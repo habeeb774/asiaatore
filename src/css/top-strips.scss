@@ -1,0 +1,23 @@
+/* Announcement + Category scroller styling */
+.announcement-bar-modern { background:var(--grad-primary); color:#fff; font:500 .7rem/1.4 var(--font-sans); letter-spacing:.3px; }
+.announcement-inner { max-width:var(--layout-max); padding:.45rem .9rem; margin:0 auto; display:flex; align-items:center; justify-content:center; }
+.announcement-text { text-align:center; }
+
+.category-scroller { border-bottom:1px solid #eceff2; background:linear-gradient(90deg,#ffffff,#f9fafb); }
+.category-scroller .category-track { max-width:var(--layout-max); margin:0 auto; padding:.55rem .9rem; display:flex; gap:.55rem; overflow-x:auto; scrollbar-width:none; scroll-snap-type:x mandatory; }
+.category-scroller .category-track::-webkit-scrollbar { display:none; }
+.cat-pill { flex:0 0 auto; background:#fff; border:1px solid #e4e8ec; color:#374151; text-decoration:none; font:600 .65rem/1 var(--font-sans); padding:.55rem .8rem; border-radius:999px; transition:background .25s,border-color .25s,color .25s; }
+.cat-pill:hover { background:#f4f7f9; border-color:#d9dee2; color:#111827; }
+.cat-pill:focus-visible { outline:2px solid #69be3c; outline-offset:2px; }
+
+.theme-minimal .cat-pill { background:#fff; }
+.dark-mode .announcement-bar-modern { background:var(--grad-primary); filter:saturate(.9) brightness(.9); }
+.dark-mode .category-scroller { background:#121e2a; border-color:#1e3042; }
+.category-scroller .cat-pill { scroll-snap-align:start; }
+.category-scroller .cat-pill { display:inline-flex; align-items:center; gap:.45rem; white-space:nowrap; padding:.45rem .8rem; border-radius:999px; background:#fff; border:1px solid #e5e7eb; color:#111827; text-decoration:none; font-size:.9rem; }
+.category-scroller .cat-pill:hover { background:#f8fafc; }
+.category-scroller .cat-pill.active { background:linear-gradient(90deg,#69be3c,#f6ad55); color:#fff; border-color:transparent; box-shadow:0 4px 14px rgba(0,0,0,.15); }
+.category-scroller .cat-pill .count { font-size:.7rem; background:#f1f5f9; color:#334155; border-radius:999px; padding:.05rem .45rem; }
+.category-scroller .cat-pill.active .count { background:rgba(255,255,255,.25); color:#fff; }
+.dark-mode .cat-pill { background:#182431; border-color:#25374a; color:#d6dde3; }
+.dark-mode .cat-pill:hover { background:#213244; border-color:#31475c; color:#fff; }

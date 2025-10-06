@@ -1,0 +1,366 @@
+import { Router } from 'express';
+import prisma from '../db/client.js';
+import { signAccessToken, signRefreshToken, verifyToken, randomToken, sha256 } from '../utils/jwt.js';
+import bcrypt from 'bcryptjs';
+import { requireAdmin, attachUser } from '../middleware/auth.js';
+import { sendEmail } from '../utils/email.js';
+import { audit } from '../utils/audit.js';
+import { sendSms } from '../utils/sms.js';
+
+const router = Router();
+
+// Helper to set/clear refresh cookie
+const REFRESH_COOKIE = 'rt';
+const cookieOpts = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.COOKIE_SAMESITE || 'lax',
+  path: '/api/auth',
+  // maxAge will be set per write; here just defaults ignored
+});
+
+// Login route using bcrypt password comparison
+router.post('/login', async (req, res) => {
+  try {
+    let { email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ ok:false, error: 'MISSING_CREDENTIALS' });
+    email = String(email).trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      if (process.env.DEBUG_LOGIN === '1') console.warn('[LOGIN] Email not found:', email);
+      return res.status(401).json({ ok:false, error: 'INVALID_LOGIN' });
+    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      if (process.env.DEBUG_LOGIN === '1') console.warn('[LOGIN] Bad password for:', email);
+      return res.status(401).json({ ok:false, error: 'INVALID_LOGIN' });
+    }
+    // Access + Refresh (session-backed)
+    const accessToken = signAccessToken({ id: user.id, role: user.role, email: user.email });
+    const rawRefresh = randomToken(48);
+    const tokenHash = sha256(rawRefresh);
+    const ttlMs = Number(process.env.REFRESH_TOKEN_TTL_MS || 1000*60*60*24*30);
+    const expiresAt = new Date(Date.now() + ttlMs);
+    const userAgent = req.headers['user-agent'] || null;
+    const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString();
+    // Create or reuse a session per device; here we always create a new session for simplicity
+    try {
+      await prisma.session.create({ data: { userId: user.id, refreshHash: tokenHash, userAgent, ip, expiresAt } });
+    } catch (e) {
+      // sessions table might not exist yet — fallback to legacy token
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.create failed; falling back to AuthToken refresh:', e.message);
+    }
+    // Also keep legacy AuthToken for migrations/backward compatibility (optional)
+    await prisma.authToken.create({ data: { userId: user.id, type: 'refresh', tokenHash, expiresAt, userAgent, ip } }).catch(() => {});
+    // Set HTTP-only cookie
+    res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
+    return res.json({ ok:true, accessToken, user: { id: user.id, role: user.role, email: user.email, name: user.name } });
+  } catch (e) {
+    if (process.env.DEBUG_LOGIN === '1' || process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.error('[LOGIN] Unexpected error', { message: e.message, stack: e.stack, code: e.code });
+    }
+    return res.status(500).json({ ok:false, error: 'LOGIN_FAILED', message: e.message, code: e.code || null });
+  }
+});
+
+// Register new user
+router.post('/register', async (req, res) => {
+  try {
+    let { email, password, name, phone } = req.body || {};
+    if (!email || !password) return res.status(400).json({ ok:false, error: 'MISSING_FIELDS' });
+    email = String(email).trim().toLowerCase();
+    if (password.length < 6) return res.status(400).json({ ok:false, error: 'WEAK_PASSWORD' });
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(409).json({ ok:false, error: 'EMAIL_EXISTS' });
+    const hashed = await bcrypt.hash(password, 10);
+    const created = await prisma.user.create({ data: { email, password: hashed, name: name || null, role: 'user', phone: phone || null } });
+    // Send email verification link (optional in dev)
+  const emailToken = randomToken(24);
+  const emailHash = sha256(emailToken);
+  const emailExpiresAt = new Date(Date.now() + 1000*60*60*24); // 24h
+  await prisma.authToken.create({ data: { userId: created.id, type: 'email_verify', tokenHash: emailHash, expiresAt: emailExpiresAt } });
+    const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.headers.host}`;
+    const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(emailToken)}&email=${encodeURIComponent(created.email)}`;
+    await sendEmail({ to: created.email, subject: 'Verify your email', text: `Verify: ${verifyUrl}` });
+    const accessToken = signAccessToken({ id: created.id, role: created.role, email: created.email });
+    const rawRefresh = randomToken(48);
+  const ttlMs = Number(process.env.REFRESH_TOKEN_TTL_MS || 1000*60*60*24*30);
+  const sessionExpiresAt = new Date(Date.now() + ttlMs);
+  const tokenHash = sha256(rawRefresh);
+    try {
+      await prisma.session.create({ data: { userId: created.id, refreshHash: tokenHash, expiresAt: sessionExpiresAt, userAgent: req.headers['user-agent'] || null, ip: (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString() } });
+    } catch (e) {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.create (register) failed; fallback:', e.message);
+    }
+    await prisma.authToken.create({ data: { userId: created.id, type: 'refresh', tokenHash, expiresAt: sessionExpiresAt } }).catch(() => {});
+    res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
+    return res.status(201).json({ ok:true, accessToken, user: { id: created.id, role: created.role, email: created.email, name: created.name } });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error: 'REGISTER_FAILED', message: e.message });
+  }
+});
+
+// Refresh access token using refresh token
+router.post('/refresh', async (req, res) => {
+  try {
+    // Prefer cookie; fallback to body for backward compatibility
+    const cookieRt = req.cookies?.[REFRESH_COOKIE];
+    const bodyRt = (req.body || {}).refreshToken;
+    const refreshToken = cookieRt || bodyRt;
+    if (!refreshToken) return res.status(400).json({ ok:false, error:'MISSING_REFRESH' });
+    const tokenHash = sha256(refreshToken);
+    // Try sessions first
+    let session = null;
+    try {
+      session = await prisma.session.findFirst({ where: { refreshHash: tokenHash, revokedAt: null, expiresAt: { gt: new Date() } } });
+    } catch (e) {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.findFirst failed; using legacy path:', e.message);
+    }
+    let userId = session?.userId;
+    if (!session) {
+      // fallback to legacy AuthToken
+      const legacy = await prisma.authToken.findFirst({ where: { type: 'refresh', tokenHash, consumedAt: null, expiresAt: { gt: new Date() } } });
+      if (legacy) userId = legacy.userId;
+      if (!userId) return res.status(401).json({ ok:false, error:'INVALID_REFRESH' });
+    }
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(401).json({ ok:false, error:'USER_NOT_FOUND' });
+    const accessToken = signAccessToken({ id: user.id, role: user.role, email: user.email });
+    // Rotate refresh token: update current session hash or convert legacy to a new session
+    const newRaw = randomToken(48);
+    const newHash = sha256(newRaw);
+    const ttlMs = Number(process.env.REFRESH_TOKEN_TTL_MS || 1000*60*60*24*30);
+    const newExp = new Date(Date.now() + ttlMs);
+    if (session) {
+      try {
+        await prisma.session.update({ where: { id: session.id }, data: { refreshHash: newHash, lastUsedAt: new Date(), expiresAt: newExp } });
+      } catch (e) {
+        if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.update failed; converting to legacy path:', e.message);
+        session = null;
+      }
+    }
+    if (!session) {
+      // legacy path: mark token consumed and create session
+      try {
+        await prisma.$transaction([
+          prisma.authToken.updateMany({ where: { type: 'refresh', tokenHash }, data: { consumedAt: new Date() } }),
+          prisma.session.create({ data: { userId, refreshHash: newHash, expiresAt: newExp, userAgent: req.headers['user-agent'] || null, ip: (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString() } })
+        ]);
+      } catch (e) {
+        // If session.create fails, at least rotate legacy token
+        await prisma.authToken.create({ data: { userId, type: 'refresh', tokenHash: newHash, expiresAt: newExp } }).catch(()=>{});
+      }
+    }
+    res.cookie(REFRESH_COOKIE, newRaw, { ...cookieOpts(), maxAge: ttlMs });
+    res.json({ ok: true, accessToken });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'REFRESH_FAILED', message: e.message });
+  }
+});
+
+// Logout: revoke current refresh token
+router.post('/logout', async (req, res) => {
+  try {
+    const cookieRt = req.cookies?.[REFRESH_COOKIE];
+    const bodyRt = (req.body || {}).refreshToken;
+    const refreshToken = cookieRt || bodyRt;
+    if (refreshToken) {
+      const tokenHash = sha256(refreshToken);
+      try { await prisma.session.updateMany({ where: { refreshHash: tokenHash, revokedAt: null }, data: { revokedAt: new Date() } }); } catch {}
+      await prisma.authToken.updateMany({ where: { type: 'refresh', tokenHash, consumedAt: null }, data: { consumedAt: new Date() } });
+    }
+    // Clear cookie
+    res.clearCookie(REFRESH_COOKIE, { ...cookieOpts(), maxAge: 0 });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(200).json({ ok: true }); // don't leak errors on logout
+  }
+});
+
+// Current user profile
+router.get('/me', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const u = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!u) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    const user = {
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      name: u.name,
+      phone: u.phone || null,
+      emailVerifiedAt: u.emailVerifiedAt,
+      phoneVerifiedAt: u.phoneVerifiedAt
+    };
+    res.json({ ok: true, user });
+  } catch (e) { res.status(500).json({ ok:false, error:'ME_FAILED', message: e.message }); }
+});
+
+// Update current user profile (name/phone)
+router.patch('/me', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const { name, phone } = req.body || {};
+    const data = {};
+    if (name !== undefined) data.name = String(name);
+    if (phone !== undefined) data.phone = phone ? String(phone).trim() : null;
+    if (!Object.keys(data).length) return res.status(400).json({ ok:false, error:'NO_FIELDS' });
+    const updated = await prisma.user.update({ where: { id: req.user.id }, data });
+    res.json({ ok: true, user: { id: updated.id, email: updated.email, role: updated.role, name: updated.name, phone: updated.phone, emailVerifiedAt: updated.emailVerifiedAt, phoneVerifiedAt: updated.phoneVerifiedAt } });
+  } catch (e) {
+    if (e?.code === 'P2002') return res.status(409).json({ ok:false, error:'PHONE_EXISTS' });
+    res.status(500).json({ ok:false, error:'UPDATE_ME_FAILED', message: e.message });
+  }
+});
+
+// Email verification request (re-send)
+router.post('/verify-email/request', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const me = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!me) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    if (me.emailVerifiedAt) return res.json({ ok:true, alreadyVerified: true });
+    const token = randomToken(24);
+    const hash = sha256(token);
+    const expiresAt = new Date(Date.now() + 1000*60*60*24);
+    await prisma.authToken.create({ data: { userId: me.id, type: 'email_verify', tokenHash: hash, expiresAt } });
+    const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.headers.host}`;
+    const url = `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(me.email)}`;
+    await sendEmail({ to: me.email, subject: 'Verify your email', text: `Verify: ${url}` });
+    res.json({ ok: true, sent: true });
+  } catch (e) { res.status(500).json({ ok:false, error:'VERIFY_EMAIL_REQUEST_FAILED', message: e.message }); }
+});
+
+// Email verification callback
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token, email } = req.query || {};
+    if (!token || !email) return res.status(400).json({ ok:false, error:'MISSING_PARAMS' });
+    const user = await prisma.user.findUnique({ where: { email: String(email).toLowerCase() } });
+    if (!user) return res.status(404).json({ ok:false, error:'USER_NOT_FOUND' });
+    const record = await prisma.authToken.findFirst({ where: { userId: user.id, type: 'email_verify', tokenHash: sha256(String(token)), consumedAt: null, expiresAt: { gt: new Date() } } });
+    if (!record) return res.status(400).json({ ok:false, error:'INVALID_TOKEN' });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } }),
+      prisma.authToken.update({ where: { id: record.id }, data: { consumedAt: new Date() } })
+    ]);
+    audit({ action: 'user.email_verified', entity: 'User', entityId: user.id, userId: user.id });
+    res.json({ ok: true, verified: true });
+  } catch (e) { res.status(500).json({ ok:false, error:'VERIFY_EMAIL_FAILED', message: e.message }); }
+});
+
+// Forgot password: send reset link
+router.post('/forgot', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ ok:false, error:'MISSING_EMAIL' });
+    const user = await prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
+    if (user) {
+      const token = randomToken(24);
+      const hash = sha256(token);
+      const expiresAt = new Date(Date.now() + 1000*60*30); // 30m
+      await prisma.authToken.create({ data: { userId: user.id, type: 'password_reset', tokenHash: hash, expiresAt } });
+      const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.headers.host}`;
+      const url = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+      await sendEmail({ to: user.email, subject: 'Reset your password', text: `Reset link: ${url}` });
+    }
+    // Always respond ok (avoid email enumeration)
+    res.json({ ok: true, message: 'If the email exists, a reset link has been sent.' });
+  } catch (e) { res.status(500).json({ ok:false, error:'FORGOT_FAILED', message: e.message }); }
+});
+
+// Reset password with token
+router.post('/reset', async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body || {};
+    if (!email || !token || !newPassword) return res.status(400).json({ ok:false, error:'MISSING_FIELDS' });
+    if (newPassword.length < 6) return res.status(400).json({ ok:false, error:'WEAK_PASSWORD' });
+    const user = await prisma.user.findUnique({ where: { email: String(email).trim().toLowerCase() } });
+    if (!user) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    const record = await prisma.authToken.findFirst({ where: { userId: user.id, type: 'password_reset', tokenHash: sha256(String(token)), consumedAt: null, expiresAt: { gt: new Date() } } });
+    if (!record) return res.status(400).json({ ok:false, error:'INVALID_TOKEN' });
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: user.id }, data: { password: hashed } }),
+      prisma.authToken.update({ where: { id: record.id }, data: { consumedAt: new Date() } })
+    ]);
+    res.json({ ok: true, message: 'PASSWORD_RESET_OK' });
+  } catch (e) { res.status(500).json({ ok:false, error:'RESET_FAILED', message: e.message }); }
+});
+
+// Phone verification request (send code)
+router.post('/verify-phone/request', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const me = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!me) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    if (!me.phone) return res.status(400).json({ ok:false, error:'NO_PHONE' });
+    if (me.phoneVerifiedAt) return res.json({ ok:true, alreadyVerified: true });
+    const code = ('' + Math.floor(100000 + Math.random()*900000)); // 6-digit
+    const expiresAt = new Date(Date.now() + 1000*60*10); // 10m
+    await prisma.authToken.create({ data: { userId: me.id, type: 'phone_verify', code, expiresAt, meta: { phone: me.phone } } });
+    await sendSms({ to: me.phone, message: `رمز التحقق: ${code}` });
+    res.json({ ok: true, sent: true });
+  } catch (e) { res.status(500).json({ ok:false, error:'VERIFY_PHONE_REQUEST_FAILED', message: e.message }); }
+});
+
+// Phone verification submit
+router.post('/verify-phone/confirm', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ ok:false, error:'MISSING_CODE' });
+    const me = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!me) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    const record = await prisma.authToken.findFirst({ where: { userId: me.id, type: 'phone_verify', code: String(code), consumedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: 'desc' } });
+    if (!record) return res.status(400).json({ ok:false, error:'INVALID_CODE' });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: me.id }, data: { phoneVerifiedAt: new Date() } }),
+      prisma.authToken.update({ where: { id: record.id }, data: { consumedAt: new Date() } })
+    ]);
+    audit({ action: 'user.phone_verified', entity: 'User', entityId: me.id, userId: me.id });
+    res.json({ ok: true, verified: true });
+  } catch (e) { res.status(500).json({ ok:false, error:'VERIFY_PHONE_FAILED', message: e.message }); }
+});
+
+// Create a new admin (must be called by an existing admin). Prevent privilege escalation by normal users.
+// Body: { email, password, name }
+router.post('/create-admin', attachUser, requireAdmin, async (req, res) => {
+  try {
+    let { email, password, name } = req.body || {};
+    if (!email || !password) return res.status(400).json({ ok:false, error:'MISSING_FIELDS' });
+    email = String(email).trim().toLowerCase();
+    if (password.length < 8) return res.status(400).json({ ok:false, error:'WEAK_PASSWORD', message:'Password must be at least 8 chars' });
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(409).json({ ok:false, error:'EMAIL_EXISTS' });
+    const hashed = await bcrypt.hash(password, 12);
+    const created = await prisma.user.create({ data: { email, password: hashed, role: 'admin', name: name || 'System Admin' } });
+    return res.status(201).json({ ok:true, admin: { id: created.id, email: created.email, role: created.role, name: created.name } });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:'ADMIN_CREATE_FAILED', message: e.message });
+  }
+});
+
+export default router;
+
+// Sessions management endpoints (optional)
+router.get('/sessions', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const sessions = await prisma.session.findMany({ where: { userId: req.user.id, revokedAt: null }, orderBy: { createdAt: 'desc' } });
+    const map = sessions.map(s => ({ id: s.id, createdAt: s.createdAt, lastUsedAt: s.lastUsedAt, userAgent: s.userAgent, ip: s.ip, expiresAt: s.expiresAt }));
+    res.json({ ok: true, sessions: map });
+  } catch (e) { res.status(500).json({ ok:false, error:'SESSIONS_LIST_FAILED', message: e.message }); }
+});
+
+router.delete('/sessions/:id', attachUser, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    const { id } = req.params;
+    const session = await prisma.session.findUnique({ where: { id } });
+    if (!session || session.userId !== req.user.id) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    await prisma.session.update({ where: { id }, data: { revokedAt: new Date() } });
+    res.json({ ok: true, revoked: true });
+  } catch (e) { res.status(500).json({ ok:false, error:'SESSION_REVOKE_FAILED', message: e.message }); }
+});

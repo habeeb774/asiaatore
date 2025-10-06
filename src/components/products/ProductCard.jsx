@@ -1,0 +1,81 @@
+import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
+import { useCart } from '../../context/CartContext';
+import { Link } from 'react-router-dom';
+import QuickViewModal from './QuickViewModal';
+import { useNavigate, useLocation } from 'react-router-dom';
+import LazyImage from '../common/LazyImage';
+import { resolveLocalized } from '../../utils/locale';
+
+const ProductCard = ({ product }) => {
+  const { locale, t } = useLanguage();
+  const { addToCart, cartItems, maxPerItem } = useCart() || { addToCart: () => {}, cartItems: [], maxPerItem: 10 };
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [btnState, setBtnState] = useState('idle'); // idle | added | max
+  const current = cartItems?.find(i => i.id === product.id);
+  const currentQty = current?.quantity || 0;
+  const reachedMax = currentQty >= (maxPerItem || 10);
+  useEffect(()=> { if (reachedMax) setBtnState('max'); }, [reachedMax]);
+  const [open, setOpen] = useState(false);
+  const name = resolveLocalized(product?.name ?? product?.title, locale) || (typeof product?.name === 'string' ? product.name : product?.title) || '';
+  const detailsPath = `${locale === 'ar' ? '' : '/' + locale}/product/${product.id}`;
+  const hasDiscount = product.oldPrice && product.oldPrice > product.price;
+  const discountPercent = hasDiscount ? Math.round( (1 - (product.price / product.oldPrice)) * 100 ) : null;
+  const outOfStock = product.stock !== undefined && product.stock <= 0;
+  return (
+    <div className="product-card" data-id={product.id}>
+      <div className="product-image product-media">
+        <LazyImage
+          src={product.image}
+          alt={name}
+          className="w-full h-full object-cover"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
+        />
+        {product.badge && <span className="badge">{locale==='ar'? 'جديد':'New'}</span>}
+        {hasDiscount && <span className="discount-badge">-{discountPercent}%</span>}
+        {outOfStock && <span className="gallery-indicator" style={{background:'rgba(109,1,11,.85)'}}>{locale==='ar'?'غير متوفر':'Out'}</span>}
+        <div className="product-overlay">
+          <button className="quick-view-btn" onClick={() => setOpen(true)}>{t('quickView')}</button>
+        </div>
+      </div>
+      <h3 className="product-title clamp-2">{name}</h3>
+      {product.rating && (
+        <div className="rating-row" aria-label={`rating ${product.rating}`}>
+          {[1,2,3,4,5].map(i => (
+            <span key={i} className={`star ${i <= product.rating ? '' : 'off'}`}>★</span>
+          ))}
+        </div>
+      )}
+      <div className="price-row">
+        <span className="price">{product.price} {locale==='ar'?'ر.س':'SAR'}</span>
+        {product.oldPrice && <span className="old">{product.oldPrice}</span>}
+      </div>
+      <div className="actions">
+        <button
+          className={`primary ${btnState==='added'?'added':''} ${btnState==='max'?'at-max':''}`}
+          disabled={outOfStock || reachedMax}
+          onClick={() => {
+            if (outOfStock || reachedMax) return;
+            const res = addToCart(product, 1);
+            if (res?.ok) {
+              const willMax = (currentQty + 1) >= (maxPerItem||10);
+              setBtnState(willMax ? 'max':'added');
+              setTimeout(()=> setBtnState(willMax ? 'max':'idle'), 1400);
+            } else if (res?.reason === 'AUTH_REQUIRED') {
+              const from = location.pathname + (location.search || '');
+              navigate('/login', { state: { from } });
+            }
+          }}
+          aria-label={outOfStock ? (locale==='ar'?'غير متوفر':'Out of stock') : (reachedMax ? (locale==='ar'?'الحد الأقصى':'Max reached') : t('addToCart'))}
+        >
+          { outOfStock ? (locale==='ar'?'غير متوفر':'Out of stock') : reachedMax ? (locale==='ar'?'الحد الأقصى':'Max') : btnState==='added' ? (locale==='ar'?'✓ تمت الإضافة':'✓ Added') : t('addToCart') }
+        </button>
+        <Link to={detailsPath}>{t('details')}</Link>
+      </div>
+      {open && <QuickViewModal product={product} onClose={() => setOpen(false)} />}
+    </div>
+  );
+};
+
+export default ProductCard;

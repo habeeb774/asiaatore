@@ -1,0 +1,83 @@
+/* Product Details — polished layout and color consistency */
+@use './_design-system' as *;
+@use './theme' as *;
+
+.product-details-page {
+  background: var(--color-bg-alt);
+}
+
+.product-details-page .breadcrumb a {
+  color: var(--color-text-soft);
+}
+.product-details-page .breadcrumb a:hover {
+  color: var(--color-primary);
+}
+
+.product-details-page .product-card,
+.product-details-page .bg-white {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.product-details-page .btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.product-details-page .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(var(--color-primary-rgb), .22);
+}
+.product-details-page .btn-primary:active {
+  transform: translateY(0);
+}
+
+.product-details-page .ring-primary-red,
+.product-details-page .text-primary-red {
+  /* unify legacy primary-red with design token */
+  --legacy-primary: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), .45);
+  color: var(--legacy-primary) !important;
+}
+
+.product-details-page .sticky-buybar {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -10px 24px -20px rgba(0,0,0,.25);
+}
+.product-details-page .sticky-buybar .inner {
+  max-width: var(--layout-max);
+  margin: 0 auto;
+  padding: .75rem var(--layout-padding-x);
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.product-details-page .sticky-buybar .price {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--color-primary);
+}
+
+.product-details-page table thead th {
+  color: var(--color-text-faint);
+}
+.product-details-page table tbody tr.bg-amber-50 {
+  background: color-mix(in oklab, var(--color-accent) 6%, #fff);
+}
+
+.product-details-page .feature-dot {
+  inline-size: .45rem;
+  block-size: .45rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+/* Responsive image polish */
+.product-details-page img {
+  border-radius: var(--radius-md);
+}

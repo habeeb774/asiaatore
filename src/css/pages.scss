@@ -1,0 +1,33 @@
+/* Centralized page-level layout and typographic rules for minimal/professional theme */
+
+/* Container for offers/products pages */
+.offers-page {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: 1.25rem 1rem 2rem;
+
+  /* Title within offers pages */
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 0 0 1rem;
+  }
+}
+
+/* Shared page title (e.g., catalog pages) */
+.catalog-page .page-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin: 0 0 1rem;
+}
+
+/* Product grid layouts */
+.products-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+
+  &.wide {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}

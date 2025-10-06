@@ -1,0 +1,13 @@
+@use './variables' as *;
+@use './mixins' as *;
+
+/* Product Cards & Grids (Modularized) */
+.products-grid,
+.featured-grid {
+  // يمكن لاحقاً حذف التكرار واستعمال %placeholders أو @mixin
+}
+
+.product-card,
+custom-product-card {
+  // استخرج القواعد المشتركة وضع الفروقات بداخل &.variant أو &.compact
+}

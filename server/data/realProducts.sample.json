@@ -1,0 +1,122 @@
+[
+  {
+    "slug": "extra-virgin-olive-oil-1l",
+    "nameEn": "Extra Virgin Olive Oil 1L",
+    "nameAr": "زيت زيتون بكر ممتاز 1 لتر",
+    "shortEn": "Cold pressed olive oil, 1 liter bottle.",
+    "shortAr": "زيت زيتون معصور على البارد، عبوة 1 لتر",
+    "category": "grocery",
+    "price": 38.5,
+    "oldPrice": 45,
+    "stock": 120,
+    "image": "https://via.placeholder.com/600x600?text=Olive+Oil"
+  },
+  {
+    "slug": "basmati-rice-5kg",
+    "nameEn": "Premium Basmati Rice 5Kg",
+    "nameAr": "أرز بسمتي فاخر 5 كجم",
+    "shortEn": "Long grain aged basmati rice.",
+    "shortAr": "أرز بسمتي حبة طويلة معتّق",
+    "category": "grocery",
+    "price": 52.9,
+    "oldPrice": null,
+    "stock": 60,
+    "image": "https://via.placeholder.com/600x600?text=Basmati+Rice"
+  },
+  {
+    "slug": "raw-honey-500g",
+    "nameEn": "Raw Natural Honey 500g",
+    "nameAr": "عسل طبيعي خام 500 جم",
+    "shortEn": "Unfiltered multifloral honey.",
+    "shortAr": "عسل طبيعي غير مُرشَّح متعدد الأزهار",
+    "category": "grocery",
+    "price": 28,
+    "oldPrice": 32,
+    "stock": 85,
+    "image": "https://via.placeholder.com/600x600?text=Honey"
+  },
+  {
+    "slug": "whole-wheat-flour-2kg",
+    "nameEn": "Whole Wheat Flour 2Kg",
+    "nameAr": "دقيق قمح كامل 2 كجم",
+    "shortEn": "Stone ground wholemeal flour.",
+    "shortAr": "دقيق قمح كامل مطحون على الحجر",
+    "category": "grocery",
+    "price": 17.5,
+    "oldPrice": null,
+    "stock": 200,
+    "image": "https://via.placeholder.com/600x600?text=Wheat+Flour"
+  },
+  {
+    "slug": "green-tea-100bags",
+    "nameEn": "Green Tea 100 Bags",
+    "nameAr": "شاي أخضر 100 كيس",
+    "shortEn": "Antioxidant rich green tea pack.",
+    "shortAr": "شاي أخضر غني بمضادات الأكسدة",
+    "category": "beverages",
+    "price": 19.9,
+    "oldPrice": 24,
+    "stock": 140,
+    "image": "https://via.placeholder.com/600x600?text=Green+Tea"
+  },
+  {
+    "slug": "arabica-coffee-1kg",
+    "nameEn": "100% Arabica Coffee Beans 1Kg",
+    "nameAr": "بن عربي ١٠٠٪ ‏١ كجم",
+    "shortEn": "Medium roast whole beans.",
+    "shortAr": "تحميص متوسط، حب كامل",
+    "category": "beverages",
+    "price": 72,
+    "oldPrice": 80,
+    "stock": 45,
+    "image": "https://via.placeholder.com/600x600?text=Coffee+Beans"
+  },
+  {
+    "slug": "organic-black-pepper-100g",
+    "nameEn": "Organic Black Pepper 100g",
+    "nameAr": "فلفل أسود عضوي 100 جم",
+    "shortEn": "Freshly ground aroma.",
+    "shortAr": "نكهة طازجة قوية",
+    "category": "grocery",
+    "price": 14.5,
+    "oldPrice": null,
+    "stock": 150,
+    "image": "https://via.placeholder.com/600x600?text=Black+Pepper"
+  },
+  {
+    "slug": "natural-deodorant-50ml",
+    "nameEn": "Natural Deodorant 50ml",
+    "nameAr": "مزيل عرق طبيعي 50 مل",
+    "shortEn": "Aluminum free herbal blend.",
+    "shortAr": "مزيج عشبي خالٍ من الألمنيوم",
+    "category": "personal-care",
+    "price": 24,
+    "oldPrice": 29,
+    "stock": 90,
+    "image": "https://via.placeholder.com/600x600?text=Deodorant"
+  },
+  {
+    "slug": "herbal-shampoo-400ml",
+    "nameEn": "Herbal Repair Shampoo 400ml",
+    "nameAr": "شامبو عشبي مرمم 400 مل",
+    "shortEn": "Strengthens and nourishes hair.",
+    "shortAr": "يقوّي ويغذّي الشعر",
+    "category": "personal-care",
+    "price": 31,
+    "oldPrice": 36,
+    "stock": 110,
+    "image": "https://via.placeholder.com/600x600?text=Shampoo"
+  },
+  {
+    "slug": "stainless-water-bottle-750ml",
+    "nameEn": "Stainless Steel Water Bottle 750ml",
+    "nameAr": "قارورة ماء ستانلس 750 مل",
+    "shortEn": "Double wall insulated.",
+    "shortAr": "عزل جداري مزدوج",
+    "category": "home",
+    "price": 55,
+    "oldPrice": 65,
+    "stock": 70,
+    "image": "https://via.placeholder.com/600x600?text=Water+Bottle"
+  }
+]

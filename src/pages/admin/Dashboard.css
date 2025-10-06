@@ -1,0 +1,35 @@
+.admin-dashboard {
+  padding: 18px;
+}
+.dashboard-header h1 {
+  margin: 0 0 12px 0;
+}
+.dashboard-layout {
+  display: flex;
+  gap: 16px;
+}
+.sidebar {
+  width: 220px;
+  border-right: 1px solid #e5e7eb;
+  padding-right: 12px;
+}
+.sidebar nav button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.sidebar nav button.active {
+  background: #eef2ff;
+  border-radius: 6px;
+}
+.dashboard-content {
+  flex: 1;
+}
+.stats-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:12px }
+.stat-card{ padding:12px;border:1px solid #e5e7eb;border-radius:8px; display:flex; gap:12px; align-items:center }
+.stat-icon{ font-size:28px }
+.recent-activity{ margin-top:18px }

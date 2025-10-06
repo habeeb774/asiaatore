@@ -1,0 +1,47 @@
+/* Flex center utility */
+@mixin flex-center($direction: row, $justify: center, $align: center) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+}
+
+/* Line clamp utility (same logic referenced in HomePage.scss comments) */
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  @if ($lines > 0) {
+    -webkit-line-clamp: $lines;
+  }
+}
+
+/* Media breakpoint helpers (optional) */
+$break-md: 768px;
+$break-lg: 1200px;
+
+@mixin up($width) {
+  @media (min-width: $width) {
+    @content;
+  }
+}
+@mixin down($width) {
+  @media (max-width: $width) {
+    @content;
+  }
+}
+
+/* Gradient text helper */
+@mixin gradient-text($gradient) {
+  background: $gradient;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Placeholder for future theming extension */
+@mixin theme-prop($property, $light, $dark) {
+  #{$property}: $light;
+  .dark-mode & {
+    #{$property}: $dark;
+  }
+}

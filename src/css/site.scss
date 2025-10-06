@@ -1,0 +1,548 @@
+/* TODO(JS): PaymentStatusWatcher is undefined in App.jsx.
+   - Ensure you import it: import PaymentStatusWatcher from './components/PaymentStatusWatcher';
+   - Or define a stub: const PaymentStatusWatcher = PaymentStatusWatcher || (() => null);
+   - Or guard usage: if (typeof PaymentStatusWatcher !== 'undefined') { ... }
+   This cannot be fixed from SCSS.
+
+   NOTE(Network): tawk.to 400 error indicates invalid / missing widget credentials or blocked request.
+   Verify property ID / script snippet and that ad/script blockers are not interfering.
+ */
+
+/* Using modern @use modules (imports must precede any rules) */
+@use './sidebar';
+@use './header';
+@use './product-card';
+/* Variables */
+$primary-red: #69be3c; /* استخدم ألوان مناسبة أو عدِّلها */
+$primary-gold: #2eafff;
+$text-dark: #0f172a;
+$muted: #64748b;
+$bg: #ffffff;
+$card-bg: #ffffff;
+$shadow: 0 6px 18px rgba(15,23,42,0.06);
+
+/* Base */
+* { box-sizing: border-box; }
+html,body,#root { height: 100%; }
+html, body {
+  overflow-x: hidden;
+}
+body {
+  font-family: Inter, "Noto Naskh Arabic", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  margin: 0;
+  color: $text-dark;
+  background: #f8fafc;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --header-height: 72px; /* restored default header height */
+
+  /* Direction / locale (use index.html lang/direction) */
+
+  /* Tailwind compatibility variables (defaults) */
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x: initial;
+  --tw-pan-y: initial;
+  --tw-pinch-zoom: initial;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position: initial;
+  --tw-gradient-via-position: initial;
+  --tw-gradient-to-position: initial;
+  --tw-ordinal: initial;
+  --tw-slashed-zero: initial;
+  --tw-numeric-figure: initial;
+  --tw-numeric-spacing: initial;
+  --tw-numeric-fraction: initial;
+  --tw-ring-inset: initial;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgba(59, 130, 246, 0.5);
+  --tw-ring-offset-shadow: 0 0 rgba(0,0,0,0);
+  --tw-ring-shadow: 0 0 rgba(0,0,0,0);
+  --tw-shadow: 0 0 rgba(0,0,0,0);
+  --tw-shadow-colored: 0 0 rgba(0,0,0,0);
+  --tw-blur: initial;
+  --tw-brightness: initial;
+  --tw-contrast: initial;
+  --tw-grayscale: initial;
+  --tw-hue-rotate: initial;
+  --tw-invert: initial;
+  --tw-saturate: initial;
+  --tw-sepia: initial;
+  --tw-drop-shadow: initial;
+  --tw-backdrop-blur: initial;
+  --tw-backdrop-brightness: initial;
+  --tw-backdrop-contrast: initial;
+  --tw-backdrop-grayscale: initial;
+  --tw-backdrop-hue-rotate: initial;
+  --tw-backdrop-invert: initial;
+  --tw-backdrop-opacity: initial;
+  --tw-backdrop-saturate: initial;
+  --tw-backdrop-sepia: initial;
+  --tw-contain-size: initial;
+  --tw-contain-layout: initial;
+  --tw-contain-paint: initial;
+  --tw-contain-style: initial;
+
+  /* Base properties */
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb;
+  font-weight: inherit !important;
+  line-height: 1.5;
+  tab-size: 4;
+
+  /* Fonts and text */
+  --font-main: 'sky-bold';
+  --font-secondary: 'sky';
+  --font-sm: 0.8685714286rem;
+
+  /* Colors */
+  --infinte-color: #681212;
+  --main-text-color: #231f1e;
+  --main-text-color-dark: #2b2d34;
+  --color-primary-d: #272628;
+  --color-primary-l: #676668;
+  --color-text: #7c8082;
+  --bg-gray: rgba(198,199,206,0.10196);
+  --color-grey: #f5f7f9;
+  --color-light-grey: #eeeeee;
+  /* Brand colors are controlled globally via SettingsContext and design-system tokens */
+  /* --color-primary, --color-primary-alt, --color-primary-rgb are defined elsewhere */
+  /* Legacy variants kept only if referenced explicitly elsewhere */
+  /* --color-primary-dark, --color-primary-light, --color-primary-reverse intentionally not set here */
+  --dark-bg-main: #292929;
+  --dark-text-main: #ffffff;
+  --dark-text-sec: #a9a9a9;
+  --dark-grey: #232427;
+  --text-btn: #080707;
+  --bg-color: #fafafa;
+  --header-bg: #ffffff;
+  --menu-bg: #ffffff;
+  --footer-bg: #ffffff;
+
+  /* UI constants */
+  --mm-ocd-width: 100%;
+  --mm-ocd-min-width: 200px;
+  --mm-ocd-max-width: 440px;
+  --mm-spn-item-height: 50px;
+  --mm-spn-item-indent: 20px;
+  --mm-spn-line-height: 24px;
+  --mm-spn-panel-offset: 30%;
+
+  --swiper-theme-color: #007aff;
+  --swiper-navigation-size: 44px;
+
+  --swal2-container-padding: 0.625em;
+  --swal2-backdrop: rgba(0, 0, 0, 0.4);
+  --swal2-width: 32em;
+  --swal2-padding: 0 0 1.25em;
+  --swal2-border: none;
+  --swal2-border-radius: 0.3125rem;
+  --swal2-background: white;
+  --swal2-color: #545454;
+  --swal2-footer-border-color: #eee;
+  --swal2-show-animation: swal2-show 0.3s;
+  --swal2-hide-animation: swal2-hide 0.15s forwards;
+  --swal2-input-background: transparent;
+  --swal2-progress-step-background: #add8e6;
+  --swal2-validation-message-background: #f0f0f0;
+  --swal2-validation-message-color: #666;
+  --swal2-close-button-position: initial;
+  --swal2-close-button-inset: auto;
+  --swal2-close-button-font-size: 2.5em;
+  --swal2-close-button-color: #ccc;
+
+  --messagePreviewHeight: 100px;
+}
+
+/* Dark mode using data-theme attribute set on <html> by ThemeProvider */
+[data-theme='dark'] {
+  --bg-color: #0b1220;
+  --header-bg: rgba(9,12,19,0.96);
+  --menu-bg: #071127;
+  --footer-bg: #071127;
+  --main-text-color: #184a87;
+  --text-btn: #f8fafc;
+  --card-bg: #071127;
+  --dark-text-main: #e6eef8;
+  --dark-text-sec: #9aa6b2;
+  --color-primary: #f6c85f;
+  --shadow: 0 8px 30px rgba(0,0,0,0.6);
+  background-color: var(--bg-color);
+  color: var(--main-text-color);
+}
+
+/* small helpers to ensure images/cards adapt in dark mode */
+[data-theme='dark'] .product-card { background: var(--card-bg); box-shadow: var(--shadow); }
+[data-theme='dark'] .header { background: var(--header-bg); border-bottom-color: rgba(255,255,255,0.04); }
+[data-theme='dark'] .btn-primary { box-shadow: 0 8px 22px rgba(246,200,95,0.12); }
+
+/* Apply RTL and locale on html element */
+html {
+  direction: rtl;
+}
+/* Ensure main content is not overlapped by fixed header */
+.site-main { padding-top: var(--header-height); min-height: calc(100vh - var(--header-height)); }
+
+@media (max-width: 768px) {
+  :root { --header-height: 64px; }
+  .site-main { padding-top: var(--header-height); }
+}
+
+/* container */
+/* Full-width layout: container-custom now spans 100%. Use .container-fixed if you need the old constrained width for specific areas. */
+.container-custom {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding-left: clamp(12px, 2vw, 40px);
+  padding-right: clamp(12px, 2vw, 40px);
+}
+
+/* Legacy constrained container (optional). Apply this class where you want the previous centered narrow layout. */
+.container-fixed {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: clamp(16px,2vw,48px);
+}
+
+/* Force a section/content to stretch full viewport width even if nested inside a constrained container */
+.full-bleed {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+/* Header */
+
+/* Search box */
+.search-box {
+  width: 420px;
+  max-width: 100%;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  input {
+    flex:1;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid rgba(15,23,42,0.06);
+    background: #fff;
+  }
+  button { padding:10px 14px; border-radius:10px; border:none; background:$primary-red; color:#fff; cursor:pointer; }
+}
+
+/* Sidebar layout (RTL-aware). Sidebar is visually on the right for RTL but placed before main in DOM for accessibility */
+/* Sidebar styles moved to src/css/_sidebar.scss (imported above) */
+
+/* Buttons */
+.btn-primary {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background: linear-gradient(90deg, $primary-red, $primary-gold);
+  color:#fff;
+  padding:10px 14px;
+  border-radius:12px;
+  border:none;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow: 0 6px 18px rgba(43,108,176,0.12);
+}
+.btn-secondary {
+  background: #fff;
+  color: $text-dark;
+  padding:10px 14px;
+  border-radius:12px;
+  border:1px solid rgba(15,23,42,0.06);
+  cursor:pointer;
+}
+
+
+/* Utility */
+.section-padding { padding: 48px 0; }
+/* small screens */
+@media (max-width: 900px) {
+  .product-card .product-image { height:180px; }
+  .header .logo img { height:30px; }
+}
+
+/* --- Lightweight fallback utilities (for projects not processing Tailwind) --- */
+/* Grid helpers used across pages */
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+
+/* Better product grids and card polish */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.featured-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Product card base styles moved to _product-card.scss */
+
+/* Responsive column helpers (escape colon in class names) */
+@media (min-width: 768px) {
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .md\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .md\:w-1\/2 { width: 50%; }
+}
+@media (min-width: 1024px) {
+  .lg\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Spacing / layout helpers used in components */
+.pt-20 { padding-top: 5rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+.py-12 { padding-top: 3rem; padding-bottom: 3rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.text-center { text-align: center; }
+
+/* Simple utility fallbacks for buttons & shadows used in pages */
+.rounded-2xl { border-radius: 1rem; }
+.shadow-2xl { box-shadow: 0 25px 50px rgba(2,6,23,0.12); }
+
+/* ============================================= */
+/* Home page structured styles & lazy image utils */
+/* ============================================= */
+
+@keyframes lazyImageShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+.lazy-image-wrapper { display:block; position:relative; }
+.lazy-image__skeleton { border-radius: inherit; }
+
+.home-hero {
+  position: relative;
+  padding-block: clamp(3rem, 6vw, 6rem);
+}
+.home-hero__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+@media (min-width: 900px) {
+  .home-hero__inner { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+.home-hero__title { font-size: clamp(2.25rem, 5vw, 4rem); font-weight: 700; line-height: 1.1; margin: 0 0 1rem; display:flex; flex-direction:column; gap:.75rem; }
+.home-hero__subtitle { font-size: clamp(1.25rem, 2.2vw, 2rem); font-weight:500; }
+.home-hero__lead { font-size:1.125rem; max-width:46ch; opacity:.9; margin-bottom:2rem; }
+.home-hero__actions { display:flex; flex-wrap:wrap; gap:1rem; }
+.home-hero__visual { position:relative; max-width:560px; width:100%; }
+.home-hero__image { border-radius:1.5rem; box-shadow:0 1.25rem 3rem -0.75rem rgba(0,0,0,.3); width:100%; height:auto; }
+.home-hero__shape { position:absolute; inset:-8% -6% -10%; z-index:-1; background:radial-gradient(circle at 30% 35%, rgba(255,255,255,.35), transparent 60%), radial-gradient(circle at 70% 65%, rgba(0,0,0,.18), transparent 70%); filter:blur(40px) saturate(140%); opacity:.55; }
+
+.home-features__grid { list-style:none; margin:0; padding:0; display:grid; gap:2rem; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+.home-feature { text-align:center; padding:1.75rem 1.25rem; border-radius:1.25rem; background:#fff; box-shadow:0 4px 16px -6px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.06); transition:transform .4s cubic-bezier(.16,.8,.36,1), box-shadow .4s cubic-bezier(.16,.8,.36,1); }
+.home-feature:hover { transform:translateY(-6px); box-shadow:0 12px 32px -4px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.1); }
+.home-feature__icon { display:inline-flex; padding:.875rem; border-radius:50%; background:linear-gradient(135deg, $primary-red, $primary-gold); color:#fff; margin-bottom:1rem; }
+.home-feature__title { font-size:1.125rem; font-weight:700; margin:0 0 .5rem; }
+.home-feature__text { font-size:.95rem; color:#555; line-height:1.6; }
+
+.home-products .home-section-head__title { font-size: clamp(1.875rem,4vw,2.5rem); font-weight:700; }
+.home-products .home-section-head__subtitle { color:#555; }
+
+.home-products .product-card { position:relative; overflow:hidden; background:#fff; border-radius:1.25rem; box-shadow:0 4px 18px -4px rgba(0,0,0,.08),0 2px 6px -2px rgba(0,0,0,.06); transition:transform .55s cubic-bezier(.16,.8,.36,1), box-shadow .55s cubic-bezier(.16,.8,.36,1); }
+.home-products .product-card:hover { transform:translateY(-8px); box-shadow:0 14px 38px -6px rgba(0,0,0,.18),0 4px 10px -2px rgba(0,0,0,.12); }
+.home-products .product-card__badge { position:absolute; top:.75rem; right:.75rem; background:$primary-red; color:#fff; padding:.4rem .7rem; font-size:.7rem; border-radius:.75rem; box-shadow:0 2px 6px -2px rgba(0,0,0,.4); }
+
+/* Dark mode adaptations */
+[data-theme='dark'] .home-feature { background: var(--card-bg); }
+[data-theme='dark'] .home-products .product-card { background: var(--card-bg); }
+
+/* Checkout styles */
+.checkout-page,
+.checkout-layout {
+  display:grid;
+  gap:1.75rem;
+  align-items:start;
+  grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+  direction: rtl;
+}
+.checkout-summary {
+  background:#fff;
+  border:1px solid rgba(0,0,0,.06);
+  padding:1.25rem 1.25rem 1.4rem;
+  border-radius:16px;
+  display:flex;
+  flex-direction:column;
+  gap:.7rem;
+  box-shadow:0 8px 24px -10px rgba(0,0,0,.08);
+}
+.checkout-summary h3 { margin:0 0 .5rem; font-size:1rem; }
+.checkout-summary .line {
+  display:flex;
+  justify-content:space-between;
+  font-size:.75rem;
+  color:#475569;
+}
+.checkout-summary .line.total {
+  font-weight:700;
+  font-size:.85rem;
+  color:#111827;
+  border-top:1px solid rgba(0,0,0,.08);
+  padding-top:.55rem;
+  margin-top:.35rem;
+}
+.checkout-summary .line.discount { color:#16a34a; }
+.checkout-coupon {
+  display:flex;
+  gap:.45rem;
+  margin-top:.35rem;
+}
+.checkout-coupon input {
+  flex:1;
+  padding:.55rem .7rem;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  font-size:.7rem;
+}
+.checkout-coupon button {
+  background:#1e293b;
+  color:#fff;
+  border:0;
+  border-radius:10px;
+  padding:.55rem .9rem;
+  font-size:.65rem;
+  cursor:pointer;
+}
+.checkout-grid-items {
+  display:flex;
+  flex-direction:column;
+  gap:.65rem;
+  font-size:.65rem;
+  max-height:200px;
+  overflow-y:auto;
+}
+.checkout-grid-items .ci {
+  display:flex;
+  justify-content:space-between;
+  gap:.5rem;
+}
+.checkout-grid-items .ci span:first-child {
+  flex:1;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  overflow:hidden;
+}
+.checkout-actions {
+  display:flex;
+  flex-direction:column;
+  gap:.6rem;
+  margin-top:.5rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline:2px solid var(--color-primary);
+  outline-offset:2px;
+}
+
+/* === Cross-Browser / Webhint Fix Utilities (Appended) === */
+
+/* 1) Normalize number inputs: remove spin buttons; add appearance fallback */
+@mixin remove-number-spinners {
+  -moz-appearance: textfield;
+  appearance: textfield; /* Chrome/Edge/Safari modern */
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+}
+/* Usage helper: wrap a form OR add class to a container */
+.input-no-spin {
+  input[type='number'] { @include remove-number-spinners; }
+}
+
+/* 2) Safe line clamp utility (avoids invalid -webkit-line-clamp:none) */
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  @if ($lines > 0) {
+    -webkit-line-clamp: $lines;
+  }
+}
+/* Ready-made clamp helpers */
+.clamp-2 { @include line-clamp(2); }
+.clamp-3 { @include line-clamp(3); }
+
+/* 3) Text size adjust (Safari / iOS / Chrome unification) */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 4) Backdrop blur utility (uses existing backdrop-blur mixin order) */
+.blur-md { @include backdrop-blur(12px); }
+.blur-sm { @include backdrop-blur(6px); }
+
+/* 5) Touch action helpers (modern browsers) */
+.touch-pan-y { touch-action: pan-y; }
+.touch-pan-x { touch-action: pan-x; }
+.touch-none  { touch-action: none; }
+
+/* 6) Text wrapping / balance (fallbacks for older Safari) */
+@mixin balanced-text {
+  text-wrap: balance; /* New spec */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+.text-balance { @include balanced-text; }
+
+/* 7) Notes (non-fixables via CSS here):
+   - scrollbar-width: غير مدعوم في Safari (تُرك كما هو حيث يستخدم في أجزاء أخرى).
+   - speak / text-justify: تجنّب استخدامها لضعف الدعم.
+   - -webkit-line-clamp: احرص على عدم تمرير قيمة none (انتهى بإضافة mixin أعلاه).
+*/
+
+/* 8) Accessibility focus utility (in case not already present globally) */
+.focus-visible-ring:focus-visible {
+  outline: 2px solid $primary-red;
+  outline-offset: 2px;
+}
+
+/* 9) Generic appearance reset utility (if needed elsewhere) */
+.appearance-none {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 10) Performance tip:
+   تجنّب إنشاء keyframes تُعدّل visibility مباشرةً. استخدم opacity + pointer-events إن أمكن.
+*/
+
+/* End Cross-Browser Utilities */
+

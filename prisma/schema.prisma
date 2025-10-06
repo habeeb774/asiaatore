@@ -1,0 +1,455 @@
+// Prisma schema for the store
+// Now targeting MySQL (production-ready). Previously SQLite.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+  seller
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+// New enumerations for extended commerce / marketing features
+enum PackagingType {
+  unit
+  carton
+  bundle
+}
+
+enum BannerLocation {
+  topStrip
+  homepage
+  footer
+}
+
+enum AppPlatform {
+  ios
+  android
+  web
+}
+
+// Invoicing status
+enum InvoiceStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+// Global store settings (singleton)
+model StoreSetting {
+  id            String   @id @default("singleton")
+  siteNameAr    String?
+  siteNameEn    String?
+  logo          String?
+  colorPrimary  String? // e.g. #69be3c
+  colorSecondary String?
+  colorAccent   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Product {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  nameAr    String
+  nameEn    String
+  shortAr   String?
+  shortEn   String?
+  category  String
+  // Normalized relations (optional for backward compatibility)
+  categoryId String?
+  Category   Category? @relation("Product_Category", fields: [categoryId], references: [id])
+  sellerId   String?
+  Seller     User?     @relation("Product_Seller", fields: [sellerId], references: [id])
+  price     Float
+  oldPrice  Float?
+  image     String?
+  rating    Int        @default(0)
+  stock     Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  OrderItem OrderItem[]
+  // Back-relations for new models referencing Product
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+  cartItems     CartItem[]
+  productImages ProductImage[]
+  // Optional brand relation
+  brandId       String?
+  brand         Brand?      @relation(fields: [brandId], references: [id])
+  tierPrices    ProductTierPrice[]
+
+  @@index([category])
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([brandId])
+  @@index([createdAt])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  nameAr      String
+  nameEn      String
+  descriptionAr String?
+  descriptionEn String?
+  image       String?
+  // Optional icon key (e.g., a lucide icon name like "coffee" or custom token)
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Back-relations
+  products    Product[] @relation("Product_Category")
+}
+
+model Order {
+  id            String     @id @default(cuid())
+  userId        String
+  status        String     @default("pending")
+  currency      String     @default("SAR")
+  subtotal      Float      @default(0)
+  discount      Float      @default(0)
+  tax           Float      @default(0)
+  grandTotal    Float      @default(0)
+  paymentMethod String?
+  paymentMeta   Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  items         OrderItem[]
+  transactions  Transaction[]
+  // Invoices created from order
+  invoices      Invoice[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  nameAr    String
+  nameEn    String
+  price     Float
+  quantity  Int     @default(1)
+  oldPrice  Float?
+  Order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  userId    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(user)
+  // Optional phone for OTP/verification
+  phone     String?  @unique
+  // Verification flags
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tokens    AuthToken[]
+  // Back-relations
+  sellingProducts Product[] @relation("Product_Seller")
+  sessions Session[]
+  invoices Invoice[]
+}
+
+model Review {
+  id        String       @id @default(cuid())
+  productId String
+  userId    String
+  rating    Int
+  title     String?
+  body      String?
+  status    ReviewStatus @default(pending)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  Product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([status])
+  @@index([userId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  altEn     String?
+  altAr     String?
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([sort])
+}
+
+// Brand / Manufacturer entity
+model Brand {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  nameAr      String
+  nameEn      String
+  descriptionAr String?
+  descriptionEn String?
+  logo        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([createdAt])
+}
+
+// Tier / volume pricing linked to product
+model ProductTierPrice {
+  id            String        @id @default(cuid())
+  productId     String
+  minQty        Int
+  price         Float
+  packagingType PackagingType @default(unit)
+  noteAr        String?
+  noteEn        String?
+  createdAt     DateTime      @default(now())
+  Product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([minQty])
+  @@unique([productId, minQty, packagingType])
+}
+
+// Marketing feature highlights (e.g., why choose us)
+model MarketingFeature {
+  id        String  @id @default(cuid())
+  titleAr   String
+  titleEn   String
+  bodyAr    String?
+  bodyEn    String?
+  icon      String? // store an icon key or URL
+  sort      Int     @default(0)
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+  @@index([sort])
+}
+
+// Marketing banners (top strip / homepage / footer)
+model MarketingBanner {
+  id        String        @id @default(cuid())
+  location  BannerLocation
+  titleAr   String?
+  titleEn   String?
+  bodyAr    String?
+  bodyEn    String?
+  image     String?
+  linkUrl   String?
+  active    Boolean       @default(true)
+  sort      Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([location])
+  @@index([active])
+  @@index([sort])
+}
+
+// App store / platform links
+model AppLink {
+  id        String      @id @default(cuid())
+  platform  AppPlatform
+  url       String
+  labelAr   String?
+  labelEn   String?
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([platform])
+  @@index([active])
+}
+
+// Unified auth token store for refresh tokens, email/phone verification, and password reset
+enum AuthTokenType {
+  refresh
+  email_verify
+  phone_verify
+  password_reset
+}
+
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  type      AuthTokenType
+  // For long random tokens (stored as hash for security)
+  tokenHash String?
+  // For short numeric codes (OTP)
+  code      String?
+  // Optional metadata (e.g., channel, device)
+  meta      Json?
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+  consumedAt DateTime?
+  User      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([expiresAt])
+}
+
+// Dedicated sessions table for refresh-token sessions (rotating tokens per session)
+model Session {
+  id             String   @id @default(cuid())
+  userId         String
+  refreshHash    String   // sha256 of the current refresh token for this session
+  userAgent      String?
+  ip             String?
+  createdAt      DateTime @default(now())
+  lastUsedAt     DateTime @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  // Optional metadata (device name, platform, etc.)
+  meta           Json?
+
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+// Payment transactions ledger
+model Transaction {
+  id         String   @id @default(cuid())
+  orderId    String
+  userId     String
+  invoiceId  String?
+  // e.g., 'authorization', 'capture', 'refund'
+  kind       String
+  // provider: 'paypal', 'stc', 'bank', 'cod', etc.
+  provider   String
+  amount     Float
+  currency   String   @default("SAR")
+  status     String   @default("pending") // e.g., 'pending', 'succeeded', 'failed'
+  reference  String?  // external reference / transaction id
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  Order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Invoice    Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([provider])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Invoice entity (separate from order for accounting)
+model Invoice {
+  id            String        @id @default(cuid())
+  orderId       String
+  userId        String
+  invoiceNumber String        @unique
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  status        InvoiceStatus @default(pending)
+  currency      String        @default("SAR")
+  subtotal      Float         @default(0)
+  tax           Float         @default(0)
+  total         Float         @default(0)
+  paymentMethod String?
+  meta          Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  Order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  logs          InvoiceLog[]
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Invoice audit log
+model InvoiceLog {
+  id        String   @id @default(cuid())
+  invoiceId String
+  userId    String?
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  Invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([createdAt])
+}
