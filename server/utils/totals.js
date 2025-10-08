@@ -1,4 +1,5 @@
 // Utilities for computing financial totals of an order
+import prisma from '../db/client.js';
 
 export function computeTotals(rawItems, overrides = {}) {
   const items = Array.isArray(rawItems) ? rawItems : [];
@@ -17,6 +18,28 @@ export function computeTotals(rawItems, overrides = {}) {
   const shipping = overrides.shipping != null ? Math.max(0, Number(overrides.shipping)) : 0;
   const grandTotal = +(subtotal - discount + tax + shipping).toFixed(2);
   return { subtotal, discount, tax, shipping, grandTotal };
+}
+
+export async function computeOrderTotals(order, sellerId) {
+  const items = order.items || [];
+  const total = items.reduce((sum, item) => {
+    const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 1);
+    return sum + itemTotal;
+  }, 0);
+
+  let commissionAmount = 0;
+  if (sellerId) {
+    const seller = await prisma.seller.findUnique({ where: { id: sellerId } });
+    if (seller) {
+      commissionAmount = total * seller.commissionRate;
+    }
+  }
+
+  return {
+    ...computeTotals(items),
+    commissionAmount,
+    total,
+  };
 }
 
 export default { computeTotals };

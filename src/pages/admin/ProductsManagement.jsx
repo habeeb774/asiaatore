@@ -1,27 +1,13 @@
-import React from 'react'
-import { useStore } from '../../context/StoreContext'
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 
-const ProductsManagement = () => {
-  const { products = [] } = useStore() || {}
-
-  return (
-    <div>
-      <h2>Products Management</h2>
-      <p>View, edit or remove products. (placeholder)</p>
-      <div style={{display:'grid',gap:8}}>
-        {products.length === 0 ? (
-          <div>No products yet.</div>
-        ) : (
-          products.map(p => (
-            <div key={p.id} style={{padding:8,border:'1px solid #e5e7eb',borderRadius:6}}>
-              <strong>{p.title || p.name}</strong>
-              <div style={{fontSize:13,color:'#6b7280'}}>Price: ${p.price}</div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  )
+// Legacy placeholder: this page has been migrated under AdminDashboard (/admin?view=products)
+// Keeping a redirect here to avoid broken links if any old bookmarks exist.
+export default function ProductsManagementLegacyRedirect() {
+  const loc = useLocation();
+  if (process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.warn('[Deprecation] /admin/ProductsManagement has moved into /admin?view=products', loc);
+  }
+  return <Navigate to="/admin?view=products" replace />;
 }
-
-export default ProductsManagement

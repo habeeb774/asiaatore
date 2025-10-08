@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import prisma from '../db/client.js';
+import * as productService from '../services/productService.js';
+import fs from 'fs';
+import path from 'path';
 import { requireAdmin } from '../middleware/auth.js';
 import { audit } from '../utils/audit.js';
 // Image upload dependencies (similar pattern to categories)
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import sharp from 'sharp';
 
 const router = Router();
@@ -43,63 +43,7 @@ function productImageMiddleware(req, res, next) {
   } else { next(); }
 }
 
-function buildImageVariants(imagePath) {
-  if (!imagePath) return null;
-  // Only build predictable variant paths for local uploads under /uploads/product-images/
-  if (!imagePath.startsWith('/uploads/product-images/')) return { original: imagePath };
-  const base = imagePath.replace(/\.[^.]+$/, '');
-  // We will save variants with suffixes _thumb.webp & _md.webp at generation time
-  return {
-    original: imagePath,
-    thumb: base + '_thumb.webp',
-    medium: base + '_md.webp'
-  };
-}
-
-function mapProduct(p) {
-  const mainVariants = buildImageVariants(p.image);
-  // ProductImages (if included) may have their own variants based on naming convention
-  const gallery = Array.isArray(p.productImages) ? p.productImages.map(img => ({
-    id: img.id,
-    url: img.url,
-    variants: buildImageVariants(img.url),
-    alt: { en: img.altEn || null, ar: img.altAr || null },
-    sort: img.sort,
-    createdAt: img.createdAt
-  })).sort((a,b) => a.sort - b.sort || a.createdAt.localeCompare?.(b.createdAt) || 0) : [];
-
-  const imagesAll = [
-    ... (p.image ? [p.image] : []),
-    ... gallery.map(g => g.url)
-  ];
-  return {
-    id: p.id,
-    slug: p.slug,
-    name: { ar: p.nameAr, en: p.nameEn },
-    short: { ar: p.shortAr, en: p.shortEn },
-    category: p.category,
-    price: p.price,
-    oldPrice: p.oldPrice,
-    originalPrice: p.oldPrice, // alias for older frontend components
-    image: p.image,
-    images: imagesAll,
-    imageVariants: mainVariants,
-    gallery, // detailed objects for additional images
-    brand: p.brand ? {
-      id: p.brand.id,
-      slug: p.brand.slug,
-      name: { ar: p.brand.nameAr, en: p.brand.nameEn },
-      logo: p.brand.logo
-    } : null,
-    tierPrices: Array.isArray(p.tierPrices) ? p.tierPrices
-      .sort((a,b)=> a.minQty - b.minQty)
-      .map(t => ({ id: t.id, minQty: t.minQty, price: t.price, packagingType: t.packagingType, note: { ar: t.noteAr, en: t.noteEn } })) : [],
-    rating: p.rating,
-    stock: p.stock,
-    createdAt: p.createdAt,
-    updatedAt: p.updatedAt
-  };
-}
+const { mapProduct } = productService;
 
 // List + filters
 router.get('/', async (req, res) => {
@@ -125,8 +69,8 @@ router.get('/', async (req, res) => {
     if (pg) {
       const skip = (pg - 1) * ps;
       const [total, list] = await Promise.all([
-        prisma.product.count({ where }),
-        prisma.product.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: ps, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } })
+        productService.count(where),
+        productService.list(where, { orderBy: { createdAt: 'desc' }, skip, take: ps })
       ]);
       return res.json({
         items: list.map(mapProduct),
@@ -136,11 +80,41 @@ router.get('/', async (req, res) => {
         totalPages: Math.ceil(total / ps)
       });
     }
-  const list = await prisma.product.findMany({ where, orderBy: { createdAt: 'desc' }, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
+    const list = await productService.list(where, { orderBy: { createdAt: 'desc' } });
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
       console.error('[PRODUCTS] List failed:', e); // eslint-disable-line no-console
+    }
+    // Degraded mode: if DB is unavailable, try serving a static sample as a minimal fallback
+    if (e.message && /Database|DB|connect/i.test(e.message)) {
+      try {
+        const samplePath = path.join(process.cwd(), 'server', 'data', 'realProducts.sample.json');
+        const raw = fs.readFileSync(samplePath, 'utf8');
+        const items = JSON.parse(raw);
+        const mapped = items.map((p) => ({
+          id: p.slug,
+          slug: p.slug,
+          name: { ar: p.nameAr, en: p.nameEn },
+          short: { ar: p.shortAr, en: p.shortEn },
+          category: p.category,
+          price: p.price,
+          oldPrice: p.oldPrice ?? null,
+          originalPrice: p.oldPrice ?? null,
+          image: p.image || null,
+          images: p.image ? [p.image] : [],
+          imageVariants: p.image ? { original: p.image } : null,
+          brand: null,
+          tierPrices: [],
+          rating: 0,
+          stock: p.stock ?? 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }));
+        return res.json(mapped);
+      } catch (_) {
+        // ignore, fall-through
+      }
     }
     res.status(500).json({ error: 'FAILED_LIST', message: e.message });
   }
@@ -154,8 +128,8 @@ router.get('/_debug', async (req, res) => {
     return res.status(403).json({ error: 'DISABLED' });
   }
   try {
-    const count = await prisma.product.count();
-    const one = await prisma.product.findFirst();
+    const count = await productService.count();
+    const one = (await productService.list({}, { take: 1 }))[0] || null;
     res.json({ ok: true, count, sample: one ? mapProduct(one) : null, envFlag: process.env.DEBUG_PRODUCTS === '1' });
   } catch (e) {
     res.status(500).json({ ok:false, error: e.message, stack: process.env.NODE_ENV === 'production' ? undefined : e.stack });
@@ -163,7 +137,7 @@ router.get('/_debug', async (req, res) => {
 });
 
 router.get('/offers', async (req, res) => {
-  const list = await prisma.product.findMany({ where: { oldPrice: { not: null } }, orderBy: { createdAt: 'desc' } });
+  const list = await productService.list({ oldPrice: { not: null } }, { orderBy: { createdAt: 'desc' } });
   res.json(list.map(mapProduct));
 });
 
@@ -174,7 +148,7 @@ router.get('/catalog/summary', async (req, res) => {
     const byCategory = await prisma.product.groupBy({ by: ['category'], _count: { category: true } });
     // For each category, get a few recent products (limit 8)
     const categories = await Promise.all(byCategory.map(async c => {
-      const items = await prisma.product.findMany({ where: { category: c.category }, orderBy: { createdAt: 'desc' }, take: 8 });
+      const items = await productService.list({ category: c.category }, { orderBy: { createdAt: 'desc' }, take: 8 });
       return {
         category: c.category,
         count: c._count.category,
@@ -188,7 +162,7 @@ router.get('/catalog/summary', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const p = await prisma.product.findUnique({ where: { id: req.params.id }, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
+  const p = await productService.getById(req.params.id);
   if (!p) return res.status(404).json({ error: 'NOT_FOUND' });
   res.json(mapProduct(p));
 });
@@ -211,7 +185,7 @@ router.post('/', requireAdmin, productImageMiddleware, async (req, res) => {
         await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
       } catch {}
     }
-    const created = await prisma.product.create({ data: {
+    const created = await productService.create({
       slug: body.slug || `product-${Date.now()}`,
       nameAr: body.nameAr || body.name?.ar || 'منتج جديد',
       nameEn: body.nameEn || body.name?.en || 'New product',
@@ -223,8 +197,8 @@ router.post('/', requireAdmin, productImageMiddleware, async (req, res) => {
       image: imagePath || `https://via.placeholder.com/600x400?text=P${Date.now()}`,
       rating: body.rating != null ? Number(body.rating) : 0,
       stock: Number.isFinite(Number(body.stock)) ? Number(body.stock) : 0,
-      brand: body.brandId ? { connect: { id: body.brandId } } : undefined
-    }, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true }});
+      brand: body.brandId ? { connect: { id: body.brandId } } : undefined,
+    });
     audit({ action: 'product.create', entity: 'Product', entityId: created.id, userId: req.user?.id, meta: { slug: created.slug } });
     res.status(201).json(mapProduct(created));
   } catch (e) {
@@ -264,7 +238,7 @@ router.put('/:id', requireAdmin, productImageMiddleware, async (req, res) => {
     }
   if (body.brandId === null) data.brandId = null;
   if (body.brandId && typeof body.brandId === 'string') data.brandId = body.brandId;
-  const updated = await prisma.product.update({ where: { id: req.params.id }, data, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
+    const updated = await productService.update(req.params.id, data);
     audit({ action: 'product.update', entity: 'Product', entityId: updated.id, userId: req.user?.id, meta: { slug: updated.slug } });
     res.json(mapProduct(updated));
   } catch (e) {
@@ -277,7 +251,7 @@ router.put('/:id', requireAdmin, productImageMiddleware, async (req, res) => {
 // Delete
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
-  const removed = await prisma.product.delete({ where: { id: req.params.id }, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
+  const removed = await productService.remove(req.params.id);
     audit({ action: 'product.delete', entity: 'Product', entityId: removed.id, userId: req.user?.id, meta: { slug: removed.slug } });
     res.json({ ok: true, removed: mapProduct(removed) });
   } catch (e) {
@@ -293,7 +267,7 @@ router.post('/:id/images', requireAdmin, productImageMiddleware, async (req, res
   try {
     const productId = req.params.id;
     // Ensure product exists
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+  const product = await productService.getById(productId);
     if (!product) return res.status(404).json({ error: 'PRODUCT_NOT_FOUND' });
     if (!req.file) return res.status(400).json({ error: 'NO_FILE', message: 'Image file required' });
 
@@ -308,18 +282,9 @@ router.post('/:id/images', requireAdmin, productImageMiddleware, async (req, res
     } catch {}
 
     // Determine next sort value
-    const maxSort = await prisma.productImage.aggregate({ where: { productId }, _max: { sort: true } });
-    const nextSort = (maxSort._max.sort ?? -1) + 1;
-
-    await prisma.productImage.create({ data: {
-      productId,
-      url,
-      altEn: req.body?.altEn || null,
-      altAr: req.body?.altAr || null,
-      sort: nextSort
-    }});
-
-    const updated = await prisma.product.findUnique({ where: { id: productId }, include: { productImages: { orderBy: { sort: 'asc' } } } });
+    const nextSort = await productService.maxImageSort(productId);
+    await productService.createImage(productId, { url, altEn: req.body?.altEn || null, altAr: req.body?.altAr || null, sort: nextSort });
+    const updated = await productService.getWithImages(productId);
     audit({ action: 'product.image.add', entity: 'Product', entityId: productId, userId: req.user?.id, meta: { image: url } });
     res.status(201).json(mapProduct(updated));
   } catch (e) {
@@ -336,10 +301,10 @@ router.patch('/images/:imageId', requireAdmin, async (req, res) => {
     if (req.body.altAr !== undefined) data.altAr = req.body.altAr || null;
     if (req.body.sort !== undefined && Number.isFinite(Number(req.body.sort))) data.sort = Number(req.body.sort);
 
-    const existing = await prisma.productImage.findUnique({ where: { id: imageId } });
+  const existing = await productService.getImageById(imageId);
     if (!existing) return res.status(404).json({ error: 'IMAGE_NOT_FOUND' });
-    await prisma.productImage.update({ where: { id: imageId }, data });
-    const updatedProduct = await prisma.product.findUnique({ where: { id: existing.productId }, include: { productImages: { orderBy: { sort: 'asc' } } } });
+  await productService.updateImage(imageId, data);
+  const updatedProduct = await productService.getWithImages(existing.productId);
     audit({ action: 'product.image.update', entity: 'Product', entityId: existing.productId, userId: req.user?.id, meta: { imageId } });
     res.json(mapProduct(updatedProduct));
   } catch (e) {
@@ -351,9 +316,9 @@ router.patch('/images/:imageId', requireAdmin, async (req, res) => {
 router.delete('/images/:imageId', requireAdmin, async (req, res) => {
   try {
     const { imageId } = req.params;
-    const img = await prisma.productImage.findUnique({ where: { id: imageId } });
+  const img = await productService.getImageById(imageId);
     if (!img) return res.status(404).json({ error: 'IMAGE_NOT_FOUND' });
-    await prisma.productImage.delete({ where: { id: imageId } });
+  await productService.deleteImage(imageId);
 
     // Attempt to remove physical files (original + variants) if local
     if (img.url.startsWith('/uploads/product-images/')) {
@@ -364,7 +329,7 @@ router.delete('/images/:imageId', requireAdmin, async (req, res) => {
       }
     }
 
-    const updatedProduct = await prisma.product.findUnique({ where: { id: img.productId }, include: { productImages: { orderBy: { sort: 'asc' } } } });
+  const updatedProduct = await productService.getWithImages(img.productId);
     audit({ action: 'product.image.delete', entity: 'Product', entityId: img.productId, userId: req.user?.id, meta: { imageId } });
     res.json(mapProduct(updatedProduct));
   } catch (e) {

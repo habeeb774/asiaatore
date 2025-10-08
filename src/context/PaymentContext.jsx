@@ -1,6 +1,6 @@
 import React, { createContext, useState, useCallback, useContext } from 'react';
 import { useToast } from './ToastContext';
-import { CheckoutContext } from '../App';
+import { CheckoutContext } from '../context/CheckoutContext';
 import * as gateway from '../services/paymentGateway';
 
 export const PaymentContext = createContext(null);

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Quick DB + users diagnostic
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import prisma from '../db/client.js';
 
 function maskDbUrl(url){

@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ProductFilters from '../components/products/ProductFilters';
 import ProductGrid from '../components/products/ProductGrid';
+import ProductGridSkeleton from '../components/products/ProductGridSkeleton.jsx';
+import { Skeleton } from '../components/ui/skeleton.jsx';
 import { useProducts } from '../context/ProductsContext';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
@@ -16,6 +18,7 @@ const CatalogPage = () => {
   const pageSize = 12;
   const [filters, setFilters] = useState({ category: '', sort: 'new', min: '', max: '', rating: '', discount: false, page: 1 });
   const [cats, setCats] = useState([]);
+  const [catsLoading, setCatsLoading] = useState(true);
 
   // sync from query string on first mount
   useEffect(() => {
@@ -34,8 +37,8 @@ const CatalogPage = () => {
     let mounted = true;
     api.listCategories({ withCounts: 1 })
       .then(r => { if (mounted && r?.categories) setCats(r.categories); })
-      .catch(() => {});
-    return () => { mounted = false; };
+      .catch(() => {})
+      .finally(() => { if (mounted) setCatsLoading(false); });
   }, []);
 
   const topCats = useMemo(() => {
@@ -101,7 +104,31 @@ const CatalogPage = () => {
       <h1 className="page-title">{t('catalog')}</h1>
 
       {/* Quick picks for top categories (same style used on Home) */}
-      {topCats.length > 0 && (
+      {/* Top categories quick picks */}
+      {catsLoading ? (
+        // Skeleton for category tiles while loading
+        <section className="section-padding bg-white" aria-labelledby="cats-head">
+          <div className="container-custom">
+            <div className="home-section-head text-center">
+              <Skeleton className="h-8 w-56 mx-auto mb-2" />
+              <Skeleton className="h-4 w-80 mx-auto" />
+            </div>
+            <div className="featured-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))'}}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i}>
+                  <div className="block rounded-2xl bg-white shadow overflow-hidden p-0">
+                    <Skeleton className="w-full" style={{aspectRatio:'4/3'}} />
+                    <div style={{padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                      <Skeleton className="h-5 w-28" />
+                      <Skeleton className="h-4 w-10" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : topCats.length > 0 ? (
         <section className="section-padding bg-white" aria-labelledby="cats-head">
           <div className="container-custom">
             <div className="home-section-head text-center">
@@ -132,9 +159,9 @@ const CatalogPage = () => {
             </div>
           </div>
         </section>
-      )}
+      ) : null}
       <ProductFilters state={filters} onChange={setFilters} />
-      {loading && <p style={{opacity:.7}}>{locale==='ar'?'جاري تحميل البيانات...':'Loading products...'}</p>}
+      {loading && <ProductGridSkeleton wide />}
       {!loading && pageSlice.length === 0 && <p>{locale==='ar'?'لا توجد نتائج':'No results'}</p>}
       {!loading && pageSlice.length > 0 && <ProductGrid products={pageSlice} wide />}
       {totalPages > 1 && (

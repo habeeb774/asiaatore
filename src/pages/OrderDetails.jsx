@@ -95,8 +95,10 @@ const OrderDetails = () => {
         <div className="text-sm flex items-center gap-2">الحالة: <strong className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">{order.status}</strong> {updating && <span className="text-xs opacity-60">...جاري الحفظ</span>}</div>
   <div className="text-sm">طريقة الدفع: {order.paymentMethod || 'غير محدد'}</div>
         <div className="pt-1 flex items-center gap-2 flex-wrap">
-          <a href={`/api/orders/${order.id}/invoice?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">عرض / طباعة الفاتورة</a>
-          <a href={`/invoice/${order.id}?print=1`} className="btn-primary px-3 py-1 text-xs">طباعة فورية</a>
+          <a href={`/api/orders/${order.id}/invoice?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">عرض الفاتورة (HTML)</a>
+          <a href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">PDF A4</a>
+          <a href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">PDF حراري 80mm</a>
+          <a href={`/api/orders/${order.id}/invoice?paper=thermal80&auto=1&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-primary px-3 py-1 text-xs">طباعة حرارية الآن</a>
         </div>
         {addr && (
           <div className="mt-3 p-3 border rounded bg-white">
@@ -194,8 +196,9 @@ const OrderDetails = () => {
         </div>
         <div className="ml-auto flex items-center gap-4">
           <button className="btn-secondary" onClick={() => window.open(getInvoiceUrl(order.id) + `?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>عرض الفاتورة</button>
-          <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF</a>
-          <button className="btn-primary" onClick={() => window.open(`/invoice/${order.id}?print=1`, '_blank')}>طباعة</button>
+          <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF A4</a>
+          <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF حراري 80mm</a>
+          <button className="btn-primary" onClick={() => window.open(`/api/orders/${order.id}/invoice?paper=thermal80&auto=1&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>طباعة حرارية</button>
           <div className="text-lg font-bold">الإجمالي: {total} ر.س</div>
         </div>
       </div>

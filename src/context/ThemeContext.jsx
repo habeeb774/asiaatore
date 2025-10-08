@@ -1,30 +1,42 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 
-const ThemeContext = createContext();
+// theme: 'light' | 'dark' | 'system'
+const ThemeContext = createContext({ theme: 'system', setTheme: () => {} });
+
+const applyThemeClass = (theme) => {
+  if (typeof document === 'undefined') return;
+  const html = document.documentElement; // html element
+  html.classList.remove('theme-light', 'theme-dark');
+  if (theme === 'light') html.classList.add('theme-light');
+  if (theme === 'dark') html.classList.add('theme-dark');
+  // system => no explicit class; media query styles apply
+};
+
+const getInitialTheme = () => {
+  try {
+    const saved = localStorage.getItem('theme');
+    if (saved && ['light','dark','system'].includes(saved)) return saved;
+  } catch {}
+  return 'system';
+};
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem('site_theme') || 'light';
-    } catch (e) {
-      return 'light';
-    }
-  });
+  const [theme, setThemeState] = useState(getInitialTheme);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    try { localStorage.setItem('site_theme', theme); } catch (e) {}
-  }, [theme]);
+  useEffect(() => { applyThemeClass(theme); }, [theme]);
+  useEffect(() => { try { localStorage.setItem('theme', theme); } catch {} }, [theme]);
 
-  const toggle = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
+  // Apply once on mount to avoid FOUC
+  useEffect(() => { applyThemeClass(theme); }, []);
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggle }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  const setTheme = useCallback((next) => {
+    if (!['light','dark','system'].includes(next)) return;
+    setThemeState(next);
+  }, []);
+
+  const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = () => useContext(ThemeContext);
 
-export default ThemeContext;

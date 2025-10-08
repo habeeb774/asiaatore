@@ -6,6 +6,10 @@ async function req(path, options = {}) {
   let token = null; try { token = localStorage.getItem('my_store_token'); } catch {}
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (import.meta?.env?.DEV && path.startsWith('/admin')) {
+    headers['x-user-id'] = headers['x-user-id'] || 'dev-admin';
+    headers['x-user-role'] = headers['x-user-role'] || 'admin';
+  }
   const res = await fetch(API_BASE + path, { ...options, headers });
   let body = null;
   try { body = await res.json(); } catch { /* ignore parse */ }
@@ -20,9 +24,19 @@ async function req(path, options = {}) {
 
 export const adminApi = {
   // Users
-  listUsers: () => req('/admin/users'),
+  listUsers: (params = {}) => {
+    const qs = new URLSearchParams();
+    const page = params.page || 1;
+    const pageSize = params.pageSize || 1000; // fetch many for client-side filter
+    qs.set('page', page);
+    qs.set('pageSize', pageSize);
+    return req('/admin/users' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
+  createUser: (data) => req('/admin/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id, data) => req('/admin/users/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteUser: (id) => req('/admin/users/' + id, { method: 'DELETE' }),
+  activateUser: (id) => req(`/admin/users/${id}/activate`, { method: 'POST' }),
+  deactivateUser: (id) => req(`/admin/users/${id}/deactivate`, { method: 'POST' }),
   // Audit logs with optional filters
   listAudit: (params = {}) => {
     const qs = new URLSearchParams();

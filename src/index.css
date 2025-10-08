@@ -33,6 +33,20 @@
   background-color: var(--color-bg);
 }
 
+/* Explicit theme classes (overrides system) */
+.theme-light {
+  --color-bg: #ffffff;
+  --color-fg: #213547;
+  --color-muted: #6b7280;
+  color-scheme: light;
+}
+.theme-dark {
+  --color-bg: #0b0f19;
+  --color-fg: rgba(255, 255, 255, 0.90);
+  --color-muted: #94a3b8;
+  color-scheme: dark;
+}
+
 /* Keep anchors neutral; components will style as needed */
 a { font-weight: 500; color: inherit; text-decoration: inherit; }
 a:hover { color: inherit; }

@@ -1,4 +1,17 @@
-const API_BASE = import.meta?.env?.VITE_API_URL || '/api';
+// Determine API base: prefer Vite proxy in dev if VITE_API_URL points to the same origin (frontend port)
+const DEV = import.meta?.env?.DEV;
+const VITE_API_ENV = import.meta?.env?.VITE_API_URL;
+let API_BASE = VITE_API_ENV || '/api';
+if (DEV && VITE_API_ENV) {
+  try {
+    const u = new URL(VITE_API_ENV, (typeof window !== 'undefined' ? window.location.origin : 'http://localhost'));
+    if (typeof window !== 'undefined' && u.origin === window.location.origin) {
+      // Use relative '/api' so Vite dev proxy forwards to backend port
+      API_BASE = '/api';
+      if (import.meta?.env?.DEV) console.warn('[API] Overriding VITE_API_URL in dev to use Vite proxy (/api).');
+    }
+  } catch {}
+}
 
 async function request(path, options = {}) {
   const url = API_BASE + path;
@@ -9,8 +22,8 @@ async function request(path, options = {}) {
   const isFormData = (typeof FormData !== 'undefined') && options.body instanceof FormData;
   const headers = { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  // Dev fallback: if no token, send admin role via legacy headers to satisfy requireAdmin in dev only
-  if (!token && import.meta?.env?.DEV) {
+  // Dev helper: for /admin/* endpoints in dev, always include admin dev headers to satisfy requireAdmin
+  if (import.meta?.env?.DEV && path.startsWith('/admin')) {
     headers['x-user-id'] = headers['x-user-id'] || 'dev-admin';
     headers['x-user-role'] = headers['x-user-role'] || 'admin';
   }
@@ -175,10 +188,30 @@ export const api = {
   },
   // Admin Stats
   adminStatsOverview: () => request('/admin/stats/overview'),
+  adminStatsFinancials: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request('/admin/stats/financials' + suffix);
+  },
+  adminStatsFinancialsCsv: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request('/admin/stats/financials/export/csv' + suffix);
+  },
   // Admin Users
-  adminUsersList: () => request('/admin/users'),
+  adminUsersList: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const tail = qs.toString() ? `?${qs.toString()}` : '';
+    return request('/admin/users' + tail);
+  },
+  adminUserCreate: (data) => request('/admin/users', { method:'POST', body: JSON.stringify(data||{}) }),
   adminUserUpdate: (id, patch) => request(`/admin/users/${id}`, { method:'PATCH', body: JSON.stringify(patch||{}) }),
   adminUserDelete: (id) => request(`/admin/users/${id}`, { method:'DELETE' }),
+  adminUserActivate: (id) => request(`/admin/users/${id}/activate`, { method:'POST' }),
+  adminUserDeactivate: (id) => request(`/admin/users/${id}/deactivate`, { method:'POST' }),
   // Bank transfer review
   bankConfirm: (orderId, reference) => request('/pay/bank/confirm', { method:'POST', body: JSON.stringify({ orderId, reference }) }),
   bankReject: (orderId, reason) => request('/pay/bank/reject', { method:'POST', body: JSON.stringify({ orderId, reason }) }),

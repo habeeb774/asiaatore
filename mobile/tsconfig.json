@@ -1,0 +1,14 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "types": ["expo-router"],
+    "lib": ["ES2017", "DOM"],
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

@@ -74,7 +74,7 @@ model Product {
   categoryId String?
   Category   Category? @relation("Product_Category", fields: [categoryId], references: [id])
   sellerId   String?
-  Seller     User?     @relation("Product_Seller", fields: [sellerId], references: [id])
+  seller     Seller?   @relation(fields: [sellerId], references: [id])
   price     Float
   oldPrice  Float?
   image     String?
@@ -133,6 +133,9 @@ model Order {
   transactions  Transaction[]
   // Invoices created from order
   invoices      Invoice[]
+  sellerId      String?
+  seller        Seller?   @relation(fields: [sellerId], references: [id])
+  commissionAmount Float? // calculated per order
 
   @@index([userId])
   @@index([status])
@@ -184,11 +187,27 @@ model User {
   updatedAt DateTime @updatedAt
   tokens    AuthToken[]
   // Back-relations
-  sellingProducts Product[] @relation("Product_Seller")
-  sessions Session[]
-  invoices Invoice[]
+  sellerProfile   Seller?
+  sessions        Session[]
+  invoices        Invoice[]
 }
 
+// Seller (Vendor) model
+model Seller {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  storeName      String
+  commissionRate Float    @default(0.05) // نسبة العمولة الافتراضية 5%
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  // علاقات
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products       Product[]
+  orders         Order[]
+}
+
+// Review model for product reviews
 model Review {
   id        String       @id @default(cuid())
   productId String

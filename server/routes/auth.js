@@ -19,12 +19,37 @@ const cookieOpts = () => ({
   // maxAge will be set per write; here just defaults ignored
 });
 
+// Dev-mode login fallback (no DB) — enabled when DEBUG_LOGIN=1 or ALLOW_INVALID_DB=true
+const DEV_AUTH_ENABLED = process.env.DEBUG_LOGIN === '1' || process.env.ALLOW_INVALID_DB === 'true';
+const DEV_USERS = [
+  {
+    email: (process.env.DEV_ADMIN_EMAIL || 'admin@example.com').toLowerCase(),
+    pass: process.env.DEV_ADMIN_PASSWORD || 'admin123',
+    role: 'admin', id: 'dev-admin', name: 'Dev Admin'
+  },
+  {
+    email: (process.env.DEV_USER_EMAIL || 'user@example.com').toLowerCase(),
+    pass: process.env.DEV_USER_PASSWORD || 'user123',
+    role: 'user', id: 'dev-user', name: 'Dev User'
+  }
+];
+
 // Login route using bcrypt password comparison
 router.post('/login', async (req, res) => {
   try {
     let { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ ok:false, error: 'MISSING_CREDENTIALS' });
     email = String(email).trim().toLowerCase();
+
+    // Fast-path: allow dev login without DB when enabled
+    if (DEV_AUTH_ENABLED) {
+      const dev = DEV_USERS.find(u => u.email === email && u.pass === password);
+      if (dev) {
+        const accessToken = signAccessToken({ id: dev.id, role: dev.role, email: dev.email });
+        // In dev fallback, skip issuing refresh cookies (no DB session). Client can keep access token in memory.
+        return res.json({ ok:true, devFallback: true, accessToken, user: { id: dev.id, role: dev.role, email: dev.email, name: dev.name } });
+      }
+    }
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       if (process.env.DEBUG_LOGIN === '1') console.warn('[LOGIN] Email not found:', email);
@@ -56,11 +81,16 @@ router.post('/login', async (req, res) => {
     res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
     return res.json({ ok:true, accessToken, user: { id: user.id, role: user.role, email: user.email, name: user.name } });
   } catch (e) {
+    const msg = e?.message || '';
+    const isDbErr = /Database|ECONNREFUSED|does not exist|connect/i.test(msg) || (e?.code && /^P\d+/.test(e.code));
     if (process.env.DEBUG_LOGIN === '1' || process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
-      console.error('[LOGIN] Unexpected error', { message: e.message, stack: e.stack, code: e.code });
+      console.error('[LOGIN] Error', { message: msg, code: e.code });
     }
-    return res.status(500).json({ ok:false, error: 'LOGIN_FAILED', message: e.message, code: e.code || null });
+    if (isDbErr) {
+      return res.status(503).json({ ok:false, error: 'DB_UNAVAILABLE', devFallback: !!DEV_AUTH_ENABLED, message: 'Database offline. Use dev credentials if enabled.' });
+    }
+    return res.status(401).json({ ok:false, error: 'INVALID_LOGIN' });
   }
 });
 
@@ -104,6 +134,11 @@ router.post('/register', async (req, res) => {
 // Refresh access token using refresh token
 router.post('/refresh', async (req, res) => {
   try {
+    if (DEV_AUTH_ENABLED) {
+      // In dev fallback, we don't manage sessions; just reject refresh to force re-login or return a transient token
+      const anonToken = signAccessToken({ id: 'dev-anon', role: 'user', email: null }, { expiresIn: '10m' });
+      return res.status(200).json({ ok: true, accessToken: anonToken, devFallback: true });
+    }
     // Prefer cookie; fallback to body for backward compatibility
     const cookieRt = req.cookies?.[REFRESH_COOKIE];
     const bodyRt = (req.body || {}).refreshToken;

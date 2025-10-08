@@ -1,0 +1,26 @@
+{
+  "app": {
+    "title": "Ma Boutique",
+    "searchPlaceholder": "Rechercher des produits…",
+    "noResults": "Aucun résultat",
+    "loading": "Chargement…"
+  },
+  "nav": {
+    "home": "Accueil",
+    "products": "Produits",
+    "orders": "Commandes",
+    "admin": "Admin"
+  },
+  "admin": {
+    "customers": {
+      "title": "Clients",
+      "add": "Ajouter",
+      "name": "Nom",
+      "email": "E-mail",
+      "role": "Rôle",
+      "status": "Statut",
+      "active": "Actif",
+      "inactive": "Inactif"
+    }
+  }
+}

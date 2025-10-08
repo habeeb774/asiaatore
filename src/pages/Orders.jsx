@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
+import AdminTableSkeleton from '../components/admin/AdminTableSkeleton.jsx';
 
 const Orders = () => {
   const { orders: allOrders = [], loading, error, useRemote, refresh } = useOrders() || {};
@@ -43,7 +44,12 @@ const Orders = () => {
   const paged = React.useMemo(() => visible.slice((page-1)*pageSize, page*pageSize), [visible, page]);
   React.useEffect(() => { setPage(1); }, [statusFilter, methodFilter, from, to, query]);
 
-  if (loading) return <div className="container-custom px-4 py-12 text-center text-sm opacity-70">جار التحميل...</div>;
+  if (loading) return (
+    <div className="container-custom px-4 py-12" aria-busy="true" aria-live="polite">
+      <div className="mb-4 flex gap-2 justify-center flex-wrap text-sm opacity-70">جار التحميل...</div>
+      <AdminTableSkeleton rows={8} cols={4} />
+    </div>
+  );
   if (error) return <div className="container-custom px-4 py-12 text-center text-sm text-red-600">خطأ: {error}</div>;
   if (visible.length === 0) return (
     <div className="container-custom px-4 py-12 text-center">
@@ -67,7 +73,7 @@ const Orders = () => {
   );
 
   return (
-    <div className="container-custom px-4 py-8">
+  <div className="container-custom px-4 py-8" aria-live="polite">
   <Seo title={title} description={locale==='ar' ? `قائمة الطلبات - ${siteName}` : `Orders - ${siteName}`} />
   <h2 className="text-2xl font-bold mb-6">الطلبات ({visible.length}) { !useRemote && <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">وضع محلي</span>}</h2>
       <div className="mb-4 flex gap-2 flex-wrap items-center text-sm">

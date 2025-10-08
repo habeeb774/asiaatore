@@ -5,7 +5,7 @@ import Seo from '../../components/Seo';
 import { useSettings } from '../../context/SettingsContext';
 
 const Register = () => {
-  const { loginAs } = useAuth();
+  const { devLoginAs } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,8 +16,8 @@ const Register = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // create mock account and login
-    loginAs('user');
+  // create mock account and login
+  devLoginAs('user');
     navigate('/');
   };
 

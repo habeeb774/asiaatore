@@ -1,51 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-
-const inputStyle = {
-  padding: '.65rem .85rem',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  fontSize: '.85rem',
-  background: '#fff',
-  width: '100%',
-  outline: 'none'
-};
-const btnStyle = {
-  padding: '.7rem 1rem',
-  border: 0,
-  borderRadius: 12,
-  background: 'linear-gradient(90deg,#69be3c,#f6ad55)',
-  color: '#fff',
-  fontSize: '.8rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '.4rem'
-};
-const subtleBtn = { ...btnStyle, background: '#f1f5f9', color: '#334155' };
-const pageWrap = {
-  direction: 'rtl',
-  minHeight: 'calc(100vh - 120px)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '2rem 1rem'
-};
-const card = {
-  width: '100%',
-  maxWidth: 420,
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 20,
-  padding: '1.75rem 1.5rem 2rem',
-  boxShadow: '0 10px 40px -18px rgba(0,0,0,.15)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.25rem'
-};
+import { Button } from '../../components/ui/button.jsx';
+import { Input } from '../../components/ui/input.jsx';
+import { Label } from '../../components/ui/label.jsx';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card.jsx';
 
 const LoginPage = () => {
   const { login, devLoginAs } = useAuth() || {};
@@ -94,60 +53,72 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={pageWrap}>
-      <div style={card}>
-        <div style={{display:'flex',flexDirection:'column',gap:'.35rem'}}>
-          <h1 style={{margin:0,fontSize:'1.35rem',fontWeight:700}}>تسجيل الدخول</h1>
-          <p style={{margin:0,fontSize:'.7rem',color:'#64748b'}}>ادخل بيانات حسابك للوصول إلى المتجر ولوحة التحكم.</p>
-        </div>
-        <form onSubmit={submit} style={{display:'flex',flexDirection:'column',gap:'.9rem'}}>
-          <div style={{display:'flex',flexDirection:'column',gap:'.35rem'}}>
-            <label style={labelStyle}>البريد الإلكتروني</label>
-            <input
-              style={inputStyle}
-              type="email"
-              autoComplete="email"
-              placeholder="example@mail.com"
-              value={email}
-              onChange={e=>setEmail(e.target.value)}
-              onKeyDown={e=>{ if (e.key==='Enter') { e.currentTarget.form?.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); } }}
-            />
+    <div className="min-h-[calc(100vh-120px)] w-full grid place-items-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="space-y-1">
+            <CardTitle>تسجيل الدخول</CardTitle>
+            <p className="text-xs text-gray-500">ادخل بيانات حسابك للوصول إلى المتجر ولوحة التحكم.</p>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:'.35rem'}}>
-            <label style={labelStyle}>كلمة المرور</label>
-            <div style={{position:'relative'}}>
-              <input
-                style={{...inputStyle,paddingRight:'3.2rem'}}
-                type={showPwd? 'text':'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={e=>setPassword(e.target.value)}
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="grid gap-4">
+            <div className="grid gap-1">
+              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="example@mail.com"
+                value={email}
+                onChange={e=>setEmail(e.target.value)}
+                onKeyDown={e=>{ if (e.key==='Enter') { e.currentTarget.form?.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); } }}
               />
-              <button
-                type="button"
-                onClick={()=>setShowPwd(s=>!s)}
-                style={{position:'absolute',top:2.5,right:4,border:0,background:'transparent',cursor:'pointer',fontSize:'.6rem',color:'#475569'}}
-                title={showPwd? 'إخفاء':'إظهار'}
-              >{showPwd? 'إخفاء':'إظهار'}</button>
             </div>
+            <div className="grid gap-1">
+              <Label htmlFor="password">كلمة المرور</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPwd ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e=>setPassword(e.target.value)}
+                  className="pr-16"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-1/2 -translate-y-1/2 right-1 text-xs text-gray-600"
+                  onClick={()=>setShowPwd(s=>!s)}
+                  title={showPwd ? 'إخفاء' : 'إظهار'}
+                >{showPwd ? 'إخفاء' : 'إظهار'}</Button>
+              </div>
+            </div>
+            {error ? (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
+            ) : null}
+            <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#69be3c] to-amber-400">
+              {loading ? '...جاري الدخول' : 'دخول'}
+            </Button>
+          </form>
+          <div className="mt-4 grid gap-2">
+            <Button type="button" variant="outline" onClick={quickAdmin}>ملء بيانات الأدمن التجريبية</Button>
+            <Button type="button" variant="outline" onClick={devAssumeAdmin} className="bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100">
+              دخول فوري (محاكاة أدمن محلي)
+            </Button>
           </div>
-          {error && <div style={errBox}>{error}</div>}
-          <button type="submit" style={btnStyle} disabled={loading}>{loading? '...جاري الدخول' : 'دخول'}</button>
-        </form>
-        <div style={{display:'flex',flexDirection:'column',gap:'.5rem'}}>
-          <button type="button" onClick={quickAdmin} style={subtleBtn}>ملء بيانات الأدمن التجريبية</button>
-          <button type="button" onClick={devAssumeAdmin} style={{...subtleBtn,background:'#fff8e1',border:'1px solid #fbbf24'}}>دخول فوري (محاكاة أدمن محلي)</button>
-        </div>
-        <p style={{ fontSize: '.7rem', margin:0 }}>
-          ليس لديك حساب؟ <Link to="/register">إنشاء حساب</Link>
-        </p>
-      </div>
+          <p className="mt-3 text-[0.72rem]">
+            ليس لديك حساب؟ <Link to="/register" className="underline">إنشاء حساب</Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-const labelStyle = { fontSize: '.6rem', fontWeight: 600, color: '#334155', letterSpacing: '.5px' };
-const errBox = { background:'#fee2e2',color:'#b91c1c',padding:'.55rem .7rem',borderRadius:12,fontSize:'.65rem',lineHeight:1.5 };
+// legacy styles removed; now using Tailwind classes
 
 export default LoginPage;

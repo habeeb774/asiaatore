@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import AdminSideNav from '../../components/admin/AdminSideNav';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import api from '../../api/client';
@@ -29,6 +30,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const view = params.get('view') || 'overview';
+  const localePrefix = location.pathname.startsWith('/en') ? '/en' : (location.pathname.startsWith('/fr') ? '/fr' : '');
   // New: remote data for admin specifics
   const [remoteUsers, setRemoteUsers] = useState([]);
   const [remoteAudit, setRemoteAudit] = useState([]);
@@ -745,6 +747,11 @@ const AdminDashboard = () => {
     <div style={pageWrap}>
       <h1 style={title}>لوحة التحكم</h1>
 
+      {/* Two-column layout with sticky admin sidebar */}
+      <div style={{ display:'grid', gridTemplateColumns:'220px 1fr', gap:16 }}>
+        <AdminSideNav />
+        <div>
+
       <div style={tabsBar}>
         {{
           overview: 'نظرة عامة',
@@ -754,37 +761,15 @@ const AdminDashboard = () => {
           audit: 'السجلات',
           brands: 'العلامات',
           marketing: 'التسويق',
-          settings: 'الإعدادات'
-        }[view]}
-        <div style={{ marginInlineStart: 'auto' }}>
-          <input
-            placeholder="بحث..."
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            style={searchInput}
-          />
-          {/* Dev helper: quick admin login if 403 occurs during create */}
-          <button type="button" onClick={quickAdminLogin} style={{...ghostBtn, marginInlineStart: 6}}>تسجيل مدير (dev)</button>
-        </div>
+          settings: 'الإعدادات',
+          reviews: 'المراجعات',
+          cats: 'التصنيفات'
+        }[view] || 'لوحة التحكم'}
+        
+        
       </div>
 
-      {/* Tab buttons */}
-      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:'.75rem'}}>
-        {[
-          ['overview','نظرة عامة'],
-          ['products','المنتجات'],
-          ['users','المستخدمون'],
-          ['orders','الطلبات'],
-          ['audit','السجلات'],
-          ['reviews','المراجعات'],
-          ['brands','العلامات'],
-          ['marketing','التسويق'],
-          ['settings','الإعدادات'],
-          ['cats','التصنيفات']
-        ].map(([id,label]) => (
-          <button key={id} onClick={()=>setView(id)} style={view===id?tabBtnActive:tabBtn}>{label}</button>
-        ))}
-      </div>
+      {/* Navigation moved to AdminSideNav; in-page tab buttons removed */}
 
       {/* Overview */}
       {view === 'overview' && (
@@ -816,7 +801,8 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Products */}
+ 
+      {/* Products Management */}
       {view === 'products' && (
         <div style={sectionWrap}>
           <form onSubmit={submitProduct} style={formRow}>
@@ -1069,6 +1055,7 @@ const AdminDashboard = () => {
         </div>
       )}
 
+
       {/* Orders Management (bank review) */}
       {view === 'orders' && (
         <div style={sectionWrap}>
@@ -1208,80 +1195,7 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Users */}
-      {view === 'users' && (
-        <div style={sectionWrap}>
-          <form onSubmit={submitUser} style={formRow}>
-            <h3 style={subTitle}>{userForm.id ? 'تعديل مستخدم' : 'إضافة مستخدم'}</h3>
-            <div style={formGrid}>
-              <input
-                placeholder="الاسم"
-                required
-                value={userForm.name}
-                onChange={e => setUserForm(f => ({ ...f, name: e.target.value }))}
-              />
-              <select
-                value={userForm.role}
-                onChange={e => setUserForm(f => ({ ...f, role: e.target.value }))}
-              >
-                <option value="user">مستخدم</option>
-                <option value="seller">بائع</option>
-                <option value="admin">مدير</option>
-              </select>
-              <select
-                value={userForm.active ? '1' : '0'}
-                onChange={e => setUserForm(f => ({ ...f, active: e.target.value === '1' }))}
-              >
-                <option value="1">مفعل</option>
-                <option value="0">موقوف</option>
-              </select>
-            </div>
-            <div style={actionsRow}>
-              <button type="submit" style={primaryBtn}>
-                <Save size={16} /> {userForm.id ? 'حفظ' : 'إضافة'}
-              </button>
-              {userForm.id && (
-                <button type="button" style={ghostBtn} onClick={resetForms}>
-                  <X size={16} /> إلغاء
-                </button>
-              )}
-            </div>
-          </form>
-          <table style={table}>
-            <thead>
-              <tr>
-                <th>الاسم</th><th>الدور</th><th>الحالة</th><th>إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map(u => (
-                <tr key={u.id}>
-                  <td>{u.name || u.email}</td>
-                  <td>{u.role}</td>
-                  <td>{u.active === false ? 'موقوف' : 'مفعل'}</td>
-                  <td style={tdActions}>
-                    <button onClick={() => setUserForm(u)} style={iconBtn} title="تعديل"><Edit3 size={16} /></button>
-                    <button onClick={async () => {
-                      if (!window.confirm('حذف المستخدم؟')) return;
-                      try {
-                        if (remoteUsers.length) {
-                          await adminApi.deleteUser(u.id);
-                          setRemoteUsers(prev => prev.filter(x => x.id !== u.id));
-                        } else {
-                          deleteUser(u.id);
-                        }
-                      } catch (e) { alert('فشل الحذف: ' + e.message); }
-                    }} style={iconBtnDanger} title="حذف"><Trash2 size={16} /></button>
-                  </td>
-                </tr>
-              ))}
-              {!filteredUsers.length && (
-                <tr><td colSpan={4} style={emptyCell}>لا توجد نتائج</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Users tab removed in favor of dedicated /admin/users page. */}
 
       {/* Categories Management */}
       {view === 'cats' && (
@@ -1335,81 +1249,6 @@ const AdminDashboard = () => {
         <ReviewsModeration />
       )}
 
-      {/* Orders */}
-      {view === 'orders' && (
-        <div style={sectionWrap}>
-          <form onSubmit={submitOrder} style={formRow}>
-            <h3 style={subTitle}>{orderForm.id ? 'تعديل طلب' : 'إضافة طلب يدوي'}</h3>
-            <div style={formGrid}>
-              <input
-                placeholder="العميل"
-                required
-                value={orderForm.customer}
-                onChange={e => setOrderForm(f => ({ ...f, customer: e.target.value }))}
-              />
-              <input
-                type="number"
-                placeholder="الإجمالي"
-                required
-                value={orderForm.total}
-                onChange={e => setOrderForm(f => ({ ...f, total: e.target.value }))}
-              />
-              <input
-                type="number"
-                placeholder="عدد العناصر"
-                required
-                value={orderForm.items}
-                onChange={e => setOrderForm(f => ({ ...f, items: e.target.value }))}
-              />
-              <select
-                value={orderForm.status}
-                onChange={e => setOrderForm(f => ({ ...f, status: e.target.value }))}
-              >
-                <option value="pending">معلق</option>
-                <option value="paid">مدفوع</option>
-                <option value="shipped">تم الشحن</option>
-                <option value="completed">مكتمل</option>
-                <option value="cancelled">ملغي</option>
-              </select>
-            </div>
-            <div style={actionsRow}>
-              <button type="submit" style={primaryBtn}>
-                <Save size={16} /> {orderForm.id ? 'حفظ' : 'إضافة'}
-              </button>
-              {orderForm.id && (
-                <button type="button" style={ghostBtn} onClick={resetForms}>
-                  <X size={16} /> إلغاء
-                </button>
-              )}
-            </div>
-          </form>
-          <table style={table}>
-            <thead>
-              <tr>
-                <th>المعرف</th><th>العميل</th><th>الإجمالي</th><th>العناصر</th><th>الحالة</th><th>إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map(o => (
-                <tr key={o.id}>
-                  <td>{o.id}</td>
-                  <td>{o.customer}</td>
-                  <td>{o.total}</td>
-                  <td>{o.items}</td>
-                  <td>{o.status}</td>
-                  <td style={tdActions}>
-                    <button onClick={() => setOrderForm(o)} style={iconBtn} title="تعديل"><Edit3 size={16} /></button>
-                    <button onClick={() => deleteOrder(o.id)} style={iconBtnDanger} title="حذف"><Trash2 size={16} /></button>
-                  </td>
-                </tr>
-              ))}
-              {!filteredOrders.length && (
-                <tr><td colSpan={6} style={emptyCell}>لا توجد نتائج</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {/* Settings */}
       {view === 'settings' && (
@@ -1711,6 +1550,8 @@ const AdminDashboard = () => {
             </form>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 };

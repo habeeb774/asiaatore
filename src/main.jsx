@@ -30,13 +30,24 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
+import { ThemeProvider } from './context/ThemeContext';
+
+// In development, ensure no stale service workers/caches interfere with Vite HMR
+if (import.meta.env.DEV && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  try {
+    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+    if (window.caches && caches.keys) {
+      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+    }
+  } catch {}
+}
 
 // Component to sync <html dir/lang>
 const HtmlLanguageSync = () => {
   const { locale } = useLanguage();
   React.useEffect(() => {
     const html = document.documentElement;
-    html.setAttribute('lang', locale === 'ar' ? 'ar' : 'en');
+    html.setAttribute('lang', ['ar','en','fr'].includes(locale) ? locale : (locale === 'ar' ? 'ar' : 'en'));
     html.setAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
   }, [locale]);
   return null;
@@ -59,27 +70,29 @@ const GlobalToastEvents = () => {
 
 const Providers = ({ children }) => (
   <I18nextProvider i18n={i18n}>
-    <LanguageProvider>
-      <AuthProvider>
-        <ProductsProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <OrdersProvider>
-                <AdminProvider>
-                  <SettingsProvider>
-                    <ToastProvider>
-                    <HtmlLanguageSync />
-                    <GlobalToastEvents />
-                    {children}
-                    </ToastProvider>
-                  </SettingsProvider>
-                </AdminProvider>
-              </OrdersProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </ProductsProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <ProductsProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <OrdersProvider>
+                  <AdminProvider>
+                    <SettingsProvider>
+                      <ToastProvider>
+                        <HtmlLanguageSync />
+                        <GlobalToastEvents />
+                        {children}
+                      </ToastProvider>
+                    </SettingsProvider>
+                  </AdminProvider>
+                </OrdersProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </ProductsProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   </I18nextProvider>
 );
 

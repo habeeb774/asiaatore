@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ProductFilters from '../components/products/ProductFilters';
 import ProductGrid from '../components/products/ProductGrid';
+import ProductGridSkeleton from '../components/products/ProductGridSkeleton.jsx';
 import { useProducts, useProductPrefetch } from '../api/products';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
@@ -94,8 +95,7 @@ const Products = () => {
     return pages;
   };
 
-  if (isLoading) return <div>Loading products…</div>;
-  if (error) return <div>Failed to load products.</div>;
+  // Defer rendering until layout to show skeletons below
 
   return (
     <div className="offers-page catalog-page container-fixed py-8">
@@ -115,23 +115,10 @@ const Products = () => {
         {/* Placeholder for view toggles or quick sort in future */}
       </div>
       <ProductFilters state={filters} onChange={setFilters} />
-      {isLoading && (
-        <div className="products-grid">
-          {Array.from({ length: pageSize }).map((_, idx) => (
-            <div key={idx} className="product-card p-4 animate-pulse">
-              <div className="h-40 bg-slate-200 rounded-lg mb-3" />
-              <div className="h-3 bg-slate-200 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-slate-200 rounded w-1/2 mb-4" />
-              <div className="h-9 bg-slate-200 rounded" />
-            </div>
-          ))}
-        </div>
-      )}
-      {error && <p className="text-red-600 text-sm">{error}</p>}
-      {!isLoading && pageSlice.length === 0 && !error && <p>{locale==='ar'?'لا توجد نتائج':'No results'}</p>}
-      {!isLoading && pageSlice.length > 0 && (
-        <ProductGrid products={pageSlice} />
-      )}
+      {isLoading && <ProductGridSkeleton count={pageSize} />}
+      {error && <p className="text-red-600 text-sm">{locale==='ar'?'فشل التحميل':'Failed to load products.'}</p>}
+      {!isLoading && !error && pageSlice.length === 0 && <p>{locale==='ar'?'لا توجد نتائج':'No results'}</p>}
+      {!isLoading && !error && pageSlice.length > 0 && <ProductGrid products={pageSlice} />}
       {totalPages > 1 && (
         <div className="pagination flex gap-2 justify-center items-center mt-6">
           <button

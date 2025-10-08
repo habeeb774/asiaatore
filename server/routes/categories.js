@@ -36,6 +36,31 @@ router.get('/', async (req, res) => {
     const countMap = Object.fromEntries(countsRaw.map(r => [r.category, r._count.category]));
     res.json({ ok: true, categories: list.map(c => ({ ...mapCategory(c), productCount: countMap[c.slug] || 0 })) });
   } catch (e) {
+    // Degraded mode: fallback to derived categories from sample products if DB is down
+    try {
+      if (/Database|DB|connect/i.test(e.message || '')) {
+        const samplePath = path.join(process.cwd(), 'server', 'data', 'realProducts.sample.json');
+        const raw = fs.readFileSync(samplePath, 'utf8');
+        const sample = JSON.parse(raw);
+        const map = new Map();
+        for (const p of sample) {
+          const slug = p.category;
+          if (!map.has(slug)) map.set(slug, { slug, nameAr: slug, nameEn: slug, descriptionAr: null, descriptionEn: null, image: null, icon: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        }
+        const list = Array.from(map.values());
+        return res.json({ ok: true, categories: list.map(c => ({
+          id: c.slug,
+          slug: c.slug,
+          name: { ar: c.nameAr, en: c.nameEn },
+          description: { ar: c.descriptionAr, en: c.descriptionEn },
+          image: c.image,
+          icon: c.icon,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          productCount: undefined
+        })) });
+      }
+    } catch {}
     res.status(500).json({ ok: false, error: 'FAILED_LIST', message: e.message });
   }
 });

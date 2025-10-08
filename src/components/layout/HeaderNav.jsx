@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useCart } from '../../context/CartContext';
@@ -9,8 +10,9 @@ import { BookOpen, Package, BadgePercent, Store as StoreIcon } from 'lucide-reac
 
 const HeaderNav = () => {
   const [openPanel, setOpenPanel] = useState(null);
-  const { t, locale } = useLanguage();
-  const { user, loginAs, logout } = useAuth() || {};
+  const { t, locale, available, setLocale } = useLanguage();
+  const { theme, setTheme } = useTheme();
+  const { user, devLoginAs, logout } = useAuth() || {};
   const { pathname } = useLocation();
   const { setting } = useSettings() || {};
   const { cartItems = [], updateQuantity, removeFromCart } = useCart() || {};
@@ -77,6 +79,29 @@ const HeaderNav = () => {
         </ul>
       </nav>
   <div className="header-actions" style={{display:'flex', alignItems:'center', gap:'.45rem'}}>
+        {/* Language & Theme controls */}
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <select
+            aria-label={locale==='ar' ? 'اللغة' : 'Language'}
+            value={locale}
+            onChange={(e)=> setLocale(e.target.value)}
+            style={{fontSize:12, border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', padding:'4px 8px', borderRadius:6}}
+          >
+            {(available||['ar','en','fr']).map(l => (
+              <option key={l} value={l}>{l.toUpperCase()}</option>
+            ))}
+          </select>
+          <select
+            aria-label={locale==='ar' ? 'الوضع' : 'Theme'}
+            value={theme}
+            onChange={(e)=> setTheme(e.target.value)}
+            style={{fontSize:12, border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', padding:'4px 8px', borderRadius:6}}
+          >
+            <option value="system">{locale==='ar'?'حسب النظام':'System'}</option>
+            <option value="light">{locale==='ar'?'فاتح':'Light'}</option>
+            <option value="dark">{locale==='ar'?'داكن':'Dark'}</option>
+          </select>
+        </div>
         {user && (
           <span className="role-badge" style={{
             background: user.role==='admin'? 'linear-gradient(90deg,#69be3c,#f6ad55)' : '#e2e8f0',
@@ -92,9 +117,9 @@ const HeaderNav = () => {
         )}
         {/* Developer quick role switch — يظهر فقط في وضع التطوير */}
         <div className="role-switcher" style={{display:'flex', gap:4}}>
-          {isDev && !user && <button onClick={()=>loginAs('user')} style={qsBtn}>User</button>}
-          {isDev && !user && <button onClick={()=>loginAs('seller')} style={qsBtn}>Seller</button>}
-          {isDev && !user && <button onClick={()=>loginAs('admin')} style={qsBtnAdmin}>Admin</button>}
+          {isDev && !user && <button onClick={()=>devLoginAs('user')} style={qsBtn}>User</button>}
+          {isDev && !user && <button onClick={()=>devLoginAs('seller')} style={qsBtn}>Seller</button>}
+          {isDev && !user && <button onClick={()=>devLoginAs('admin')} style={qsBtnAdmin}>Admin</button>}
           {user && <button onClick={logout} style={qsBtn}>{locale==='ar'?'خروج':'Logout'}</button>}
         </div>
         <button

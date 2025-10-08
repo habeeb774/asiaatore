@@ -6,12 +6,13 @@ import CategoryScroller from './CategoryScroller';
 import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
+import { useTheme } from '../../context/ThemeContext';
 
 const AppLayout = ({ children }) => {
   const { locale, setLocale, available } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { pathname } = useLocation();
   const isHome = pathname === '/' || pathname === '/en';
-  const next = available.find(l => l !== locale) || 'ar';
   return (
     <ToastProvider>
       <div className="app-layout professional-layout theme-minimal">
@@ -21,12 +22,7 @@ const AppLayout = ({ children }) => {
           <HeaderNav />
           {/* Avoid duplicating categories bar on Home. Home renders CategoryChips section itself. */}
           {!isHome && <CategoryScroller />}
-          <div style={{display:'flex', gap:8, justifyContent:'flex-end', padding:'4px 12px'}}>
-            <span style={{fontSize:11, opacity:.7}}>{locale === 'ar' ? 'اللغة:' : 'Lang:'} {locale.toUpperCase()}</span>
-            <button onClick={() => setLocale(next)} style={{fontSize:12, border:'1px solid #ccc', background:'#fff', cursor:'pointer', padding:'4px 8px', borderRadius:4}}>
-              {locale === 'ar' ? 'English' : 'العربية'}
-            </button>
-          </div>
+          {/* Language & Theme selectors moved into HeaderNav */}
           {children}
         </div>
       </div>

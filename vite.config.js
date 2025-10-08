@@ -32,23 +32,36 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//],
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,ico}'],
           runtimeCaching: [
             {
-              urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+              // Only cache same-origin API GET calls; avoid opaque cross-origin and non-GET
+              urlPattern: ({ url, request }) => request.method === 'GET' && url.origin === self.location.origin && url.pathname.startsWith('/api/'),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'api-cache',
                 networkTimeoutSeconds: 8,
-                cacheableResponse: { statuses: [0, 200] }
+                cacheableResponse: { statuses: [200] },
+                // Do not cache bad responses to avoid Cache.put errors
+                fetchOptions: { credentials: 'same-origin' }
               }
             },
             {
-              urlPattern: ({ request }) => request.destination === 'image',
+              // Cache only same-origin images to prevent opaque responses
+              urlPattern: ({ url, request }) => request.destination === 'image' && url.origin === self.location.origin,
               handler: 'StaleWhileRevalidate',
-              options: { cacheName: 'image-cache', cacheableResponse: { statuses: [0, 200] } }
+              options: {
+                cacheName: 'image-cache',
+                cacheableResponse: { statuses: [200] },
+                matchOptions: { ignoreSearch: true }
+              }
             }
-          ]
+          ],
+          // Take control ASAP on updates
+          clientsClaim: true,
+          skipWaiting: true
         },
         // Disable SW in dev to avoid caching stale bundles while debugging
         devOptions: { enabled: false }

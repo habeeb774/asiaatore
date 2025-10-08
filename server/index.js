@@ -29,6 +29,8 @@ import settingsRoutes from './routes/settings.js';
 import sellersRoutes from './routes/sellers.js';
 import invoicesRoutes from './routes/invoices.js';
 import authRoutes from './routes/auth.js';
+import sellerRoutes from './routes/sellers.js';
+import adminRoutes from './routes/admin.js';
 import { attachUser } from './middleware/auth.js';
 import { registerSse, setupWebSocket } from './utils/realtimeHub.js';
 import fs from 'fs';
@@ -38,6 +40,7 @@ import { quoteShipping } from './utils/shipping.js';
 import prisma from './db/client.js';
 import typeDefs from './graphql/typeDefs.js';
 import resolvers from './graphql/resolvers.js';
+import errorHandler from './middleware/errorHandler.js';
 
 // Force override so a stale system/global DATABASE_URL (e.g. old file:./dev.db) does not block the .env value
 const dotenvResult = dotenv.config({ override: true });
@@ -507,6 +510,22 @@ app.get('/api/docs', (req, res) => {
   `);
 });
 
+// Realtime events via Server-Sent Events (SSE)
+app.get('/api/events', (req, res) => {
+  // SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+  // Register client (authorization optional; attachUser was applied globally earlier)
+  registerSse(res, req.user || null);
+  // Initial hello to confirm stream is open
+  try {
+    res.write('event: hello\n');
+    res.write(`data: ${JSON.stringify({ ok: true, t: Date.now() })}\n\n`);
+  } catch {}
+});
+
 // root informational page to avoid default 'Cannot GET /' in browser
 app.get('/', (req, res) => {
   const acceptsText = req.accepts(['html','text']) === 'text';
@@ -612,7 +631,6 @@ app.use(attachUser);
 // Apply DB guard to routes that rely on the database
 app.use(
   [
-    '/api/products',
     '/api/orders',
     '/api/admin',
     '/api/pay',
@@ -643,6 +661,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/sellers', sellersRoutes);
 app.use('/api/invoices', invoicesRoutes);
+app.use('/api/seller', sellerRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Payments
 app.use('/api/pay/paypal', paypalRoutes);
@@ -697,66 +717,8 @@ app.use('/products', (req, res) => {
   res.redirect(308, '/api/products' + (req.url || ''));
 });
 
-// Enhanced Error handler
-app.use((err, req, res, next) => {
-  // eslint-disable-next-line no-console
-  console.error('[API Error]', { id: req.id, path: req.originalUrl, err });
-
-  if (res.headersSent) return next(err);
-
-  let status = 500;
-  let code = 'INTERNAL_ERROR';
-  let message = 'Unexpected server error';
-
-  // Prisma error mapping (if Prisma is used in downstream routes)
-  if (err && typeof err === 'object') {
-    if (err.code && /^P20\d{2}$/.test(err.code)) {
-      switch (err.code) {
-        case 'P2002': // unique constraint
-          status = 409;
-          code = 'UNIQUE_CONSTRAINT';
-          message = 'Resource already exists (unique constraint).';
-          break;
-        case 'P2025': // record not found
-          status = 404;
-          code = 'NOT_FOUND';
-          message = 'Requested resource not found.';
-          break;
-        case 'P2003': // fk constraint
-          status = 400;
-          code = 'FK_CONSTRAINT';
-          message = 'Foreign key constraint failed.';
-          break;
-        default:
-          status = 400;
-          code = err.code;
-          message = 'Database operation failed.';
-      }
-    } else if (err.name === 'ValidationError') {
-      status = 400;
-      code = 'VALIDATION_ERROR';
-      message = err.message || 'Invalid input.';
-    }
-  }
-
-  const isProd = process.env.NODE_ENV === 'production';
-  const debugEnabled = process.env.DEBUG_ERRORS === 'true';
-
-  const payload = {
-    error: code,
-    message,
-    requestId: req.id
-  };
-
-  if (!isProd && debugEnabled) {
-    payload.debug = {
-      originalMessage: err.message,
-      stack: err.stack
-    };
-  }
-
-  res.status(status).json(payload);
-});
+// Centralized Error handler (kept last)
+app.use(errorHandler);
 
 // Global unhandled promise rejection logging
 process.on('unhandledRejection', (reason) => {

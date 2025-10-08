@@ -1,40 +1,41 @@
-import React from 'react'
-import cn from '../../utils/cn'
+import React from 'react';
+import { cn } from '../../lib/utils.js';
 
-// Props: variant (primary|secondary|ghost|danger), size (sm|md|lg), full, icon, loading
-export default function Button({
-  as: Comp = 'button',
-  variant = 'primary',
-  size = 'md',
-  full = false,
+const variants = {
+  default: 'bg-primary text-white hover:opacity-95',
+  outline: 'border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900',
+  ghost: 'hover:bg-gray-100 dark:hover:bg-gray-900',
+  destructive: 'bg-danger text-white hover:opacity-95',
+  secondary: 'bg-secondary text-white hover:opacity-95'
+};
+
+const sizes = {
+  sm: 'h-8 px-3 text-sm',
+  md: 'h-9 px-4',
+  lg: 'h-10 px-5 text-base',
+  icon: 'h-9 w-9 p-0'
+};
+
+export const Button = React.forwardRef(function Button({
   className,
-  children,
-  loading = false,
-  disabled,
-  ...rest
-}) {
-  const base = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-ring disabled:opacity-60 disabled:cursor-not-allowed'
-  const variants = {
-    primary: 'bg-primary text-white hover:brightness-110 shadow-sm',
-    secondary: 'bg-secondary text-white hover:brightness-110 shadow-sm',
-    ghost: 'bg-transparent text-primary hover:bg-primary/10',
-    danger: 'bg-danger text-white hover:brightness-110 shadow-sm'
-  }
-  const sizes = {
-    sm: 'h-8 px-3 text-sm',
-    md: 'h-10 px-4 text-sm',
-    lg: 'h-12 px-6 text-base'
-  }
+  variant = 'default',
+  size = 'md',
+  asChild,
+  ...props
+}, ref) {
+  const Comp = asChild ? 'span' : 'button';
   return (
     <Comp
-      className={cn(base, variants[variant] || variants.primary, sizes[size] || sizes.md, full && 'w-full', className)}
-      disabled={disabled || loading}
-      {...rest}
-    >
-      {loading && (
-        <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+      ref={ref}
+      className={cn(
+        'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background',
+        variants[variant] || variants.default,
+        sizes[size] || sizes.md,
+        className
       )}
-      {children}
-    </Comp>
-  )
-}
+      {...props}
+    />
+  );
+});
+
+export default Button;

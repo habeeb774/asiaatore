@@ -27,6 +27,96 @@ router.get('/overview', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/stats/financials
+// Query: days=30 (default), from, to (ISO dates), tz offset not supported (uses server timezone)
+// Returns daily series: date (YYYY-MM-DD), orders, revenue, aov, activeCustomersDaily
+// And aggregates: totalRevenue, totalOrders, overallAov, activeCustomersWindow
+router.get('/financials', requireAdmin, async (req, res) => {
+  try {
+    const maxDays = 365;
+    const days = Math.min(maxDays, Math.max(1, parseInt(req.query.days || '30', 10)));
+    const now = new Date();
+    // Date range: [start, end)
+    const end = req.query.to ? new Date(req.query.to) : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const start = req.query.from ? new Date(req.query.from) : new Date(end); start.setDate(start.getDate() - days);
+
+    // Fetch orders for the window
+    const list = await prisma.order.findMany({
+      where: { createdAt: { gte: start, lt: end } },
+      select: { id: true, userId: true, createdAt: true, grandTotal: true }
+    });
+
+    // Build day buckets
+    const dayKey = (d) => {
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      return dd.toISOString().slice(0, 10);
+    };
+    // Initialize series over the period to ensure continuous dates
+    const seriesMap = new Map();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i);
+      const key = dayKey(d);
+      seriesMap.set(key, { date: key, orders: 0, revenue: 0, aov: 0, activeCustomersDaily: 0, _users: new Set() });
+    }
+
+    // Aggregate
+    for (const o of list) {
+      const key = dayKey(o.createdAt);
+      let bucket = seriesMap.get(key);
+      if (!bucket) {
+        bucket = { date: key, orders: 0, revenue: 0, aov: 0, activeCustomersDaily: 0, _users: new Set() };
+        seriesMap.set(key, bucket);
+      }
+      bucket.orders += 1;
+      bucket.revenue += Number(o.grandTotal || 0);
+      if (o.userId) bucket._users.add(String(o.userId));
+    }
+    // Finalize buckets and totals
+    let totalRevenue = 0, totalOrders = 0;
+    const windowUsers = new Set();
+    const daily = Array.from(seriesMap.values()).map(b => {
+      b.activeCustomersDaily = b._users.size;
+      b.aov = b.orders ? (b.revenue / b.orders) : 0;
+      totalRevenue += b.revenue;
+      totalOrders += b.orders;
+      b._users.forEach(u => windowUsers.add(u));
+      delete b._users;
+      return b;
+    });
+    const overallAov = totalOrders ? (totalRevenue / totalOrders) : 0;
+    const activeCustomersWindow = windowUsers.size;
+
+    res.json({ ok: true, range: { from: start.toISOString(), to: end.toISOString(), days }, totals: { totalRevenue, totalOrders, overallAov, activeCustomersWindow }, daily });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'FAILED_FINANCIALS', message: e.message });
+  }
+});
+
+// Export financials CSV
+router.get('/financials/export/csv', requireAdmin, async (req, res) => {
+  try {
+    const maxDays = 365;
+    const days = Math.min(maxDays, Math.max(1, parseInt(req.query.days || '30', 10)));
+    const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl);
+    // Reuse the in-process handler logic by calling Prisma directly again to avoid duplicating too much
+    const now = new Date();
+    const end = req.query.to ? new Date(req.query.to) : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const start = req.query.from ? new Date(req.query.from) : new Date(end); start.setDate(start.getDate() - days);
+    const list = await prisma.order.findMany({ where: { createdAt: { gte: start, lt: end } }, select: { id: true, userId: true, createdAt: true, grandTotal: true } });
+    const dayKey = (d) => { const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return dd.toISOString().slice(0,10); };
+    const seriesMap = new Map();
+    for (let i = 0; i < days; i++) { const d = new Date(start); d.setDate(d.getDate() + i); const key = dayKey(d); seriesMap.set(key, { date: key, orders: 0, revenue: 0, _users: new Set() }); }
+    for (const o of list) { const key = dayKey(o.createdAt); const b = seriesMap.get(key) || { date: key, orders: 0, revenue: 0, _users: new Set() }; b.orders++; b.revenue += Number(o.grandTotal||0); if (o.userId) b._users.add(String(o.userId)); seriesMap.set(key, b); }
+    const rows = Array.from(seriesMap.values()).map(b => ({ date: b.date, orders: b.orders, revenue: b.revenue, aov: b.orders ? b.revenue/b.orders : 0, activeCustomersDaily: b._users.size }));
+    const csv = stringify(rows, { header: true });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="financials_${days}d.csv"`);
+    res.send(csv);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'EXPORT_FINANCIALS_FAILED', message: e.message });
+  }
+});
+
 // Export orders CSV with filters (status, paymentMethod, from, to)
 router.get('/orders/export/csv', requireAdmin, async (req, res) => {
   try {

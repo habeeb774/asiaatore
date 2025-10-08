@@ -8,6 +8,7 @@ import { useProducts } from '../context/ProductsContext';
 import { useLanguage } from '../context/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import api from '../api/client';
+import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.jsx';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -47,7 +48,11 @@ const ProductDetails = () => {
   }, [product, tierPrices, quantity]);
   const totalPrice = (effectiveUnitPrice * quantity).toFixed(2);
 
-  if (loading) return <div className="container-custom px-4 py-8">جاري التحميل...</div>;
+  if (loading) return (
+    <div className="container-custom px-4 py-8" aria-busy="true" aria-live="polite">
+      <ProductDetailSkeleton />
+    </div>
+  );
   if (error) return <div className="container-custom px-4 py-8 text-red-600 text-sm">خطأ: {error}</div>;
   if (!product) return <div className="container-custom px-4 py-8">المنتج غير موجود</div>;
 

@@ -58,20 +58,34 @@ export function initCounters() {
   });
 }
 
+// Global flags and helpers to avoid duplicate handlers and leaks
+let __home_reinitBound = false;
+let __home_resizeBound = false;
+let __home_resizeTimer = null;
+
+function updateCarouselElement(carousel) {
+  const track = qs('.carousel__track', carousel);
+  const items = qsa('.carousel__item', track);
+  if (!track || items.length === 0) return;
+  const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 0;
+  const w = (items[0]?.getBoundingClientRect()?.width || 0) + gap;
+  const idx = Math.max(0, Math.min(parseInt(carousel.dataset.carouselIndex || '0', 10) || 0, items.length - 1));
+  track.style.transform = `translateX(${-idx * w}px)`;
+}
+
+function updateAllCarousels() {
+  qsa('.carousel[data-carousel-init="1"]').forEach(updateCarouselElement);
+}
+
 export function initCarousel(rootSel = '.carousel') {
   qsa(rootSel).forEach(carousel => {
-    if (carousel.dataset.carouselInit) return;
-    carousel.dataset.carouselInit = '1';
+    if (carousel.dataset.carouselInit === '1') return;
     const track = qs('.carousel__track', carousel);
     const items = qsa('.carousel__item', track);
     if (!track || items.length === 0) return;
 
-    let index = 0;
-    function update() {
-      const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 0;
-      const w = items[0].getBoundingClientRect().width + gap;
-      track.style.transform = `translateX(${-index * w}px)`;
-    }
+    carousel.dataset.carouselInit = '1';
+    carousel.dataset.carouselIndex = carousel.dataset.carouselIndex || '0';
 
     const nav = document.createElement('div');
     nav.className = 'carousel__nav';
@@ -88,15 +102,30 @@ export function initCarousel(rootSel = '.carousel') {
     nav.append(btnPrev, btnNext);
     carousel.appendChild(nav);
 
-    function clamp() {
-      index = Math.max(0, Math.min(index, items.length - 1));
-    }
-    btnPrev.addEventListener('click', () => { index--; clamp(); update(); });
-    btnNext.addEventListener('click', () => { index++; clamp(); update(); });
+    function clamp(idx) { return Math.max(0, Math.min(idx, items.length - 1)); }
+    btnPrev.addEventListener('click', () => {
+      const cur = parseInt(carousel.dataset.carouselIndex || '0', 10) || 0;
+      carousel.dataset.carouselIndex = String(clamp(cur - 1));
+      updateCarouselElement(carousel);
+    });
+    btnNext.addEventListener('click', () => {
+      const cur = parseInt(carousel.dataset.carouselIndex || '0', 10) || 0;
+      carousel.dataset.carouselIndex = String(clamp(cur + 1));
+      updateCarouselElement(carousel);
+    });
 
-    window.addEventListener('resize', () => update());
-    update();
+    // Initial position
+    updateCarouselElement(carousel);
   });
+
+  // Single debounced resize handler for all carousels
+  if (!__home_resizeBound) {
+    window.addEventListener('resize', () => {
+      if (__home_resizeTimer) cancelAnimationFrame(__home_resizeTimer);
+      __home_resizeTimer = requestAnimationFrame(() => updateAllCarousels());
+    }, { passive: true });
+    __home_resizeBound = true;
+  }
 }
 
 export function initProductCardActions() {
@@ -146,14 +175,17 @@ export function bootHome() {
   initCounters();
   initCarousel();
   initProductCardActions();
-  // إعادة تهيئة عند التنقل SPA (إن وجد):
-  document.addEventListener('reinit:home', () => {
-    initLazyImages();
-    initRevealOnScroll();
-    initCounters();
-    initCarousel();
-    initProductCardActions();
-  });
+  // إعادة تهيئة عند التنقل SPA (إن وجد): اربط مرة واحدة فقط لتفادي التكرار
+  if (!__home_reinitBound) {
+    document.addEventListener('reinit:home', () => {
+      initLazyImages();
+      initRevealOnScroll();
+      initCounters();
+      initCarousel();
+      initProductCardActions();
+    });
+    __home_reinitBound = true;
+  }
 }
 
 // تشغيل تلقائي إذا كانت الصفحة الرئيسية مسجّلة عبر data-home-root

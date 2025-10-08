@@ -5,7 +5,7 @@ import Seo from '../../components/Seo';
 import { useSettings } from '../../context/SettingsContext';
 
 const Login = () => {
-  const { loginAs } = useAuth();
+  const { devLoginAs } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -15,8 +15,8 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Use mock login for now
-    loginAs('user');
+  // Use mock login for now
+  devLoginAs('user');
     navigate('/');
   };
 
@@ -42,7 +42,7 @@ const Login = () => {
 
         <div className="my-4 text-center">أو سجل عبر</div>
         <div className="flex gap-2">
-          <button className="btn-secondary flex-1" onClick={()=>{ loginAs('user'); navigate('/') }}>تسجيل سريع</button>
+          <button className="btn-secondary flex-1" onClick={()=>{ devLoginAs('user'); navigate('/') }}>تسجيل سريع</button>
           <button className="btn-secondary flex-1" onClick={()=>window.alert('OAuth not wired yet')}>Google</button>
         </div>
       </div>

@@ -11,30 +11,35 @@ export function attachUser(req, _res, next) {
     const payload = verifyToken(token);
     if (payload) {
       req.user = { id: payload.id, role: payload.role || 'user', email: payload.email };
-      return next();
+      // Do not early-return: allow dev headers to adjust role in non-production if configured
     }
   }
   // Support token via query string for GET requests (restricted):
-  // - Only for invoice endpoints
+  // - Only for invoice endpoints and SSE events
   // - Enabled by ALLOW_QUERY_TOKEN=true or any non-production NODE_ENV
   if (req.method === 'GET' && req.query && req.query.token) {
     const allowQueryToken = process.env.ALLOW_QUERY_TOKEN === 'true' || process.env.NODE_ENV !== 'production';
     const p = req.originalUrl || req.url || '';
     const isInvoiceEndpoint = /^\/api\/orders\/[^/]+\/(invoice(?:\.pdf)?)\b/.test(p);
-    if (allowQueryToken && isInvoiceEndpoint) {
+    const isSseEvents = /^\/api\/events\b/.test(p);
+    if (allowQueryToken && (isInvoiceEndpoint || isSseEvents)) {
       const payload = verifyToken(String(req.query.token));
       if (payload) {
         req.user = { id: payload.id, role: payload.role || 'user', email: payload.email };
-        return next();
+        // Do not early-return: allow dev headers to adjust in non-production
       }
     }
   }
   // Fallback legacy headers (dev mode only unless explicitly allowed)
   const allowDevHeaders = process.env.ALLOW_DEV_HEADERS === 'true' || process.env.NODE_ENV !== 'production';
   if (allowDevHeaders) {
+    const hdrId = req.headers['x-user-id'];
+    const hdrRole = req.headers['x-user-role'];
+    // Merge on top of any existing user (from token) to allow temporary role elevation in dev
     req.user = {
-      id: req.headers['x-user-id'] || 'guest',
-      role: req.headers['x-user-role'] || 'guest'
+      id: hdrId || req.user?.id || 'guest',
+      role: hdrRole || req.user?.role || 'guest',
+      email: req.user?.email || null
     };
   }
   next();

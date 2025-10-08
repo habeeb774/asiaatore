@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOrders } from '../../context/OrdersContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
+import { Skeleton } from '../../components/ui/skeleton.jsx';
 
 const statusOptions = ['pending','paid','shipped','completed','cancelled'];
 
@@ -56,7 +57,7 @@ const OrderCard = ({ o, updateOrderStatus, deleteOrder }) => (
 
 const OrdersManagement = () => {
   const { user } = useAuth() || {};
-  const { orders = [], updateOrderStatus } = useOrders() || {};
+  const { orders = [], updateOrderStatus, loading } = useOrders() || {};
   const { deleteOrder } = useAdmin() || {};
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -76,7 +77,7 @@ const OrdersManagement = () => {
   useEffect(()=> { if (page > pageCount) setPage(pageCount); }, [pageCount, page]);
 
   return (
-    <div style={{direction:'rtl'}}>
+    <div style={{direction:'rtl'}} aria-busy={loading ? 'true' : 'false'} aria-live="polite">
       <h2 style={{margin:'0 0 1rem'}}>إدارة الطلبات</h2>
       {!user || user.role !== 'admin' ? (
         <div style={{padding:'1rem',background:'#fef2f2',color:'#b91c1c',borderRadius:10,fontSize:'.8rem'}}>
@@ -101,19 +102,44 @@ const OrdersManagement = () => {
             />
             <div style={{fontSize:12,alignSelf:'center'}}>عدد: {filtered.length}</div>
           </div>
-          <div style={{display:'grid',gap:10}}>
-            {filtered.length === 0
-              ? <div style={{fontSize:13,color:'#64748b'}}>لا توجد طلبات مطابقة.</div>
-              : paged.map(o => (
-                  <OrderCard
-                    key={o.id}
-                    o={o}
-                    updateOrderStatus={updateOrderStatus}
-                    deleteOrder={deleteOrder}
-                  />
-                ))
-            }
-          </div>
+          {loading ? (
+            <div style={{display:'grid',gap:10}}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ padding:'10px 12px', border:'1px solid #e5e7eb', borderRadius:12, background:'#fff' }}>
+                  <div style={{ display:'grid', gap:8 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <div style={{ display:'flex', gap:12 }}>
+                      <Skeleton className="h-3 w-40" />
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <Skeleton className="h-7 w-24" />
+                      <Skeleton className="h-7 w-16" />
+                      <Skeleton className="h-7 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{display:'grid',gap:10}}>
+              {filtered.length === 0
+                ? <div style={{fontSize:13,color:'#64748b'}}>لا توجد طلبات مطابقة.</div>
+                : paged.map(o => (
+                    <OrderCard
+                      key={o.id}
+                      o={o}
+                      updateOrderStatus={updateOrderStatus}
+                      deleteOrder={deleteOrder}
+                    />
+                  ))
+              }
+            </div>
+          )}
           {pageCount > 1 && (
             <div style={{display:'flex',gap:6,marginTop:16,flexWrap:'wrap'}}>
               <button

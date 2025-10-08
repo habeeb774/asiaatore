@@ -20,7 +20,7 @@ import { FeaturesContext } from '../App'; // استخدام السياق الج�
 import { useLanguage } from '../context/LanguageContext';
 import { localizeName } from '../utils/locale';
 import { useOrders } from '../context/OrdersContext'; // لإحضار قائمة الطلبات
-import { CheckoutContext } from '../App';
+import { CheckoutContext } from '../context/CheckoutContext';
 import { useSettings } from '../context/SettingsContext';
 
 const smallChipStyle = {
@@ -45,7 +45,7 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
   const cartContext = useCart() || {};
   const { locale } = useLanguage ? useLanguage() : { locale: 'ar' };
   const wishlistContext = useWishlist() || {};
-  const { user, loginAs, logout } = useAuth() || {};
+  const { user, devLoginAs, logout } = useAuth() || {};
   const isDev = !!(import.meta && import.meta.env && import.meta.env.DEV);
   const { theme, toggle } = useTheme() || { theme: 'light', toggle: () => {} };
   const cartItems = cartContext.cartItems || [];
@@ -76,19 +76,32 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
   const qtyBtnStyle = {background:'#e2e8f0',border:0,borderRadius:6,width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:'.7rem',fontWeight:600,color:'#0f172a'};
 
   useEffect(() => {
-    const onScroll = () => {
+    // rAF-throttled scroll handler + passive listener لتقليل الضغط أثناء التمرير
+    let ticking = false;
+    const handle = () => {
       const y = window.scrollY || 0;
-      setIsScrolled(y > 50);
+      // تحديث حالة scrolled فقط عند تغير القيمة لتفادي إعادة التصيير غير اللازمة
+      const scrolled = y > 50;
+      setIsScrolled(prev => (prev !== scrolled ? scrolled : prev));
+
       const last = lastScrollYRef.current;
       const delta = Math.abs(y - last);
       // إخفاء الشريط عند التمرير لأسفل بسرعة معقولة وإظهاره عند التمرير للأعلى
       if (delta > 6) {
         const goingDown = y > last;
-        setIsHiddenOnScroll(goingDown && y > 120);
+        const nextHidden = goingDown && y > 120;
+        setIsHiddenOnScroll(prev => (prev !== nextHidden ? nextHidden : prev));
         lastScrollYRef.current = y;
       }
+      ticking = false;
     };
-    window.addEventListener('scroll', onScroll);
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(handle);
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -575,9 +588,9 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
             <div className="auth-inline action-block">
               {!user ? (
                 <div className="auth-buttons">
-                  {isDev && <button className="text-sm text-gray-600" onClick={() => loginAs('user')}>مستخدم</button>}
-                  {isDev && <button className="text-sm text-gray-600" onClick={() => loginAs('seller')}>بائع</button>}
-                  {isDev && <button className="text-sm text-gray-600" onClick={() => loginAs('admin')}>مدير</button>}
+                  {isDev && <button className="text-sm text-gray-600" onClick={() => devLoginAs('user')}>مستخدم</button>}
+                  {isDev && <button className="text-sm text-gray-600" onClick={() => devLoginAs('seller')}>بائع</button>}
+                  {isDev && <button className="text-sm text-gray-600" onClick={() => devLoginAs('admin')}>مدير</button>}
                 </div>  
               ) : (
                 <div className="auth-user">
@@ -773,9 +786,9 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
               <div className="auth-quick">
                 <p className="muted">سجّل دخولاً سريعاً لأغراض الاختبار:</p>
                 <div className="quick-buttons">
-                  {isDev && <button onClick={() => { loginAs('user'); closePanels(); }} className="btn-chip">مستخدم</button>}
-                  {isDev && <button onClick={() => { loginAs('seller'); closePanels(); }} className="btn-chip">بائع</button>}
-                  {isDev && <button onClick={() => { loginAs('admin'); closePanels(); }} className="btn-chip">مدير</button>}
+                  {isDev && <button onClick={() => { devLoginAs('user'); closePanels(); }} className="btn-chip">مستخدم</button>}
+                  {isDev && <button onClick={() => { devLoginAs('seller'); closePanels(); }} className="btn-chip">بائع</button>}
+                  {isDev && <button onClick={() => { devLoginAs('admin'); closePanels(); }} className="btn-chip">مدير</button>}
                 </div>
               </div>
             ) : (

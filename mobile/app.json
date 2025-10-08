@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "My Store",
+    "slug": "my-store-mobile",
+    "version": "0.1.0",
+    "scheme": "mystore",
+    "orientation": "portrait",
+    "plugins": [],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    }
+  }
+}

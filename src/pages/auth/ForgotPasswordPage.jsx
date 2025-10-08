@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { api } from '../../api/client';
 import { Link } from 'react-router-dom';
+import { Button } from '../../components/ui/button.jsx';
+import { Input } from '../../components/ui/input.jsx';
+import { Label } from '../../components/ui/label.jsx';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card.jsx';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -23,26 +27,29 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div style={{direction:'rtl',display:'flex',justifyContent:'center',padding:'2rem'}}>
-      <form onSubmit={submit} style={form}>
-        <h1 style={h1}>استرجاع كلمة المرور</h1>
-        <p style={p}>أدخل بريدك لإرسال رابط/رمز إعادة التعيين (محاكاة).</p>
-        <input style={inp} type="email" placeholder="example@mail.com" value={email} onChange={e=>setEmail(e.target.value)} />
-        {error && <div style={err}>{error}</div>}
-        {sent && <div style={ok}>تم إرسال رابط (وهمي) إن كان البريد مسجلاً.</div>}
-        <button type="submit" style={btn} disabled={loading}>{loading? '...إرسال' : 'إرسال رابط'}</button>
-        <p style={{fontSize:'.65rem',margin:'0.75rem 0 0'}}>تذكرت؟ <Link to="/login">عودة لتسجيل الدخول</Link></p>
-      </form>
+    <div className="min-h-[calc(100vh-120px)] w-full grid place-items-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>استرجاع كلمة المرور</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="grid gap-3">
+            <p className="text-xs text-gray-500">أدخل بريدك لإرسال رابط/رمز إعادة التعيين (محاكاة).</p>
+            <div className="grid gap-1">
+              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Input id="email" type="email" placeholder="example@mail.com" value={email} onChange={e=>setEmail(e.target.value)} />
+            </div>
+            {error ? (<div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>) : null}
+            {sent ? (<div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">تم إرسال رابط (وهمي) إن كان البريد مسجلاً.</div>) : null}
+            <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#69be3c] to-amber-400">{loading? '...إرسال' : 'إرسال رابط'}</Button>
+            <p className="mt-1 text-[0.72rem]">تذكرت؟ <Link to="/login" className="underline">عودة لتسجيل الدخول</Link></p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-const form = {background:'#fff',padding:'1.5rem 1.4rem 2rem',border:'1px solid #e2e8f0',borderRadius:18,display:'flex',flexDirection:'column',gap:'.65rem',width:'100%',maxWidth:420,boxShadow:'0 8px 34px -12px rgba(0,0,0,.15)'};
-const h1 = {margin:0,fontSize:'1.25rem',fontWeight:700};
-const p = {margin:0,fontSize:'.65rem',color:'#475569'};
-const inp = {padding:'.65rem .85rem',border:'1px solid #e2e8f0',borderRadius:12,fontSize:'.8rem'};
-const btn = {padding:'.7rem 1rem',border:0,borderRadius:12,background:'linear-gradient(90deg,#69be3c,#f6ad55)',color:'#fff',fontSize:'.8rem',fontWeight:600,cursor:'pointer'};
-const err = {background:'#fee2e2',color:'#b91c1c',padding:'.5rem .7rem',borderRadius:12,fontSize:'.65rem',lineHeight:1.5};
-const ok = {background:'#dcfce7',color:'#166534',padding:'.5rem .7rem',borderRadius:12,fontSize:'.65rem',lineHeight:1.5};
+// legacy inline styles removed; using Tailwind classes
 
 export default ForgotPasswordPage;

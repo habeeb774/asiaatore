@@ -7,6 +7,7 @@ import { localizeName, localizeField } from '../utils/locale';
 import { useCart } from '../context/CartContext';
 import ProductReviews from '../components/ProductReviews';
 import { useSettings } from '../context/SettingsContext';
+import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.jsx';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -22,6 +23,7 @@ const ProductDetailPage = () => {
     price: 99,
     stock: 5
   }), [id, locale]);
+  const isLoading = !product; // context may hydrate after mount
   const p = product || fallback;
   const displayName = localizeName(p, locale);
   const descriptionText = localizeField(p, 'short', locale);
@@ -46,19 +48,25 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <div className="product-detail">
+    <div className="product-detail" aria-busy={isLoading ? 'true' : 'false'} aria-live="polite">
       <Seo title={title} description={description} image={p.image} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(productLd)}} />
-      <h1>{displayName}</h1>
-      <p>{descriptionText}</p>
-      <img src={p.image} alt={displayName} style={{maxWidth:'100%', borderRadius:8}} />
-      <div style={{marginTop:16, display:'flex', gap:12, flexWrap:'wrap', alignItems:'center'}}>
-        <button className="btn-primary" disabled={p.stock<=0} onClick={()=>addToCart(p)}>
-          {p.stock<=0 ? (locale==='ar'?'غير متوفر':'Out of stock') : (locale==='ar'?'أضف للسلة':'Add to cart')}
-        </button>
-        <span style={{fontSize:'.85rem', color:'#444'}}>{locale==='ar'?'المخزون':'Stock'}: {p.stock}</span>
-      </div>
-        <ProductReviews productId={p.id} />
+      {isLoading ? (
+        <ProductDetailSkeleton />
+      ) : (
+        <>
+          <h1>{displayName}</h1>
+          <p>{descriptionText}</p>
+          <img src={p.image} alt={displayName} style={{maxWidth:'100%', borderRadius:8}} />
+          <div style={{marginTop:16, display:'flex', gap:12, flexWrap:'wrap', alignItems:'center'}}>
+            <button className="btn-primary" disabled={p.stock<=0} onClick={()=>addToCart(p)}>
+              {p.stock<=0 ? (locale==='ar'?'غير متوفر':'Out of stock') : (locale==='ar'?'أضف للسلة':'Add to cart')}
+            </button>
+            <span style={{fontSize:'.85rem', color:'#444'}}>{locale==='ar'?'المخزون':'Stock'}: {p.stock}</span>
+          </div>
+          <ProductReviews productId={p.id} />
+        </>
+      )}
     </div>
   );
 };

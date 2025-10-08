@@ -60,6 +60,7 @@ const Analytics = () => {
   });
   const [trendRevenue, setTrendRevenue] = React.useState([]);
   const [trendOrders, setTrendOrders] = React.useState([]);
+  const [fin, setFin] = React.useState(null);
 
   const onPreset = (k) => {
     setRange(k);
@@ -148,6 +149,10 @@ const Analytics = () => {
     try {
       const orders = await fetchOrdersInRange();
       compute(orders);
+      // also fetch financials server-side (faster aggregated)
+      const days = Math.max(1, Math.round((new Date(to) - new Date(from))/86400000)+1);
+      const f = await api.adminStatsFinancials({ from, to, days });
+      setFin(f);
     } catch (e) {
       setError(e.message || 'Failed to load analytics');
     } finally {
@@ -264,6 +269,36 @@ const Analytics = () => {
           <span>إجمالي الإيراد: {trendRevenue.reduce((a,b)=>a+b,0).toFixed(2)} SAR</span>
           <span>إجمالي الطلبات: {trendOrders.reduce((a,b)=>a+b,0)}</span>
         </div>
+      </div>
+
+      {/* Financials (server aggregated) */}
+      <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <h3 style={{ margin:0 }}>التقارير المالية (تجميعي)</h3>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => downloadExport('csv')} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تصدير CSV (طلبات)</button>
+          </div>
+        </div>
+        {loading ? <div className="muted">جاري التحميل…</div> : (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:16, marginTop:12 }}>
+            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
+              <div className="muted">إجمالي الإيراد</div>
+              <div style={{ fontWeight:700, fontSize:22 }}>{(fin?.totals?.totalRevenue||0).toFixed(2)} SAR</div>
+            </div>
+            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
+              <div className="muted">إجمالي الطلبات</div>
+              <div style={{ fontWeight:700, fontSize:22 }}>{fin?.totals?.totalOrders||0}</div>
+            </div>
+            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
+              <div className="muted">متوسط قيمة الطلب</div>
+              <div style={{ fontWeight:700, fontSize:22 }}>{(fin?.totals?.overallAov||0).toFixed(2)} SAR</div>
+            </div>
+            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
+              <div className="muted">العملاء النشطون (الفترة)</div>
+              <div style={{ fontWeight:700, fontSize:22 }}>{fin?.totals?.activeCustomersWindow||0}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Distributions */}
