@@ -34,6 +34,17 @@ Full‑stack demo store: React (Vite) frontend + Express API + Prisma (MySQL).
 
 Admin demo user (if seeded): `admin@example.com / Admin123!`
 
+
+## Key Features
+
+- **E-commerce**: Full product catalog, cart, checkout, orders, invoices
+- **Multi-payment**: PayPal, STC Pay, Bank Transfer, Cash on Delivery
+- **Admin Dashboard**: Products, users, orders, analytics, reports
+- **Delivery Management**: Complete delivery worker system with GPS tracking (see [README-DELIVERY.md](./README-DELIVERY.md))
+- **Real-time Updates**: SSE/WebSocket for live order and delivery status
+- **Multi-language**: Arabic & English support
+- **Marketing**: Banners, features, app links
+- **Security**: JWT auth, role-based access, session management
 ## Production
 
 - Use `.env.production.example` as a template and set CORS_ORIGIN to your domains.
