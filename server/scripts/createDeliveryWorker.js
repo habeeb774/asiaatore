@@ -49,7 +49,7 @@ async function main() {
         userId,
         vehicleType,
         status: 'active',
-        rating: 5.0,
+        rating: 0.0, // Start with no rating until deliveries are completed
         totalDeliveries: 0
       }
     });
