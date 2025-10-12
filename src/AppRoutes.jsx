@@ -20,6 +20,8 @@ import BankTransfers from './pages/admin/BankTransfers';
 import Analytics from './pages/admin/Analytics';
 import Customers from './pages/admin/Customers';
 import Settings from './pages/admin/Settings';
+import DeliveryManagement from './pages/admin/DeliveryManagement';
+import DeliveryDashboard from './pages/delivery/DeliveryDashboard';
 import AccountSecurity from './pages/AccountSecurity';
 import Canonical from './components/Canonical';
 // NOTE: useLanguage was imported but unused; removed to prevent lint warning.
@@ -90,6 +92,9 @@ const AppRoutes = () => {
   <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
   <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
   <Route path="/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/login" />} />
+  <Route path="/admin/delivery" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<DeliveryManagement />} redirectTo="/login" />} />
+  {/* Protected delivery worker route */}
+  <Route path="/delivery" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['delivery']} element={<DeliveryDashboard />} redirectTo="/login" />} />
   <Route path="/login" element={<LoginPage />} />
   <Route path="/register" element={<RegisterPage />} />
   <Route path="/forgot" element={<ForgotPasswordPage />} />

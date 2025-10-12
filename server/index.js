@@ -29,6 +29,8 @@ import settingsRoutes from './routes/settings.js';
 import sellersRoutes from './routes/sellers.js';
 import invoicesRoutes from './routes/invoices.js';
 import authRoutes from './routes/auth.js';
+import deliveryRoutes from './routes/delivery.js';
+import adminDeliveryRoutes from './routes/adminDelivery.js';
 import { attachUser } from './middleware/auth.js';
 import { registerSse, setupWebSocket } from './utils/realtimeHub.js';
 import fs from 'fs';
@@ -643,6 +645,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/sellers', sellersRoutes);
 app.use('/api/invoices', invoicesRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/admin/delivery', adminDeliveryRoutes);
 
 // Payments
 app.use('/api/pay/paypal', paypalRoutes);

@@ -14,6 +14,7 @@ enum Role {
   user
   admin
   seller
+  delivery
 }
 
 enum ReviewStatus {
@@ -452,4 +453,116 @@ model InvoiceLog {
 
   @@index([invoiceId])
   @@index([createdAt])
+}
+
+// ===== DELIVERY WORKER SYSTEM =====
+
+// Delivery worker status
+enum DeliveryWorkerStatus {
+  active
+  inactive
+  suspended
+}
+
+// Delivery assignment status
+enum DeliveryAssignmentStatus {
+  pending      // assigned but not yet accepted
+  accepted     // worker accepted
+  rejected     // worker rejected
+  in_progress  // worker started delivery
+  delivered    // successfully delivered
+  failed       // delivery failed
+  cancelled    // assignment cancelled
+}
+
+// Delivery proof type
+enum DeliveryProofType {
+  signature
+  photo
+  otp
+  customer_confirmation
+}
+
+// Delivery worker profile (extends User with role='delivery')
+model DeliveryWorker {
+  id              String                 @id @default(cuid())
+  userId          String                 @unique
+  vehicleType     String?                // e.g., 'motorcycle', 'car', 'bicycle'
+  vehicleNumber   String?                // vehicle plate number
+  licenseNumber   String?                // driver license
+  status          DeliveryWorkerStatus   @default(active)
+  rating          Float                  @default(0)
+  totalDeliveries Int                    @default(0)
+  // Optional work hours and zones
+  workStartTime   String?                // e.g., "08:00"
+  workEndTime     String?                // e.g., "20:00"
+  allowedZones    Json?                  // array of allowed delivery zones
+  meta            Json?                  // additional metadata
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  assignments     DeliveryAssignment[]
+  locations       DeliveryLocation[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Delivery assignment (links order to delivery worker)
+model DeliveryAssignment {
+  id              String                   @id @default(cuid())
+  orderId         String
+  workerId        String
+  status          DeliveryAssignmentStatus @default(pending)
+  // Pickup and delivery addresses
+  pickupAddress   Json?                    // store/warehouse address
+  deliveryAddress Json?                    // customer address
+  // Timing
+  assignedAt      DateTime                 @default(now())
+  acceptedAt      DateTime?
+  startedAt       DateTime?                // when worker started delivery
+  deliveredAt     DateTime?                // when delivery completed
+  // Distance and duration
+  estimatedDistance Float?                 // in km
+  estimatedDuration Int?                   // in minutes
+  actualDistance    Float?                 // actual distance traveled
+  actualDuration    Int?                   // actual time taken
+  // Delivery proof
+  proofType       DeliveryProofType?
+  proofData       Json?                    // signature/photo URL/OTP/etc
+  // Customer feedback
+  customerRating  Int?                     // 1-5 rating from customer
+  customerFeedback String?
+  // Notes and rejection reason
+  notes           String?
+  rejectionReason String?
+  meta            Json?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  worker          DeliveryWorker           @relation(fields: [workerId], references: [id])
+
+  @@index([orderId])
+  @@index([workerId])
+  @@index([status])
+  @@index([assignedAt])
+  @@index([deliveredAt])
+}
+
+// Real-time location tracking for delivery workers
+model DeliveryLocation {
+  id         String         @id @default(cuid())
+  workerId   String
+  latitude   Float
+  longitude  Float
+  accuracy   Float?         // GPS accuracy in meters
+  speed      Float?         // speed in km/h
+  heading    Float?         // direction in degrees
+  timestamp  DateTime       @default(now())
+  meta       Json?
+
+  worker     DeliveryWorker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@index([workerId])
+  @@index([timestamp])
 }
