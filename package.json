@@ -22,6 +22,7 @@
     "db:studio": "npx prisma studio",
     "db:seed": "node server/db/seed.js",
     "admin:create": "node server/scripts/createAdmin.js",
+    "delivery:create": "node server/scripts/createDeliveryWorker.js",
     "login:verify": "node server/scripts/verifyLogin.js",
     "user:show": "node server/scripts/showUser.js",
     "users:list": "node server/scripts/listUsers.js",
