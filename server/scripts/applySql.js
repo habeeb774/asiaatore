@@ -29,6 +29,12 @@ async function main(){
   };
   const conn = await mysql.createConnection(baseConfig);
   try {
+    const dbName = (u.pathname || '').replace(/^\//, '');
+    if (!dbName) {
+      throw new Error('DATABASE_URL is missing database name');
+    }
+    // Ensure DB exists and select it
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; USE \`${dbName}\`;`);
     // Split statements on semicolons but keep USE and ALTER etc.; naive split works for our file
     const statements = sql
       .split(/;\s*\n/)

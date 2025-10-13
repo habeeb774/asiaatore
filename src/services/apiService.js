@@ -1,4 +1,4 @@
-export const API_BASE = '/api';
+export const API_BASE = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api';
 
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;

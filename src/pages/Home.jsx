@@ -148,7 +148,7 @@ const Home = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <LazyImage
-              src="/images/hero-image.jpg"
+              src="/images/hero-image.svg"
               alt="منتجات آسيوية"
               className="home-hero__image"
               priority

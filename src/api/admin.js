@@ -2,7 +2,7 @@
 
 async function req(path, options = {}) {
   // Lazy inline version (no duplication of existing client.js patterns too much)
-  const API_BASE = import.meta?.env?.VITE_API_URL || '/api';
+  const API_BASE = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api';
   let token = null; try { token = localStorage.getItem('my_store_token'); } catch {}
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -56,7 +56,7 @@ export const adminApi = {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.append(k, v); });
     // Return full Response text (CSV) - bypass json parser (use fetch directly)
-    const API_BASE = import.meta?.env?.VITE_API_URL || '/api';
+  const API_BASE = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api';
     let token = null; try { token = localStorage.getItem('my_store_token'); } catch {}
     const headers = {}; if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(API_BASE + '/admin/stats/orders/export/csv' + (qs.toString() ? `?${qs.toString()}` : ''), { headers }).then(r => r.text());
@@ -64,7 +64,7 @@ export const adminApi = {
   exportOrdersXlsx: (params = {}) => {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.append(k, v); });
-    const API_BASE = import.meta?.env?.VITE_API_URL || '/api';
+  const API_BASE = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api';
     let token = null; try { token = localStorage.getItem('my_store_token'); } catch {}
     const headers = {}; if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(API_BASE + '/admin/stats/orders/export/xlsx' + (qs.toString() ? `?${qs.toString()}` : ''), { headers }).then(r => r.blob());

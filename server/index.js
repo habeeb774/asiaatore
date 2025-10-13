@@ -1,4 +1,5 @@
 import express from 'express';
+import mysql from 'mysql2/promise';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -876,6 +877,44 @@ async function initDb() {
   }
 }
 await initDb();
+
+// Optional: raw MySQL debug route (bypasses Prisma) — off by default
+// Enable by setting ENABLE_RAW_MYSQL=1 in your environment
+if (process.env.ENABLE_RAW_MYSQL === '1') {
+  try {
+    // Build mysql2 connection options from DATABASE_URL
+    const url = new URL(process.env.DATABASE_URL || '');
+    if (url.protocol.toLowerCase() !== 'mysql:') {
+      throw new Error('DATABASE_URL must start with mysql:// to use raw MySQL route');
+    }
+    const sslStrict = /[?&]sslaccept=strict/i.test(url.search);
+    const pool = await mysql.createPool({
+      host: url.hostname,
+      port: url.port ? Number(url.port) : 3306,
+      user: decodeURIComponent(url.username || ''),
+      password: decodeURIComponent(url.password || ''),
+      database: (url.pathname || '').replace(/^\//, ''),
+      connectionLimit: 4,
+      // If Prisma needed sslaccept=strict, apply a strict TLS policy here too
+      ssl: sslStrict ? { rejectUnauthorized: true, minVersion: 'TLSv1.2' } : undefined,
+    });
+    // Note: Prisma maps the Product model to a `Product` table by default.
+    // If your DB uses a different casing/name, adjust the table name below.
+    app.get('/api/raw/products', async (req, res) => {
+      try {
+        const [rows] = await pool.query(
+          'SELECT id, slug, nameAr, nameEn, price, image FROM `Product` ORDER BY createdAt DESC LIMIT 50'
+        );
+        res.json(rows);
+      } catch (e) {
+        res.status(500).json({ error: 'RAW_MYSQL_QUERY_FAILED', message: e.message });
+      }
+    });
+    console.log('[Debug] Raw MySQL route enabled at GET /api/raw/products');
+  } catch (e) {
+    console.warn('[Debug] Failed to enable raw MySQL route:', e.message);
+  }
+}
 
 // Graceful shutdown
 async function graceful(exitCode = 0) {
