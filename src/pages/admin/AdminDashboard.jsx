@@ -1,16 +1,20 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import './Dashboard.css';
 import AdminSideNav from '../../components/admin/AdminSideNav';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
+import { useOrders } from '../../context/OrdersContext';
 import api from '../../api/client';
 import { adminApi } from '../../api/admin';
 import { Edit3, Trash2, Plus, Save, X } from 'lucide-react';
+import ProductPicker from '../../components/admin/ProductPicker';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 
 const AdminDashboard = () => {
   const { user } = useAuth() || {};
   const isAdmin = user?.role === 'admin';
+  const { refresh } = useOrders() || {};
 
   const {
     products: adminProducts, users, orders,
@@ -21,10 +25,11 @@ const AdminDashboard = () => {
 
   // Local shadow list for API-backed products (to avoid breaking existing context usage)
   const [apiProducts, setApiProducts] = useState([]);
+  const [apiBacked, setApiBacked] = useState(false); // true if API fetch succeeded (even if empty)
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [prodError, setProdError] = useState(null);
 
-  const effectiveProducts = apiProducts.length ? apiProducts : adminProducts;
+  const effectiveProducts = apiBacked ? apiProducts : adminProducts;
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -198,6 +203,22 @@ const AdminDashboard = () => {
   const [marketingBanners, setMarketingBanners] = useState([]);
   const [marketingAppLinks, setMarketingAppLinks] = useState([]);
   const [featureForm, setFeatureForm] = useState({ id:null, titleAr:'', titleEn:'', bodyAr:'', bodyEn:'', icon:'', sort:0, active:true });
+  // Offers management state
+  const [offers, setOffers] = useState([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [offersError, setOffersError] = useState(null);
+  const [offerFilter, setOfferFilter] = useState('');
+  const [offerSort, setOfferSort] = useState('recent'); // recent | discount_desc | price_asc | price_desc
+  const [offerCategoryFilter, setOfferCategoryFilter] = useState('');
+  const [offerForm, setOfferForm] = useState({ id:null, nameAr:'', nameEn:'', price:'', oldPrice:'', image:'', category:'general' });
+  // New: Add-discount helper form
+  const [addDiscFilter, setAddDiscFilter] = useState('');
+  const [addDiscForm, setAddDiscForm] = useState({ productId:'', percent:'', newPrice:'' });
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [addDiscShowAll, setAddDiscShowAll] = useState(false); // افتراضياً: عرض المنتجات المؤهلة فقط
+  // Batch discount
+  const [batchSelected, setBatchSelected] = useState([]); // array of product IDs
+  const [batchPercent, setBatchPercent] = useState('');
   const [bannerForm, setBannerForm] = useState({ id:null, location:'homepage', titleAr:'', titleEn:'', bodyAr:'', bodyEn:'', image:'', linkUrl:'', sort:0, active:true });
   const [bannerImageFile, setBannerImageFile] = useState(null);
   const [appLinkForm, setAppLinkForm] = useState({ id:null, platform:'web', url:'', labelAr:'', labelEn:'', active:true });
@@ -576,13 +597,13 @@ const AdminDashboard = () => {
     }
     try {
       setLoadingProducts(true);
-      if (productForm.id && apiProducts.length) {
+      if (productForm.id && apiBacked) {
         const updated = useFormData
           ? await api.updateProductForm(productForm.id, payload)
           : await api.updateProduct(productForm.id, payload);
         setApiProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
         setAudit(a => [{ ts: Date.now(), action: 'update_product', id: updated.id }, ...a].slice(0,200));
-      } else if (apiProducts.length) {
+      } else if (apiBacked) {
         const created = useFormData
           ? await api.createProductForm(payload)
           : await api.createProduct(payload);
@@ -651,9 +672,9 @@ const AdminDashboard = () => {
       setLoadingProducts(true); setProdError(null);
       try {
         const list = await api.listProducts();
-        if (active && Array.isArray(list)) setApiProducts(list);
+        if (active && Array.isArray(list)) { setApiProducts(list); setApiBacked(true); }
       } catch (e) {
-        if (active) setProdError(e.message);
+        if (active) { setProdError(e.message); setApiBacked(false); }
       } finally {
         if (active) setLoadingProducts(false);
       }
@@ -733,6 +754,181 @@ const AdminDashboard = () => {
 
   const refreshAudit = () => { setAuditReload(x => x + 1); };
 
+  // ------- Offers: loaders & handlers -------
+  const loadOffers = async () => {
+    setOffersLoading(true); setOffersError(null);
+    try {
+      const list = await api.listOffers();
+      setOffers(Array.isArray(list) ? list : []);
+    } catch (e) {
+      setOffersError(e.message);
+    } finally { setOffersLoading(false); }
+  };
+
+  useEffect(() => {
+    if (view === 'offers' && !offers.length) loadOffers();
+  }, [view]);
+
+  // Ensure categories are available when entering Offers for filtering and form select
+  useEffect(() => {
+    if (view !== 'offers') return;
+    if (catList.length) return;
+    let mounted = true;
+    setCatLoading(true); setCatError(null);
+    api.listCategories({ withCounts: 1 }).then(res => {
+      const list = Array.isArray(res?.categories) ? res.categories : [];
+      const map = new Map();
+      for (const c of list) { if (c?.slug && !map.has(c.slug)) map.set(c.slug, c); }
+      const uniq = Array.from(map.values()).sort((a,b) => (b.productCount||0) - (a.productCount||0) || String(a.name?.ar||a.name?.en||a.slug).localeCompare(String(b.name?.ar||b.name?.en||b.slug), 'ar'));
+      if (mounted) setCatList(uniq);
+    }).catch(err => { if (mounted) setCatError(err.message||'فشل تحميل التصنيفات'); }).finally(() => { if (mounted) setCatLoading(false); });
+    return () => { mounted = false; };
+  }, [view, catList.length]);
+
+  const visibleOffers = useMemo(() => {
+    let list = [...offers];
+    const q = (offerFilter||'').toLowerCase();
+    if (q) list = list.filter(o => (o.name?.ar||o.name?.en||'').toLowerCase().includes(q));
+    if (offerCategoryFilter) list = list.filter(o => (o.category||'') === offerCategoryFilter);
+    switch (offerSort) {
+      case 'discount_desc':
+        list.sort((a,b)=> ((a.originalPrice||a.oldPrice||0)-(a.price||0)) < ((b.originalPrice||b.oldPrice||0)-(b.price||0)) ? 1 : -1);
+        break;
+      case 'price_asc': list.sort((a,b)=> (a.price||0)-(b.price||0)); break;
+      case 'price_desc': list.sort((a,b)=> (b.price||0)-(a.price||0)); break;
+      case 'recent':
+      default:
+        list.sort((a,b)=> String(b.updatedAt||b.id).localeCompare(String(a.updatedAt||a.id)));
+    }
+    return list;
+  }, [offers, offerFilter, offerSort]);
+
+  // Ensure products list is available when entering Offers
+  useEffect(() => {
+    if (view !== 'offers') return;
+    if (apiProducts.length) return;
+    (async () => {
+      try {
+        const list = await api.listProducts();
+        if (Array.isArray(list)) { setApiProducts(list); setApiBacked(true); }
+      } catch { /* ignore load errors here */ }
+    })();
+  }, [view, apiProducts.length]);
+
+  const resetOfferForm = () => setOfferForm({ id:null, nameAr:'', nameEn:'', price:'', oldPrice:'', image:'', category:'general' });
+
+  const editOffer = (o) => {
+    setOfferForm({ id:o.id, nameAr:o.name?.ar||'', nameEn:o.name?.en||'', price:o.price||'', oldPrice:o.originalPrice||o.oldPrice||'', image:o.image||'', category:o.category||'general' });
+  };
+
+  const round2 = (n) => Math.max(0, Math.round((+n + Number.EPSILON) * 100) / 100);
+  // Eligible only (used for batch eligible list and some filters)
+  const availableForDiscount = useMemo(() => {
+    const needle = (addDiscFilter||'').toLowerCase();
+    return (apiBacked ? apiProducts : effectiveProducts)
+      .filter(p => !p.oldPrice && p.price > 0)
+      .filter(p => needle ? ((p.name?.ar||p.name?.en||p.name||'').toLowerCase().includes(needle)) : true)
+      .slice(0, 300);
+  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter]);
+  // For the single-product "اختر المنتج" select: optionally show all products (not just eligible)
+  const availableForAddPicker = useMemo(() => {
+    const needle = (addDiscFilter||'').toLowerCase();
+    let list = (apiBacked ? apiProducts : effectiveProducts)
+      .filter(p => (p.price||0) > 0);
+    if (!addDiscShowAll) list = list.filter(p => !p.oldPrice);
+    if (needle) list = list.filter(p => (p.name?.ar||p.name?.en||p.name||'').toLowerCase().includes(needle));
+    return list.slice(0, 300);
+  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter, addDiscShowAll]);
+  const selectedAddDiscProduct = useMemo(() => {
+    return availableForDiscount.find(p => p.id === addDiscForm.productId) || (apiBacked ? apiProducts.find(p=>p.id===addDiscForm.productId) : effectiveProducts.find(p=>p.id===addDiscForm.productId));
+  }, [availableForDiscount, addDiscForm.productId, apiBacked, apiProducts, effectiveProducts]);
+  const onAddDiscPercent = (v) => {
+    setAddDiscForm(f => {
+      const price = selectedAddDiscProduct?.price || 0;
+      const perc = +v || 0;
+      const np = price ? round2(price * (100 - perc) / 100) : '';
+      return { ...f, percent: v, newPrice: np };
+    });
+  };
+  const onAddDiscNewPrice = (v) => {
+    setAddDiscForm(f => {
+      const price = selectedAddDiscProduct?.price || 0;
+      const np = +v || 0;
+      const perc = price ? Math.max(0, Math.round((1 - (np/price)) * 100)) : '';
+      return { ...f, newPrice: v, percent: perc };
+    });
+  };
+  const applyAddDiscount = async (e) => {
+    e?.preventDefault?.();
+    if (!addDiscForm.productId) { setOffersError('اختر منتجاً لإضافة خصم'); return; }
+    const basePrice = +selectedAddDiscProduct?.price || 0;
+    const newPrice = +addDiscForm.newPrice || 0;
+    if (!(basePrice>0) || !(newPrice>0) || newPrice >= basePrice) {
+      setOffersError('السعر الجديد غير صالح. يجب أن يكون أقل من السعر الحالي');
+      return;
+    }
+    setOffersLoading(true); setOffersError(null);
+    try {
+      await api.updateProduct(addDiscForm.productId, { oldPrice: basePrice, price: round2(newPrice) });
+      await loadOffers();
+      setAddDiscForm({ productId:'', percent:'', newPrice:'' });
+      setAddDiscFilter('');
+    } catch (e2) {
+      setOffersError(e2.message);
+    } finally { setOffersLoading(false); }
+  };
+
+  const submitOffer = async (e) => {
+    e.preventDefault(); setOffersLoading(true); setOffersError(null);
+    try {
+      if (offerForm.oldPrice && +offerForm.oldPrice <= +offerForm.price) {
+        throw new Error('السعر القديم يجب أن يكون أعلى من السعر الحالي لاحتساب الخصم');
+      }
+      const payload = {
+        nameAr: offerForm.nameAr || offerForm.nameEn || 'عرض',
+        nameEn: offerForm.nameEn || offerForm.nameAr || 'Offer',
+        price: +offerForm.price,
+        oldPrice: offerForm.oldPrice ? +offerForm.oldPrice : null,
+        category: offerForm.category || 'general',
+        image: offerForm.image || undefined
+      };
+      if (offerForm.id) {
+        await api.updateProduct(offerForm.id, payload);
+        await loadOffers();
+      } else {
+        await api.createProduct(payload);
+        await loadOffers();
+      }
+      resetOfferForm();
+    } catch (e2) {
+      setOffersError(e2.message);
+    } finally { setOffersLoading(false); }
+  };
+
+  const clearOfferDiscount = async (id) => {
+    if (!id) return;
+    if (!window.confirm('مسح الخصم لهذا المنتج؟')) return;
+    setOffersLoading(true); setOffersError(null);
+    try {
+      await api.updateProduct(id, { oldPrice: null });
+      // Remove from current offers list since it no longer qualifies
+      setOffers(os => os.filter(o => o.id !== id));
+      // If editing the same offer, reset form
+      setOfferForm(f => (f.id === id ? { id:null, nameAr:'', nameEn:'', price:'', oldPrice:'', image:'', category:'general' } : f));
+    } catch (e) {
+      setOffersError(e.message);
+    } finally { setOffersLoading(false); }
+  };
+
+  const removeOffer = async (id) => {
+    if (!window.confirm('حذف هذا العرض؟')) return;
+    setOffersLoading(true); setOffersError(null);
+    try {
+      await api.deleteProduct(id);
+      setOffers(os => os.filter(o => o.id !== id));
+    } catch (e) { setOffersError(e.message); } finally { setOffersLoading(false); }
+  };
+
   if (!isAdmin) {
     return (
       <div style={{direction:'rtl',padding:'2rem',maxWidth:520,margin:'2rem auto',background:'#fff',border:'1px solid #e2e8f0',borderRadius:16,boxShadow:'0 6px 28px -8px rgba(0,0,0,.12)'}}>
@@ -744,7 +940,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div style={pageWrap}>
+    <div className="admin-root" style={pageWrap}>
       <h1 style={title}>لوحة التحكم</h1>
 
       {/* Two-column layout with sticky admin sidebar */}
@@ -755,6 +951,7 @@ const AdminDashboard = () => {
       <div style={tabsBar}>
         {{
           overview: 'نظرة عامة',
+          offers: 'العروض',
           products: 'المنتجات',
           users: 'المستخدمون',
           orders: 'الطلبات',
@@ -797,6 +994,213 @@ const AdminDashboard = () => {
             </ul>
             {loadingRemote && <div style={{fontSize:'.6rem',color:'#64748b'}}>...تحميل</div>}
             {errorRemote && <div style={{fontSize:'.6rem',color:'#b91c1c'}}>خطأ: {errorRemote}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Offers Management (moved inside content area to keep sidebar position) */}
+      {view === 'offers' && (
+        <div style={{display:'grid', gap:'1rem'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:0}}>
+            <h3 style={{margin:0,fontSize:'1rem'}}>إدارة العروض</h3>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <input placeholder="بحث" value={offerFilter} onChange={e=>setOfferFilter(e.target.value)} style={searchInput} />
+              <select value={offerSort} onChange={e=>setOfferSort(e.target.value)} style={searchInput}>
+                <option value="recent">الأحدث</option>
+                <option value="discount_desc">أعلى خصم</option>
+                <option value="price_asc">السعر تصاعدي</option>
+                <option value="price_desc">السعر تنازلي</option>
+              </select>
+              <select value={offerCategoryFilter} onChange={e=>setOfferCategoryFilter(e.target.value)} style={searchInput}>
+                <option value="">كل التصنيفات</option>
+                {catOptions.map(c=> <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+              <button type="button" onClick={loadOffers} style={secondaryBtn}>تحديث</button>
+            </div>
+          </div>
+          {/* Add Discount Tool (single) */}
+          <div style={{...formRow, marginBottom:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap', marginBottom:6}}>
+              <div style={{fontWeight:700, fontSize:'.9rem'}}>إضافة خصم لمنتج موجود</div>
+              <input placeholder="بحث عن منتج" value={addDiscFilter} onChange={e=>setAddDiscFilter(e.target.value)} style={searchInput} />
+              <button type="button" onClick={()=>setPickerOpen(true)} style={secondaryBtn}>اختر من القائمة</button>
+            </div>
+            <form onSubmit={applyAddDiscount} style={{display:'grid',gap:8,gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', alignItems:'end'}}>
+              <select value={addDiscForm.productId} onChange={e=> setAddDiscForm(f=>({...f, productId:e.target.value, percent:'', newPrice:'' }))} style={searchInput}>
+                <option value="">— اختر المنتج —</option>
+                {availableForAddPicker.map(p => (
+                  <option key={p.id} value={p.id}>{(p.name?.ar||p.name?.en||p.name)} — {p.price}</option>
+                ))}
+              </select>
+              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                <label style={{fontSize:'.65rem',opacity:.8}}>السعر الحالي</label>
+                <div style={{padding:'.55rem .75rem', border:'1px solid #e2e8f0', borderRadius:10, background:'#f8fafc'}}>{selectedAddDiscProduct?.price || '—'}</div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                <label style={{fontSize:'.65rem',opacity:.8}}>نسبة الخصم %</label>
+                <input type="number" min="1" max="90" step="1" placeholder="%" value={addDiscForm.percent} onChange={e=> onAddDiscPercent(e.target.value)} style={searchInput} />
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {[5,10,15,20,25,30].map(p => (
+                    <button type="button" key={p} style={ghostBtn} onClick={()=> onAddDiscPercent(String(p))}>{p}%</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                <label style={{fontSize:'.65rem',opacity:.8}}>السعر الجديد</label>
+                <input type="number" step="0.01" placeholder="0.00" value={addDiscForm.newPrice} onChange={e=> onAddDiscNewPrice(e.target.value)} style={searchInput} />
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <button type="submit" disabled={!addDiscForm.productId || !(+addDiscForm.newPrice>0)} style={primaryBtn}>تطبيق الخصم</button>
+                <button type="button" style={ghostBtn} onClick={()=>{ setAddDiscForm({ productId:'', percent:'', newPrice:'' }); setAddDiscFilter(''); }}>إلغاء</button>
+                <label style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:'.75rem'}}>
+                  <input type="checkbox" checked={addDiscShowAll} onChange={e=>setAddDiscShowAll(e.target.checked)} /> عرض كل المنتجات
+                </label>
+              </div>
+            </form>
+          </div>
+          {/* Batch Discount Tool */}
+          <div style={{...formRow, marginTop:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              <div style={{fontWeight:700, fontSize:'.9rem'}}>خصم جماعي</div>
+              <input type="number" min="1" max="90" step="1" placeholder="%" value={batchPercent} onChange={e=>setBatchPercent(e.target.value)} style={searchInput} />
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {[5,10,15,20,25,30].map(p => (
+                  <button type="button" key={p} style={ghostBtn} onClick={()=> setBatchPercent(String(p))}>{p}%</button>
+                ))}
+              </div>
+              <button type="button" disabled={!batchSelected.length || !(+batchPercent>0)} style={primaryBtn} onClick={async()=>{
+                try {
+                  setOffersLoading(true); setOffersError(null);
+                  const res = await api.batchDiscount({ productIds: batchSelected, percent: +batchPercent });
+                  await loadOffers();
+                  setBatchSelected([]); setBatchPercent('');
+                  if (res?.errors?.length) alert('تمت العملية مع بعض الأخطاء: ' + res.errors.length);
+                } catch(e){ setOffersError(e.message); } finally { setOffersLoading(false); }
+              }}>تطبيق على المحدد ({batchSelected.length})</button>
+              <button type="button" disabled={!batchSelected.length} style={secondaryBtn} onClick={async()=>{
+                if (!window.confirm('مسح الخصم عن المنتجات المحددة؟')) return;
+                try {
+                  setOffersLoading(true); setOffersError(null);
+                  await api.batchClearDiscount(batchSelected);
+                  await loadOffers();
+                  setBatchSelected([]);
+                } catch(e){ setOffersError(e.message); } finally { setOffersLoading(false); }
+              }}>مسح الخصم للمحدد</button>
+              <button type="button" style={ghostBtn} onClick={()=>{ setBatchSelected([]); setBatchPercent(''); }}>مسح التحديد</button>
+            </div>
+            <div style={{fontSize:'.7rem',opacity:.8,marginTop:6}}>اختر المنتجات من القائمة المؤهلة أدناه أو من جدول العروض (لإعادة احتساب خصم).</div>
+            <div style={{display:'grid', gap:8, marginTop:8}}>
+              <div style={{fontWeight:600}}>منتجات مؤهلة (بدون خصم):</div>
+              <div style={{maxHeight:220, overflow:'auto', border:'1px solid #e2e8f0', borderRadius:10, padding:6, display:'grid', gap:6}}>
+                {availableForDiscount.map(p => (
+                  <label key={p.id} style={{display:'flex',alignItems:'center',gap:8, fontSize:'.8rem'}}>
+                    <input type="checkbox" checked={batchSelected.includes(p.id)} onChange={(e)=> setBatchSelected(prev => e.target.checked ? [...new Set([...prev, p.id])] : prev.filter(id=>id!==p.id))} />
+                    <span style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:260}}>{p.name?.ar||p.name?.en||p.name}</span>
+                    <span style={{fontSize:'.7rem',opacity:.7}}>— {p.price}</span>
+                  </label>
+                ))}
+                {!availableForDiscount.length && <div style={{fontSize:'.7rem',opacity:.7}}>لا توجد منتجات مؤهلة حالياً.</div>}
+              </div>
+            </div>
+          </div>
+          <ProductPicker
+            open={pickerOpen}
+            onClose={()=>setPickerOpen(false)}
+            onSelect={(p)=>{
+              setAddDiscForm(f=>({ ...f, productId: p.id, percent:'', newPrice:'' }));
+            }}
+            title="اختر منتج لإضافة خصم"
+            onlyEligible={!addDiscShowAll}
+            query={addDiscFilter}
+            onQueryChange={setAddDiscFilter}
+            allowToggleEligible={true}
+            onToggleEligible={(nextOnlyEligible)=> setAddDiscShowAll(!nextOnlyEligible)}
+          />
+          {offersError && <div style={errorText}>{offersError}</div>}
+          <form onSubmit={submitOffer} style={{...formRow,marginBottom:0}}>
+            <input placeholder="اسم عربي" value={offerForm.nameAr} onChange={e=>setOfferForm(f=>({...f,nameAr:e.target.value}))} style={input} />
+            <input placeholder="اسم إنجليزي" value={offerForm.nameEn} onChange={e=>setOfferForm(f=>({...f,nameEn:e.target.value}))} style={input} />
+            <input placeholder="السعر" type="number" step="0.01" value={offerForm.price} onChange={e=>setOfferForm(f=>({...f,price:e.target.value}))} style={inputSmall} />
+            <input placeholder="السعر القديم (للخصم)" type="number" step="0.01" value={offerForm.oldPrice} onChange={e=>setOfferForm(f=>({...f,oldPrice:e.target.value}))} style={inputSmall} />
+            <input placeholder="صورة (رابط)" value={offerForm.image} onChange={e=>setOfferForm(f=>({...f,image:e.target.value}))} style={input} />
+            <select value={offerForm.category} onChange={e=>setOfferForm(f=>({...f,category:e.target.value}))} style={inputSmall}>
+              <option value="general">عام</option>
+              {catOptions.map(c=> <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+            <button type="submit" style={primaryBtn}>{offerForm.id ? 'تحديث' : 'إضافة عرض'}</button>
+            {offerForm.id && <button type="button" style={linkBtnStyle} onClick={resetOfferForm}>إلغاء</button>}
+            {offerForm.id && <button type="button" style={ghostBtn} onClick={()=>clearOfferDiscount(offerForm.id)}>مسح الخصم</button>}
+          </form>
+          <div style={{overflowX:'auto'}}>
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={visibleOffers.length>0 && visibleOffers.every(o=> batchSelected.includes(o.id))}
+                      onChange={(e)=> {
+                        if (e.target.checked) setBatchSelected(prev => Array.from(new Set([ ...prev, ...visibleOffers.map(o=>o.id) ])));
+                        else setBatchSelected(prev => prev.filter(id => !visibleOffers.some(o=>o.id===id)));
+                      }}
+                      title="تحديد الكل"
+                    />
+                  </th>
+                  <th>الصورة</th>
+                  <th>الاسم</th>
+                  <th>السعر</th>
+                  <th>الخصم</th>
+                  <th>التصنيف</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offersLoading && <tr><td colSpan={6} style={emptyCell}>...تحميل</td></tr>}
+                {!offersLoading && visibleOffers.map(o => {
+                  const hasDisc = !!(o.originalPrice || o.oldPrice);
+                  const op = o.originalPrice || o.oldPrice || 0;
+                  const discPct = hasDisc && op>o.price ? Math.round(((op - o.price)/op)*100) : 0;
+                  return (
+                    <tr key={o.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={batchSelected.includes(o.id)}
+                          onChange={(e)=> setBatchSelected(prev => e.target.checked ? [...new Set([...prev, o.id])] : prev.filter(id=>id!==o.id))}
+                        />
+                      </td>
+                      <td>
+                        <img
+                          src={o.image || o.imageVariants?.thumb || '/logo.svg'}
+                          alt=""
+                          style={{width:56,height:56,objectFit:'cover',borderRadius:8,border:'1px solid #e2e8f0'}}
+                          onError={(e)=>{ e.currentTarget.src='/logo.svg'; }}
+                        />
+                      </td>
+                      <td>{o.name?.ar || o.name?.en}</td>
+                      <td>
+                        {hasDisc && op ? (
+                          <div style={{display:'flex',flexDirection:'column'}}>
+                            <span style={{textDecoration:'line-through',color:'#64748b',fontSize:'.7rem'}}>{op}</span>
+                            <span style={{fontWeight:700}}>{o.price}</span>
+                          </div>
+                        ) : (
+                          <span>{o.price}</span>
+                        )}
+                      </td>
+                      <td>{hasDisc ? (<span style={{background:'#ecfccb',color:'#3f6212',padding:'.15rem .4rem',borderRadius:6,fontSize:'.65rem',fontWeight:700}}>-{discPct}%</span>) : '—'}</td>
+                      <td>{o.category}</td>
+                      <td>
+                        <button type="button" onClick={()=>editOffer(o)} style={iconBtn}><Edit3 size={16} /></button>
+                        {hasDisc && <button type="button" onClick={()=>clearOfferDiscount(o.id)} title="مسح الخصم" style={iconBtn}>✕</button>}
+                        <button type="button" onClick={()=>removeOffer(o.id)} style={iconBtnDanger}><Trash2 size={16} /></button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!offersLoading && !visibleOffers.length && <tr><td colSpan={7} style={emptyCell}>لا توجد عروض</td></tr>}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -964,7 +1368,7 @@ const AdminDashboard = () => {
                         ><Edit3 size={16} /></button>
                         <button
                           onClick={async () => {
-                            if (apiProducts.length) {
+                            if (apiBacked) {
                               try {
                                 await api.deleteProduct(p.id);
                                 setApiProducts(prev => prev.filter(x => x.id !== p.id));
@@ -1563,6 +1967,9 @@ const tabsBar = { display: 'flex', gap: '.4rem', alignItems: 'center', flexWrap:
 const tabBtn = { background: '#f1f5f9', border: 0, padding: '.55rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 500 };
 const tabBtnActive = { ...tabBtn, background: 'linear-gradient(90deg,#69be3c,#f6ad55)', color: '#fff', boxShadow: '0 2px 8px -2px rgba(0,0,0,.25)' };
 const searchInput = { padding: '.55rem .75rem', border: '1px solid #e2e8f0', borderRadius: 10, minWidth: 160, fontSize: '.8rem', background: '#fff' };
+// Base input styles used in forms
+const input = { ...searchInput, minWidth: 180 };
+const inputSmall = { ...searchInput, minWidth: 110 };
 const grid3 = { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' };
 const statBox = { background: '#fff', padding: '1rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.35rem' };
 const statValue = { fontSize: '1.6rem', fontWeight: 700, color: '#0f172a' };
@@ -1574,6 +1981,10 @@ const actionsRow = { display: 'flex', gap: '.6rem', flexWrap: 'wrap' };
 const subTitle = { margin: 0, fontSize: '1rem', fontWeight: 600 };
 const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: '.4rem', border: 0, background: 'linear-gradient(90deg,#69be3c,#f6ad55)', color: '#fff', padding: '.6rem .95rem', borderRadius: 10, cursor: 'pointer', fontSize: '.75rem', fontWeight: 600 };
 const ghostBtn = { ...primaryBtn, background: '#f1f5f9', color: '#334155' };
+// Secondary button (neutral variant)
+const secondaryBtn = { ...primaryBtn, background: '#e2e8f0', color: '#0f172a' };
+// Link-like button used for small cancel actions
+const linkBtnStyle = { background: 'transparent', border: 0, color: '#334155', cursor: 'pointer', padding: '.4rem .6rem', borderRadius: 8, fontSize: '.75rem', fontWeight: 600 };
 const table = { width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 14px -6px rgba(0,0,0,.06)' };
 const tdActions = { display: 'flex', gap: '.35rem', alignItems: 'center' };
 const iconBtn = { background: '#f1f5f9', border: 0, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', color: '#0f172a' };
@@ -1581,6 +1992,7 @@ const iconBtnDanger = { ...iconBtn, background: '#fee2e2', color: '#b91c1c' };
 const emptyCell = { textAlign: 'center', padding: '1rem', fontSize: '.75rem', color: '#64748b' };
 const mutedP = { fontSize: '.75rem', color: '#475569', margin: '.25rem 0 1rem' };
 const ulClean = { margin: 0, padding: '0 1rem', listStyle: 'disc', lineHeight: 1.9 };
+const errorText = { fontSize: '.75rem', color: '#b91c1c' };
 // Tier pricing sub-table styles
 const tierLabel = { fontSize: '.55rem', fontWeight: 600, color: '#475569' };
 const tierInput = { ...searchInput, minWidth: 90, fontSize: '.65rem', padding: '.4rem .5rem' };

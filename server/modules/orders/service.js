@@ -81,32 +81,49 @@ async function normalizeItems(raw) {
   return out;
 }
 
+// Helper: extract a numeric shipping override from input.paymentMeta or top-level input.shipping
+function extractShippingOverride(input) {
+  const metaShip = input?.paymentMeta?.shipping;
+  if (typeof metaShip === 'number' && !Number.isNaN(metaShip)) return metaShip;
+  const top = input?.shipping;
+  if (top && typeof top === 'object') {
+    const candidates = [top.amount, top.price, top.cost, top.value];
+    for (const c of candidates) {
+      if (typeof c === 'number' && !Number.isNaN(c)) return c;
+      const n = c != null ? Number(c) : NaN;
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  return undefined;
+}
+
 export const OrdersService = {
   async list(params = {}) {
     const { where = {}, orderBy = { createdAt: 'desc' }, page, pageSize } = params;
+    const whereNd = Object.prototype.hasOwnProperty.call(where, 'deletedAt') ? where : { ...where, deletedAt: null };
     const pg = page ? Math.max(1, parseInt(page, 10)) : null;
     const ps = pageSize ? Math.min(500, Math.max(1, parseInt(pageSize, 10))) : 50;
     if (pg) {
       const skip = (pg - 1) * ps;
       const [total, list] = await Promise.all([
-        prisma.order.count({ where }),
-        prisma.order.findMany({ where, orderBy, skip, take: ps, include: { items: true } }),
+        prisma.order.count({ where: whereNd }),
+        prisma.order.findMany({ where: whereNd, orderBy, skip, take: ps, include: { items: true } }),
       ]);
       return { items: list, total, page: pg, pageSize: ps, totalPages: Math.ceil(total / ps) };
     }
-    const list = await prisma.order.findMany({ where, orderBy, include: { items: true } });
+    const list = await prisma.order.findMany({ where: whereNd, orderBy, include: { items: true } });
     return { items: list };
   },
 
   async getById(id) {
-    return prisma.order.findUnique({ where: { id }, include: { items: true } });
+    return prisma.order.findFirst({ where: { id, deletedAt: null }, include: { items: true } });
   },
 
   async create(input) {
     const userId = input.userId || 'guest';
     const currency = input.currency || 'SAR';
     const items = await normalizeItems(input.items || []);
-    const shippingOverride = typeof input.paymentMeta?.shipping === 'number' ? input.paymentMeta.shipping : undefined;
+    const shippingOverride = extractShippingOverride(input);
     const totals = computeTotals(items, { shipping: shippingOverride });
     const created = await prisma.order.create({
       data: {
@@ -166,7 +183,7 @@ export const OrdersService = {
       itemsData = await normalizeItems(body.items);
     }
 
-    const shippingOverride = typeof body.paymentMeta?.shipping === 'number' ? body.paymentMeta.shipping : undefined;
+    const shippingOverride = extractShippingOverride(body);
     const totals = computeTotals(itemsData, { ...body, shipping: shippingOverride });
 
     const updateData = {

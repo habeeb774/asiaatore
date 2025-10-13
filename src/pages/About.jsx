@@ -18,7 +18,7 @@ const About = () => {
   const { features = [], loading } = useMarketing() || {};
   const { locale } = useLanguage();
   const { setting } = useSettings() || {};
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const pageTitle = locale==='ar' ? `من نحن | ${siteName}` : `${siteName} | About Us`;
   const list = useMemo(() => features.slice().sort((a,b)=>(a.sort||0)-(b.sort||0)), [features]);
   return (

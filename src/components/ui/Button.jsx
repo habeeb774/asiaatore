@@ -1,23 +1,32 @@
 import React from 'react';
 import { cn } from '../../lib/utils.js';
 
-const variants = {
+// Unified Button component that supports both legacy and new variant names
+const VARIANTS = {
+  // Legacy naming used in some pages
+  primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500',
+  success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500',
+  warning: 'bg-orange-600 text-white hover:bg-orange-700 focus-visible:ring-orange-500',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
+  subtle: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-300',
+  // Shared
+  outline: 'border border-gray-300 text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-900',
+  ghost: 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-900',
+  // New naming used in StyleGuide and auth pages
   default: 'bg-primary text-white hover:opacity-95',
-  outline: 'border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900',
-  ghost: 'hover:bg-gray-100 dark:hover:bg-gray-900',
-  destructive: 'bg-danger text-white hover:opacity-95',
-  secondary: 'bg-secondary text-white hover:opacity-95'
+  secondary: 'bg-secondary text-white hover:opacity-95',
+  destructive: 'bg-danger text-white hover:opacity-95'
 };
 
-const sizes = {
+const SIZES = {
   sm: 'h-8 px-3 text-sm',
-  md: 'h-9 px-4',
+  md: 'h-9 px-4 text-sm',
   lg: 'h-10 px-5 text-base',
   icon: 'h-9 w-9 p-0'
 };
 
 export const Button = React.forwardRef(function Button({
-  className,
+  className = '',
   variant = 'default',
   size = 'md',
   asChild,
@@ -28,9 +37,9 @@ export const Button = React.forwardRef(function Button({
     <Comp
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background',
-        variants[variant] || variants.default,
-        sizes[size] || sizes.md,
+        'inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background',
+        VARIANTS[variant] || VARIANTS.default || VARIANTS.primary,
+        SIZES[size] || SIZES.md,
         className
       )}
       {...props}

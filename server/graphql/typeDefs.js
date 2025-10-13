@@ -1,7 +1,7 @@
 export default `#graphql
   scalar JSON
 
-  type User { id: ID! email: String! role: String! name: String }
+  type User { id: ID! email: String role: String! name: String }
 
   type Brand { id: ID! slug: String! nameAr: String! nameEn: String! logo: String }
   type ProductImage { id: ID! url: String! altEn: String, altAr: String, sort: Int }

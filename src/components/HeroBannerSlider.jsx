@@ -67,7 +67,7 @@ const HeroBannerSlider = () => {
       aria-label={locale==='ar' ? 'شرائح ترويجية' : 'Promotional slider'}
     >
       <div 
-        className="container-custom" 
+        className="container-custom full-bleed-mobile"
       >
         <div
           ref={sliderRef}

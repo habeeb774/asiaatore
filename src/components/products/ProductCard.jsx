@@ -7,7 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import LazyImage from '../common/LazyImage';
 import { resolveLocalized } from '../../utils/locale';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, showImageBadge = true, showPriceBadge = true }) => {
   const { locale, t } = useLanguage();
   const { addToCart, cartItems, maxPerItem } = useCart() || { addToCart: () => {}, cartItems: [], maxPerItem: 10 };
   const navigate = useNavigate();
@@ -20,8 +20,11 @@ const ProductCard = ({ product }) => {
   const [open, setOpen] = useState(false);
   const name = resolveLocalized(product?.name ?? product?.title, locale) || (typeof product?.name === 'string' ? product.name : product?.title) || '';
   const detailsPath = `${locale === 'ar' ? '' : '/' + locale}/product/${product.id}`;
-  const hasDiscount = product.oldPrice && product.oldPrice > product.price;
-  const discountPercent = hasDiscount ? Math.round( (1 - (product.price / product.oldPrice)) * 100 ) : null;
+  const baseOldRaw = (product?.oldPrice ?? product?.originalPrice);
+  const baseOld = baseOldRaw != null ? +baseOldRaw : undefined;
+  const priceNum = product?.price != null ? +product.price : undefined;
+  const hasDiscount = Number.isFinite(baseOld) && Number.isFinite(priceNum) && baseOld > priceNum;
+  const discountPercent = hasDiscount ? Math.round( (1 - (priceNum / baseOld)) * 100 ) : null;
   const outOfStock = product.stock !== undefined && product.stock <= 0;
   return (
     <div className="product-card" data-id={product.id}>
@@ -32,8 +35,8 @@ const ProductCard = ({ product }) => {
           className="w-full h-full object-cover"
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
         />
-        {product.badge && <span className="badge">{locale==='ar'? 'جديد':'New'}</span>}
-        {hasDiscount && <span className="discount-badge">-{discountPercent}%</span>}
+  {product.badge && <span className="badge">{locale==='ar'? 'جديد':'New'}</span>}
+  {showImageBadge && hasDiscount && <span className="discount-badge">-{discountPercent}%</span>}
         {outOfStock && <span className="gallery-indicator" style={{background:'rgba(109,1,11,.85)'}}>{locale==='ar'?'غير متوفر':'Out'}</span>}
         <div className="product-overlay">
           <button className="quick-view-btn" onClick={() => setOpen(true)}>{t('quickView')}</button>
@@ -49,7 +52,12 @@ const ProductCard = ({ product }) => {
       )}
       <div className="price-row">
         <span className="price">{product.price} {locale==='ar'?'ر.س':'SAR'}</span>
-        {product.oldPrice && <span className="old">{product.oldPrice}</span>}
+        {Number.isFinite(baseOld) && <span className="old">{baseOld}</span>}
+        {showPriceBadge && hasDiscount && typeof discountPercent === 'number' && (
+          <span className="badge-soft" style={{fontSize:'.62rem', padding:'.15rem .4rem', borderRadius:8, marginInlineStart:6}}>
+            -{discountPercent}%
+          </span>
+        )}
       </div>
       <div className="actions">
         <button

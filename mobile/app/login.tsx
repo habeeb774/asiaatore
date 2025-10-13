@@ -6,8 +6,10 @@ import { Screen, Title, Button, Text } from '../components/UI';
 import { API_BASE } from '../lib/config';
 
 export default function Login() {
+  // In dev, the API supports fallback credentials when DEBUG_LOGIN=1 or ALLOW_INVALID_DB=true
+  // Defaults below match server DEV_USERS in server/routes/auth.js
   const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('Admin123!');
+  const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
@@ -34,6 +36,7 @@ export default function Login() {
       <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="كلمة المرور" style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10 }} />
       <Button title={loading ? '...' : 'دخول'} onPress={submit} />
       <Text muted size={12}>سيتم حفظ التوكن محليًا للاستخدام لاحقًا</Text>
+      <Text muted size={11}>ملاحظة: في وضع التطوير جرّب البريد: admin@example.com وكلمة المرور: admin123</Text>
     </Screen>
   );
 }

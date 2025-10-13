@@ -1,27 +1,9 @@
-import React from 'react'
-import { useStore } from '../../context/StoreContext'
+/* Legacy Admin Dashboard (tabbed) - deprecated.
+   This file now redirects to the new AdminDashboard route (/admin) which uses AdminSideNav + view query.
+*/
+import React from 'react';
+import { Navigate } from 'react-router-dom';
 
-const SellersManagement = () => {
-  const { sellers = [] } = useStore() || {}
-
-  return (
-    <div>
-      <h2>Sellers Management</h2>
-      <p>List of registered sellers. (placeholder)</p>
-      <div style={{display:'grid',gap:8}}>
-        {sellers.length === 0 ? (
-          <div>No sellers yet.</div>
-        ) : (
-          sellers.map(s => (
-            <div key={s.id} style={{padding:8,border:'1px solid #e5e7eb',borderRadius:6}}>
-              <strong>{s.name}</strong>
-              <div style={{fontSize:13,color:'#6b7280'}}>{s.email}</div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  )
+export default function LegacyAdminDashboardRedirect() {
+  return <Navigate to="/admin?view=sellers" replace />;
 }
-
-export default SellersManagement

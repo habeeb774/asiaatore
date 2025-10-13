@@ -174,19 +174,126 @@ async function main() {
     console.log('Inserted app links.');
   }
 
-  // Store settings default
-  const existingSetting = await prisma.storeSetting.findUnique({ where: { id: 'singleton' } }).catch(()=>null);
-  if (!existingSetting) {
-    await prisma.storeSetting.create({ data: {
+  // Add 10 ready-made products with proper categoryId and valid internet images (idempotent upsert)
+  try {
+    console.log('Ensuring 10 demo products (with categoryId and images)...');
+    // Map category slug -> id
+    const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
+    const catBySlug = Object.fromEntries(categories.map(c => [c.slug, c.id]));
+    const items = [
+      { slug: 'catid-tea-premium', nameAr: 'شاي فاخر', nameEn: 'Premium Tea', price: 19.5, cat: 'sugar-tea-coffee' },
+      { slug: 'catid-arabica-coffee', nameAr: 'قهوة أرابيكا', nameEn: 'Arabica Coffee', price: 32.0, cat: 'sugar-tea-coffee' },
+      { slug: 'catid-fresh-milk-1l', nameAr: 'حليب طازج 1ل', nameEn: 'Fresh Milk 1L', price: 7.5, cat: 'dairy-eggs' },
+      { slug: 'catid-free-range-eggs', nameAr: 'بيض بلدي', nameEn: 'Free-range Eggs', price: 16.0, cat: 'dairy-eggs' },
+      { slug: 'catid-basmati-rice-5kg', nameAr: 'رز بسمتي 5كجم', nameEn: 'Basmati Rice 5kg', price: 58.0, cat: 'pasta-rice' },
+      { slug: 'catid-penne-pasta', nameAr: 'مكرونة بيني', nameEn: 'Penne Pasta', price: 9.0, cat: 'pasta-rice' },
+      { slug: 'catid-olive-oil-500ml', nameAr: 'زيت زيتون 500مل', nameEn: 'Olive Oil 500ml', price: 24.0, cat: 'oils-ghee' },
+      { slug: 'catid-sunflower-oil-1l', nameAr: 'زيت دوار الشمس 1ل', nameEn: 'Sunflower Oil 1L', price: 18.0, cat: 'oils-ghee' },
+      { slug: 'catid-sparkling-water', nameAr: 'ماء غازي', nameEn: 'Sparkling Water', price: 4.0, cat: 'water-beverages' },
+      { slug: 'catid-orange-juice', nameAr: 'عصير برتقال', nameEn: 'Orange Juice', price: 6.5, cat: 'water-beverages' },
+    ];
+    // Use picsum.photos as reliable HTTP image source for tests (unique per slug)
+    const imageFor = (slug) => `https://picsum.photos/seed/${encodeURIComponent(slug)}/800/600`;
+    for (const p of items) {
+      const categoryId = catBySlug[p.cat] || catBySlug['supermarket'] || null;
+      if (!categoryId) { console.warn('Skipping product due to missing categoryId for', p.slug); continue; }
+      // Upsert product
+      const prod = await prisma.product.upsert({
+        where: { slug: p.slug },
+        update: {
+          nameAr: p.nameAr, nameEn: p.nameEn,
+          price: p.price,
+          category: p.cat,
+          categoryId,
+          image: imageFor(p.slug),
+          stock: 25
+        },
+        create: {
+          slug: p.slug,
+          nameAr: p.nameAr, nameEn: p.nameEn,
+          shortAr: 'منتج للتجربة', shortEn: 'Test product',
+          category: p.cat,
+          categoryId,
+          price: p.price, image: imageFor(p.slug), rating: 4, stock: 25
+        }
+      });
+      // Ensure a couple of ProductImage rows (idempotent by checking count)
+      const imgCount = await prisma.productImage.count({ where: { productId: prod.id } });
+      if (imgCount < 2) {
+        await prisma.productImage.createMany({ data: [
+          { productId: prod.id, url: imageFor(p.slug) + '?v=1', altAr: p.nameAr, altEn: p.nameEn, sort: 0 },
+          { productId: prod.id, url: imageFor(p.slug) + '?v=2', altAr: p.nameAr, altEn: p.nameEn, sort: 1 },
+        ] });
+      }
+    }
+    console.log('Ensured 10 demo products with categoryId & images.');
+  } catch (e) {
+    console.warn('Demo catId products step skipped:', e.message);
+  }
+
+  // Ensure a demo seller and assign some products to this seller (idempotent)
+  try {
+    const sellerEmail = 'seller@example.com';
+    let sellerUser = await prisma.user.findUnique({ where: { email: sellerEmail } });
+    if (!sellerUser) {
+      const hashed = await bcrypt.hash('Seller123!', 10);
+      sellerUser = await prisma.user.create({ data: { email: sellerEmail, password: hashed, role: 'seller', name: 'Demo Seller' } });
+      console.log('Seller user created (seller@example.com / Seller123!).');
+    } else if (sellerUser.role !== 'seller') {
+      sellerUser = await prisma.user.update({ where: { id: sellerUser.id }, data: { role: 'seller' } });
+      console.log('Existing user role elevated to seller:', sellerEmail);
+    }
+    const sellerProfile = await prisma.seller.upsert({
+      where: { userId: sellerUser.id },
+      update: { active: true },
+      create: { userId: sellerUser.id, storeName: 'متجر تجريبي', commissionRate: 0.05, active: true }
+    });
+    // Assign a subset of products (the 10 inserted above) to this seller
+    const slugsToAssign = [
+      'catid-tea-premium',
+      'catid-arabica-coffee',
+      'catid-fresh-milk-1l',
+      'catid-free-range-eggs',
+      'catid-basmati-rice-5kg',
+      'catid-penne-pasta',
+      'catid-olive-oil-500ml',
+      'catid-sunflower-oil-1l',
+      'catid-sparkling-water',
+      'catid-orange-juice',
+    ];
+    const products = await prisma.product.findMany({ where: { slug: { in: slugsToAssign } }, select: { id: true, slug: true, sellerId: true } });
+    if (products.length) {
+      const toUpdate = products.filter(p => p.sellerId !== sellerProfile.id);
+      for (const p of toUpdate) {
+        await prisma.product.update({ where: { id: p.id }, data: { sellerId: sellerProfile.id } });
+      }
+      if (toUpdate.length) console.log(`Assigned ${toUpdate.length} products to seller ${sellerProfile.storeName}.`);
+      else console.log('Seller assignment already in place for demo products.');
+    }
+  } catch (e) {
+    console.warn('Seller seeding/assignment step skipped:', e.message);
+  }
+
+  // Store settings default (idempotent via upsert)
+  // Fix legacy zero-date values that may break Prisma mappings
+  try {
+    await prisma.$executeRawUnsafe(
+      'UPDATE StoreSetting SET updatedAt = NOW(), createdAt = IFNULL(createdAt, NOW()) WHERE id = "singleton" AND (updatedAt IS NULL OR updatedAt = "0000-00-00 00:00:00")'
+    );
+  } catch { /* ignore */ }
+  await prisma.storeSetting.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
       id: 'singleton',
-      siteNameAr: 'متجري',
+      siteNameAr: 'شركة منفذ اسيا التجارية',
       siteNameEn: 'My Store',
       colorPrimary: '#69be3c',
       colorSecondary: '#f6ad55',
       colorAccent: '#0ea5e9'
-    }});
-    console.log('Inserted default store settings.');
-  }
+    }
+  });
+  console.log('Store settings ensured (singleton).');
 }
 
 main().catch(e => { console.error(e); process.exit(1); }).finally(async ()=> { await prisma.$disconnect(); });

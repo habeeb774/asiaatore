@@ -9,9 +9,12 @@ This guide helps you launch the store to production safely.
 - Domain(s) for site and API
 
 ## 1) Environment variables
-Copy `.env.production.example` to `.env` on the server and fill it:
-- AUTH_SECRET=your_long_random_secret
+Copy `.env.example` to `.env` on the server and fill it:
 - APP_BASE_URL=https://yourdomain.com
+- DATABASE_URL=mysql://user:pass@dbhost:3306/my_store
+- CORS_ORIGIN=https://yourdomain.com,https://www.yourdomain.com
+- TRUST_PROXY=true (behind Nginx)
+- FORCE_HTTPS=true (optional, if Nginx forwards X-Forwarded-Proto)
 
 ## 2) Install and build
 On the server:
@@ -28,11 +31,49 @@ Or directly:
 - `NODE_ENV=production node server/index.js`
 
 ## 4) Proxy and HTTPS
-Configure Nginx/Traefik to:
-- Terminate TLS
-- Proxy /api to the Node app (PORT from .env)
-- Serve /uploads from the Node app
-- Serve the SPA (if not served by Node) from the `dist/` directory or a CDN
+Use Nginx as reverse proxy with HTTPS via Let’s Encrypt (Certbot). Example server block:
+
+```
+server {
+	listen 80;
+	server_name yourdomain.com www.yourdomain.com;
+	location /.well-known/acme-challenge/ { root /var/www/certbot; }
+	location / { return 301 https://$host$request_uri; }
+}
+
+server {
+	listen 443 ssl http2;
+	server_name yourdomain.com www.yourdomain.com;
+
+	ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+	ssl_protocols TLSv1.2 TLSv1.3;
+	ssl_ciphers HIGH:!aNULL:!MD5;
+
+	# Health check
+	location /api/health { proxy_pass http://127.0.0.1:4000/api/health; proxy_set_header Host $host; }
+
+	# API
+	location /api {
+		proxy_pass http://127.0.0.1:4000;
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection "upgrade";
+		proxy_set_header Host $host;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Host $host;
+	}
+
+	# Static SPA (if served by Nginx)
+	location / {
+		root /var/www/my-store/dist;
+		try_files $uri /index.html;
+	}
+}
+```
+
+Then obtain/renew certs with Certbot.
 
 ## 5) Vite client configuration
 If the SPA is hosted on a separate domain from the API:
@@ -46,6 +87,8 @@ If the SPA is hosted on a separate domain from the API:
 - Helmet enabled (already wired)
 - Rate limiting configured for auth/payment
 - Strong `JWT_SECRET`
+ - Behind Nginx, set `TRUST_PROXY=true` and optionally `FORCE_HTTPS=true`
+ - Monitor `/api/health` in uptime checks
 
 ## 7) Payments (PayPal)
 - Switch to live credentials and webhook ID
@@ -53,6 +96,7 @@ If the SPA is hosted on a separate domain from the API:
 - Verify webhook reception in production
 
 ## 8) Monitoring and logs
+- The server uses pino for structured logs. Control verbosity with `LOG_LEVEL` and enable pretty output locally with `PINO_PRETTY=true`.
 - Use PM2 logs: `pm2 logs my-store-server`
 - Add a log shipper (optional)
 

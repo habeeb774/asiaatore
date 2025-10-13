@@ -1,3 +1,7 @@
+// LEGACY FILE NOTICE:
+// This file is retained for historical reference only and is NOT used by the current app.
+// The live router entrypoint is `src/main.jsx` which renders `AppRoutes.jsx`.
+// Please do NOT add new code here. If needed, migrate any parts into the modern structure.
 import React, { useState, createContext, useCallback, useMemo, Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CartProvider, useCart } from './context/CartContext';
@@ -12,12 +16,12 @@ import Sidebar from './components/Sidebar';
 
 // New contexts and pages
 import { AuthProvider } from './context/AuthContext';
-import { OrdersProvider, useOrders } from './context/OrdersContext';
+import { OrdersProvider } from './context/OrdersContext';
 import { ReviewsProvider } from './context/ReviewsContext';
 import { AdminProvider } from './context/AdminContext';
 import TawkProvider from './components/TawkProvider';
 import { CheckoutProvider, CheckoutContext } from './context/CheckoutContext';
-import { PaymentProvider } from './context/PaymentContext';
+import { PaymentProvider, PaymentContext } from './context/PaymentContext';
 
 // استبدال الاستيرادات المباشرة للصفحات بـ lazy لتحسين الأداء
 const Home = lazy(() => import('./pages/Home'));
@@ -45,7 +49,7 @@ const Brands = lazy(() => import('./pages/Brands'));
 const CheckoutSuccess = lazy(() => import('./pages/CheckoutSuccess'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const SellerDashboard = lazy(() => import('./pages/seller/SellerDashboard'));
+const SellerDashboard = lazy(() => import('./pages/admin/Sellers'));
 const PaymentMethod = lazy(() => import('./pages/PaymentMethod'));
 const PaymentSelect = lazy(() => import('./pages/PaymentSelect'));
 const PaymentProcessing = lazy(() => import('./pages/PaymentProcessing'));
@@ -313,7 +317,7 @@ function App() {
 
                                           {/* dashboards */}
                                           <Route path="/admin" element={<AdminDashboard />} />
-                                          <Route path="/seller" element={<SellerDashboard />} />
+                                          <Route path="/sellers" element={<SellerDashboard />} />
                                           <Route path="/orders" element={<Orders />} />
                                           <Route path="/order/:id" element={<OrderDetails />} />
                                           <Route path="/seller/products" element={<ProductManager />} />

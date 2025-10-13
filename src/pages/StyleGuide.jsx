@@ -1,9 +1,9 @@
 import React from 'react';
-import { Button } from '../components/ui/button.jsx';
+import { Button } from '../components/ui/Button.jsx';
 import { Input } from '../components/ui/input.jsx';
 import { Label } from '../components/ui/label.jsx';
 import { Badge } from '../components/ui/badge.jsx';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card.jsx';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.jsx';
 import { Skeleton } from '../components/ui/skeleton.jsx';
 
 export default function StyleGuide() {

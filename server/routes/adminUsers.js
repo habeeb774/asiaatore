@@ -21,7 +21,7 @@ router.post('/', requireAdmin, async (req, res) => {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   if (!emailOk) return res.status(400).json({ ok:false, error:'INVALID_EMAIL' });
     role = role || 'user';
-    const allowedRoles = new Set(['user','admin','seller']);
+  const allowedRoles = new Set(['user','admin','seller','delivery']);
     if (!allowedRoles.has(role)) return res.status(400).json({ ok:false, error:'INVALID_ROLE' });
     if (!sendInvite) {
       if (!password) return res.status(400).json({ ok:false, error:'MISSING_PASSWORD' });

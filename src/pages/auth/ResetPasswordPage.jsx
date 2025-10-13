@@ -36,10 +36,10 @@ const ResetPasswordPage = () => {
     <div style={{direction:'rtl',display:'flex',justifyContent:'center',padding:'2rem'}}>
       <form onSubmit={submit} style={card}>
         <h1 style={h1}>إعادة تعيين كلمة المرور</h1>
-        <input style={inp} placeholder="البريد" value={email} onChange={e=>setEmail(e.target.value)} />
-        <input style={inp} placeholder="رمز التحقق" value={token} onChange={e=>setToken(e.target.value)} />
-        <input style={inp} type="password" placeholder="كلمة المرور الجديدة" value={pwd} onChange={e=>setPwd(e.target.value)} />
-        <input style={inp} type="password" placeholder="تأكيد كلمة المرور" value={confirm} onChange={e=>setConfirm(e.target.value)} />
+  <input id="reset-email" name="email" autoComplete="email" style={inp} placeholder="البريد" value={email} onChange={e=>setEmail(e.target.value)} />
+  <input id="reset-token" name="token" style={inp} placeholder="رمز التحقق" value={token} onChange={e=>setToken(e.target.value)} />
+  <input id="reset-password" name="new-password" autoComplete="new-password" style={inp} type="password" placeholder="كلمة المرور الجديدة" value={pwd} onChange={e=>setPwd(e.target.value)} />
+  <input id="reset-password-confirm" name="new-password-confirm" autoComplete="new-password" style={inp} type="password" placeholder="تأكيد كلمة المرور" value={confirm} onChange={e=>setConfirm(e.target.value)} />
         {err && <div style={errBox}>{err}</div>}
         {ok && <div style={okBox}>تم التعيين بنجاح</div>}
         <button type="submit" style={btn} disabled={loading}>{loading? '...تنفيذ' : 'تعيين'}</button>

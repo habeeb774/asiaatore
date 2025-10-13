@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 const AnnouncementBar = () => {
   const { locale } = useLanguage();
   const msg = locale === 'ar'
-    ? 'قسط مشترياتك عبر تابي وتمارا – شحن سريع وخيارات دفع متعددة'
+    ? 'شحن سريع وخيارات دفع متعددة'
     : 'Split your purchases via Tabby & Tamara – Fast shipping & flexible payments';
   return (
     <div className="announcement-bar-modern" role="note">

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-irregular-whitespace */
 // Generic scraper for external store listing pages (e.g., jomlah.app)
 // Usage (example):
 //   node server/scripts/scrapeStoreProducts.js \
@@ -92,7 +93,7 @@ function parsePriceText(s){
 	// Extract first number like 12.50 or 12,50
 	if (!s) return null;
 	const normalized = normalizeDigits(s).replace(/[\s ]/g,'');
-	const m = normalized.match(/([0-9]+(?:[\.,][0-9]{1,2})?)/);
+	const m = normalized.match(/([0-9]+(?:[.,][0-9]{1,2})?)/);
 	if (!m) return null;
 	const num = m[1].replace(',', '.');
 	const n = Number(num);

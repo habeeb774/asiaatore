@@ -6,7 +6,7 @@ import Seo from '../components/Seo';
 const Contact = () => {
   const { setting } = useSettings() || {};
   const { locale } = useLanguage();
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const [sent, setSent] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -148,6 +148,8 @@ const Contact = () => {
                     <div>
                       <label className="block text-gray-700 mb-2">الاسم الكامل *</label>
                       <input
+                        id="contact-name"
+                        autoComplete="name"
                         type="text"
                         name="name"
                         value={formData.name}
@@ -160,6 +162,8 @@ const Contact = () => {
                     <div>
                       <label className="block text-gray-700 mb-2">البريد الإلكتروني *</label>
                       <input
+                        id="contact-email"
+                        autoComplete="email"
                         type="email"
                         name="email"
                         value={formData.email}
@@ -175,6 +179,8 @@ const Contact = () => {
                     <div>
                       <label className="block text-gray-700 mb-2">رقم الهاتف</label>
                       <input
+                        id="contact-phone"
+                        autoComplete="tel"
                         type="tel"
                         name="phone"
                         value={formData.phone}
@@ -186,6 +192,7 @@ const Contact = () => {
                     <div>
                       <label className="block text-gray-700 mb-2">الموضوع *</label>
                       <select
+                        id="contact-subject"
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
@@ -205,6 +212,7 @@ const Contact = () => {
                   <div>
                     <label className="block text-gray-700 mb-2">الرسالة *</label>
                     <textarea
+                      id="contact-message"
                       name="message"
                       value={formData.message}
                       onChange={handleChange}

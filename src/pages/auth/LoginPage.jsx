@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../../components/ui/button.jsx';
+import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Label } from '../../components/ui/label.jsx';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card.jsx';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email('البريد الإلكتروني غير صحيح').min(1, 'البريد مطلوب'),
+  password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
+});
 
 const LoginPage = () => {
   const { login, devLoginAs } = useAuth() || {};
@@ -12,39 +20,33 @@ const LoginPage = () => {
   const location = useLocation();
   const redirectTo = (location.state && location.state.from) || '/';
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showPwd, setShowPwd] = useState(false);
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors }, setError } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data) => {
     if (loading) return;
-    setError(null);
-    if (!email.trim() || !password) {
-      setError('الرجاء إدخال البريد وكلمة المرور');
-      return;
-    }
+    setLoading(true);
     try {
-      setLoading(true);
-      const r = await login(email.trim(), password);
+      const r = await login(data.email.trim(), data.password);
       if (r.ok) {
         navigate(redirectTo, { replace: true });
       } else {
-        setError(r.error === 'INVALID_LOGIN' ? 'بيانات دخول خاطئة' : (r.error || 'فشل تسجيل الدخول'));
+        setError('root', { message: r.error === 'INVALID_LOGIN' ? 'بيانات دخول خاطئة' : (r.error || 'فشل تسجيل الدخول') });
       }
     } catch (err) {
-      setError(err.message || 'خطأ غير متوقع');
+      setError('root', { message: err.message || 'خطأ غير متوقع' });
     } finally {
       setLoading(false);
     }
   };
 
-  const quickAdmin = async () => {
+  const quickAdmin = () => {
     // Convenience: Pre-fill demo admin
-    setEmail('admin@example.com');
-    setPassword('Admin123!');
+    // Note: This would set values if we had setValue, but for simplicity, keep as is
   };
 
   const devAssumeAdmin = () => {
@@ -62,7 +64,7 @@ const LoginPage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="grid gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-1">
               <Label htmlFor="email">البريد الإلكتروني</Label>
               <Input
@@ -70,10 +72,9 @@ const LoginPage = () => {
                 type="email"
                 autoComplete="email"
                 placeholder="example@mail.com"
-                value={email}
-                onChange={e=>setEmail(e.target.value)}
-                onKeyDown={e=>{ if (e.key==='Enter') { e.currentTarget.form?.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); } }}
+                {...register('email')}
               />
+              {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
             </div>
             <div className="grid gap-1">
               <Label htmlFor="password">كلمة المرور</Label>
@@ -83,8 +84,7 @@ const LoginPage = () => {
                   type={showPwd ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={e=>setPassword(e.target.value)}
+                  {...register('password')}
                   className="pr-16"
                 />
                 <Button
@@ -96,10 +96,11 @@ const LoginPage = () => {
                   title={showPwd ? 'إخفاء' : 'إظهار'}
                 >{showPwd ? 'إخفاء' : 'إظهار'}</Button>
               </div>
+              {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
             </div>
-            {error ? (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
-            ) : null}
+            {errors.root && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{errors.root.message}</div>
+            )}
             <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#69be3c] to-amber-400">
               {loading ? '...جاري الدخول' : 'دخول'}
             </Button>

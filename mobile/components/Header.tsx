@@ -7,7 +7,7 @@ import { API_BASE } from '../lib/config';
 export function Header({ showTitle = true }: { showTitle?: boolean }) {
   const { data } = useStoreSettings();
   const t = useTheme();
-  const name = data?.siteNameAr || data?.siteNameEn || 'متجري';
+  const name = data?.siteNameAr || data?.siteNameEn || 'شركة منفذ اسيا التجارية';
   const origin = API_BASE.replace(/\/?api\/?$/, '');
   const logo = data?.logo
     ? (data.logo.startsWith('http') ? data.logo : `${origin}${data.logo}`)

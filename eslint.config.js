@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'dev-dist', '11dist']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -30,7 +30,7 @@ export default defineConfig([
   },
   // Node/Server overrides
   {
-    files: ['server/**/*.{js,jsx}', '*.config.{js,cjs}', 'vite.config.js', 'tailwind.config.js', 'ecosystem.config.cjs'],
+    files: ['server/**/*.{js,jsx}', '*.config.{js,cjs}', 'vite.config.js', 'tailwind.config.js', 'ecosystem.config.cjs', 'scripts/**/*.{js,jsx}', 'mobile/**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: { ...globals.node },

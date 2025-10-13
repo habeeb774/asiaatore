@@ -1,5 +1,12 @@
 .admin-dashboard {
   padding: 18px;
+  /* Enforce Cairo in admin scope in case any component-level CSS overrides the base */
+  font-family: var(--font-sans, 'Cairo', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
+}
+
+/* Root wrapper for AdminDashboard to inherit Cairo strongly across descendants */
+.admin-root, .admin-root * {
+  font-family: var(--font-sans, 'Cairo', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif) !important;
 }
 .dashboard-header h1 {
   margin: 0 0 12px 0;

@@ -12,7 +12,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   const { setting } = useSettings() || {};
-  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'متجري';
+  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -28,16 +28,16 @@ const Register = () => {
         <h2 className="text-2xl font-bold mb-4">إنشاء حساب</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="text-sm">الاسم الكامل</label>
-            <input className="w-full mt-1 p-2 border rounded" value={name} onChange={(e)=>setName(e.target.value)} />
+            <label className="text-sm" htmlFor="reg-name">الاسم الكامل</label>
+            <input id="reg-name" name="name" autoComplete="name" className="w-full mt-1 p-2 border rounded" value={name} onChange={(e)=>setName(e.target.value)} />
           </div>
           <div className="mb-3">
-            <label className="text-sm">البريد الإلكتروني أو الهاتف</label>
-            <input className="w-full mt-1 p-2 border rounded" value={email} onChange={(e)=>setEmail(e.target.value)} />
+            <label className="text-sm" htmlFor="reg-email">البريد الإلكتروني أو الهاتف</label>
+            <input id="reg-email" name="email" type="email" autoComplete="email" className="w-full mt-1 p-2 border rounded" value={email} onChange={(e)=>setEmail(e.target.value)} />
           </div>
           <div className="mb-3">
-            <label className="text-sm">كلمة المرور</label>
-            <input type="password" className="w-full mt-1 p-2 border rounded" value={password} onChange={(e)=>setPassword(e.target.value)} />
+            <label className="text-sm" htmlFor="reg-password">كلمة المرور</label>
+            <input id="reg-password" name="new-password" type="password" autoComplete="new-password" className="w-full mt-1 p-2 border rounded" value={password} onChange={(e)=>setPassword(e.target.value)} />
           </div>
           <div className="flex items-center justify-between">
             <button className="btn-primary px-6 py-2">أنشئ الحساب</button>

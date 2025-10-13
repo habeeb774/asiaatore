@@ -13,14 +13,14 @@ Common local issues and quick one-liners.
   - Dev helpers: `QUICK_START_DB=1` (local fallback URL), `ALLOW_INVALID_DB=true` (degraded mode), `ALLOW_DEV_HEADERS=true` (header-based fake auth).
   - API health: http://localhost:4000/_health | DB ping: http://localhost:4000/_db_ping
 
-### 🔧 Free a locked port (Vite at 3000 or API at 4000)
+### 🔧 Free a locked port (Vite at 5173 or API at 4000+)
 ```powershell
-# Find and kill the process using port 3000
-netstat -ano | findstr :3000
+# Find and kill the process using port 5173
+netstat -ano | findstr :5173
 # Then replace <PID> with the actual number
 taskkill /PID <PID> /F
 
-# For the API default port 4000
+# For the API default port 4000 (may increment to 4001+ if busy)
 netstat -ano | findstr :4000
 taskkill /PID <PID> /F
 ```
@@ -33,7 +33,7 @@ npm install
 
 ### 🗄️ Reset Prisma schema / dev DB
 ```powershell
-npx prisma migrate reset --force
+npm run db:reset
 ```
 
 ### 🧪 Rebuild/run cleanly
@@ -43,7 +43,7 @@ npm run dev:server
 npm run dev
 ```
 
-> Tip: The API auto-increments the port if 4000 is busy. The Vite dev server uses port 3000 (see `vite.config.js`).
+> Tip: The API auto-increments the port if 4000 is busy. The Vite dev server defaults to port 5173 and will pick the next open port if that one is taken.
 
 ---
 
@@ -177,7 +177,7 @@ npm run dev:server
 npm run dev
 ```
 4) URLs:
-- Frontend (Vite): http://localhost:3000
+- Frontend (Vite): http://localhost:5173 (auto-increments if busy)
 - API: http://localhost:4000 (auto-increments if busy)
 - Health: /_health, /_db_status, /_db_ping
 - Docs: /api/docs (HTML) and /api/docs.json (OpenAPI-lite)

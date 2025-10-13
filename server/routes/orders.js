@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 import prisma from '../db/client.js';
 import { OrdersService, mapOrder as mapOrderDto } from '../modules/orders/service.js';
 import { audit } from '../utils/audit.js';
+import { generateInvoiceQrPng } from '../utils/qr.js';
 import { emitOrderEvent } from '../utils/realtimeHub.js';
 import { requireAdmin } from '../middleware/auth.js';
 
@@ -15,9 +17,22 @@ const mapOrder = mapOrderDto;
 // List orders (admin: all / user: own) with optional pagination
 // List orders with advanced filters (admin only for cross-user queries)
 // Query params: userId, status, paymentMethod, from, to, page, pageSize
+const listSchema = z.object({
+  userId: z.string().trim().optional(),
+  status: z.string().trim().optional(),
+  paymentMethod: z.string().trim().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(200).optional()
+});
 router.get('/', async (req, res) => {
   try {
-    const { userId, page, pageSize, status, paymentMethod, from, to } = req.query;
+    const parsed = listSchema.safeParse(req.query || {});
+    if (!parsed.success) {
+      return res.status(400).json({ ok:false, error:'INVALID_QUERY', fields: parsed.error.flatten() });
+    }
+    const { userId, page, pageSize, status, paymentMethod, from, to } = parsed.data;
     const isAdmin = req.user?.role === 'admin';
     const where = {};
     if (!isAdmin) {
@@ -42,7 +57,7 @@ router.get('/', async (req, res) => {
       }
       if (Object.keys(range).length) where.createdAt = range;
     }
-    const result = await OrdersService.list({ where, page, pageSize, orderBy: { createdAt: 'desc' } });
+  const result = await OrdersService.list({ where, page, pageSize, orderBy: { createdAt: 'desc' } });
     if ('total' in result) {
       return res.json({ ok: true, orders: result.items.map(mapOrder), page: result.page, pageSize: result.pageSize, total: result.total, totalPages: result.totalPages });
     }
@@ -58,9 +73,53 @@ router.get('/', async (req, res) => {
 });
 
 // Create order
+const orderItemSchema = z.object({
+  productId: z.union([z.string(), z.literal('custom')]),
+  quantity: z.coerce.number().int().positive(),
+  price: z.coerce.number().nonnegative().optional()
+});
+const createOrderSchema = z
+  .object({
+    items: z.array(orderItemSchema).min(1),
+    paymentMethod: z.string().trim().optional(),
+    // Zod v4: use unknown() instead of any()
+    paymentMeta: z.record(z.unknown()).optional(),
+    shippingAddress: z.record(z.unknown()).optional(),
+    // Accept top-level shipping meta for compatibility with tests/clients
+    shipping: z.record(z.unknown()).optional(),
+    note: z.string().trim().max(500).optional(),
+    userId: z.string().optional()
+  })
+  // Allow extra keys without failing validation to avoid internal _zod catchall issues
+  .catchall(z.unknown());
 router.post('/', async (req, res) => {
   try {
-    const body = req.body || {};
+    let body;
+    try {
+      const parsed = createOrderSchema.safeParse(req.body || {});
+      if (!parsed.success) {
+        return res.status(400).json({ ok:false, error:'INVALID_INPUT', fields: parsed.error.flatten() });
+      }
+      body = parsed.data;
+    } catch (zerr) {
+      // Zod v4 internal error guard: fall back to permissive parsing
+      if (process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.warn('[ORDERS] Zod parsing failed; using permissive fallback:', zerr?.message);
+      }
+      const raw = req.body || {};
+      const items = Array.isArray(raw.items) ? raw.items : [];
+      if (!items.length) return res.status(400).json({ ok:false, error:'INVALID_INPUT', message:'items required' });
+      body = {
+        items,
+        paymentMethod: typeof raw.paymentMethod === 'string' ? raw.paymentMethod : undefined,
+        paymentMeta: raw.paymentMeta && typeof raw.paymentMeta === 'object' ? raw.paymentMeta : undefined,
+        shippingAddress: raw.shippingAddress && typeof raw.shippingAddress === 'object' ? raw.shippingAddress : undefined,
+        shipping: raw.shipping && typeof raw.shipping === 'object' ? raw.shipping : undefined,
+        note: typeof raw.note === 'string' ? raw.note : undefined,
+        userId: typeof raw.userId === 'string' ? raw.userId : undefined,
+      };
+    }
     const created = await OrdersService.create({ ...body, userId: req.user?.id || body.userId || 'guest' });
     audit({ action: 'order.create', entity: 'Order', entityId: created.id, userId: created.userId, meta: { items: created.items.length, total: created.grandTotal } });
     emitOrderEvent('order.created', created);
@@ -89,10 +148,20 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update order (partial) - admin can update anything, user limited (e.g., cannot change userId or totals directly)
+const updateOrderSchema = z.object({
+  status: z.string().trim().optional(),
+  items: z.array(orderItemSchema).optional(),
+  // Zod v4: use unknown() instead of any()
+  paymentMeta: z.record(z.unknown()).optional(),
+});
 router.patch('/:id', async (req, res) => {
   const isAdmin = req.user?.role === 'admin';
   try {
-    const updated = await OrdersService.update(req.params.id, req.body || {}, { isAdmin, userId: req.user?.id || 'guest' });
+    const parsed = updateOrderSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ ok:false, error:'INVALID_INPUT', fields: parsed.error.flatten() });
+    }
+    const updated = await OrdersService.update(req.params.id, parsed.data, { isAdmin, userId: req.user?.id || 'guest' });
     audit({ action: 'order.update', entity: 'Order', entityId: updated.id, userId: req.user?.id, meta: { status: updated.status } });
     emitOrderEvent('order.updated', updated);
     res.json({ ok: true, order: mapOrder(updated) });
@@ -103,7 +172,7 @@ router.patch('/:id', async (req, res) => {
 });
 
 function renderInvoiceHtml(order, opts = {}) {
-  const storeName = opts.storeName || 'متجري';
+  const storeName = opts.storeName || 'شركة منفذ اسيا التجارية';
   const logoUrl = opts.logoUrl || null;
   const currency = order.currency || 'SAR';
   const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : v;
@@ -165,7 +234,10 @@ function renderInvoiceHtml(order, opts = {}) {
       .totals .row:last-child{border-bottom:0}
       .totals .label{color:var(--muted)}
       .totals .grand{font-weight:800;font-size:${paper==='thermal80' ? '14px' : '18px'}}
-      footer{margin-top:${paper==='thermal80' ? '10px' : '28px'};color:var(--muted);font-size:${paper==='thermal80' ? '11px' : '12px'};display:flex;justify-content:space-between;gap:12px;align-items:center}
+  footer{margin-top:${paper==='thermal80' ? '10px' : '28px'};color:var(--muted);font-size:${paper==='thermal80' ? '11px' : '12px'};display:flex;justify-content:space-between;gap:12px;align-items:center}
+  .qr{display:flex;align-items:center;gap:10px}
+  .qr img{width:${paper==='thermal80' ? '72px' : '96px'};height:${paper==='thermal80' ? '72px' : '96px'};object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .qr .caption{font-size:${paper==='thermal80' ? '10px' : '12px'}}
   .print-btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:${paper==='thermal80' ? '6px 10px' : '8px 12px'};border-radius:10px;cursor:pointer}
   .print-btn:hover{box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent)}
       .actions{display:flex;gap:8px}
@@ -184,7 +256,7 @@ function renderInvoiceHtml(order, opts = {}) {
     <div class="container">
       <header>
         <div class="brand">
-          ${logoUrl ? `<img class=\"logo\" src=\"${logoUrl}\" alt=\"Logo\" onerror=\"this.style.display='none'\"/>` : ''}
+          ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" onerror="this.style.display='none'"/>` : ''}
           <div class="name">${storeName}</div>
         </div>
         <div class="meta">
@@ -232,15 +304,18 @@ function renderInvoiceHtml(order, opts = {}) {
       </div>
 
       <footer>
-        <div>شكرًا لتسوقك معنا. هذه الفاتورة صالحة بدون توقيع.</div>
+        <div style="display:flex;gap:12px;align-items:center">
+          ${opts.qrDataUrl ? `<div class="qr"><img src="${opts.qrDataUrl}" alt="QR"/><div class="caption">تحقق من الفاتورة عبر رمز QR</div></div>` : ''}
+          <div>شكرًا لتسوقك معنا. هذه الفاتورة صالحة بدون توقيع.</div>
+        </div>
         <div class="actions no-print">
-          ${opts.pdfUrlA4 ? `<a class=\"print-btn\" href=\"${opts.pdfUrlA4}\" target=\"_blank\" rel=\"noopener\">تحميل PDF A4</a>` : ''}
-          ${opts.pdfUrlThermal ? `<a class=\"print-btn\" href=\"${opts.pdfUrlThermal}\" target=\"_blank\" rel=\"noopener\">PDF حراري 80mm</a>` : ''}
+          ${opts.pdfUrlA4 ? `<a class="print-btn" href="${opts.pdfUrlA4}" target="_blank" rel="noopener">تحميل PDF A4</a>` : ''}
+          ${opts.pdfUrlThermal ? `<a class="print-btn" href="${opts.pdfUrlThermal}" target="_blank" rel="noopener">PDF حراري 80mm</a>` : ''}
           <button class="print-btn" onclick="window.print()">طباعة</button>
         </div>
       </footer>
     </div>
-    ${opts.autoPrint ? `<script>document.addEventListener('DOMContentLoaded',()=>{ try{ window.print(); }catch(e){} });</script>` : ''}
+  ${opts.autoPrint ? '<script>document.addEventListener("DOMContentLoaded",()=>{ try{ window.print(); }catch(e){} });</script>' : ''}
   </body>
   </html>`;
 }
@@ -256,7 +331,7 @@ router.get('/:id/invoice', async (req, res) => {
     }
     // Load store settings for branding
     let setting = null; try { setting = await prisma.storeSetting.findUnique({ where: { id: 'singleton' } }); } catch {}
-  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'متجري';
+  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
   // Build theme from settings or logo
   const theme = { accent: setting?.colorAccent || setting?.colorPrimary || null, line: '#e2e8f0', soft: '#f8fafc' };
     let logoSrc = null;
@@ -296,7 +371,7 @@ router.get('/:id/invoice', async (req, res) => {
       } catch {}
     }
 
-    const token = typeof req.query?.token === 'string' ? req.query.token : null;
+  const token = typeof req.query?.token === 'string' ? req.query.token : null;
     const paper = String(req.query?.paper || '').toLowerCase();
     const autoPrint = String(req.query?.auto || '') === '1' || String(req.query?.auto || '').toLowerCase() === 'true';
     const pdfParamsA4 = new URLSearchParams();
@@ -307,7 +382,16 @@ router.get('/:id/invoice', async (req, res) => {
     // Thermal 80mm link
     pdfParamsThermal.set('paper', 'thermal80');
     const pdfUrlThermal = `${req.protocol}://${req.headers.host}/api/orders/${order.id}/invoice.pdf?${pdfParamsThermal}`;
-  res.type('html').send(renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, pdfUrlA4, pdfUrlThermal, theme, paper, autoPrint }));
+    // Generate QR (prefer official invoice entity if exists)
+    let qrDataUrl = null;
+    try {
+      const baseUrl = `${req.protocol}://${req.headers.host}`;
+      const inv = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }).catch(() => null);
+      const verifyUrl = inv ? `${baseUrl}/api/invoices/${inv.id}` : `${baseUrl}/api/orders/${order.id}/invoice`;
+      const qrPng = await generateInvoiceQrPng(verifyUrl);
+      qrDataUrl = `data:image/png;base64,${qrPng.toString('base64')}`;
+    } catch {}
+    res.type('html').send(renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, pdfUrlA4, pdfUrlThermal, theme, paper, autoPrint, qrDataUrl }));
   } catch (e) {
     res.status(500).send('<h1>Error generating invoice</h1>');
   }
@@ -324,7 +408,7 @@ router.get('/:id/invoice.pdf', async (req, res) => {
     }
   // Load store settings for branding
   let setting = null; try { setting = await prisma.storeSetting.findUnique({ where: { id: 'singleton' } }); } catch {}
-  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'متجري';
+  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
   const theme = { accent: setting?.colorAccent || setting?.colorPrimary || null, line: '#e2e8f0', soft: '#f8fafc' };
   let logoSrc = null;
   if (setting?.logo) {
@@ -360,7 +444,16 @@ router.get('/:id/invoice.pdf', async (req, res) => {
     } catch {}
   }
   const paper = String(req.query?.paper || '').toLowerCase();
-  const html = renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, theme, paper });
+  // QR for PDF
+  let qrDataUrl = null;
+  try {
+    const baseUrl = `${req.protocol}://${req.headers.host}`;
+    const inv = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }).catch(() => null);
+    const verifyUrl = inv ? `${baseUrl}/api/invoices/${inv.id}` : `${baseUrl}/api/orders/${order.id}/invoice`;
+    const qrPng = await generateInvoiceQrPng(verifyUrl);
+    qrDataUrl = `data:image/png;base64,${qrPng.toString('base64')}`;
+  } catch {}
+  const html = renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, theme, paper, qrDataUrl });
     let puppeteer;
     try {
       puppeteer = (await import('puppeteer')).default;

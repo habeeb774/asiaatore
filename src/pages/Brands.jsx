@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import Seo from '../components/Seo';
+import Breadcrumbs from '../components/common/Breadcrumbs';
 
 const PLACEHOLDER = '/vite.svg';
 
@@ -55,7 +56,7 @@ const Brands = () => {
     return list;
   }, [brands, query, sort]);
 
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const title = locale==='ar' ? 'العلامات التجارية' : 'Brands';
   const pageTitle = `${title} | ${siteName}`;
   const productsWord = (count)=> locale==='ar' ? `${count} منتج` : `${count} products`;
@@ -63,6 +64,7 @@ const Brands = () => {
   return (
     <div className="container-custom px-4 py-10">
       <Seo title={pageTitle} description={title} />
+      <Breadcrumbs items={[{ label: locale==='ar'?'الرئيسية':'Home', to: '/' }, { label: title }]} />
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center gap-4">
           <h2 className="text-2xl font-bold tracking-tight">{title}</h2>

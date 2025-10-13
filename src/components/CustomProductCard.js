@@ -58,7 +58,12 @@ class CustomProductCard extends HTMLElement {
   getBadge() {
     const p = this._product;
     if (!p) return '';
-    if (this.hasSale()) return `<span class="cp-badge">خصم</span>`;
+    if (this.hasSale()) {
+      const rp = Number(p.regular_price);
+      const sp = Number(p.sale_price);
+      const pct = Math.round((1 - (sp / rp)) * 100);
+      return `<span class="cp-badge">-${pct}%</span>`;
+    }
     if (p.promotion_title) return `<span class="cp-badge">${this.escape(p.promotion_title)}</span>`;
     return '';
   }

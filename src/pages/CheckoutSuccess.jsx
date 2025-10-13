@@ -20,7 +20,7 @@ const CheckoutSuccess = () => {
   const [message, setMessage] = useState('جاري إنهاء الدفع...');
   const { setting } = useSettings() || {};
   const { locale } = useLanguage();
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
 
   useEffect(() => {
     const doCapture = async () => {

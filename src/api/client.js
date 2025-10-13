@@ -22,10 +22,17 @@ async function request(path, options = {}) {
   const isFormData = (typeof FormData !== 'undefined') && options.body instanceof FormData;
   const headers = { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  // Dev helper: for /admin/* endpoints in dev, always include admin dev headers to satisfy requireAdmin
-  if (import.meta?.env?.DEV && path.startsWith('/admin')) {
-    headers['x-user-id'] = headers['x-user-id'] || 'dev-admin';
-    headers['x-user-role'] = headers['x-user-role'] || 'admin';
+  // Dev helper: in dev, if no Authorization token, include admin dev headers for non-auth endpoints
+  if (import.meta?.env?.DEV && !token && !path.startsWith('/auth')) {
+    let devUser = null;
+    try { const raw = localStorage.getItem('my_store_user'); if (raw) devUser = JSON.parse(raw); } catch {}
+    if (devUser?.id && devUser?.role) {
+      headers['x-user-id'] = headers['x-user-id'] || devUser.id;
+      headers['x-user-role'] = headers['x-user-role'] || devUser.role;
+    } else {
+      headers['x-user-id'] = headers['x-user-id'] || 'dev-admin';
+      headers['x-user-role'] = headers['x-user-role'] || 'admin';
+    }
   }
   try {
     // include credentials when hitting auth endpoints so cookies are sent
@@ -71,6 +78,11 @@ async function request(path, options = {}) {
     const tail = bodyText && !parsed ? (' - ' + bodyText.slice(0,240)) : '';
     const msg = `${baseMsg}${details} (${method} ${path})${tail}`;
     if (import.meta.env.DEV) console.error('[API]', msg);
+    // Return structured error payload to callers that expect JSON, else throw
+    if (parsed && typeof parsed === 'object') {
+      // Keep status and code for the UI to classify
+      return Promise.reject(Object.assign(new Error(msg), { code: parsed.error, data: parsed, status: res.status }));
+    }
     throw new Error(msg);
   }
   return res.json();
@@ -89,6 +101,8 @@ export const api = {
   },
   createProduct: (data) => request('/products', { method: 'POST', body: JSON.stringify(data) }),
   updateProduct: (id, data) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  batchDiscount: (payload) => request('/products/batch/discount', { method: 'POST', body: JSON.stringify(payload||{}) }),
+  batchClearDiscount: (productIds) => request('/products/batch/clear-discount', { method: 'POST', body: JSON.stringify({ productIds }) }),
   createProductForm: (formData) => request('/products', { method: 'POST', body: formData }),
   updateProductForm: (id, formData) => request(`/products/${id}`, { method: 'PUT', body: formData }),
   deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
@@ -143,6 +157,7 @@ export const api = {
   ,cartMerge: (items) => request('/cart/merge', { method: 'POST', body: JSON.stringify({ items }) })
   ,cartSet: (productId, quantity) => request('/cart/set', { method: 'POST', body: JSON.stringify({ productId, quantity }) })
   ,cartClear: () => request('/cart', { method: 'DELETE' })
+  ,cartRemoveItem: (productId) => request(`/cart/item/${productId}`, { method: 'DELETE' })
   // Reviews
   ,reviewsListForProduct: (productId) => request(`/reviews/product/${productId}`)
   ,reviewCreate: (productId, data) => request('/reviews', { method: 'POST', body: JSON.stringify({ productId, ...data }) })
@@ -155,10 +170,10 @@ export const api = {
   ,brandUpdate: (id, data) => request(`/brands/${id}`, { method:'PUT', body: JSON.stringify(data) })
   ,brandDelete: (id) => request(`/brands/${id}`, { method:'DELETE' })
   // Tier Prices
-  ,tierList: (productId) => request(`/products/${productId}/tier-prices`)
-  ,tierCreate: (productId, data) => request(`/products/${productId}/tier-prices`, { method:'POST', body: JSON.stringify(data) })
-  ,tierUpdate: (id, data) => request(`/tier-prices/${id}`, { method:'PATCH', body: JSON.stringify(data) })
-  ,tierDelete: (id) => request(`/tier-prices/${id}`, { method:'DELETE' })
+  ,tierList: (productId) => request(`/tier-prices/products/${productId}/tier-prices`)
+  ,tierCreate: (productId, data) => request(`/tier-prices/products/${productId}/tier-prices`, { method:'POST', body: JSON.stringify(data) })
+  ,tierUpdate: (id, data) => request(`/tier-prices/tier-prices/${id}`, { method:'PATCH', body: JSON.stringify(data) })
+  ,tierDelete: (id) => request(`/tier-prices/tier-prices/${id}`, { method:'DELETE' })
   // Marketing
   ,marketingFeatures: () => request('/marketing/features')
   ,marketingFeatureCreate: (data) => request('/marketing/features', { method:'POST', body: JSON.stringify(data) })
@@ -219,7 +234,89 @@ export const api = {
     const qs = new URLSearchParams({ status: 'pending_bank_review', paymentMethod: 'bank' });
     Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
     return request('/orders?' + qs.toString());
+  },
+  // Chat
+  chatEnsureThread: (sellerId, ctx = {}) => request('/chat/threads', { method:'POST', body: JSON.stringify({ sellerId, ...ctx }) }),
+  chatListThreads: (as='buyer', params={}) => {
+    const qs = new URLSearchParams({ as });
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    return request('/chat/threads?' + qs.toString());
+  },
+  chatGetMessages: (threadId) => request(`/chat/threads/${threadId}/messages`),
+  chatSendMessage: (threadId, content) => request(`/chat/threads/${threadId}/messages`, { method:'POST', body: JSON.stringify({ content }) })
+  // Seller product management
+  ,sellerProductsList: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request('/sellers/products' + suffix);
   }
+  ,sellerProductCreate: (data) => request('/sellers/products', { method:'POST', body: JSON.stringify(data||{}) })
+  ,sellerProductUpdate: (id, patch) => request(`/sellers/products/${id}`, { method:'PATCH', body: JSON.stringify(patch||{}) })
+  ,sellerProductDelete: (id) => request(`/sellers/products/${id}`, { method:'DELETE' })
+  ,sellerProductAddImages: (id, images=[]) => request(`/sellers/products/${id}/images`, { method:'POST', body: JSON.stringify({ images }) })
+  ,sellerProductUploadImage: (id, file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return request(`/sellers/products/${id}/upload-image`, { method: 'POST', body: fd });
+  }
+  // Delivery (drivers)
+  ,deliveryList: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const suffix = qs.toString() ? `?${qs}` : '';
+    return request('/delivery/orders' + suffix);
+  }
+  ,deliveryAssigned: () => request('/delivery/orders/assigned')
+  ,deliveryHistory: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const suffix = qs.toString() ? `?${qs}` : '';
+    return request('/delivery/orders/history' + suffix);
+  }
+  ,deliveryGet: (id) => request(`/delivery/orders/${id}`)
+  ,deliveryAccept: (id) => request(`/delivery/orders/${id}/accept`, { method:'POST' })
+  ,deliveryReject: (id) => request(`/delivery/orders/${id}/reject`, { method:'POST' })
+  ,deliveryStart: (id) => request(`/delivery/orders/${id}/start`, { method:'POST' })
+  ,deliveryComplete: (id, payload={}) => {
+    // Support both JSON and FormData (for proof upload)
+    try {
+      if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+        return request(`/delivery/orders/${id}/complete`, { method:'POST', body: payload });
+      }
+    } catch {}
+    return request(`/delivery/orders/${id}/complete`, { method:'POST', body: JSON.stringify(payload || {}) });
+  }
+  ,deliveryFail: (id, reason) => request(`/delivery/orders/${id}/fail`, { method:'POST', body: JSON.stringify({ reason }) })
+  ,deliveryOtpGenerate: (id) => request(`/delivery/orders/${id}/otp/generate`, { method:'POST' })
+  ,deliveryOtpConfirm: (id, code) => request(`/delivery/orders/${id}/otp/confirm`, { method:'POST', body: JSON.stringify({ code }) })
+  ,deliverySignature: (id, file) => {
+    const fd = new FormData();
+    fd.append('signature', file);
+    return request(`/delivery/orders/${id}/signature`, { method:'POST', body: fd });
+  }
+  ,deliveryLocation: (id, loc) => request(`/delivery/orders/${id}/location`, { method:'POST', body: JSON.stringify(loc || {}) })
+  // Delivery profile & presence
+  ,deliveryProfileGet: () => request('/delivery/me/profile')
+  ,deliveryProfileUpdate: (patch) => request('/delivery/me/profile', { method:'PATCH', body: JSON.stringify(patch||{}) })
+  ,deliveryDriversOnline: () => request('/delivery/drivers/online')
+  // Addresses
+  ,addressesList: () => request('/addresses')
+  ,addressCreate: (data) => request('/addresses', { method: 'POST', body: JSON.stringify(data||{}) })
+  ,addressUpdate: (id, patch) => request(`/addresses/${id}`, { method: 'PATCH', body: JSON.stringify(patch||{}) })
+  ,addressDelete: (id) => request(`/addresses/${id}`, { method: 'DELETE' })
+  // Seller KYC
+  ,sellerProfileGet: () => request('/sellers/profile')
+  ,sellerProfileSubmit: (payload) => request('/sellers/profile', { method:'POST', body: JSON.stringify(payload||{}) })
+  // Admin KYC review
+  ,adminSellersList: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null && v!=='') qs.append(k, v); });
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request('/admin/sellers' + suffix);
+  }
+  ,adminSellerApprove: (id) => request(`/admin/sellers/${id}/approve`, { method:'POST' })
+  ,adminSellerReject: (id, reason) => request(`/admin/sellers/${id}/reject`, { method:'POST', body: JSON.stringify({ reason }) })
 };
 
 export default api;

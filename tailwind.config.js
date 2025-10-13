@@ -1,7 +1,12 @@
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 module.exports = {
 	content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: ['Cairo', 'var(--font-sans)', ...defaultTheme.fontFamily.sans],
+			},
 			colors: {
 				primary: "var(--color-primary)",
 				secondary: "var(--color-secondary)",
@@ -23,7 +28,7 @@ module.exports = {
 			}
 		}
 	},
-	plugins: [require('tailwindcss-animate')],
+	plugins: [require('tailwindcss-animate'), require('tailwindcss-rtl')],
 }
 
 

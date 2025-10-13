@@ -6,9 +6,9 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: my_store_db
-      MYSQL_USER: store_user
-      MYSQL_PASSWORD: StorePass123!
+      MYSQL_DATABASE: DB
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 
     ports:
       - '3306:3306'
     command: ["mysqld", "--default-authentication-plugin=mysql_native_password", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]

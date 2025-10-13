@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../api/client';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -11,9 +11,10 @@ const CategoryChips = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const trackRef = useRef(null);
   const { locale } = useLanguage();
-  const baseCatalogPath = locale === 'en' ? '/en/catalog' : '/catalog';
+  const baseProductsPath = locale === 'en' ? '/en/products' : (locale === 'fr' ? '/fr/products' : '/products');
   const [showAll, setShowAll] = useState(false);
   const MAX_DEFAULT = 10;
 
@@ -115,9 +116,10 @@ const CategoryChips = () => {
           };
           const Icon = pickIcon();
           return (
-            <Link
+            <button
               key={c.id || c.slug}
-              to={`${baseCatalogPath}?category=${encodeURIComponent(c.slug)}`}
+              type="button"
+              onClick={() => navigate(`${baseProductsPath}?category=${encodeURIComponent(c.slug)}&page=1`)}
               className={`group flex flex-col items-center justify-start gap-2 w-[120px] shrink-0 snap-start text-center`}
               aria-current={active ? 'page' : undefined}
             >
@@ -138,7 +140,7 @@ const CategoryChips = () => {
               {typeof c.productCount === 'number' && c.productCount > 0 && (
                 <span className={`text-xs ${active ? 'text-slate-500' : 'text-slate-500'}`}>{c.productCount}</span>
               )}
-            </Link>
+            </button>
           );
         })}
         {uniqueCats.length > MAX_DEFAULT && (

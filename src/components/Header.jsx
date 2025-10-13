@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useContext, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SearchTypeahead from './SearchTypeahead';
 import {
@@ -43,7 +43,8 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'cart' | 'wishlist' | 'account' | null
   const cartContext = useCart() || {};
-  const { locale } = useLanguage ? useLanguage() : { locale: 'ar' };
+  const lang = useLanguage();
+  const locale = lang?.locale ?? 'ar';
   const wishlistContext = useWishlist() || {};
   const { user, devLoginAs, logout } = useAuth() || {};
   const isDev = !!(import.meta && import.meta.env && import.meta.env.DEV);
@@ -232,6 +233,16 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
   const cartCount = Array.isArray(cartItems) ? cartItems.reduce((s,i)=>s+(i.quantity||1),0) : 0;
   const wishlistCount = Array.isArray(wishlistItems) ? wishlistItems.length : 0;
   const cartTotal = Array.isArray(cartItems) ? cartItems.reduce((s,i)=>s + ((i.price || i.salePrice || 0) * (i.quantity || 1)), 0) : 0;
+  const currencyFormatter = useMemo(() => new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
+    style: 'currency',
+    currency: 'SAR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }), [locale]);
+  const cartTotalLabel = cartTotal > 0 ? currencyFormatter.format(cartTotal) : null;
+  const cartAriaLabel = locale === 'ar'
+    ? `السلة (${cartCount} ${cartCount === 1 ? 'عنصر' : 'عناصر'})`
+    : `Cart (${cartCount} ${cartCount === 1 ? 'item' : 'items'})`;
   const { updateQuantity, removeFromCart, maxPerItem } = cartContext;
 
   // ترتيب جديد + يمكن التوسعة لاحقاً
@@ -373,11 +384,18 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
       <header className={`header ${isScrolled ? 'scrolled' : ''} ${isHiddenOnScroll ? 'hidden-on-scroll' : ''}`}>
         <div className="container-custom header-inner reorganized">
           <div className="header-section header-start">
-            <Link to="/" className="logo">
+            <Link to="/" className="logo" aria-label="الصفحة الرئيسية">
               {setting?.logo ? (
-                <img src={setting.logo} alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'} style={{ height: 34, objectFit:'contain' }} />
+                <img
+                  src={setting.logo}
+                  alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'}
+                  className="inline-block h-4 md:h-6 w-auto object-contain"
+                  style={{ objectFit:'contain' }}
+                />
               ) : (
-                <h5>{setting?.siteNameAr || setting?.siteNameEn || 'متجري'}</h5>
+                <h5 style={{ display:'inline-flex', alignItems:'center', gap:6, fontWeight:700 }}>
+                  {setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية'}
+                </h5>
               )}
             </Link>
           </div>
@@ -463,7 +481,7 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
               {/* بائع */}
               {user?.role === 'seller' && (
                 <li className="nav-item">
-                  <Link to="/seller" className={`nav-link${location.pathname.startsWith('/seller') ? ' active' : ''}`}>
+                  <Link to="/seller" className={`nav-link${location.pathname.startsWith('/Seller') ? ' active' : ''}`}>
                     لوحة البائع
                   </Link>
                 </li>
@@ -545,20 +563,20 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
             </button>
 
             {/* السلة */}
-            <button
-              type="button"
-              className="icon cart-icon action-block panel-trigger"
-              title="السلة"
-              aria-haspopup="dialog"
-              aria-expanded={activePanel === 'cart'}
-              aria-controls="panel-cart"
-              onClick={() => togglePanel('cart')}
+            <Link
+              to="/cart"
+              className={`cart-icon cart-link action-block${cartCount > 0 ? ' has-items' : ''}`}
               ref={cartIconRef}
+              aria-label={cartAriaLabel}
+              onClick={closePanels}
             >
-              <ShoppingCart />
-              {cartCount > 0 && <span className="badge" aria-label="عدد العناصر">{cartCount}</span>}
-              {cartTotal > 0 && <span className="cart-total" aria-label="إجمالي السلة">{cartTotal.toFixed(2)} ر.س</span>}
-            </button>
+              <ShoppingCart aria-hidden="true" />
+              <span className="cart-link__label">السلة</span>
+              <span className="cart-link__count" aria-hidden="true">{cartCount}</span>
+              {cartTotalLabel && (
+                <span className="cart-link__total" aria-hidden="true">{cartTotalLabel}</span>
+              )}
+            </Link>
 
             {/* الحساب */}
             <button
@@ -642,12 +660,27 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
           <div className="panel-body scroll-y">
             {wishlistItems.length ? (
               <ul className="mini-list">
-                {wishlistItems.map(w => (
-                  <li key={w.id}>
-                    <span className="item-title">{ localizeName({ name: w.name || w.title }, locale) }</span>
-                    {w.price && <span className="item-price">{w.price} ر.س</span>}
-                  </li>
-                ))}
+                {wishlistItems.map(w => {
+                  const price = w.price != null ? +w.price : NaN;
+                  const opRaw = w.oldPrice ?? w.originalPrice;
+                  const op = opRaw != null ? +opRaw : NaN;
+                  const hasDisc = Number.isFinite(price) && Number.isFinite(op) && op > price;
+                  const pct = hasDisc ? Math.round((1 - (price/op)) * 100) : 0;
+                  return (
+                    <li key={w.id}>
+                      <span className="item-title">{ localizeName({ name: w.name || w.title }, locale) }</span>
+                      <span className="item-price">
+                        {Number.isFinite(price) ? `${price} ر.س` : ''}
+                        {hasDisc && (
+                          <>
+                            {' '}<span style={{textDecoration:'line-through', opacity:.7}}>{op.toFixed(2)}</span>
+                            <span className="badge" style={{marginInlineStart:6, fontSize:'.55rem'}}> -{pct}%</span>
+                          </>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             ) : <div className="empty">لا توجد عناصر مفضلة</div>}
           </div>
@@ -676,6 +709,10 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
                 {cartItems.map(c => {
                   const q = c.quantity || 1;
                   const price = (c.price || c.salePrice || 0);
+                  const opRaw = c.oldPrice ?? c.originalPrice;
+                  const op = opRaw != null ? +opRaw : NaN;
+                  const hasDisc = Number.isFinite(op) && op > price;
+                  const pct = hasDisc ? Math.round((1 - (price/op)) * 100) : 0;
                   return (
                     <li key={c.id} style={{display:'flex',alignItems:'center',gap:10}}>
                       <div style={{width:52,height:52,flexShrink:0, background:'#f1f5f9',borderRadius:12,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -683,7 +720,15 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
                       </div>
                       <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:4}}>
                         <span style={{fontSize:'.7rem',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{ localizeName({ name: c.name || c.title }, locale) }</span>
-                        <span style={{fontSize:'.6rem',color:'#475569'}}>{price.toFixed(2)} ر.س × {q} = <strong style={{color:'#0f172a'}}>{(price*q).toFixed(2)} ر.س</strong></span>
+                        <span style={{fontSize:'.6rem',color:'#475569'}}>
+                          {price.toFixed(2)} ر.س × {q} = <strong style={{color:'#0f172a'}}>{(price*q).toFixed(2)} ر.س</strong>
+                          {hasDisc && (
+                            <>
+                              {' '}<span style={{textDecoration:'line-through', opacity:.7}}>{op.toFixed(2)}</span>
+                              <span className="badge" style={{marginInlineStart:6, fontSize:'.55rem'}}> -{pct}%</span>
+                            </>
+                          )}
+                        </span>
                       </div>
                       <div style={{display:'flex',alignItems:'center',gap:4}}>
                         <button aria-label="إنقاص الكمية" onClick={()=> updateQuantity && updateQuantity(c.id, Math.max(1, q-1))} style={qtyBtnStyle}>-</button>

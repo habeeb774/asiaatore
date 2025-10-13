@@ -9,7 +9,7 @@ import { useSettings } from '../context/SettingsContext';
 const OffersPage = () => {
   const { t, locale } = useLanguage();
   const { setting } = useSettings() || {};
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const pageTitle = locale==='ar' ? `${t('offers')} | ${siteName}` : `${siteName} | ${t('offers')}`;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);

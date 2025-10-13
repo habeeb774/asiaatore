@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import { Button } from '../../components/ui/button.jsx';
+import { Button } from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/input.jsx';
 import { Label } from '../../components/ui/label.jsx';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card.jsx';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx';
 
 const RegisterPage = () => {
   const navigate = useNavigate();

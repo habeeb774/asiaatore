@@ -5,6 +5,33 @@ import { attachUser } from '../middleware/auth.js';
 const router = Router();
 router.use(attachUser);
 
+// In development (or when ALLOW_DEV_HEADERS=true), if requests use dev headers with a user id
+// that doesn't exist in DB yet, auto-provision a minimal user to avoid FK violations on CartItem
+async function ensureDbUserIfDev(req) {
+  try {
+    if (!req.user?.id) return;
+    const allowDevHeaders = process.env.ALLOW_DEV_HEADERS === 'true' || process.env.NODE_ENV !== 'production';
+    if (!allowDevHeaders) return;
+    const found = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (found) return;
+    const email = req.user.email || `${req.user.id}@dev.local`;
+    await prisma.user.create({
+      data: {
+        id: req.user.id,
+        email,
+        password: 'dev-autocreated',
+        role: (req.user.role === 'admin' ? 'admin' : 'user'),
+        name: req.user.email || 'Dev User'
+      }
+    });
+  } catch (_) {
+    // ignore – best-effort; if it still fails, handlers will return clear FK_CONSTRAINT
+  }
+}
+
+// Ensure user exists (dev auto-provision) for all cart routes
+router.use(async (req, _res, next) => { await ensureDbUserIfDev(req); next(); });
+
 function requireUser(req, res, next) {
   if (!req.user || !req.user.id || req.user.id === 'guest') return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
   next();
@@ -61,23 +88,43 @@ router.post('/merge', requireUser, async (req, res) => {
     const existing = await prisma.cartItem.findMany({ where: { userId: req.user.id, productId: { in: Array.from(incomingMap.keys()) } } });
     const existingMap = new Map(existing.map(i => [i.productId, i]));
 
-    // 4) Compute final clamped quantities and upsert
-    const ops = [];
+    // 4) Load product stocks
+    const products = await prisma.product.findMany({ where: { id: { in: Array.from(incomingMap.keys()) } }, select: { id: true, stock: true } });
+    const stockMap = new Map(products.map(p => [p.id, Number(p.stock) || 0]));
+
+    // 5) Compute final quantities with stock-aware clamping and prepare operations
+    const upserts = [];
+    const stockUpdates = [];
+    const skipped = [];
     for (const [pid, addQty] of incomingMap.entries()) {
       const current = existingMap.get(pid)?.quantity || 0;
-      const finalQty = Math.min(99, Math.max(1, current + addQty));
-      ops.push(
+      const desired = Math.min(99, Math.max(1, current + addQty));
+      const available = stockMap.get(pid) ?? 0;
+      const deltaAdd = Math.max(0, desired - current);
+      // Cap additions by available stock; if none, skip increasing
+      const allowedAdd = Math.min(deltaAdd, Math.max(0, available));
+      const finalQty = current + allowedAdd; // may equal current if no stock
+      if (finalQty <= 0) {
+        // couldn't add this product (likely out of stock)
+        skipped.push({ productId: pid, reason: 'OUT_OF_STOCK' });
+        continue;
+      }
+      upserts.push(
         prisma.cartItem.upsert({
           where: { userId_productId: { userId: req.user.id, productId: pid } },
           update: { quantity: finalQty },
           create: { userId: req.user.id, productId: pid, quantity: finalQty }
         })
       );
+      if (allowedAdd > 0) {
+        stockUpdates.push(prisma.product.update({ where: { id: pid }, data: { stock: { decrement: allowedAdd } } }));
+        stockMap.set(pid, available - allowedAdd);
+      }
     }
-    if (ops.length) await prisma.$transaction(ops);
+    if (upserts.length || stockUpdates.length) await prisma.$transaction([...upserts, ...stockUpdates]);
 
   const merged = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
-  res.json({ ok: true, items: merged.map(i => ({ ...i, id: i.productId })) });
+  res.json({ ok: true, items: merged.map(i => ({ ...i, id: i.productId })), skipped });
   } catch (e) {
     // Surface Prisma codes more readably
     if (e && e.code) {
@@ -95,15 +142,43 @@ router.post('/set', requireUser, async (req, res) => {
     const { productId, quantity } = req.body || {};
     if (!productId) return res.status(400).json({ ok:false, error:'MISSING_PRODUCT' });
     // verify product exists to avoid FK violation
-    const exists = await prisma.product.findUnique({ where: { id: String(productId) } });
-    if (!exists) return res.status(400).json({ ok:false, error:'PRODUCT_NOT_FOUND' });
+    const product = await prisma.product.findUnique({ where: { id: String(productId) }, select: { id: true, stock: true } });
+    if (!product) return res.status(400).json({ ok:false, error:'PRODUCT_NOT_FOUND' });
     const qty = Math.min(99, Math.max(0, parseInt(quantity||0,10)));
+
+    const existing = await prisma.cartItem.findUnique({ where: { userId_productId: { userId: req.user.id, productId: String(productId) } } });
+    const currentQty = existing?.quantity || 0;
+    const delta = qty - currentQty;
+
     if (qty === 0) {
-      try { await prisma.cartItem.delete({ where: { userId_productId: { userId: req.user.id, productId } } }); } catch {}
+      // Remove item and restock by currentQty
+      await prisma.$transaction([
+        prisma.cartItem.delete({ where: { userId_productId: { userId: req.user.id, productId: String(productId) } } }).catch(() => null),
+        currentQty > 0 ? prisma.product.update({ where: { id: String(productId) }, data: { stock: { increment: currentQty } } }) : null
+      ].filter(Boolean));
       return res.json({ ok: true, removed: true });
     }
-    const updated = await prisma.cartItem.upsert({ where: { userId_productId: { userId: req.user.id, productId } }, update: { quantity: qty }, create: { userId: req.user.id, productId, quantity: qty } });
-    res.json({ ok: true, item: updated });
+
+    if (delta > 0) {
+      // Increasing quantity: require sufficient stock
+      if ((product.stock || 0) < delta) return res.status(400).json({ ok:false, error:'INSUFFICIENT_STOCK', available: Number(product.stock) || 0 });
+      const [updated] = await prisma.$transaction([
+        prisma.cartItem.upsert({ where: { userId_productId: { userId: req.user.id, productId: String(productId) } }, update: { quantity: qty }, create: { userId: req.user.id, productId: String(productId), quantity: qty } }),
+        prisma.product.update({ where: { id: String(productId) }, data: { stock: { decrement: delta } } })
+      ]);
+      return res.json({ ok: true, item: updated });
+    } else if (delta < 0) {
+      // Decreasing quantity: return stock
+      const restore = Math.abs(delta);
+      const [updated] = await prisma.$transaction([
+        prisma.cartItem.update({ where: { userId_productId: { userId: req.user.id, productId: String(productId) } }, data: { quantity: qty } }),
+        prisma.product.update({ where: { id: String(productId) }, data: { stock: { increment: restore } } })
+      ]);
+      return res.json({ ok: true, item: updated });
+    } else {
+      // No change
+      return res.json({ ok: true, item: existing || { userId: req.user.id, productId: String(productId), quantity: qty } });
+    }
   } catch (e) {
     res.status(500).json({ ok: false, error: 'SET_FAILED', message: e.message });
   }
@@ -111,8 +186,39 @@ router.post('/set', requireUser, async (req, res) => {
 
 // Clear cart
 router.delete('/', requireUser, async (req, res) => {
-  await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
-  res.json({ ok: true });
+  try {
+    const items = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
+    if (!items.length) return res.json({ ok: true });
+    const ops = [];
+    for (const it of items) {
+      if (it.quantity > 0) {
+        ops.push(prisma.product.update({ where: { id: it.productId }, data: { stock: { increment: it.quantity } } }));
+      }
+    }
+    ops.push(prisma.cartItem.deleteMany({ where: { userId: req.user.id } }));
+    await prisma.$transaction(ops);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'CLEAR_FAILED', message: e.message });
+  }
+});
+
+// Remove a single item from cart and restore its stock
+router.delete('/item/:productId', requireUser, async (req, res) => {
+  try {
+    const productId = String(req.params.productId || '').trim();
+    if (!productId) return res.status(400).json({ ok: false, error: 'MISSING_PRODUCT' });
+    const item = await prisma.cartItem.findUnique({ where: { userId_productId: { userId: req.user.id, productId } } });
+    if (!item) return res.status(404).json({ ok: false, error: 'NOT_IN_CART' });
+    const qty = Number(item.quantity) || 0;
+    await prisma.$transaction([
+      prisma.cartItem.delete({ where: { userId_productId: { userId: req.user.id, productId } } }),
+      qty > 0 ? prisma.product.update({ where: { id: productId }, data: { stock: { increment: qty } } }) : null
+    ].filter(Boolean));
+    res.json({ ok: true, removed: { productId, quantity: qty } });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'REMOVE_ITEM_FAILED', message: e.message });
+  }
 });
 
 export default router;

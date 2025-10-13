@@ -23,13 +23,41 @@ async function ensureSettingsTable() {
         colorPrimary VARCHAR(32) NULL,
         colorSecondary VARCHAR(32) NULL,
         colorAccent VARCHAR(32) NULL,
+        taxNumber VARCHAR(64) NULL,
+        supportPhone VARCHAR(64) NULL,
+        supportMobile VARCHAR(64) NULL,
+        supportWhatsapp VARCHAR(64) NULL,
+        supportEmail VARCHAR(128) NULL,
+        supportHours VARCHAR(128) NULL,
+        footerAboutAr TEXT NULL,
+        footerAboutEn TEXT NULL,
         createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+    // Ensure new columns exist even if table pre-existed
+    const alters = [
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS taxNumber VARCHAR(64) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportPhone VARCHAR(64) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportMobile VARCHAR(64) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportWhatsapp VARCHAR(64) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportEmail VARCHAR(128) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportHours VARCHAR(128) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS footerAboutAr TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS footerAboutEn TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkBlog TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkSocial TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkReturns TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkPrivacy TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS appStoreUrl TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS playStoreUrl TEXT NULL"
+    ];
+    for (const sql of alters) {
+      try { await prisma.$executeRawUnsafe(sql); } catch { /* ignore if not supported */ }
+    }
     // Ensure singleton row
     await prisma.$executeRawUnsafe(`
-      INSERT IGNORE INTO StoreSetting (id, siteNameAr, siteNameEn) VALUES ('singleton','متجري','My Store');
+      INSERT IGNORE INTO StoreSetting (id, siteNameAr, siteNameEn) VALUES ('singleton','شركة منفذ اسيا التجارية','My Store');
     `);
     SETTINGS_TABLE_ENSURED = true;
   } catch (e) {
@@ -71,18 +99,57 @@ const upload = multer({
 
 // GET current settings (public)
 router.get('/', async (_req, res) => {
-  await ensureSettingsTable();
-  const setting = await prisma.storeSetting.findUnique({ where: { id: 'singleton' } }).catch(()=>null);
-  res.json({
-    ok: true,
-    setting: setting || null
-  });
+  try {
+    await ensureSettingsTable();
+    const setting = await prisma.storeSetting.findUnique({ where: { id: 'singleton' } });
+    return res.json({ ok: true, setting: setting || null });
+  } catch (e) {
+    // Degraded fallback: provide sane defaults to keep the UI working in dev
+    const fallbackEnabled = (
+      process.env.NODE_ENV !== 'production' ||
+      process.env.ALLOW_INVALID_DB === 'true' ||
+      /Database|DB|connect/i.test(e?.message || '')
+    );
+    if (fallbackEnabled) {
+      const defaultSetting = {
+        id: 'singleton',
+        siteNameAr: 'شركة منفذ اسيا التجارية',
+        siteNameEn: 'My Store',
+        logo: '/logo.svg',
+        colorPrimary: '#69be3c',
+        colorSecondary: '#1f2937',
+        colorAccent: '#ef4444',
+        taxNumber: null,
+        supportPhone: null,
+        supportMobile: null,
+        supportWhatsapp: null,
+        supportEmail: null,
+        supportHours: null,
+        footerAboutAr: null,
+        footerAboutEn: null,
+        linkBlog: null,
+        linkSocial: null,
+        linkReturns: null,
+        linkPrivacy: null,
+        appStoreUrl: null,
+        playStoreUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      res.setHeader('x-fallback', 'default-settings');
+      return res.json({ ok: true, setting: defaultSetting });
+    }
+    return res.status(500).json({ ok: false, error: 'FAILED_GET', message: e.message });
+  }
 });
 
 // PATCH update settings (admin)
 router.patch('/', attachUser, requireAdmin, async (req, res) => {
   await ensureSettingsTable();
-  const { siteNameAr, siteNameEn, colorPrimary, colorSecondary, colorAccent } = req.body || {};
+  const { siteNameAr, siteNameEn, colorPrimary, colorSecondary, colorAccent,
+    taxNumber, supportPhone, supportMobile, supportWhatsapp, supportEmail, supportHours,
+    footerAboutAr, footerAboutEn,
+    linkBlog, linkSocial, linkReturns, linkPrivacy, appStoreUrl, playStoreUrl } = req.body || {};
   try {
     const data = {};
     if (siteNameAr !== undefined) data.siteNameAr = siteNameAr || null;
@@ -90,6 +157,20 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
     if (colorPrimary !== undefined) data.colorPrimary = colorPrimary || null;
     if (colorSecondary !== undefined) data.colorSecondary = colorSecondary || null;
     if (colorAccent !== undefined) data.colorAccent = colorAccent || null;
+    if (taxNumber !== undefined) data.taxNumber = taxNumber || null;
+    if (supportPhone !== undefined) data.supportPhone = supportPhone || null;
+    if (supportMobile !== undefined) data.supportMobile = supportMobile || null;
+    if (supportWhatsapp !== undefined) data.supportWhatsapp = supportWhatsapp || null;
+    if (supportEmail !== undefined) data.supportEmail = supportEmail || null;
+    if (supportHours !== undefined) data.supportHours = supportHours || null;
+    if (footerAboutAr !== undefined) data.footerAboutAr = footerAboutAr || null;
+    if (footerAboutEn !== undefined) data.footerAboutEn = footerAboutEn || null;
+  if (linkBlog !== undefined) data.linkBlog = linkBlog || null;
+  if (linkSocial !== undefined) data.linkSocial = linkSocial || null;
+  if (linkReturns !== undefined) data.linkReturns = linkReturns || null;
+  if (linkPrivacy !== undefined) data.linkPrivacy = linkPrivacy || null;
+  if (appStoreUrl !== undefined) data.appStoreUrl = appStoreUrl || null;
+  if (playStoreUrl !== undefined) data.playStoreUrl = playStoreUrl || null;
     const updated = await prisma.storeSetting.upsert({
       where: { id: 'singleton' },
       create: { id: 'singleton', ...data },

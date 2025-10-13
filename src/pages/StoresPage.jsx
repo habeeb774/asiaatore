@@ -1,26 +1,21 @@
 import React from 'react';
-import Seo from '../components/Seo';
-import { useSettings } from '../context/SettingsContext';
-import { useLanguage } from '../context/LanguageContext';
 
 const STORES = [
-  { id: 1, name: 'متجر التقنية', city: 'الرياض' },
-  { id: 2, name: 'متجر الأزياء', city: 'جدة' }
+  { id: 1, name: 'قريباً', city: '' },
 ];
 
 const StoresPage = () => {
-  const { setting } = useSettings() || {};
-  const { locale } = useLanguage();
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
-  const title = (locale==='ar' ? 'المتاجر' : 'Stores') + ' | ' + siteName;
   return (
-    <div className="stores-page">
-      <Seo title={title} description={locale==='ar' ? `فروع ومتاجر ${siteName}` : `${siteName} store locations`} />
-      <h1>المتاجر</h1>
-      <ul>
+    <div className="container-custom px-4 py-12">
+      <h2 className="text-2xl font-bold mb-6">المتاجر</h2>
+      <ul className="space-y-3">
         {STORES.map(s => (
-          <li key={s.id}>
-            <strong>{s.name}</strong> - {s.city}
+          <li key={s.id} className="p-4 border rounded bg-white flex items-center gap-3">
+            <img src={"/vite.svg"} alt="store" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="font-semibold">{s.name}</div>
+              {s.city ? <div className="text-xs text-gray-500">{s.city}</div> : null}
+            </div>
           </li>
         ))}
       </ul>

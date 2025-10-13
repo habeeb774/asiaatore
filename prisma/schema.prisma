@@ -14,6 +14,7 @@ enum Role {
   user
   admin
   seller
+  delivery
 }
 
 enum ReviewStatus {
@@ -49,40 +50,64 @@ enum InvoiceStatus {
   refunded
 }
 
+// Chat roles for internal messaging
+enum ChatRole {
+  buyer
+  seller
+  delivery
+}
+
 // Global store settings (singleton)
 model StoreSetting {
-  id            String   @id @default("singleton")
-  siteNameAr    String?
-  siteNameEn    String?
-  logo          String?
-  colorPrimary  String? // e.g. #69be3c
-  colorSecondary String?
-  colorAccent   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default("singleton")
+  siteNameAr      String?
+  siteNameEn      String?
+  logo            String?
+  colorPrimary    String? // e.g. #69be3c
+  colorSecondary  String?
+  colorAccent     String?
+  // New contact and footer fields
+  taxNumber       String?
+  supportPhone    String?
+  supportMobile   String?
+  supportWhatsapp String?
+  supportEmail    String?
+  supportHours    String?
+  footerAboutAr   String?
+  footerAboutEn   String?
+  // Footer links and app stores
+  linkBlog        String?
+  linkSocial      String?
+  linkReturns     String?
+  linkPrivacy     String?
+  appStoreUrl     String?
+  playStoreUrl    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Product {
-  id        String     @id @default(cuid())
-  slug      String     @unique
-  nameAr    String
-  nameEn    String
-  shortAr   String?
-  shortEn   String?
-  category  String
+  id            String             @id @default(cuid())
+  slug          String             @unique
+  nameAr        String
+  nameEn        String
+  shortAr       String?
+  shortEn       String?
+  category      String
   // Normalized relations (optional for backward compatibility)
-  categoryId String?
-  Category   Category? @relation("Product_Category", fields: [categoryId], references: [id])
-  sellerId   String?
-  seller     Seller?   @relation(fields: [sellerId], references: [id])
-  price     Float
-  oldPrice  Float?
-  image     String?
-  rating    Int        @default(0)
-  stock     Int        @default(0)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  OrderItem OrderItem[]
+  categoryId    String?
+  Category      Category?          @relation("Product_Category", fields: [categoryId], references: [id], onDelete: SetNull)
+  sellerId      String?
+  seller        Seller?            @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+  price         Float
+  oldPrice      Float?
+  image         String?
+  rating        Int                @default(0)
+  stock         Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  deletedAt     DateTime?
+  OrderItem     OrderItem[]
   // Back-relations for new models referencing Product
   reviews       Review[]
   wishlistItems WishlistItem[]
@@ -90,72 +115,101 @@ model Product {
   productImages ProductImage[]
   // Optional brand relation
   brandId       String?
-  brand         Brand?      @relation(fields: [brandId], references: [id])
+  brand         Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
   tierPrices    ProductTierPrice[]
+  // Chat back-relations
+  chatThreads   ChatThread[]       @relation("ChatThread_product")
 
   @@index([category])
   @@index([categoryId])
   @@index([sellerId])
   @@index([brandId])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  nameAr      String
-  nameEn      String
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  nameAr        String
+  nameEn        String
   descriptionAr String?
   descriptionEn String?
-  image       String?
+  image         String?
   // Optional icon key (e.g., a lucide icon name like "coffee" or custom token)
-  icon        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  icon          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
   // Back-relations
-  products    Product[] @relation("Product_Category")
+  products      Product[] @relation("Product_Category")
 }
 
 model Order {
-  id            String     @id @default(cuid())
-  userId        String
-  status        String     @default("pending")
-  currency      String     @default("SAR")
-  subtotal      Float      @default(0)
-  discount      Float      @default(0)
-  tax           Float      @default(0)
-  grandTotal    Float      @default(0)
-  paymentMethod String?
-  paymentMeta   Json?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  items         OrderItem[]
-  transactions  Transaction[]
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status           String        @default("pending")
+  currency         String        @default("SAR")
+  subtotal         Float         @default(0)
+  discount         Float         @default(0)
+  tax              Float         @default(0)
+  grandTotal       Float         @default(0)
+  paymentMethod    String?
+  paymentMeta      Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  deletedAt        DateTime?
+  items            OrderItem[]
+  transactions     Transaction[]
   // Invoices created from order
-  invoices      Invoice[]
-  sellerId      String?
-  seller        Seller?   @relation(fields: [sellerId], references: [id])
+  invoices         Invoice[]
+  sellerId         String?
+  seller           Seller?       @relation(fields: [sellerId], references: [id], onDelete: SetNull)
   commissionAmount Float? // calculated per order
+  // Delivery assignment and tracking
+  deliveryDriverId String?
+  deliveryDriver   User?         @relation("User_DeliveryOrders", fields: [deliveryDriverId], references: [id], onDelete: SetNull)
+  deliveryStatus   String        @default("unassigned") // unassigned, assigned, accepted, out_for_delivery, delivered, failed, canceled
+  deliveredAt      DateTime?
+  // Extended delivery timestamps and metrics
+  acceptedAt       DateTime?
+  outForDeliveryAt DateTime?
+  failedAt         DateTime?
+  deliveryDistanceKm Float?
+  deliveryDurationSec Int?
+  deliveryLocation Json?
+  // Chat back-relations
+  chatThreads      ChatThread[]  @relation("ChatThread_order")
+  // Delivery confirmation records (OTP/photo/signature)
+  deliveryConfirmations DeliveryConfirmation[]
+  // Active OTPs (relation)
+  otps             DeliveryOtp[]
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([deletedAt])
+  @@index([deliveryDriverId])
+  @@index([deliveryStatus])
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
+  id        String    @id @default(cuid())
   orderId   String
   productId String
   nameAr    String
   nameEn    String
   price     Float
-  quantity  Int     @default(1)
+  quantity  Int       @default(1)
   oldPrice  Float?
-  Order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  Product   Product @relation(fields: [productId], references: [id])
+  Order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product   Product   @relation(fields: [productId], references: [id])
+  deletedAt DateTime?
 
   @@index([orderId])
   @@index([productId])
+  @@index([deletedAt])
 }
 
 model AuditLog {
@@ -173,38 +227,94 @@ model AuditLog {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      Role     @default(user)
+  id               String         @id @default(cuid())
+  email            String         @unique
+  password         String
+  name             String?
+  role             Role           @default(user)
   // Optional phone for OTP/verification
-  phone     String?  @unique
+  phone            String?        @unique
   // Verification flags
-  emailVerifiedAt DateTime?
-  phoneVerifiedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tokens    AuthToken[]
+  emailVerifiedAt  DateTime?
+  phoneVerifiedAt  DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+  tokens           AuthToken[]
   // Back-relations
-  sellerProfile   Seller?
-  sessions        Session[]
-  invoices        Invoice[]
+  sellerProfile    Seller?
+  sessions         Session[]
+  invoices         Invoice[]
+  orders           Order[]
+  deliveryOrders   Order[]        @relation("User_DeliveryOrders")
+  notifications    Notification[] @relation("User_Notifications")
+  reviews          Review[]       @relation("User_Reviews")
+  wishlistItems    WishlistItem[] @relation("User_WishlistItems")
+  cartItems        CartItem[]     @relation("User_CartItems")
+  transactions     Transaction[]  @relation("User_Transactions")
+  addresses        Address[]      @relation("User_Addresses")
+  // Chat back-relations
+  chatThreadsBuyer ChatThread[]   @relation("ChatThread_buyer")
+  chatThreadsDriver ChatThread[]  @relation("ChatThread_driver")
+  chatMessages     ChatMessage[]  @relation("ChatMessage_sender")
+  // Delivery profile (for drivers)
+  deliveryProfile  DeliveryProfile?
+  deliveryOtps     DeliveryOtp[]
+  deliveryConfirmations DeliveryConfirmation[]
 }
 
 // Seller (Vendor) model
 model Seller {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  storeName      String
-  commissionRate Float    @default(0.05) // نسبة العمولة الافتراضية 5%
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                String       @id @default(cuid())
+  userId            String       @unique
+  storeName         String
+  commissionRate    Float        @default(0.05) // نسبة العمولة الافتراضية 5%
+  active            Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deletedAt         DateTime?
   // علاقات
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products       Product[]
-  orders         Order[]
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products          Product[]
+  orders            Order[]
+  // Chat back-relations
+  chatThreadsSeller ChatThread[] @relation("ChatThread_seller")
+  // KYC fields
+  companyName       String?
+  crNumber          String? // commercial registration number
+  iban              String?
+  bankName          String?
+  addressText       String?
+  documents         Json? // uploaded documents refs
+  kycStatus         String       @default("none") // none, pending, approved, rejected
+  kycAt             DateTime?
+  rejectionReason   String?
+}
+
+// Buyer addresses
+model Address {
+  id        String    @id @default(cuid())
+  userId    String
+  label     String? // e.g., Home, Work
+  name      String? // recipient name
+  phone     String?
+  country   String?   @default("SA")
+  city      String?
+  district  String?
+  street    String?
+  building  String?
+  apartment String?
+  notes     String?
+  isDefault Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation("User_Addresses", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isDefault])
+  @@index([deletedAt])
 }
 
 // Review model for product reviews
@@ -218,11 +328,14 @@ model Review {
   status    ReviewStatus @default(pending)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
   Product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  User      User         @relation("User_Reviews", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([status])
   @@index([userId])
+  @@index([deletedAt])
 }
 
 model WishlistItem {
@@ -231,6 +344,7 @@ model WishlistItem {
   productId String
   createdAt DateTime @default(now())
   Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  User      User     @relation("User_WishlistItems", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
   @@index([userId])
@@ -245,6 +359,7 @@ model CartItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  User      User     @relation("User_CartItems", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
   @@index([userId])
@@ -252,33 +367,37 @@ model CartItem {
 }
 
 model ProductImage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   productId String
   url       String
   altEn     String?
   altAr     String?
-  sort      Int      @default(0)
-  createdAt DateTime @default(now())
-  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sort      Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  Product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([sort])
+  @@index([deletedAt])
 }
 
 // Brand / Manufacturer entity
 model Brand {
-  id          String    @id @default(cuid())
-  slug        String    @unique
-  nameAr      String
-  nameEn      String
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  nameAr        String
+  nameEn        String
   descriptionAr String?
   descriptionEn String?
-  logo        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  products    Product[]
+  logo          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  products      Product[]
 
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 // Tier / volume pricing linked to product
@@ -293,31 +412,33 @@ model ProductTierPrice {
   createdAt     DateTime      @default(now())
   Product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@unique([productId, minQty, packagingType])
   @@index([productId])
   @@index([minQty])
-  @@unique([productId, minQty, packagingType])
 }
 
 // Marketing feature highlights (e.g., why choose us)
 model MarketingFeature {
-  id        String  @id @default(cuid())
+  id        String    @id @default(cuid())
   titleAr   String
   titleEn   String
   bodyAr    String?
   bodyEn    String?
   icon      String? // store an icon key or URL
-  sort      Int     @default(0)
-  active    Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  sort      Int       @default(0)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([active])
   @@index([sort])
+  @@index([deletedAt])
 }
 
 // Marketing banners (top strip / homepage / footer)
 model MarketingBanner {
-  id        String        @id @default(cuid())
+  id        String         @id @default(cuid())
   location  BannerLocation
   titleAr   String?
   titleEn   String?
@@ -325,14 +446,16 @@ model MarketingBanner {
   bodyEn    String?
   image     String?
   linkUrl   String?
-  active    Boolean       @default(true)
-  sort      Int           @default(0)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  active    Boolean        @default(true)
+  sort      Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
 
   @@index([location])
   @@index([active])
   @@index([sort])
+  @@index([deletedAt])
 }
 
 // App store / platform links
@@ -345,9 +468,11 @@ model AppLink {
   active    Boolean     @default(true)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  deletedAt DateTime?
 
   @@index([platform])
   @@index([active])
+  @@index([deletedAt])
 }
 
 // Unified auth token store for refresh tokens, email/phone verification, and password reset
@@ -359,21 +484,21 @@ enum AuthTokenType {
 }
 
 model AuthToken {
-  id        String        @id @default(cuid())
-  userId    String
-  type      AuthTokenType
+  id         String        @id @default(cuid())
+  userId     String
+  type       AuthTokenType
   // For long random tokens (stored as hash for security)
-  tokenHash String?
+  tokenHash  String?
   // For short numeric codes (OTP)
-  code      String?
+  code       String?
   // Optional metadata (e.g., channel, device)
-  meta      Json?
-  userAgent String?
-  ip        String?
-  expiresAt DateTime
-  createdAt DateTime      @default(now())
+  meta       Json?
+  userAgent  String?
+  ip         String?
+  expiresAt  DateTime
+  createdAt  DateTime      @default(now())
   consumedAt DateTime?
-  User      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -382,19 +507,19 @@ model AuthToken {
 
 // Dedicated sessions table for refresh-token sessions (rotating tokens per session)
 model Session {
-  id             String   @id @default(cuid())
-  userId         String
-  refreshHash    String   // sha256 of the current refresh token for this session
-  userAgent      String?
-  ip             String?
-  createdAt      DateTime @default(now())
-  lastUsedAt     DateTime @default(now())
-  expiresAt      DateTime
-  revokedAt      DateTime?
+  id          String    @id @default(cuid())
+  userId      String
+  refreshHash String // sha256 of the current refresh token for this session
+  userAgent   String?
+  ip          String?
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime  @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
   // Optional metadata (device name, platform, etc.)
-  meta           Json?
+  meta        Json?
 
-  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -403,23 +528,24 @@ model Session {
 
 // Payment transactions ledger
 model Transaction {
-  id         String   @id @default(cuid())
-  orderId    String
-  userId     String
-  invoiceId  String?
+  id        String   @id @default(cuid())
+  orderId   String
+  userId    String
+  invoiceId String?
   // e.g., 'authorization', 'capture', 'refund'
-  kind       String
+  kind      String
   // provider: 'paypal', 'stc', 'bank', 'cod', etc.
-  provider   String
-  amount     Float
-  currency   String   @default("SAR")
-  status     String   @default("pending") // e.g., 'pending', 'succeeded', 'failed'
-  reference  String?  // external reference / transaction id
-  meta       Json?
-  createdAt  DateTime @default(now())
+  provider  String
+  amount    Float
+  currency  String   @default("SAR")
+  status    String   @default("pending") // e.g., 'pending', 'succeeded', 'failed'
+  reference String? // external reference / transaction id
+  meta      Json?
+  createdAt DateTime @default(now())
 
-  Order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  Invoice    Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  Order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  User    User     @relation("User_Transactions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([userId])
@@ -446,16 +572,18 @@ model Invoice {
   meta          Json?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
 
-  Order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
-  logs          InvoiceLog[]
+  Order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  User         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  logs         InvoiceLog[]
 
   @@index([orderId])
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 // Invoice audit log
@@ -467,8 +595,146 @@ model InvoiceLog {
   meta      Json?
   createdAt DateTime @default(now())
 
-  Invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  Invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
+  @@index([createdAt])
+}
+
+// User-targeted notifications (admin/system updates)
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String?
+  type      String    @default("info")
+  title     String?
+  body      String?
+  severity  String? // info, warning, error
+  meta      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  User User? @relation("User_Notifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+}
+
+// Chat thread between a buyer (User) and a seller (Seller)
+model ChatThread {
+  id            String    @id @default(cuid())
+  buyerId       String // references User.id
+  sellerId      String // references Seller.id
+  // Optional context
+  productId     String?
+  orderId       String?
+  // Optional delivery driver participant (User with role=delivery)
+  driverId      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastMessageAt DateTime  @default(now())
+  lastMessage   String?
+  buyerUnread   Int       @default(0)
+  sellerUnread  Int       @default(0)
+  deletedAt     DateTime?
+
+  // Relations
+  buyer    User          @relation("ChatThread_buyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller   Seller        @relation("ChatThread_seller", fields: [sellerId], references: [id], onDelete: Cascade)
+  product  Product?      @relation("ChatThread_product", fields: [productId], references: [id], onDelete: SetNull)
+  order    Order?        @relation("ChatThread_order", fields: [orderId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+  driver   User?         @relation("ChatThread_driver", fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@unique([buyerId, sellerId, productId, orderId])
+  // Allow dedicated buyer-driver chat threads per order context
+  @@unique([buyerId, driverId, orderId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([driverId])
+  @@index([productId])
+  @@index([orderId])
+  @@index([lastMessageAt])
+}
+
+// Individual messages in a chat thread
+model ChatMessage {
+  id        String    @id @default(cuid())
+  threadId  String
+  senderId  String // User.id of the sender (buyer or seller.userId)
+  role      ChatRole
+  content   String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+  deletedAt DateTime?
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User       @relation("ChatMessage_sender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// Delivery driver profile and presence
+model DeliveryProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  online            Boolean  @default(false)
+  vehicleType       String?
+  licensePlate      String?
+  lastKnownLocation Json?
+  lastSeenAt        DateTime?
+  // Optional working hours and status
+  workStartHour     Int?     // 0-23 local time
+  workEndHour       Int?     // 0-23 local time
+  suspended         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([online])
+  @@index([updatedAt])
+}
+
+// Short-lived OTP codes for delivery confirmation
+model DeliveryOtp {
+  id         String   @id @default(cuid())
+  orderId    String
+  userId     String?  // customer userId for the order
+  codeHash   String   // sha256 of the 4-6 digit code
+  active     Boolean  @default(true)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  consumedAt DateTime?
+
+  Order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  User  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([active])
+  @@index([expiresAt])
+}
+
+// Audit-friendly record of how delivery was confirmed
+model DeliveryConfirmation {
+  id           String   @id @default(cuid())
+  orderId      String
+  driverId     String?
+  method       String   // 'otp' | 'photo' | 'signature'
+  otpVerifiedAt DateTime?
+  otpLast4     String?  // last 4 digits for audit (masked)
+  photoUrl     String?
+  signatureUrl String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  Order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driver User?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([driverId])
   @@index([createdAt])
 }

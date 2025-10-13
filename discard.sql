@@ -1,0 +1,1 @@
+ALTER TABLE my_store_db.product DISCARD TABLESPACE;

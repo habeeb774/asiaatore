@@ -1,99 +1,233 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
-import api from '../../api/client';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 
-const ProductFilters = ({ state, onChange }) => {
+const ProductFilters = ({ state, onChange, sidebar = false }) => {
   const { locale } = useLanguage();
   const isAr = locale === 'ar';
 
   const update = (patch) => onChange({ ...state, ...patch });
-  const reset = () => onChange({ category: '', sort: 'new', min: '', max: '', rating: '', discount: false });
+  // Keep current category (selected from page top) — do not reset it here
+  const reset = () => onChange({ ...state, sort: 'new', min: '', max: '', rating: '', discount: false });
 
-  // Load categories dynamically (withCounts)
-  const [cats, setCats] = useState([]);
-  const [loadingCats, setLoadingCats] = useState(false);
-  const [catError, setCatError] = useState('');
+  // Exclude category from "active" since category is controlled by the top page navigation
+  const hasActive = !!(state.min || state.max || state.rating || state.discount);
 
-  useEffect(() => {
-    let mounted = true;
-    const cacheKey = 'pf_cats_cache_v1';
-    const ttlMs = 5 * 60 * 1000; // 5 minutes
-    const now = Date.now();
-    try {
-      const cachedRaw = localStorage.getItem(cacheKey);
-      if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw);
-        if (cached.expires > now && Array.isArray(cached.data)) {
-          setCats(cached.data);
-        }
-      }
-    } catch {}
-    setLoadingCats(true);
-    api.listCategories({ withCounts: 1 }).then(res => {
-      const list = res.categories || [];
-      // Deduplicate by slug and sort by count desc then name
-      const map = new Map();
-      for (const c of list) {
-        if (!c?.slug) continue;
-        if (!map.has(c.slug)) map.set(c.slug, c);
-      }
-      const uniq = Array.from(map.values())
-        .sort((a,b) => (b.productCount||0) - (a.productCount||0) || String(a.name?.ar||a.slug).localeCompare(String(b.name?.ar||b.slug), 'ar'));
-      // Hide categories with zero products in this UI
-      const nonEmpty = uniq.filter(c => (c.productCount||0) > 0);
-      if (mounted) setCats(nonEmpty);
-      try { localStorage.setItem(cacheKey, JSON.stringify({ data: nonEmpty, expires: now + ttlMs })); } catch {}
-    }).catch(err => {
-      if (mounted) setCatError(err.message || 'failed');
-    }).finally(() => { if (mounted) setLoadingCats(false); });
-    return () => { mounted = false; };
-  }, []);
-
-  const catOptions = useMemo(() => {
-    return cats.map(c => ({ value: c.slug, label: isAr ? (c.name?.ar || c.slug) : (c.name?.en || c.slug) }));
-  }, [cats, isAr]);
+  const wrapperClass = sidebar
+    ? 'grid grid-cols-1 gap-2 md:gap-2.5 sticky top-30'
+    : 'w-full';
 
   return (
-    <div className="product-filters" style={{display:'flex', flexWrap:'wrap', gap:'12px', alignItems:'flex-end'}}>
-      <div className="filter-group">
-        <label htmlFor="cat">{isAr ? 'التصنيف' : 'Category'}</label>
-        <select id="cat" value={state.category} onChange={e => update({ category: e.target.value })}>
-          <option value="">{isAr ? 'الكل' : 'All'}</option>
-          {catOptions.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        {loadingCats && <div style={{fontSize:12,color:'#888'}}>{isAr?'...جاري التحميل':'Loading...'}</div>}
-        {catError && <div role="status" style={{fontSize:12,color:'#a00'}}>{isAr?'فشل تحميل التصنيفات':'Failed to load categories'}</div>}
-      </div>
-      <div className="filter-group">
-        <label htmlFor="sort">{isAr ? 'ترتيب' : 'Sort'}</label>
-        <select id="sort" value={state.sort} onChange={e => update({ sort: e.target.value })}>
-          <option value="new">{isAr ? 'الأحدث' : 'Newest'}</option>
-          <option value="price-asc">{isAr ? 'السعر ↑' : 'Price ↑'}</option>
-            <option value="price-desc">{isAr ? 'السعر ↓' : 'Price ↓'}</option>
-        </select>
-      </div>
-      <div className="filter-group">
-        <label>{isAr ? 'السعر من' : 'Price Min'}</label>
-        <input type="number" min="0" value={state.min || ''} onChange={e => update({ min: e.target.value })} placeholder={isAr?'أدنى':'Min'} style={{width:100}} />
-      </div>
-      <div className="filter-group">
-        <label>{isAr ? 'إلى' : 'To'}</label>
-        <input type="number" min="0" value={state.max || ''} onChange={e => update({ max: e.target.value })} placeholder={isAr?'أقصى':'Max'} style={{width:100}} />
-      </div>
-      <div className="filter-group">
-        <label>{isAr ? 'التقييم' : 'Rating'}</label>
-        <select value={state.rating || ''} onChange={e => update({ rating: e.target.value })}>
-          <option value="">{isAr ? 'الكل' : 'All'}</option>
-          {[5,4,3,2,1].map(r => <option key={r} value={r}>{isAr ? `على الأقل ${r}` : `≥ ${r}`}</option>)}
-        </select>
-      </div>
-      <div className="filter-group" style={{display:'flex', flexDirection:'column'}}>
-        <label>{isAr ? 'خصم' : 'Discount'}</label>
-        <input type="checkbox" checked={!!state.discount} onChange={e => update({ discount: e.target.checked })} />
-      </div>
-      <button type="button" onClick={reset} style={{padding:'6px 14px', borderRadius:8, border:'1px solid #ccc', background:'#f8f8f8', cursor:'pointer'}}>{isAr ? 'إعادة ضبط' : 'Reset'}</button>
+    <div className={"product-filters " + wrapperClass}>
+      {/* Header row with Reset (sidebar mode) */}
+      {sidebar && (
+        <div className="flex items-center justify-between mb-0.5">
+          <div className="text-xs text-slate-500">
+            {isAr ? 'تصفية النتائج' : 'Filter results'}{hasActive ? (
+              <span className="ms-1 inline-block rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                {isAr ? 'مفعّل' : 'Active'}
+              </span>
+            ) : null}
+          </div>
+          <button type="button" onClick={reset} className="inline-flex items-center gap-1 text-[11px] text-sky-700 hover:text-sky-800">
+            <RefreshCw className="size-3" /> {isAr ? 'إعادة ضبط' : 'Reset'}
+          </button>
+        </div>
+      )}
+
+      {/* Category filter removed; category selection is controlled by page-level UI */}
+
+      {/* Toolbar (compact) for non-sidebar */}
+      {!sidebar && (
+        <div
+          role="toolbar"
+          aria-label={isAr ? 'شريط تصفية المنتجات' : 'Products filter toolbar'}
+          className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white/80 p-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/70"
+        >
+          {/* Sort */}
+          <div className="flex items-center gap-1">
+            <label htmlFor="sort" className="sr-only">{isAr ? 'الترتيب' : 'Sort'}</label>
+            <select
+              id="sort"
+              value={state.sort}
+              onChange={(e) => update({ sort: e.target.value })}
+              className="h-8 min-w-[8rem] rounded-md border border-slate-200 bg-white px-2 text-xs"
+            >
+              <option value="new">{isAr ? 'الأحدث' : 'Newest'}</option>
+              <option value="price-asc">{isAr ? 'السعر ↑' : 'Price ↑'}</option>
+              <option value="price-desc">{isAr ? 'السعر ↓' : 'Price ↓'}</option>
+            </select>
+          </div>
+
+          {/* Price min/max */}
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-slate-600">{isAr ? 'السعر' : 'Price'}</span>
+            <input
+              type="number"
+              min="0"
+              value={state.min || ''}
+              onChange={(e) => update({ min: e.target.value })}
+              placeholder={isAr ? 'من' : 'Min'}
+              className="h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-sky-500"
+              inputMode="numeric"
+            />
+            <span className="text-[11px] text-slate-500">{isAr ? 'إلى' : 'to'}</span>
+            <input
+              type="number"
+              min="0"
+              value={state.max || ''}
+              onChange={(e) => update({ max: e.target.value })}
+              placeholder={isAr ? 'أقصى' : 'Max'}
+              className="h-8 w-24 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-sky-500"
+              inputMode="numeric"
+            />
+          </div>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1">
+            <label htmlFor="rating" className="sr-only">{isAr ? 'التقييم' : 'Rating'}</label>
+            <select
+              id="rating"
+              value={state.rating || ''}
+              onChange={(e) => update({ rating: e.target.value })}
+              className="h-8 min-w-[7rem] rounded-md border border-slate-200 bg-white px-2 text-xs"
+            >
+              <option value="">{isAr ? 'الكل' : 'All'}</option>
+              {[5, 4, 3, 2, 1].map((r) => (
+                <option key={r} value={r}>
+                  {isAr ? `على الأقل ${r}` : `≥ ${r}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Discount */}
+          <label className="ms-auto inline-flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-800">
+            <span>{isAr ? 'خصم' : 'Discount'}</span>
+            <span className="inline-flex items-center gap-2">
+              <input
+                id="discount"
+                type="checkbox"
+                checked={!!state.discount}
+                onChange={(e) => update({ discount: e.target.checked })}
+                className="peer sr-only"
+              />
+              <span className="block h-4 w-8 rounded-full bg-slate-300 peer-checked:bg-sky-600 transition-colors">
+                <span className="block h-3.5 w-3.5 translate-x-0.5 translate-y-0.5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-[14px]" />
+              </span>
+            </span>
+          </label>
+
+          {/* Reset */}
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100"
+          >
+            <RefreshCw className="size-3.5" /> {isAr ? 'إعادة ضبط' : 'Reset'}
+          </button>
+        </div>
+      )}
+
+      {/* Original stacked filters for sidebar mode */}
+      {sidebar && (
+        <>
+          {/* Sort */}
+          <details className="group rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm open:shadow" open>
+            <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-slate-800">
+              <span>{isAr ? 'الترتيب' : 'Sort'}</span>
+              <ChevronDown className="size-1.5 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2">
+              <select
+                id="sort"
+                value={state.sort}
+                onChange={(e) => update({ sort: e.target.value })}
+                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs"
+              >
+                <option value="new">{isAr ? 'الأحدث' : 'Newest'}</option>
+                <option value="price-asc">{isAr ? 'السعر ↑' : 'Price ↑'}</option>
+                <option value="price-desc">{isAr ? 'السعر ↓' : 'Price ↓'}</option>
+              </select>
+            </div>
+          </details>
+
+          {/* Price */}
+          <details className="group rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm open:shadow" open>
+            <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-slate-800">
+              <span>{isAr ? 'السعر' : 'Price'}</span>
+              <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-slate-500">{isAr ? 'من' : 'Min'}</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={state.min || ''}
+                  onChange={(e) => update({ min: e.target.value })}
+                  placeholder={isAr ? 'أدنى' : 'Min'}
+                  className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-500"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-slate-500">{isAr ? 'إلى' : 'Max'}</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={state.max || ''}
+                  onChange={(e) => update({ max: e.target.value })}
+                  placeholder={isAr ? 'أقصى' : 'Max'}
+                  className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-500"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+          </details>
+
+          {/* Rating */}
+          <details className="group rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm open:shadow">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-slate-800">
+              <span>{isAr ? 'التقييم' : 'Rating'}</span>
+              <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2">
+              <select
+                value={state.rating || ''}
+                onChange={(e) => update({ rating: e.target.value })}
+                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs"
+              >
+                <option value="">{isAr ? 'الكل' : 'All'}</option>
+                {[5, 4, 3, 2, 1].map((r) => (
+                  <option key={r} value={r}>
+                    {isAr ? `على الأقل ${r}` : `≥ ${r}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </details>
+
+          {/* Discount toggle */}
+          <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+            <label className="flex items-center justify-between gap-2 text-xs text-slate-800">
+              <span>{isAr ? 'خصم' : 'Discount'}</span>
+              <span className="inline-flex items-center gap-2">
+                <input
+                  id="discount"
+                  type="checkbox"
+                  checked={!!state.discount}
+                  onChange={(e) => update({ discount: e.target.checked })}
+                  className="peer sr-only"
+                />
+                <span className="block h-4 w-8 rounded-full bg-slate-300 peer-checked:bg-sky-600 transition-colors">
+                  <span className="block h-3.5 w-3.5 translate-x-0.5 translate-y-0.5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-[14px]" />
+                </span>
+              </span>
+            </label>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import api from '../../api/client';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy } from 'lucide-react';
@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as 
 const CategoryScroller = () => {
   const { locale } = useLanguage();
   const { pathname, search } = useLocation();
+  const navigate = useNavigate();
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -100,12 +101,27 @@ const CategoryScroller = () => {
             return null;
           };
           const Icon = pickIcon();
+          const onPick = (slug) => {
+            // Update current page query params in-place (no route change to catalog)
+            const params = new URLSearchParams(search || '');
+            params.set('category', slug);
+            // Reset pagination on category change
+            params.set('page', '1');
+            const qs = params.toString();
+            navigate(`${pathname}${qs ? `?${qs}` : ''}`, { replace: false });
+          };
           return (
-            <Link key={c.id || c.slug} to={`${baseCatalogPath}?category=${encodeURIComponent(c.slug)}`} className={`cat-pill ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined}>
+            <button
+              key={c.id || c.slug}
+              type="button"
+              onClick={() => onPick(c.slug)}
+              className={`cat-pill ${active ? 'active' : ''}`}
+              aria-current={active ? 'page' : undefined}
+            >
               {Icon && <Icon size={14} className="opacity-70" />}
               <span>{locale==='ar' ? (c.name?.ar || c.slug) : (c.name?.en || c.slug)}</span>
               {typeof c.productCount === 'number' && c.productCount > 0 && <span className="count">{c.productCount}</span>}
-            </Link>
+            </button>
           );
         })}
         {uniqueCats.length > MAX_DEFAULT && (

@@ -153,9 +153,8 @@ const Customers = () => {
 
   return (
     <div className="admin-page-wrapper" style={{ direction:'rtl', padding:'1.25rem 0' }}>
-      <Seo title="العملاء | Customers" description="Customers management" />
-      <h1 className="page-title">العملاء / Customers</h1>
-      <p className="muted">إدارة العملاء (Placeholder). سيتم ربط البيانات والإجراءات لاحقاً.</p>
+      <Seo title=" ادارةالعملاء | Customers" description="Customers management" />
+      <h1 className="page-title">ادارة العملاء / Customers</h1>
 
       <div style={{ display:'grid', gridTemplateColumns:'220px 1fr', gap:16 }}>
         <AdminSideNav />

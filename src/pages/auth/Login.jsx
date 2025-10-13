@@ -11,7 +11,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const { setting } = useSettings() || {};
-  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'متجري';
+  const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -27,12 +27,27 @@ const Login = () => {
         <h2 className="text-2xl font-bold mb-4">تسجيل الدخول</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="text-sm">البريد الإلكتروني أو الهاتف</label>
-            <input className="w-full mt-1 p-2 border rounded" value={email} onChange={(e)=>setEmail(e.target.value)} />
+            <label className="text-sm" htmlFor="login-identifier">البريد الإلكتروني أو الهاتف</label>
+            <input
+              id="login-identifier"
+              name="username"
+              autoComplete="username"
+              className="w-full mt-1 p-2 border rounded"
+              value={email}
+              onChange={(e)=>setEmail(e.target.value)}
+            />
           </div>
           <div className="mb-3">
-            <label className="text-sm">كلمة المرور</label>
-            <input type="password" className="w-full mt-1 p-2 border rounded" value={password} onChange={(e)=>setPassword(e.target.value)} />
+            <label className="text-sm" htmlFor="login-password">كلمة المرور</label>
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              className="w-full mt-1 p-2 border rounded"
+              value={password}
+              onChange={(e)=>setPassword(e.target.value)}
+            />
           </div>
           <div className="flex items-center justify-between">
             <button className="btn-primary px-6 py-2">دخول</button>

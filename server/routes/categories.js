@@ -38,7 +38,12 @@ router.get('/', async (req, res) => {
   } catch (e) {
     // Degraded mode: fallback to derived categories from sample products if DB is down
     try {
-      if (/Database|DB|connect/i.test(e.message || '')) {
+      const fallbackEnabled = (
+        process.env.NODE_ENV !== 'production' ||
+        process.env.ALLOW_INVALID_DB === 'true' ||
+        /Database|DB|connect/i.test(e?.message || '')
+      );
+      if (fallbackEnabled) {
         const samplePath = path.join(process.cwd(), 'server', 'data', 'realProducts.sample.json');
         const raw = fs.readFileSync(samplePath, 'utf8');
         const sample = JSON.parse(raw);
@@ -48,6 +53,7 @@ router.get('/', async (req, res) => {
           if (!map.has(slug)) map.set(slug, { slug, nameAr: slug, nameEn: slug, descriptionAr: null, descriptionEn: null, image: null, icon: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
         }
         const list = Array.from(map.values());
+        res.setHeader('x-fallback', 'sample-categories');
         return res.json({ ok: true, categories: list.map(c => ({
           id: c.slug,
           slug: c.slug,
@@ -200,3 +206,16 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 });
 
 export default router;
+
+// Lightweight debug (dev-only) to probe connectivity
+router.get('/_debug', async (req, res) => {
+  const enabled = process.env.NODE_ENV !== 'production' && (req.query.debug === '1' || process.env.DEBUG_CATEGORIES === '1');
+  if (!enabled) return res.status(403).json({ ok:false, error:'DISABLED' });
+  try {
+    const count = await prisma.category.count();
+    const one = await prisma.category.findFirst();
+    res.json({ ok:true, count, sample: one ? mapCategory(one) : null });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:e.message });
+  }
+});

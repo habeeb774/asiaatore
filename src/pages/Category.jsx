@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import api from '../api/client'
 import { useLanguage } from '../context/LanguageContext'
 import { resolveLocalized } from '../utils/locale'
+import Breadcrumbs from '../components/common/Breadcrumbs'
 
 const Category = () => {
   const { slug } = useParams()
@@ -28,11 +29,17 @@ const Category = () => {
     return () => { mounted = false }
   }, [slug])
 
-  const { locale } = useLanguage ? useLanguage() : { locale: 'ar' };
+  const lang = useLanguage();
+  const locale = lang?.locale ?? 'ar';
 
   return (
     <div className="container-custom px-4 py-12">
-      <h2 className="text-2xl font-bold mb-4">الفئة: {slug}</h2>
+      <Breadcrumbs items={[
+        { label: locale === 'ar' ? 'الرئيسية' : 'Home', to: '/' },
+        { label: locale === 'ar' ? 'الفئات' : 'Categories', to: '/categories' },
+        { label: cat ? resolveLocalized(cat.name, locale) : slug }
+      ]} />
+      <h2 className="text-2xl font-bold mb-4">{locale==='ar' ? 'الفئة' : 'Category'}: {cat ? resolveLocalized(cat.name, locale) : slug}</h2>
       {loading && <div className="text-sm opacity-70">جار التحميل...</div>}
       {error && <div className="text-sm text-red-600">خطأ: {error}</div>}
       {cat && (

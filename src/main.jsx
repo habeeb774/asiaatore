@@ -3,16 +3,19 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppRoutes from './AppRoutes';
 import './index.css';
+// Local Cairo font (self-hosted via package)
+import '@fontsource/cairo/400.css';
+import '@fontsource/cairo/700.css';
 // SCSS bundles
-import './css/_design-system.scss';
-import './css/theme.scss';
-import './css/product-details.scss';
-import './css/ProductList.scss';
-import './css/product-card.scss';
-import './css/pages.scss';
-import './css/enhancements.scss';
-import './css/HomePage.scss'; // لاحقاً استبدل باستيراد partials
-import './css/top-strips.scss';
+import './styles/_design-system.scss';
+import './styles/theme.scss';
+import './styles/product-details.scss';
+import './styles/ProductList.scss';
+import './styles/product-card.scss';
+import './styles/pages.scss';
+import './styles/enhancements.scss';
+import './styles/HomePage.scss'; // لاحقاً استبدل باستيراد partials
+import './styles/top-strips.scss';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ProductsProvider } from './context/ProductsContext';
 import { CartProvider } from './context/CartContext';
@@ -31,6 +34,8 @@ import './i18n';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 import { ThemeProvider } from './context/ThemeContext';
+// Ensure Leaflet maps render correctly across the app
+import 'leaflet/dist/leaflet.css';
 
 // In development, ensure no stale service workers/caches interfere with Vite HMR
 if (import.meta.env.DEV && typeof window !== 'undefined' && 'serviceWorker' in navigator) {

@@ -23,21 +23,40 @@ export const AuthProvider = ({ children }) => {
   }, [user])
 
   const login = async (email, password) => {
-    const resp = await api.authLogin(email, password)
-    if (resp.ok && (resp.accessToken || resp.token)) {
-      const access = resp.accessToken || resp.token
-      try { localStorage.setItem('my_store_token', access) } catch {}
-      setUser(resp.user)
-      try { toast?.success?.('تم تسجيل الدخول', resp.user?.email || '') } catch {}
-      return { ok: true }
+    try {
+      const resp = await api.authLogin(email, password)
+      if (resp.ok && (resp.accessToken || resp.token)) {
+        const access = resp.accessToken || resp.token
+        try { localStorage.setItem('my_store_token', access) } catch {}
+        setUser(resp.user)
+        try { toast?.success?.('تم تسجيل الدخول', resp.user?.email || '') } catch {}
+        return { ok: true }
+      }
+      const code = resp?.error
+      if (code === 'USER_NOT_FOUND') {
+        toast?.warn?.('المستخدم غير موجود', 'تحقق من البريد الإلكتروني أو قم بالتسجيل')
+      } else if (code === 'WRONG_PASSWORD') {
+        toast?.error?.('كلمة المرور غير صحيحة', 'حاول مرة أخرى أو استخدم خيار استعادة كلمة المرور')
+      } else if (code === 'DB_UNAVAILABLE') {
+        toast?.error?.('خدمة الدخول غير متاحة', 'حاول لاحقاً، أو استخدم تسجيل الدخول التجريبي إن كان مفعلاً')
+      } else if (code === 'MISSING_CREDENTIALS') {
+        toast?.warn?.('بيانات ناقصة', 'يرجى إدخال البريد الإلكتروني وكلمة المرور')
+      } else {
+        toast?.error?.('فشل تسجيل الدخول', code || 'تحقق من بيانات الدخول')
+      }
+      return { ok: false, error: code || 'LOGIN_FAILED' }
+    } catch (e) {
+      const msg = e?.message?.includes('Network error') ? 'تعذر الاتصال بالخادم' : 'حدث خطأ غير متوقع'
+      toast?.error?.('فشل تسجيل الدخول', msg)
+      return { ok: false, error: 'NETWORK_OR_UNKNOWN' }
     }
-    try { toast?.error?.('فشل تسجيل الدخول', resp?.error || 'تحقق من بيانات الدخول') } catch {}
-    return { ok: false, error: resp.error || 'LOGIN_FAILED' }
   }
 
   // Dev fallback to quickly assume roles (optional)
   const devLoginAs = (role = 'user') => {
-    const mock = { id: role + '-mock', role, name: role }
+    // Use stable IDs to align with demo data from StoreContext (e.g., seller-1)
+    const ids = { seller: 'seller-1', admin: 'admin-1', user: 'user-1', delivery: 'delivery-1' }
+    const mock = { id: ids[role] || (role + '-mock'), role, name: role }
     setUser(mock)
   }
 

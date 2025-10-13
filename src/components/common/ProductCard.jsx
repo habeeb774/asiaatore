@@ -36,7 +36,8 @@ const ProductCard = ({ product }) => {
   const mainImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image || '/vite.svg'
   const hasDiscount = product.originalPrice && product.originalPrice > product.price
   const discountPercent = hasDiscount ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0
-  const { locale } = useLanguage ? useLanguage() : { locale: 'ar' }
+  const lang = useLanguage();
+  const locale = lang?.locale ?? 'ar'
   const nameText = resolveLocalized(product.name, locale) || product.slug || 'منتج'
   const descText = product.description ? resolveLocalized(product.description, locale) : ''
 

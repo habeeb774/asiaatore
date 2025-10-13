@@ -20,7 +20,8 @@ const Categories = () => {
     return () => { mounted = false }
   }, [])
 
-  const { locale } = useLanguage ? useLanguage() : { locale: 'ar' };
+  const lang = useLanguage();
+  const locale = lang?.locale ?? 'ar';
   return (
     <div className="container-custom px-4 py-12">
       <h2 className="text-2xl font-bold mb-4">الفئات</h2>

@@ -23,7 +23,7 @@ function ensureTag(tagName, attrs = {}) {
 
 const Canonical = ({ alternates = ['ar','en'] }) => {
   const location = useLocation();
-  const langCtx = useLanguage && useLanguage();
+  const langCtx = useLanguage();
 
   useEffect(() => {
     // detect locale prefix (simple heuristic: first segment if matches alternates but not default root)

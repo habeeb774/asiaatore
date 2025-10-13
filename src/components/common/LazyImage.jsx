@@ -71,6 +71,7 @@ export default function LazyImage({
           srcSet={srcSet}
           sizes={sizes}
           loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : undefined}
           decoding="async"
           onLoad={(e) => {
             setLoaded(true);

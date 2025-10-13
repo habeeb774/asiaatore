@@ -3,7 +3,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
-import morgan from 'morgan';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import paypalRoutes from './paypal.js';
@@ -26,11 +27,14 @@ import cartRoutes from './routes/cart.js';
 import reviewsRoutes from './routes/reviews.js';
 import searchRoutes from './routes/search.js';
 import settingsRoutes from './routes/settings.js';
-import sellersRoutes from './routes/sellers.js';
+import sellersRoutes, { adminSellersRouter } from './routes/sellers.js';
+import addressesRoutes from './routes/addresses.js';
 import invoicesRoutes from './routes/invoices.js';
 import authRoutes from './routes/auth.js';
 import sellerRoutes from './routes/sellers.js';
 import adminRoutes from './routes/admin.js';
+import chatRoutes from './routes/chat.js';
+import deliveryRoutes from './routes/delivery.js';
 import { attachUser } from './middleware/auth.js';
 import { registerSse, setupWebSocket } from './utils/realtimeHub.js';
 import fs from 'fs';
@@ -90,21 +94,32 @@ let PORT = Number(process.env.PORT) || 4000;
 if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 
 // Security middleware (Helmet)
-// By default, disable CSP to avoid breaking dev; allow enabling minimal CSP via HELMET_CSP=true
+// Single consolidated Helmet instance. Disable CSP in dev; allow enabling via HELMET_CSP=true
 const useCsp = process.env.HELMET_CSP === 'true';
+const isProd = process.env.NODE_ENV === 'production';
 app.use(helmet({
-  contentSecurityPolicy: useCsp ? {
+  contentSecurityPolicy: isProd ? (useCsp ? {
     useDefaults: true,
     directives: {
-      // Minimal safe defaults; adjust if you serve SPA from same origin
       "default-src": ["'self'"],
-      "img-src": ["'self'", 'data:', 'blob:'],
+      // Allow Leaflet tile images and marker icons from OSM and unpkg
+      "img-src": [
+        "'self'",
+        'data:',
+        'blob:',
+        'https://*.tile.openstreetmap.org',
+        'https://tile.openstreetmap.org',
+        'https://*.tile.openstreetmap.de',
+        'https://tile.openstreetmap.de',
+        'https://unpkg.com'
+      ],
       "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       "style-src": ["'self'", "'unsafe-inline'"],
       "connect-src": ["'self'", '*']
     }
-  } : false,
-  crossOriginEmbedderPolicy: false, // avoid issues with third-party iframes/assets in dev
+  } : false) : false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
   referrerPolicy: { policy: 'no-referrer-when-downgrade' }
 }));
 
@@ -121,7 +136,7 @@ app.use(compression({
   }
 }));
 
-const isProd = process.env.NODE_ENV === 'production';
+// isProd is defined above
 
 // CORS allowlist (prod) or permissive (dev)
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
@@ -142,16 +157,7 @@ const corsOptions = isProd && allowedOrigins.length
       credentials: true,
     };
 
-// Security headers (keep single Helmet usage)
-app.use(
-  helmet({
-    // Keep CSP simple; disable in dev to avoid blocking Vite HMR (can enable via HELMET_CSP=true above)
-    contentSecurityPolicy: isProd ? undefined : false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-    crossOriginEmbedderPolicy: false,
-    referrerPolicy: { policy: 'no-referrer-when-downgrade' },
-  })
-);
+// (Helmet already applied above)
 
 // CORS
 app.use(cors(corsOptions));
@@ -161,6 +167,16 @@ app.options('*', cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploads (static) — make product/brand/category uploads available to the SPA
+// Example: /uploads/product-images/..., /uploads/brand-logos/...
+try {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch { /* ignore */ }
+  }
+  app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', redirect: false }));
+} catch {}
 
 // Rate limiters (configurable via env)
 const authLimiter = rateLimit({
@@ -177,10 +193,26 @@ const payLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many payment requests, try again later.' },
 });
-app.use('/api/auth', authLimiter);
-app.use('/api/pay', payLimiter);
-// Apply same limiter to legacy /auth alias
-app.use('/auth', authLimiter);
+// Enable/disable auth rate limit: default only in production unless explicitly enabled
+const AUTH_RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_AUTH_DISABLE === 'true';
+const AUTH_RATE_LIMIT_ENABLED = process.env.RATE_LIMIT_AUTH_ENABLE === 'true';
+const applyAuthRateLimit = !AUTH_RATE_LIMIT_DISABLED && (isProd || AUTH_RATE_LIMIT_ENABLED);
+if (applyAuthRateLimit) {
+  app.use('/api/auth', authLimiter);
+  // Apply same limiter to legacy /auth alias
+  app.use('/auth', authLimiter);
+} else {
+  console.warn('[RateLimit] Auth limiter disabled (dev/testing). Set RATE_LIMIT_AUTH_ENABLE=true to force-enable or RATE_LIMIT_AUTH_DISABLE=false');
+}
+// Only apply payment limiter in production unless explicitly enabled
+const PAY_RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_PAY_DISABLE === 'true';
+const PAY_RATE_LIMIT_ENABLED = process.env.RATE_LIMIT_PAY_ENABLE === 'true';
+const applyPayRateLimit = !PAY_RATE_LIMIT_DISABLED && (isProd || PAY_RATE_LIMIT_ENABLED);
+if (applyPayRateLimit) {
+  app.use('/api/pay', payLimiter);
+} else {
+  console.warn('[RateLimit] Pay limiter disabled (dev/testing). Set RATE_LIMIT_PAY_ENABLE=true to force-enable or RATE_LIMIT_PAY_DISABLE=false');
+}
 
 // Optional: serve built client (SPA) from dist in production if enabled
 if (process.env.SERVE_CLIENT === 'true') {
@@ -196,17 +228,28 @@ async function setupGraphQL() {
     const { ApolloServer } = await import('@apollo/server');
     const { ApolloServerPluginLandingPageLocalDefault } = await import('@apollo/server/plugin/landingPage/default');
     const { expressMiddleware } = await import('@apollo/server/express4');
-    const serverGql = new ApolloServer({ typeDefs, resolvers, plugins: [ApolloServerPluginLandingPageLocalDefault()] });
+    const serverGql = new ApolloServer({
+      typeDefs,
+      resolvers,
+      // Allow landing page and introspection in dev; can be disabled in production if needed
+      plugins: [ApolloServerPluginLandingPageLocalDefault()],
+      introspection: process.env.NODE_ENV !== 'production',
+    });
     await serverGql.start();
-    app.use('/api/graphql', expressMiddleware(serverGql, {
-      context: async ({ req }) => ({ user: req.user || null, prisma })
-    }));
+    // Ensure auth context and DB guard apply to GraphQL requests
+    app.use(
+      '/api/graphql',
+      attachUser,
+      requireValidDb,
+      expressMiddleware(serverGql, {
+        context: async ({ req }) => ({ user: req.user || null, prisma })
+      })
+    );
     console.log('[GraphQL] Mounted at /api/graphql');
   } catch (e) {
     console.warn('[GraphQL] Skipped:', e.message);
   }
 }
-await setupGraphQL();
 
 // Request ID middleware (before logger)
 app.use((req, res, next) => {
@@ -215,10 +258,32 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request logger (morgan)
-morgan.token('id', (req) => req.id);
-const morganFormat = process.env.MORGAN_FORMAT || ':remote-addr :method :url :status :res[content-length] - :response-time ms reqId=:id';
-app.use(morgan(morganFormat));
+// Request logger (pino)
+const LOG_LEVEL = process.env.LOG_LEVEL || (isProd ? 'info' : 'debug');
+const PINO_PRETTY = process.env.PINO_PRETTY === 'true' || (!isProd && process.env.PINO_PRETTY !== 'false');
+const transport = PINO_PRETTY
+  ? pino.transport({ target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard', singleLine: false } })
+  : undefined;
+const logger = pino({ level: LOG_LEVEL }, transport);
+// Attach pino-http middleware
+app.use(pinoHttp({
+  logger,
+  genReqId: (req, res) => req.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)),
+  serializers: {
+    req(req) {
+      return { id: req.id, method: req.method, url: req.url, headers: { host: req.headers.host, 'user-agent': req.headers['user-agent'] } };
+    },
+    res(res) {
+      return { statusCode: res.statusCode };
+    }
+  },
+  customSuccessMessage: function (req, res) {
+    return `${req.method} ${req.url}`;
+  },
+  customErrorMessage: function (req, res, err) {
+    return `${req.method} ${req.url} -> ${res.statusCode} ${err?.message || ''}`.trim();
+  }
+}));
 
 // Optional: force HTTPS
 if (process.env.FORCE_HTTPS === 'true') {
@@ -430,6 +495,20 @@ app.get('/_health', (req, res) => {
   });
 });
 
+// New: API health endpoint for load balancers and uptime checks
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: DB_URL_VALID && dbConnected ? 'ok' : (DB_URL_VALID ? 'degraded' : 'invalid-config'),
+    uptimeSeconds: Math.round(process.uptime()),
+    time: new Date().toISOString(),
+    db: {
+      validUrl: DB_URL_VALID,
+      connected: dbConnected,
+      quickStart: DB_QUICK_START,
+    }
+  });
+});
+
 // مسار فحص مباشر يدوي
 app.get('/_db_ping', async (req, res) => {
   if (!DB_URL_VALID) {
@@ -491,7 +570,22 @@ app.get('/api/docs.json', (req, res) => {
   '/api/invoices/{id}': { get: { summary: 'Get invoice by id' } },
   '/api/invoices/{id}/pdf': { get: { summary: 'Invoice PDF' } },
   '/api/invoices/{id}/status': { post: { summary: 'Update invoice status (admin)' } },
-      '/api/events': { get: { summary: 'Realtime events (SSE)' } }
+      '/api/events': { get: { summary: 'Realtime events (SSE)' } },
+      // Delivery API
+      '/api/delivery/orders': { get: { summary: 'List delivery orders (assigned or pool via ?pool=1)', tags: ['delivery'] } },
+      '/api/delivery/orders/assigned': { get: { summary: 'List orders assigned to current driver', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}': { get: { summary: 'Get delivery order by id', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/accept': { post: { summary: 'Accept order assignment', tags: ['delivery'] } },
+  '/api/delivery/orders/{id}/reject': { post: { summary: 'Reject assigned order before start', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/start': { post: { summary: 'Start delivery', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/complete': { post: { summary: 'Complete delivery (optional proof upload)', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/fail': { post: { summary: 'Report failed delivery', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/location': { post: { summary: 'Update driver location for this order', tags: ['delivery'] } },
+      '/api/delivery/location/update': { post: { summary: 'Alias to update location with orderId in body', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/status': { patch: { summary: 'Patch delivery status', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/otp/generate': { post: { summary: 'Generate OTP for delivery confirmation', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/otp/confirm': { post: { summary: 'Confirm delivery via OTP', tags: ['delivery'] } },
+      '/api/delivery/orders/{id}/signature': { post: { summary: 'Upload signature image to confirm delivery', tags: ['delivery'] } }
     }
   });
 });
@@ -511,7 +605,7 @@ app.get('/api/docs', (req, res) => {
 });
 
 // Realtime events via Server-Sent Events (SSE)
-app.get('/api/events', (req, res) => {
+app.get('/api/events', attachUser, (req, res) => {
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -628,11 +722,15 @@ app.use('/auth', authRoutes);
 // attach user context (reads JWT if present)
 app.use(attachUser);
 
+// Mount GraphQL endpoint (after auth and DB guard are defined)
+await setupGraphQL();
+
 // Apply DB guard to routes that rely on the database
 app.use(
   [
     '/api/orders',
     '/api/admin',
+    '/api/addresses',
     '/api/pay',
     '/api/brands',
     '/api/marketing',
@@ -640,6 +738,7 @@ app.use(
     '/api/cart',
     '/api/sellers',
     '/api/invoices',
+    '/api/chat',
   ],
   requireValidDb
 );
@@ -660,9 +759,25 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/sellers', sellersRoutes);
+app.use('/api/addresses', addressesRoutes);
 app.use('/api/invoices', invoicesRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/sellers', adminSellersRouter);
+// Prepare conditional mounting for delivery routes; will execute after DB init
+function mountDeliveryRoutesConditionally() {
+  try {
+    if (DB_URL_VALID && dbConnected) {
+      app.use('/api/delivery', requireValidDb, deliveryRoutes);
+    } else {
+      console.warn('[Delivery] Mounting delivery routes in degraded mode (DB invalid or not connected).');
+      app.use('/api/delivery', deliveryRoutes);
+    }
+  } catch (e) {
+    console.warn('[Delivery] Mount failed:', e.message);
+  }
+}
 
 // Payments
 app.use('/api/pay/paypal', paypalRoutes);
@@ -844,6 +959,8 @@ async function startServerWithRetry(maxRetries = 5) {
 }
 
 await startServerWithRetry();
+// Now that DB flags are initialized, mount delivery routes appropriately
+mountDeliveryRoutesConditionally();
 
 // SPA fallback (if serving client) — after server starts
 if (process.env.SERVE_CLIENT === 'true') {
@@ -873,6 +990,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/sellers', sellersRoutes);
 app.use('/api/invoices', invoicesRoutes);
+// chat mounted earlier
+// delivery already mounted
 
 // Optional alias: support bare /products by redirecting to /api/products
 app.use('/products', (req, res) => {

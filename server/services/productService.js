@@ -1,5 +1,10 @@
 import prisma from '../db/client.js';
 
+// Ensure queries exclude soft-deleted records by default
+const withNotDeleted = (where = {}) => (
+  Object.prototype.hasOwnProperty.call(where, 'deletedAt') ? where : { ...where, deletedAt: null }
+);
+
 // --- Mapping helpers (kept close to service for reuse) ---
 function buildImageVariants(imagePath) {
   if (!imagePath) return null;
@@ -58,19 +63,19 @@ export function mapProduct(p) {
 }
 
 // --- Query helpers ---
-const baseInclude = { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true };
+const baseInclude = { productImages: { where: { deletedAt: null }, orderBy: { sort: 'asc' } }, brand: true, tierPrices: true };
 
 export async function count(where = {}) {
-  return prisma.product.count({ where });
+  return prisma.product.count({ where: withNotDeleted(where) });
 }
 
 export async function list(where = {}, opts = {}) {
   const { orderBy = { createdAt: 'desc' }, include = baseInclude, skip, take } = opts;
-  return prisma.product.findMany({ where, orderBy, include, skip, take });
+  return prisma.product.findMany({ where: withNotDeleted(where), orderBy, include, skip, take });
 }
 
 export async function getById(id, include = baseInclude) {
-  return prisma.product.findUnique({ where: { id }, include });
+  return prisma.product.findFirst({ where: { id, deletedAt: null }, include });
 }
 
 export async function create(data) {
@@ -82,7 +87,7 @@ export async function update(id, data) {
 }
 
 export async function remove(id) {
-  return prisma.product.delete({ where: { id }, include: baseInclude });
+  return prisma.product.update({ where: { id }, data: { deletedAt: new Date() }, include: baseInclude });
 }
 
 // Gallery helpers
@@ -104,11 +109,11 @@ export async function updateImage(imageId, data) {
 }
 
 export async function deleteImage(imageId) {
-  return prisma.productImage.delete({ where: { id: imageId } });
+  return prisma.productImage.update({ where: { id: imageId }, data: { deletedAt: new Date() } });
 }
 
 export async function getWithImages(productId) {
-  return prisma.product.findUnique({ where: { id: productId }, include: { productImages: { orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
+  return prisma.product.findFirst({ where: { id: productId, deletedAt: null }, include: { productImages: { where: { deletedAt: null }, orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
 }
 
 export default {

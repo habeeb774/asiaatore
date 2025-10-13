@@ -1,6 +1,6 @@
 import { Pressable, Text as RNText, View, type ViewStyle, type TextStyle } from 'react-native';
 import { useTheme } from '../lib/theme';
-import { ReactNode } from 'react';
+import React, { ReactNode, forwardRef } from 'react';
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const t = useTheme();
@@ -12,22 +12,24 @@ export function Title({ children }: { children: ReactNode }) {
   return <RNText style={{ fontSize: 20, fontWeight: '700', color: t.fg }}>{children}</RNText>;
 }
 
-export function Text({ children, muted = false, size = 14, style }: { children: ReactNode; muted?: boolean; size?: number; style?: TextStyle }) {
+export function Text({ children, muted = false, size = 14, style, numberOfLines }: { children: ReactNode; muted?: boolean; size?: number; style?: TextStyle; numberOfLines?: number }) {
   const t = useTheme();
-  return <RNText style={[{ color: muted ? t.muted : t.fg, fontSize: size }, style]}>{children}</RNText>;
+  return <RNText numberOfLines={numberOfLines} style={[{ color: muted ? t.muted : t.fg, fontSize: size }, style]}>{children}</RNText>;
 }
 
-export function Button({ title, onPress, variant = 'primary' }: { title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost' }) {
-  const t = useTheme();
-  const bg = variant === 'primary' ? t.primary : variant === 'secondary' ? t.secondary : 'transparent';
-  const color = variant === 'ghost' ? t.primary : '#fff';
-  const borderColor = variant === 'ghost' ? t.primary : 'transparent';
-  return (
-    <Pressable onPress={onPress} style={{ backgroundColor: bg, paddingVertical: 10, paddingHorizontal: 14, borderRadius: t.radius, borderWidth: 1, borderColor }}>
-      <RNText style={{ color, fontWeight: '600', textAlign: 'center' }}>{title}</RNText>
-    </Pressable>
-  );
-}
+export const Button = forwardRef<React.ElementRef<typeof Pressable>, { title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost'; disabled?: boolean }>(
+  ({ title, onPress, variant = 'primary', disabled = false }, ref) => {
+    const t = useTheme();
+    const bg = variant === 'primary' ? t.primary : variant === 'secondary' ? t.secondary : 'transparent';
+    const color = variant === 'ghost' ? t.primary : '#fff';
+    const borderColor = variant === 'ghost' ? t.primary : 'transparent';
+    return (
+      <Pressable ref={ref} onPress={onPress} disabled={disabled} style={{ backgroundColor: disabled ? '#cbd5e1' : bg, paddingVertical: 10, paddingHorizontal: 14, borderRadius: t.radius, borderWidth: 1, borderColor, opacity: disabled ? 0.7 : 1 }}>
+        <RNText style={{ color: disabled ? '#475569' : color, fontWeight: '600', textAlign: 'center' }}>{title}</RNText>
+      </Pressable>
+    );
+  }
+);
 
 export function Card({ children }: { children: ReactNode }) {
   const t = useTheme();

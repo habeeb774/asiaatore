@@ -12,7 +12,7 @@ const Orders = () => {
   const { user } = useAuth() || {};
   const { setting } = useSettings() || {};
   const { locale } = useLanguage();
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const title = (locale==='ar' ? 'الطلبات' : 'Orders') + ' | ' + siteName;
   const [statusFilter, setStatusFilter] = React.useState('');
   const [methodFilter, setMethodFilter] = React.useState('');

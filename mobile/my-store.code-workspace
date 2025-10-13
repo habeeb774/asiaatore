@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "my-store",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"mssql.intelliSense.enableErrorChecking": false,
+		"files.associations": {
+			"prisma/migrations/**/*.sql": "mysql"
+		},
+		"inlineChat.enableV2": true
+	}
+}

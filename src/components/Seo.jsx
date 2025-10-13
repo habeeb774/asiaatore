@@ -19,7 +19,7 @@ const setMeta = (nameOrProp, value, attr = 'name') => {
 const Seo = ({ title, description, image, url }) => {
   const { setting } = useSettings() || {};
   useEffect(() => {
-    const siteName = setting?.siteNameAr || setting?.siteNameEn || 'متجري';
+    const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
     const finalTitle = title || siteName;
     if (finalTitle) document.title = finalTitle;
     setMeta('description', description, 'name');

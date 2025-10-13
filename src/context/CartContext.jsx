@@ -8,7 +8,8 @@ const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
   const { user } = useAuth() || {};
-  const { locale } = useLanguage ? useLanguage() : { locale: 'ar' };
+  const lang = useLanguage();
+  const locale = lang?.locale ?? 'ar';
   const [cartItems, setCartItems] = useState(() => {
     try {
       const raw = localStorage.getItem('my_store_cart');
@@ -52,12 +53,14 @@ export const CartProvider = ({ children }) => {
       return { ok: false, reason: 'AUTH_REQUIRED' };
     }
     let updated;
+    let finalDesiredQty = qty;
     setCartItems(prev => {
       const idx = prev.findIndex(i => i.id === product.id);
       if (idx > -1) {
         const copy = [...prev];
         const currentQty = copy[idx].quantity || 1;
         const nextQty = Math.min(MAX_PER_ITEM, currentQty + qty);
+        finalDesiredQty = nextQty;
         copy[idx].quantity = nextQty;
         // recompute unit price if tier pricing applies
         copy[idx].price = selectTierUnit(product, nextQty);
@@ -80,28 +83,66 @@ export const CartProvider = ({ children }) => {
     } catch {}
     // Server sync — ensure we send the intended qty (not product.quantity field)
     (async () => {
-      try { await api.cartSet(product.id, qty); } catch (e) { setError(e.message); }
+      try {
+        // Send absolute desired quantity, not delta
+        await api.cartSet(product.id, finalDesiredQty);
+      } catch (e) {
+        // Roll back optimistic update on stock errors
+        if (e?.code === 'INSUFFICIENT_STOCK' || /INSUFFICIENT_STOCK/.test(e?.message||'')) {
+          const available = Number(e?.data?.available ?? 0);
+          setCartItems(prev => prev.map(i => {
+            if (i.id !== product.id) return i;
+            const next = Math.min(i.quantity || 0, available);
+            const unit = selectTierUnit(product, next);
+            return { ...i, quantity: next, price: unit };
+          }));
+          try {
+            window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'error', title: 'الكمية غير متاحة', description: `المتوفر الآن: ${available}` } }));
+          } catch {}
+        } else {
+          setError(e.message);
+        }
+      }
     })();
     return { ok: true, ...updated };
-  }, [user]);
+  }, [user, locale]);
 
   const removeFromCart = (productId) => {
     setCartItems(prev => prev.filter(i => i.id !== productId));
     if (user) {
       (async () => {
-        try { await api.cartSet(productId, 0); } catch (e) { setError(e.message); }
+        try { await api.cartRemoveItem(productId); } catch (e) { setError(e.message); }
       })();
     }
   };
 
   const updateQuantity = (productId, quantity) => {
+    let prevQty = 0;
     setCartItems(prev => prev.map(i => {
       if (i.id !== productId) return i;
+      prevQty = i.quantity || 0;
       const unit = selectTierUnit(i, quantity);
       return { ...i, quantity, price: unit };
     }));
     if (user) {
-      (async () => { try { await api.cartSet(productId, quantity); } catch (e) { setError(e.message); } })();
+      (async () => {
+        try {
+          await api.cartSet(productId, quantity);
+        } catch (e) {
+          if (e?.code === 'INSUFFICIENT_STOCK' || /INSUFFICIENT_STOCK/.test(e?.message||'')) {
+            const available = Number(e?.data?.available ?? 0);
+            setCartItems(prev => prev.map(i => {
+              if (i.id !== productId) return i;
+              const next = Math.min(available, prevQty);
+              const unit = selectTierUnit(i, next);
+              return { ...i, quantity: next, price: unit };
+            }));
+            try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'error', title: 'الكمية غير متاحة', description: `المتوفر الآن: ${available}` } })); } catch {}
+          } else {
+            setError(e.message);
+          }
+        }
+      })();
     }
   };
 
@@ -143,8 +184,27 @@ export const CartProvider = ({ children }) => {
         const merged = Array.from(map.values());
         setCartItems(merged);
         if (cartItems.length) {
-          // push merge to server
-            try { await api.cartMerge(merged.map(m => ({ productId: m.id, quantity: m.quantity }))); } catch {}
+          // push merge to server, then refetch authoritative cart
+          try {
+            const resp = await api.cartMerge(merged.map(m => ({ productId: m.id, quantity: m.quantity })));
+            const skipped = Array.isArray(resp?.skipped) ? resp.skipped : [];
+            if (skipped.length) {
+              const msg = (locale === 'ar')
+                ? `تعذر إضافة ${skipped.length} عنصر بسبب نفاد المخزون`
+                : `${skipped.length} items were skipped (out of stock)`;
+              try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'warn', title: 'نفاد المخزون', description: msg } })); } catch {}
+            }
+          } catch {}
+          try {
+            const fresh = await api.cartList();
+            const freshItems = Array.isArray(fresh) ? fresh : (fresh.items || []);
+            setCartItems(freshItems.map(it => ({
+              id: it.productId || it.id,
+              quantity: it.quantity || 1,
+              price: it.price || it.salePrice || 0,
+              ...it
+            })));
+          } catch {}
         }
         hasMergedRef.current = true;
       } catch (e) {

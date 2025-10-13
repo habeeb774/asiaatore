@@ -9,14 +9,15 @@ const Footer = () => {
   const { appLinks = [], byLocation } = useMarketing() || { appLinks: [], byLocation:{ footer:[] } };
   const { setting } = useSettings() || {};
   const footerBanners = byLocation?.footer || [];
-
+ 
   return (
+   
     <footer className="bg-gray-100 mt-12 py-8">
       <div className="container-custom px-4 text-center">
         <div className="mb-4 flex items-center justify-center gap-2">
           <Link to="/" className="font-bold text-lg inline-flex items-center gap-2">
             {setting?.logo && <img src={setting.logo} alt={setting?.siteNameAr || setting?.siteNameEn || 'logo'} className="h-6 w-auto object-contain" />}
-            <span>{setting?.siteNameAr || setting?.siteNameEn || 'متجري'}</span>
+            <span>{setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية'}</span>
           </Link>
         </div>
         {footerBanners.length > 0 && (
@@ -45,7 +46,7 @@ const Footer = () => {
           </div>
         )}
         <div className="text-sm text-gray-600">
-          © {new Date().getFullYear()} {setting?.siteNameAr || setting?.siteNameEn || 'متجري'}. جميع الحقوق محفوظة.
+          © {new Date().getFullYear()} {setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية'}. جميع الحقوق محفوظة.
         </div>
       </div>
     </footer>

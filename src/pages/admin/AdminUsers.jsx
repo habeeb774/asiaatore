@@ -23,7 +23,7 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [q, setQ] = useState('');
-  const [role, setRole] = useState(''); // '', 'user', 'seller', 'admin'
+  const [role, setRole] = useState(''); // '', 'user', 'seller', 'delivery', 'admin'
   const [staffOnly, setStaffOnly] = useState(true); // hide customers by default
   const [active, setActive] = useState(''); // '', '1', '0'
 
@@ -124,6 +124,7 @@ export default function AdminUsers() {
           <option value="">كل الأدوار</option>
           <option value="user">مستخدم</option>
           <option value="seller">بائع</option>
+          <option value="delivery">موصل</option>
           <option value="admin">مدير</option>
         </select>
         <label style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:'.8rem',padding:'.45rem .6rem',background:'#fff',border:'1px solid #e2e8f0',borderRadius:10}}>
@@ -161,6 +162,7 @@ export default function AdminUsers() {
           <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}>
             <option value="user">مستخدم</option>
             <option value="seller">بائع</option>
+            <option value="delivery">موصل</option>
             <option value="admin">مدير</option>
           </select>
           {form.id && (
@@ -200,6 +202,10 @@ export default function AdminUsers() {
                 <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
                 <td style={tdActions}>
                   <button title="تعديل" onClick={()=>setForm({ id:u.id, name:u.name||'', email:u.email||'', phone:u.phone||'', role:u.role||'user', active: u.active!==false, sendInvite:false, password:'' })} style={iconBtn}>✎</button>
+                  {/* Quick role actions */}
+                  {u.role !== 'delivery' && (
+                    <button title="تعيين كموصل" onClick={async()=>{ try { await adminApi.updateUser(u.id, { role:'delivery' }); fetchUsers(); } catch(e){ alert('فشل التعيين: '+e.message); } }} style={iconBtn}>🚚</button>
+                  )}
                   {u.active === false
                     ? <button title="تفعيل" onClick={()=>activate(u, true)} style={iconBtn}>✓</button>
                     : <button title="إيقاف" onClick={()=>activate(u, false)} style={iconBtnDanger}>⏸</button>}

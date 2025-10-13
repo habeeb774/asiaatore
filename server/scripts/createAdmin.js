@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Usage: node server/scripts/createAdmin.js email password [name]
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import readline from 'readline';
 import bcrypt from 'bcryptjs';
 import prisma from '../db/client.js';

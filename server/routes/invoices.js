@@ -2,6 +2,7 @@ import { Router } from 'express'
 import prisma from '../db/client.js'
 import { attachUser, requireAdmin } from '../middleware/auth.js'
 import PDFDocument from 'pdfkit'
+import { generateInvoiceQrPng } from '../utils/qr.js'
 
 const router = Router()
 
@@ -148,6 +149,16 @@ router.get('/:id/pdf', attachUser, async (req, res) => {
       doc.fontSize(12).text(`الإجمالي: ${money(inv.total)}`, { align: 'right' })
       if (inv.paymentMethod) doc.fontSize(10).text(`الدفع: ${inv.paymentMethod.toUpperCase()}`, { align: 'right' })
 
+      // QR code (official invoice verification)
+      try {
+        const baseUrl = req.protocol + '://' + req.get('host')
+        const qrUrl = `${baseUrl}/api/invoices/${inv.id}`
+        const qrPng = await generateInvoiceQrPng(qrUrl)
+        doc.image(qrPng, width/2-45, doc.y+10, { width: 90, height: 90 })
+        doc.moveDown(5)
+        doc.fontSize(8).text('تحقق من الفاتورة عبر رمز QR', { align: 'center' })
+      } catch {}
+
       doc.end()
       return
     }
@@ -177,6 +188,17 @@ router.get('/:id/pdf', attachUser, async (req, res) => {
     doc.text(`الإجمالي قبل الضريبة: ${inv.subtotal.toFixed(2)} ${inv.currency}`)
     doc.text(`الضريبة: ${inv.tax.toFixed(2)} ${inv.currency}`)
     doc.text(`الإجمالي: ${inv.total.toFixed(2)} ${inv.currency}`, { underline: true })
+
+    // QR code (official invoice verification)
+    try {
+      const baseUrl = req.protocol + '://' + req.get('host')
+      const qrUrl = `${baseUrl}/api/invoices/${inv.id}`
+      const qrPng = await generateInvoiceQrPng(qrUrl)
+      doc.image(qrPng, doc.page.width-160, doc.y, { width: 90, height: 90 })
+      doc.moveDown(5)
+      doc.fontSize(8).text('تحقق من الفاتورة عبر رمز QR', doc.page.width-160, doc.y, { align: 'left' })
+    } catch {}
+
     doc.end()
   } catch (e) { res.status(500).json({ ok:false, error:'INVOICE_PDF_FAILED', message: e.message }) }
 })

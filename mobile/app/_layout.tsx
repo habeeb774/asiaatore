@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { CartProvider } from '../context/CartContext';
+import { ToastProvider } from '../context/ToastContext';
 import { ThemeProvider } from '../lib/theme';
 import { useStoreSettings } from '../lib/settings';
 
@@ -24,12 +26,17 @@ function InnerLayout() {
   } as any;
   return (
     <ThemeProvider overrides={overrides}>
-      <Stack>
-        <Stack.Screen name="index" options={{ title: 'الرئيسية' }} />
-        <Stack.Screen name="login" options={{ title: 'دخول' }} />
-        <Stack.Screen name="orders" options={{ title: 'طلباتي' }} />
-        <Stack.Screen name="product/[id]" options={{ title: 'المنتج' }} />
-      </Stack>
+      <ToastProvider>
+        <CartProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ title: 'الرئيسية' }} />
+            <Stack.Screen name="login" options={{ title: 'دخول' }} />
+            <Stack.Screen name="orders" options={{ title: 'طلباتي' }} />
+            <Stack.Screen name="product/[id]" options={{ title: 'المنتج' }} />
+          </Stack>
+        </CartProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

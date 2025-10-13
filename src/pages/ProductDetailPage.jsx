@@ -29,7 +29,7 @@ const ProductDetailPage = () => {
   const descriptionText = localizeField(p, 'short', locale);
 
   const { setting } = useSettings() || {};
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const title = `${displayName} | ${siteName}`;
   const description = descriptionText;
   const productLd = {

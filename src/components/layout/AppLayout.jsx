@@ -7,6 +7,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
 import { useTheme } from '../../context/ThemeContext';
+import SiteFooter from './SiteFooter';
+import FloatingCart from '../ui/FloatingCart';
 
 const AppLayout = ({ children }) => {
   const { locale, setLocale, available } = useLanguage();
@@ -24,7 +26,9 @@ const AppLayout = ({ children }) => {
           {!isHome && <CategoryScroller />}
           {/* Language & Theme selectors moved into HeaderNav */}
           {children}
+          <SiteFooter />
         </div>
+        <FloatingCart />
       </div>
     </ToastProvider>
   );

@@ -31,7 +31,7 @@ const Home = () => {
     for (const c of cats) { const k = c.slug||c.id; if (!uniq.has(k)) uniq.set(k, c); }
     return Array.from(uniq.values()).sort((a,b)=> (b.productCount||0)-(a.productCount||0)).slice(0,8);
   },[cats]);
-  const baseCatalogPath = locale === 'en' ? '/en/catalog' : '/catalog';
+  const baseProductsPath = locale === 'en' ? '/en/products' : (locale === 'fr' ? '/fr/products' : '/products');
 
   // choose first N discounted or highest stock as featured (simple heuristic)
   const featuredProducts = useMemo(() => {
@@ -44,7 +44,12 @@ const Home = () => {
   }, [products]);
 
   const latestProducts = useMemo(() => (products || []).slice(-6).reverse(), [products]);
-  const discountProducts = useMemo(() => (products || []).filter(p => p.oldPrice && p.oldPrice > p.price).slice(0,6), [products]);
+  const discountProducts = useMemo(() => (products || []).filter(p => {
+    const opRaw = (p.oldPrice ?? p.originalPrice);
+    const op = opRaw != null ? +opRaw : NaN;
+    const price = p.price != null ? +p.price : NaN;
+    return Number.isFinite(op) && Number.isFinite(price) && op > price;
+  }).slice(0,6), [products]);
 
   // Preload hero & first few product images for perceived performance
   // Preload unique image URLs only to avoid duplicate keys and wasted preloads
@@ -72,16 +77,13 @@ const Home = () => {
     ];
   }, [marketingFeatures, t, locale]);
 
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store');
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const pageTitle = locale === 'ar' ? `${t('home')} | ${siteName}` : `${siteName} | ${t('home')}`;
   const pageDesc = t('heroLead');
 
   return (
     <div className="home-page-wrapper">
       <Seo title={pageTitle} description={pageDesc} />
-      {preloadImages.map((src, i) => (
-        <link key={`${src}|${i}`} rel="preload" as="image" href={src} />
-      ))}
       {/* Top Strip (Marketing banners location=topStrip) */}
       {byLocation.topStrip && byLocation.topStrip.length > 0 && (
         <div className="top-strip bg-primary-red text-white text-sm">
@@ -100,21 +102,38 @@ const Home = () => {
   <HeroBannerSlider />
 
   {/* Hero Section */}
-      <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white" aria-labelledby="hero-heading">
-        <div className="home-hero__inner container-custom">
+      <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,.08)] relative overflow-hidden" aria-labelledby="hero-heading">
+        {/* subtle texture overlay */}
+        <div className="pointer-events-none absolute inset-0 opacity-[.06]" style={{backgroundImage:'radial-gradient(ellipse at 20% 0%,#fff,transparent 40%), radial-gradient(ellipse at 80% 100%,#fff,transparent 40%)'}} aria-hidden="true" />
+        <div className="home-hero__inner container-custom relative">
           <motion.div
             className="home-hero__content"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
+            <div className="mb-3">
+              <span className="inline-flex items-center gap-2 text-[.8rem] font-semibold bg-white/15 border border-white/20 rounded-full px-3 py-1 shadow-sm">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-300" />
+                {locale==='ar' ? 'خصومات حتى 30٪' : 'Up to 30% off'}
+              </span>
+            </div>
             <h1 id="hero-heading" className="home-hero__title">
-              {siteName || t('heroTitle')}
+              <span className="inline-flex items-center gap-1 align-middle">
+                <img
+                  src={setting?.logo || '/logo.svg'}
+                  alt=""
+                  aria-hidden="true"
+                  className="home-hero__brand inline-block h-3 md:h-5 w-auto object-contain"
+                  style={{verticalAlign:'middle', objectFit:'contain'}}
+                />
+                <span>{siteName || t('heroTitle')}</span>
+              </span>
               <span className="home-hero__subtitle">{t('heroSubtitle')}</span>
             </h1>
             <p className="home-hero__lead">{t('heroLead')}</p>
             <div className="home-hero__actions" role="group" aria-label="الروابط الرئيسية">
-              <Link to="/catalog" className="btn-primary home-hero__btn" aria-label={t('heroCtaShop')}>
+              <Link to={baseProductsPath} className="btn-primary home-hero__btn" aria-label={t('heroCtaShop')}>
                 {t('heroCtaShop')} <ArrowLeft size={20} aria-hidden="true" />
               </Link>
               <Link to="/about" className="btn-secondary home-hero__btn" aria-label={t('heroCtaAbout')}>
@@ -132,6 +151,7 @@ const Home = () => {
               src="/images/hero-image.jpg"
               alt="منتجات آسيوية"
               className="home-hero__image"
+              priority
             />
             <div className="home-hero__shape" aria-hidden="true" />
           </motion.div>
@@ -139,7 +159,7 @@ const Home = () => {
       </header>
 
       {/* Category Chips */}
-      <div className="bg-white border-b">
+      <div className="backdrop-blur-sm bg-white/75 supports-[backdrop-filter]:bg-white/60 border-b">
         <div className="container-custom py-3">
           <CategoryChips />
         </div>
@@ -152,7 +172,7 @@ const Home = () => {
             {features.map((feature, index) => (
               <motion.li
                 key={feature.id ?? `${feature.title || 'feature'}-${index}`}
-                className="home-feature"
+                className="home-feature bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-80px' }}
@@ -178,7 +198,7 @@ const Home = () => {
             <div className="featured-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))'}}>
               {topCats.map((c,i)=> (
                 <motion.div key={c.id||c.slug} initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:.45, delay:i*.04}}>
-                  <Link to={`${baseCatalogPath}?category=${encodeURIComponent(c.slug)}`} className="block rounded-2xl bg-white shadow hover:shadow-2xl transition overflow-hidden">
+                  <Link to={`${baseProductsPath}?category=${encodeURIComponent(c.slug)}&page=1`} className="block rounded-2xl bg-white shadow hover:shadow-2xl transition overflow-hidden">
                     <div style={{aspectRatio:'4/3', background:'#f3f4f6', display:'grid', placeItems:'center'}}>
                       {c.image
                         ? <img src={c.image} alt={c.name?.ar||c.slug} style={{width:'100%',height:'100%',objectFit:'cover'}} />
@@ -222,7 +242,7 @@ const Home = () => {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Link to="/catalog" className="btn-primary text-lg px-8 py-4">
+            <Link to={baseProductsPath} className="btn-primary text-lg px-8 py-4">
               {t('viewAllProducts')}
             </Link>
           </div>
@@ -271,24 +291,13 @@ const Home = () => {
       <section className="home-blog section-padding bg-white" aria-labelledby="blog-heading">
         <div className="container-custom">
           <div className="home-section-head text-center">
-            <h2 id="blog-heading" className="home-section-head__title">{t('fromBlog')}</h2>
+            <h2 id="blog-heading" className="home-section-head__title">{t('عنا')}</h2>
           </div>
           <div className="blog-preview-grid">
-            {[1,2,3].map(i => (
-              <article key={i} className="blog-card" aria-label={`blog item ${i}`}> 
-                <div className="blog-card__media">
-                  <LazyImage src={`/vite.svg`} alt="blog" />
-                </div>
-                <div className="blog-card__body">
-                  <h3 className="blog-card__title">{locale==='ar' ? `مقال تجريبي ${i}` : `Sample Post ${i}`}</h3>
-                  <p className="blog-card__excerpt">{locale==='ar' ? 'نص تمهيدي مختصر لمعاينة المقال.' : 'Short teaser preview for this sample post.'}</p>
-                  <Link to="/blog" className="blog-card__more">{t('readMore')} →</Link>
-                </div>
-              </article>
-            ))}
+      
           </div>
           <div className="text-center mt-10">
-            <Link to="/blog" className="btn-primary px-7 py-3">{t('blog')}</Link>
+            <Link to="/blog" className="btn-primary px-7 py-3">{t('المزيد')}</Link>
           </div>
         </div>
       </section>

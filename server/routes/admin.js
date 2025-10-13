@@ -57,7 +57,7 @@ router.post('/users', requireAdmin, async (req, res) => {
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   if (!emailOk) return res.status(400).json({ ok:false, error:'INVALID_EMAIL' });
     role = role || 'user';
-    const allowedRoles = new Set(['user','admin','seller']);
+  const allowedRoles = new Set(['user','admin','seller','delivery']);
     if (!allowedRoles.has(role)) return res.status(400).json({ ok:false, error:'INVALID_ROLE' });
     if (!sendInvite) {
       if (!password) return res.status(400).json({ ok:false, error:'MISSING_PASSWORD' });
@@ -108,32 +108,57 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
 
 // Update a user (role, name, phone)
 router.patch('/users/:id', requireAdmin, async (req, res) => {
-  const { role, name, phone } = req.body;
-  const user = await prisma.user.update({
-    where: { id: req.params.id },
-    data: {
-      ...(role && { role }),
-      ...(name && { name }),
-      ...(phone && { phone }),
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      phone: true,
-      createdAt: true,
-      updatedAt: true,
-    }
+  const { role, name, phone } = req.body || {};
+  const id = req.params.id;
+  const before = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, email: true, name: true, role: true, phone: true, createdAt: true, updatedAt: true }
   });
-  res.json(user);
+  if (!before) return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND' });
+
+  const data = {
+    ...(typeof role !== 'undefined' && role && { role }),
+    ...(typeof name !== 'undefined' && { name }),
+    ...(typeof phone !== 'undefined' && { phone }),
+  };
+  if (!Object.keys(data).length) return res.status(400).json({ ok: false, error: 'NO_CHANGES' });
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data,
+    select: { id: true, email: true, name: true, role: true, phone: true, createdAt: true, updatedAt: true }
+  });
+
+  try {
+    const changedFields = [];
+    if (typeof data.role !== 'undefined' && before.role !== updated.role) changedFields.push('role');
+    if (typeof data.name !== 'undefined' && before.name !== updated.name) changedFields.push('name');
+    if (typeof data.phone !== 'undefined' && before.phone !== updated.phone) changedFields.push('phone');
+    await audit({
+      action: 'user.update',
+      entity: 'User',
+      entityId: id,
+      userId: req.user?.id,
+      meta: {
+        changedFields,
+        before: { role: before.role, name: before.name, phone: before.phone },
+        after: { role: updated.role, name: updated.name, phone: updated.phone }
+      }
+    });
+  } catch (_) { /* noop */ }
+
+  res.json(updated);
 });
 
 // Delete a user
 router.delete('/users/:id', requireAdmin, async (req, res) => {
-  await prisma.user.delete({
-    where: { id: req.params.id }
-  });
+  const id = req.params.id;
+  const existing = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, role: true } });
+  if (!existing) return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND' });
+  await prisma.user.delete({ where: { id } });
+  try {
+    await audit({ action: 'user.delete', entity: 'User', entityId: id, userId: req.user?.id, meta: { email: existing.email, role: existing.role } });
+  } catch (_) { /* noop */ }
   res.json({ ok: true });
 });
 

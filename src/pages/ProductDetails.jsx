@@ -22,7 +22,8 @@ const ProductDetails = () => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const { locale } = useLanguage ? useLanguage() : { locale: 'ar' };
+  const lang = useLanguage();
+  const locale = lang?.locale ?? 'ar';
   const nameText = useMemo(() => resolveLocalized(product?.name, locale) || 'منتج', [product, locale]);
   const descText = useMemo(() => resolveLocalized(product?.description, locale) || '', [product, locale]);
 
@@ -47,6 +48,13 @@ const ProductDetails = () => {
     return applicable ? Math.min(base, applicable.price) : base;
   }, [product, tierPrices, quantity]);
   const totalPrice = (effectiveUnitPrice * quantity).toFixed(2);
+  const oldPriceRaw = product?.originalPrice ?? product?.oldPrice;
+  const oldPrice = oldPriceRaw != null ? +oldPriceRaw : undefined;
+  const priceNum = product?.price != null ? +product.price : undefined;
+  const hasDiscount = Number.isFinite(oldPrice) && Number.isFinite(priceNum) && oldPrice > priceNum;
+  const discountAmount = hasDiscount ? (oldPrice - priceNum) : 0;
+  const discountPercent = hasDiscount ? Math.round((1 - (priceNum / oldPrice)) * 100) : 0;
+  const outOfStock = product?.stock != null && product.stock <= 0;
 
   if (loading) return (
     <div className="container-custom px-4 py-8" aria-busy="true" aria-live="polite">
@@ -57,6 +65,10 @@ const ProductDetails = () => {
   if (!product) return <div className="container-custom px-4 py-8">المنتج غير موجود</div>;
 
   const handleAddToCart = () => {
+    if (outOfStock) {
+      try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'warn', title: 'غير متوفر', description: 'هذا المنتج غير متاح حالياً في المخزون' } })); } catch {}
+      return;
+    }
     addToCart({ ...product, quantity, price: effectiveUnitPrice });
   };
 
@@ -164,11 +176,13 @@ const ProductDetails = () => {
               <div className="mb-6">
                 <div className="flex items-center flex-wrap gap-3 mb-2">
                   <span className="text-3xl font-bold text-primary">{effectiveUnitPrice.toFixed(2)} ر.س</span>
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="text-xl text-gray-500 line-through">{product.originalPrice} ر.س</span>
-                  )}
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">وفر {(product.originalPrice - product.price).toFixed(2)} ر.س</span>
+                  {hasDiscount && (
+                    <>
+                      <span className="text-xl text-gray-500 line-through">{oldPrice} ر.س</span>
+                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">
+                        وفر {discountAmount.toFixed(2)} ر.س • -{discountPercent}%
+                      </span>
+                    </>
                   )}
                   {tierPrices.length > 0 && (
                     <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded">تسعير بالجملة متاح</span>
@@ -239,7 +253,7 @@ const ProductDetails = () => {
                   </button>
                 </div>
                 <div className="flex flex-col flex-1 gap-2">
-                  <button onClick={handleAddToCart} className="btn-primary flex-1 py-3 text-lg">
+                  <button onClick={handleAddToCart} className="btn-primary flex-1 py-3 text-lg" disabled={outOfStock} aria-disabled={outOfStock}>
                     أضف إلى السلة (الإجمالي: {totalPrice} ر.س)
                   </button>
                   {effectiveUnitPrice !== product.price && (
@@ -304,10 +318,21 @@ const ProductDetails = () => {
                       onError={(e)=>{ e.currentTarget.src = placeholderImg; }}
                     />
                     <span className="absolute top-2 right-2 bg-primary-red text-white px-2 py-1 rounded text-sm">{relatedProduct.category}</span>
+                    {((relatedProduct.originalPrice ?? relatedProduct.oldPrice) > (relatedProduct.price || 0)) && (()=>{
+                      const op = +(relatedProduct.originalPrice ?? relatedProduct.oldPrice);
+                      const pr = +(relatedProduct.price || 0);
+                      const pct = Math.round((1 - (pr/op)) * 100);
+                      return <span className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-xs">-{pct}%</span>;
+                    })()}
                   </div>
                   <h3 className="font-bold text-lg mb-2">{resolveLocalized(relatedProduct.name, locale)}</h3>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary-red">{relatedProduct.price} ر.س</span>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-bold text-primary-red">{relatedProduct.price} ر.س</span>
+                      {(relatedProduct.originalPrice ?? relatedProduct.oldPrice) && (relatedProduct.originalPrice ?? relatedProduct.oldPrice) > (relatedProduct.price || 0) && (
+                        <span className="text-sm text-gray-500 line-through">{(relatedProduct.originalPrice ?? relatedProduct.oldPrice)} ر.س</span>
+                      )}
+                    </div>
                     <Link to={`/product/${relatedProduct.id}`} className="btn-primary text-sm px-4 py-2">عرض المنتج</Link>
                   </div>
                 </motion.div>
@@ -320,7 +345,7 @@ const ProductDetails = () => {
       <div className="sticky-buybar lg:hidden">
         <div className="inner">
           <div className="price">{effectiveUnitPrice.toFixed(2)} ر.س</div>
-          <button onClick={handleAddToCart} className="btn-primary flex-1 py-3 text-base">أضف إلى السلة</button>
+          <button onClick={handleAddToCart} className="btn-primary flex-1 py-3 text-base" disabled={outOfStock} aria-disabled={outOfStock}>أضف إلى السلة</button>
         </div>
       </div>
     </div>

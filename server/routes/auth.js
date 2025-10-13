@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import prisma from '../db/client.js';
 import { signAccessToken, signRefreshToken, verifyToken, randomToken, sha256 } from '../utils/jwt.js';
 import bcrypt from 'bcryptjs';
@@ -35,11 +36,17 @@ const DEV_USERS = [
 ];
 
 // Login route using bcrypt password comparison
+const loginSchema = z.object({
+  email: z.string().email().transform(v => v.trim().toLowerCase()),
+  password: z.string().min(1, 'MISSING_PASSWORD')
+});
 router.post('/login', async (req, res) => {
   try {
-    let { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ ok:false, error: 'MISSING_CREDENTIALS' });
-    email = String(email).trim().toLowerCase();
+    const parsed = loginSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ ok:false, error: 'INVALID_INPUT', fields: parsed.error.flatten() });
+    }
+    const { email, password } = parsed.data;
 
     // Fast-path: allow dev login without DB when enabled
     if (DEV_AUTH_ENABLED) {
@@ -50,15 +57,17 @@ router.post('/login', async (req, res) => {
         return res.json({ ok:true, devFallback: true, accessToken, user: { id: dev.id, role: dev.role, email: dev.email, name: dev.name } });
       }
     }
-    const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       if (process.env.DEBUG_LOGIN === '1') console.warn('[LOGIN] Email not found:', email);
-      return res.status(401).json({ ok:false, error: 'INVALID_LOGIN' });
+      const detailed = process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
+      return res.status(401).json({ ok:false, error: detailed ? 'USER_NOT_FOUND' : 'INVALID_LOGIN' });
     }
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       if (process.env.DEBUG_LOGIN === '1') console.warn('[LOGIN] Bad password for:', email);
-      return res.status(401).json({ ok:false, error: 'INVALID_LOGIN' });
+      const detailed = process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
+      return res.status(401).json({ ok:false, error: detailed ? 'WRONG_PASSWORD' : 'INVALID_LOGIN' });
     }
     // Access + Refresh (session-backed)
     const accessToken = signAccessToken({ id: user.id, role: user.role, email: user.email });
@@ -95,12 +104,19 @@ router.post('/login', async (req, res) => {
 });
 
 // Register new user
+const registerSchema = z.object({
+  email: z.string().email().transform(v => v.trim().toLowerCase()),
+  password: z.string().min(6, 'WEAK_PASSWORD'),
+  name: z.string().trim().min(1).optional(),
+  phone: z.string().trim().optional()
+});
 router.post('/register', async (req, res) => {
   try {
-    let { email, password, name, phone } = req.body || {};
-    if (!email || !password) return res.status(400).json({ ok:false, error: 'MISSING_FIELDS' });
-    email = String(email).trim().toLowerCase();
-    if (password.length < 6) return res.status(400).json({ ok:false, error: 'WEAK_PASSWORD' });
+    const parsed = registerSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ ok:false, error:'INVALID_INPUT', fields: parsed.error.flatten() });
+    }
+    const { email, password, name, phone } = parsed.data;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ ok:false, error: 'EMAIL_EXISTS' });
     const hashed = await bcrypt.hash(password, 10);
@@ -216,9 +232,28 @@ router.post('/logout', async (req, res) => {
 // Current user profile
 router.get('/me', attachUser, async (req, res) => {
   try {
-    if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    // In dev or degraded mode, return a stable dev user if no auth token provided
+    if (!req.user) {
+      if (DEV_AUTH_ENABLED) {
+        const dev = DEV_USERS.find(u => u.role === 'user') || DEV_USERS[0];
+        return res.json({ ok: true, devFallback: true, user: { id: dev.id, email: dev.email, role: dev.role, name: dev.name } });
+      }
+      return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
+    }
     const u = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!u) return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    if (!u) {
+      // If a dev token (e.g., id like 'dev-*') or DB missing user, return claims-based user in dev
+      if (DEV_AUTH_ENABLED) {
+        const fallback = {
+          id: req.user.id || 'dev-user',
+          email: req.user.email || (DEV_USERS.find(x=>x.role==='user')?.email ?? 'user@example.com'),
+          role: req.user.role || 'user',
+          name: DEV_USERS.find(x=>x.role==='user')?.name || 'Dev User'
+        };
+        return res.json({ ok: true, devFallback: true, user: fallback });
+      }
+      return res.status(404).json({ ok:false, error:'NOT_FOUND' });
+    }
     const user = {
       id: u.id,
       email: u.email,
