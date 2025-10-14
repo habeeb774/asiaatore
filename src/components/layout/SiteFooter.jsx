@@ -145,7 +145,7 @@ function AppBadges({ appStoreUrl, playStoreUrl, playBadgeAlt, appStoreBadgeAlt, 
       >
         {gpOk ? (
           <img
-            src="/assets/badges/google-play-badge.png"
+            src="/assets/badges/google-play-badge.svg"
             alt={playBadgeAlt}
             className="h-11 md:h-12 object-contain transition-transform duration-150 group-hover:-translate-y-0.5 group-active:translate-y-0 group-hover:brightness-110"
             loading="lazy"

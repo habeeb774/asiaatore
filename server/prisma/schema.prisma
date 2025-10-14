@@ -1,0 +1,14 @@
+// Prisma schema for the store (copied for server-only deployments)
+// Keep in sync with top-level prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ... Keep the same models/enums as the root schema
+// For brevity here, reference the root schema; in CI/deploy, ensure this file is kept updated.

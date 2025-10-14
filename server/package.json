@@ -1,0 +1,40 @@
+{
+  "name": "my-store-server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "prisma generate",
+    "start": "node index.js",
+    "dev": "node index.js",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@apollo/server": "^4.11.1",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.4.0",
+    "graphql": "^16.11.0",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "mysql2": "^3.15.2",
+    "pdfkit": "^0.15.0",
+    "pino": "^9.5.0",
+    "pino-http": "^9.0.0",
+    "prisma": "^5.22.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.33.5",
+    "ws": "^8.18.3",
+    "zod": "^4.1.12"
+  }
+}
