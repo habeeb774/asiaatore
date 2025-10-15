@@ -11,7 +11,7 @@ Common local issues and quick one-liners.
 
 - Verify .env before anything: DATABASE_URL must start with `mysql://`.
   - Dev helpers: `QUICK_START_DB=1` (local fallback URL), `ALLOW_INVALID_DB=true` (degraded mode), `ALLOW_DEV_HEADERS=true` (header-based fake auth).
-  - API health: http://localhost:4000/_health | DB ping: http://localhost:4000/_db_ping
+  - API health: https://asiaatore-production.up.railway.app/_health | DB ping: https://asiaatore-production.up.railway.app/_db_ping
 
 ### 🔧 Free a locked port (Vite at 5173 or API at 4000+)
 ```powershell
@@ -168,7 +168,7 @@ Highlights:
 1) Install Node.js 18+ and npm 9+
 2) Copy `.env.example` to `.env` and set:
    - `AUTH_SECRET` (or `JWT_SECRET`) — strong secret in production
-   - `DATABASE_URL` — a valid MySQL URL like `mysql://user:pass@localhost:3306/my_store`
+   - `DATABASE_URL` — a valid MySQL URL like `mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway`
    - Optional Dev: `QUICK_START_DB=1`, `ALLOW_INVALID_DB=true`
 3) Install & run:
 ```powershell
@@ -178,7 +178,7 @@ npm run dev
 ```
 4) URLs:
 - Frontend (Vite): http://localhost:5173 (auto-increments if busy)
-- API: http://localhost:4000 (auto-increments if busy)
+- API: https://asiaatore-production.up.railway.app (auto-increments if busy)
 - Health: /_health, /_db_status, /_db_ping
 - Docs: /api/docs (HTML) and /api/docs.json (OpenAPI-lite)
 - Realtime: /api/events

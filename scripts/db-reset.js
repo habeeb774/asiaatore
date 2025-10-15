@@ -39,7 +39,7 @@ if (!database) {
   process.exit(1);
 }
 
-const host = url.hostname || 'localhost';
+const host = url.hostname || 'https://asiaatore-production.up.railway.app';
 const port = url.port ? Number(url.port) : 3306;
 const user = decodeURIComponent(url.username || 'root');
 const password = decodeURIComponent(url.password || '');

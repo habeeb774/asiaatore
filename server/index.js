@@ -1,4 +1,5 @@
 import express from 'express';
+
 import mysql from 'mysql2/promise';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -71,15 +72,13 @@ if (!process.env.APP_BASE_URL && process.env.BASE_URL) {
   if (!fs.existsSync(examplePath)) {
     const template = `# Example environment configuration
 # Direct URL (preferred)
-DATABASE_URL="mysql://user:pass@localhost:3306/my_store"
-
-# Or parts (server will assemble if DATABASE_URL missing/invalid)
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=user
-DB_PASS=pass
-DB_NAME=my_store
-
+DATABASE_URL="mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway"
+# Alternative: provide individual parts and let the server assemble the URL.
+DB_HOST=mysql.railway.internal
+ DB_PORT=3306
+ DB_USER=root
+ DB_PASS=VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP
+DB_NAME=railway
 # Developer helpers (DO NOT use in production):
 # QUICK_START_DB=1          # auto inject local default URL if missing
 # ALLOW_INVALID_DB=true     # run in degraded mode without valid DB
@@ -147,7 +146,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || '')
 
 const corsOptions = isProd && allowedOrigins.length
   ? {
-      origin(origin, cb) {
+      origin(origin, cb) { 
         if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
         return cb(new Error('Not allowed by CORS'));
       },
@@ -395,7 +394,7 @@ const allowInvalidDb =
 
 // NEW: Quick start fallback (developer convenience)
 if (!DB_URL_VALID && process.env.QUICK_START_DB === '1') {
-  const fallback = 'mysql://root:root@localhost:3306/my_store';
+  const fallback = 'mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway';
   process.env.DATABASE_URL = fallback;
   dbUrl = fallback;
   DB_URL_VALID = true;
@@ -427,15 +426,16 @@ if (!DB_URL_VALID && process.env.ALLOW_INVALID_DBB === 'true') {
 const printDbHelp = () => {
   console.error(`[DB] مثال إعداد .env:
 # صيغة مباشرة
-DATABASE_URL="mysql://user:pass@localhost:3306/my_store"
+DATABASE_URL="mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway"
 
 # أو باستخدام الأجزاء (سيتم تركيبها تلقائياً):
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=user
-DB_PASS=pass
-DB_NAME=my_store
 
+# Alternative: provide individual parts and let the server assemble the URL.
+DB_HOST=https://asiaatore-production.up.railway.app/
+ DB_PORT=3306
+ DB_USER=root
+ DB_PASS=VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP
+DB_NAME=railway
 # لتجاوز الفحص مؤقتاً (لا يُنصح في الإنتاج):
 ALLOW_INVALID_DB=true
 `);
@@ -672,10 +672,10 @@ if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_ENV_TEMPLATE === 
   const tpl =
 `# --- Example .env template (generated) ---
 # Direct full URL (preferred)
-DATABASE_URL="mysql://user:pass@localhost:3306/my_store"
+DATABASE_URL="mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway"
 
 # Or let the server assemble from parts:
-DB_HOST=localhost
+DB_HOST=https://asiaatore-production.up.railway.app
 DB_PORT=3306
 DB_USER=user
 DB_PASS=pass
@@ -967,7 +967,7 @@ async function startServerWithRetry(maxRetries = 5) {
     try {
       await new Promise((resolve, reject) => {
         const server = app.listen(PORT, async () => {
-          console.log(`Payment stub server listening on http://localhost:${PORT}`);
+          console.log(`Payment stub server listening on port ${PORT}`);
           // Optional WebSocket setup behind a flag
           if (process.env.REALTIME_WS === 'true') {
             await setupWebSocket(server);

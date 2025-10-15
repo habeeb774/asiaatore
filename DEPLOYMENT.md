@@ -10,9 +10,9 @@ This guide helps you launch the store to production safely.
 
 ## 1) Environment variables
 Copy `.env.example` to `.env` on the server and fill it:
-- APP_BASE_URL=https://yourdomain.com
-- DATABASE_URL=mysql://user:pass@dbhost:3306/my_store
-- CORS_ORIGIN=https://yourdomain.com,https://www.yourdomain.com
+- APP_BASE_URL=https://asiaatore-production.up.railway.app
+- DATABASE_URL="mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway"
+- CORS_ORIGIN=https://manafadasiacompany.store,https://manafadasiacompany.store
 - TRUST_PROXY=true (behind Nginx)
 - FORCE_HTTPS=true (optional, if Nginx forwards X-Forwarded-Proto)
 

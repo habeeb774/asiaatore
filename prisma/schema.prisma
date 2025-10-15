@@ -7,6 +7,243 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(user)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+  reviews   Review[]
+  wishlist  WishlistItem[]
+  cart      CartItem[]
+}
+
+enum Role {
+  user
+  admin
+  seller
+}
+
+model Brand {
+  id           String    @id @default(uuid())
+  slug         String    @unique
+  nameAr       String
+  nameEn       String
+  descriptionAr String?
+  descriptionEn String?
+  logo         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  products     Product[]
+}
+
+model Product {
+  id         String    @id @default(uuid())
+  slug       String    @unique
+  nameAr     String
+  nameEn     String
+  shortAr    String?
+  shortEn    String?
+  category   String
+  price      Float
+  oldPrice   Float?
+  image      String?
+  rating     Int       @default(0)
+  stock      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  brandId    String?
+  brand      Brand?    @relation(fields: [brandId], references: [id])
+  orderItems OrderItem[]
+  reviews    Review[]
+  wishlist   WishlistItem[]
+  cart       CartItem[]
+  images     ProductImage[]
+  tierPrices ProductTierPrice[]
+}
+
+model Category {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  nameAr        String
+  nameEn        String
+  descriptionAr String?
+  descriptionEn String?
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  status        String      @default("pending")
+  currency      String      @default("SAR")
+  subtotal      Float       @default(0)
+  discount      Float       @default(0)
+  tax           Float       @default(0)
+  grandTotal    Float       @default(0)
+  paymentMethod String?
+  paymentMeta   Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  nameAr    String
+  nameEn    String
+  price     Float
+  quantity  Int      @default(1)
+  oldPrice  Float?
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  title     String?
+  body      String?
+  status    ReviewStatus @default(pending)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([userId, productId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, productId])
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  url       String
+  altEn     String?
+  altAr     String?
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model ProductTierPrice {
+  id            String   @id @default(uuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  minQty        Int
+  price         Float
+  packagingType PackagingType @default(unit)
+  noteAr        String?
+  noteEn        String?
+  createdAt     DateTime @default(now())
+  @@unique([productId, minQty, packagingType])
+}
+
+enum PackagingType {
+  unit
+  carton
+  bundle
+}
+
+model MarketingFeature {
+  id        String   @id @default(uuid())
+  titleAr   String
+  titleEn   String
+  bodyAr    String?
+  bodyEn    String?
+  icon      String?
+  sort      Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MarketingBanner {
+  id        String   @id @default(uuid())
+  location  BannerLocation
+  titleAr   String?
+  titleEn   String?
+  bodyAr    String?
+  bodyEn    String?
+  image     String?
+  linkUrl   String?
+  active    Boolean  @default(true)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum BannerLocation {
+  topStrip
+  homepage
+  footer
+}
+
+model AppLink {
+  id        String   @id @default(uuid())
+  platform  Platform
+  url       String
+  labelAr   String?
+  labelEn   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Platform {
+  ios
+  android
+  web
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String?
+  userId    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+  @@index([entity])
+  @@index([action])
+  @@index([createdAt])
+}
+
+
 model storesetting {
   id              String   @id @default("singleton")
   siteNameAr      String?

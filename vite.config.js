@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // Use env to configure proxy target so frontend links to whichever backend port is running
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const proxyTarget = env.VITE_PROXY_TARGET || 'http://localhost:4000'
+  const proxyTarget = env.VITE_PROXY_TARGET || 'https://asiaatore-production.up.railway.app'
   return {
     plugins: [
       react(),
@@ -76,9 +76,9 @@ export default defineConfig(({ mode }) => {
       open: true,
       proxy: {
         '/api': {
-          target: proxyTarget,
-          changeOrigin: true,
-          secure: false
+          arget: 'https://asiaatore-production.up.railway.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
         }
       }
     }

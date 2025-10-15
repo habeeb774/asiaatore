@@ -17,13 +17,13 @@ Purpose: make you productive immediately on this codebase. Keep answers concrete
 - Seed: `npm run db:seed` (creates demo data if script supports it).
 - API server: `npm run dev:server` (runs `server/index.js`). If port 4000 is busy, it auto-increments.
 - Frontend: `npm run dev` (Vite, default port 3000, proxies `/api` to backend). Open http://localhost:3000.
-- Health checks: http://localhost:4000/_health and http://localhost:4000/_db_ping.
+- Health checks: https://asiaatore-production.up.railway.app/_health and https://asiaatore-production.up.railway.app/_db_ping.
 
 ## Environment and config tips
 - `.env` is loaded with override; ensure `DATABASE_URL` starts with `mysql://`. Shorthands like `user:pass@host:3306/db` are normalized.
 - If `DATABASE_URL` is invalid or missing, the server can rebuild from parts: `DB_HOST/DB_PORT/DB_USER/DB_PASS/DB_NAME`.
 - Dev-only helpers:
-  - `QUICK_START_DB=1` injects `mysql://root:root@localhost:3306/my_store` as a fallback.
+  - `QUICK_START_DB=1` injects `mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway` as a fallback.
   - `ALLOW_INVALID_DB=true` lets the API run in degraded mode (non-DB routes only).
   - `ALLOW_DEV_HEADERS=true` allows header-based fake auth (`x-user-id`, `x-user-role`).
   - `DEBUG_ERRORS=true` includes stack traces in JSON error responses (non-prod only).
@@ -48,7 +48,7 @@ Purpose: make you productive immediately on this codebase. Keep answers concrete
 - Audit: `server/utils/audit.js` writes to `AuditLog`; call `audit({ action, entity, entityId, userId, meta })` for significant events.
 
 ## Frontend conventions
-- Vite config proxies `/api` to `VITE_PROXY_TARGET` or `http://localhost:4000` by default (`vite.config.js`).
+- Vite config proxies `/api` to `VITE_PROXY_TARGET` or `https://asiaatore-production.up.railway.app` by default (`vite.config.js`).
 - SPA routes live in `src/pages` and `src/AppRoutes.jsx`. Components under `src/components/**`, contexts under `src/context/**`.
 - React 19 setup with `@vitejs/plugin-react`, Tailwind 4 (`tailwind.config.js`, `postcss.config.cjs`).
 

@@ -7,7 +7,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: process.env.PORT || 4000,
+        PORT: process.env.PORT || 3306,
         TRUST_PROXY: 'true',
         FORCE_HTTPS: process.env.FORCE_HTTPS || 'false',
         SERVE_CLIENT: process.env.SERVE_CLIENT || 'false',
