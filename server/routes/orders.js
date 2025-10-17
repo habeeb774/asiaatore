@@ -5,6 +5,8 @@ import path from 'path';
 import sharp from 'sharp';
 import prisma from '../db/client.js';
 import { OrdersService, mapOrder as mapOrderDto } from '../modules/orders/service.js';
+import aramex from '../services/shipping/adapters/aramex.js';
+import smsa from '../services/shipping/adapters/smsa.js';
 import { audit } from '../utils/audit.js';
 import { generateInvoiceQrPng } from '../utils/qr.js';
 import { emitOrderEvent } from '../utils/realtimeHub.js';
@@ -57,7 +59,16 @@ router.get('/', async (req, res) => {
       }
       if (Object.keys(range).length) where.createdAt = range;
     }
-  const result = await OrdersService.list({ where, page, pageSize, orderBy: { createdAt: 'desc' } });
+    let result;
+    try {
+      result = await OrdersService.list({ where, page, pageSize, orderBy: { createdAt: 'desc' } });
+    } catch (e) {
+      if (process.env.ALLOW_INVALID_DB === 'true') {
+        if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS_ROUTE] list failed, returning degraded empty list', e);
+        return res.json({ ok: true, orders: [], degraded: true, note: 'DB query failed; returning empty orders list in dev.' });
+      }
+      throw e;
+    }
     if ('total' in result) {
       return res.json({ ok: true, orders: result.items.map(mapOrder), page: result.page, pageSize: result.pageSize, total: result.total, totalPages: result.totalPages });
     }
@@ -73,11 +84,12 @@ router.get('/', async (req, res) => {
 });
 
 // Create order
+// Accept extra fields in items (name, oldPrice, etc.) to be permissive for frontend payloads
 const orderItemSchema = z.object({
   productId: z.union([z.string(), z.literal('custom')]),
   quantity: z.coerce.number().int().positive(),
   price: z.coerce.number().nonnegative().optional()
-});
+}).catchall(z.unknown());
 const createOrderSchema = z
   .object({
     items: z.array(orderItemSchema).min(1),
@@ -106,10 +118,36 @@ router.post('/', async (req, res) => {
       if (process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
         console.warn('[ORDERS] Zod parsing failed; using permissive fallback:', zerr?.message);
+        if (process.env.DEBUG_ERRORS === 'true') {
+          try { console.debug('[ORDERS] Incoming body (raw):', JSON.stringify(req.body)); } catch (e) { console.debug('[ORDERS] Incoming body (raw) - cannot stringify', req.body); }
+        }
       }
-      const raw = req.body || {};
+      // Additional debug: include request headers and content-length to help
+      // identify scenarios where body parsing might be failing (e.g., wrong
+      // content-type or a proxy trimming the body).
+      if (process.env.DEBUG_ERRORS === 'true') {
+        try {
+          console.debug('[ORDERS] request headers:', { 'content-type': req.headers['content-type'], 'content-length': req.headers['content-length'] });
+        } catch {}
+      }
+      let raw = req.body || {};
+      // If body arrived as a raw JSON string for any reason, try to parse it so we can read items
+      if (typeof raw === 'string') {
+        try { raw = JSON.parse(raw); } catch (e) {
+          if (process.env.DEBUG_ERRORS === 'true') console.debug('[ORDERS] Raw body is string but failed JSON.parse', e.message, 'content-type=', req.headers['content-type']);
+        }
+      }
       const items = Array.isArray(raw.items) ? raw.items : [];
-      if (!items.length) return res.status(400).json({ ok:false, error:'INVALID_INPUT', message:'items required' });
+      if (!items.length) {
+        const debugInfo = {
+          contentType: req.headers['content-type'] || null,
+          bodyType: typeof req.body,
+          bodyKeys: req.body && typeof req.body === 'object' ? Object.keys(req.body) : null,
+        };
+        const payload = { ok: false, error: 'INVALID_INPUT', message: 'items required' };
+        if (process.env.DEBUG_ERRORS === 'true') payload.debug = debugInfo;
+        return res.status(400).json(payload);
+      }
       body = {
         items,
         paymentMethod: typeof raw.paymentMethod === 'string' ? raw.paymentMethod : undefined,
@@ -168,6 +206,124 @@ router.patch('/:id', async (req, res) => {
   } catch (e) {
     const status = e.statusCode || 400;
     res.status(status).json({ ok: false, error: status === 403 ? 'FORBIDDEN' : 'FAILED_UPDATE', message: e.message });
+  }
+});
+
+// Order tracking endpoints
+// POST /api/orders/:id/track  - receive tracking update (status/location/note) and broadcast via SSE
+router.post('/:id/track', async (req, res) => {
+  const { status, location, note } = req.body || {};
+  try {
+    const order = await OrdersService.getById(req.params.id);
+    if (!order) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    // Only owner or admin can persist status change; others may still emit events in degraded mode
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && order.userId !== (req.user?.id || 'guest')) {
+      return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    }
+    let updated = null;
+    try {
+      // Only update status field to keep changes minimal
+      if (typeof status === 'string' && status.trim()) {
+        updated = await OrdersService.update(req.params.id, { status: String(status).trim() }, { isAdmin, userId: req.user?.id || order.userId });
+      }
+    } catch (e) {
+      if (process.env.ALLOW_INVALID_DB === 'true') {
+        // emit event even if DB update failed in degraded mode
+        emitOrderEvent('order.tracking', { id: req.params.id, status, location, note });
+        return res.json({ ok: true, degraded: true });
+      }
+      throw e;
+    }
+    // Broadcast tracking update to SSE/WebSocket clients
+    emitOrderEvent('order.tracking', { id: (updated && updated.id) || req.params.id, status: (updated && updated.status) || status, location, note });
+    return res.json({ ok: true, tracking: { id: (updated && updated.id) || req.params.id, status: (updated && updated.status) || status, location, note } });
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: 'FAILED_TRACK', message: e.message });
+  }
+});
+
+router.get('/:id/track', async (req, res) => {
+  try {
+    const order = await OrdersService.getById(req.params.id);
+    if (!order) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    return res.json({ ok: true, id: order.id, status: order.status, updatedAt: order.updatedAt });
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: 'FAILED_GET', message: e.message });
+  }
+});
+
+// Create shipment for order via adapter (choose provider via body.provider or default)
+// POST /api/orders/:id/ship  { provider?: 'aramex'|'smsa' }
+router.post('/:id/ship', async (req, res) => {
+  try {
+    const order = await OrdersService.getById(req.params.id);
+    if (!order) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    // only admin or owner may create shipments
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && order.userId !== (req.user?.id || 'guest')) return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    const provider = String(req.body?.provider || '').toLowerCase() || (process.env.DEFAULT_SHIPPING_PROVIDER || 'aramex');
+    const adapters = { aramex, smsa };
+    const adapter = adapters[provider];
+    if (!adapter) return res.status(400).json({ ok: false, error: 'UNKNOWN_PROVIDER' });
+    // Call adapter; adapters are responsible for persisting Shipment record if model exists
+    const result = await adapter.createShipment(order);
+    // If adapter didn't persist, attempt to save minimal shipment record
+    try {
+      if (result && result.trackingId && prisma?.shipment) {
+        const exists = await prisma.shipment.findUnique({ where: { trackingNumber: result.trackingId } }).catch(() => null);
+        if (!exists) {
+          await prisma.shipment.create({ data: { orderId: order.id, provider: provider, trackingNumber: result.trackingId, status: result.status || 'created', meta: result.raw ? (typeof result.raw === 'object' ? result.raw : String(result.raw)) : undefined } }).catch(() => null);
+        }
+      }
+    } catch (e) { /* ignore persistence errors */ }
+    try { emitOrderEvent('order.shipped', { id: order.id, provider, trackingId: result.trackingId || null, status: result.status || null }); } catch (e) {}
+    return res.json({ ok: true, result });
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: 'FAILED_SHIP', message: e.message });
+  }
+});
+
+// Get shipments for order. Optional ?refresh=1 to call provider track endpoints for each
+router.get('/:id/ship', async (req, res) => {
+  try {
+    const order = await OrdersService.getById(req.params.id);
+    if (!order) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && order.userId !== (req.user?.id || 'guest')) return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    let list = [];
+    try {
+      list = await prisma.shipment.findMany({ where: { orderId: order.id } });
+    } catch (e) {
+      if (process.env.ALLOW_INVALID_DB === 'true') list = [];
+      else throw e;
+    }
+    const refresh = String(req.query?.refresh || '') === '1' || String(req.query?.refresh || '').toLowerCase() === 'true';
+    if (refresh) {
+      const adapters = { aramex, smsa };
+      const updated = [];
+      for (const s of list) {
+        const adapter = adapters[(s.provider || '').toLowerCase()];
+        if (!adapter) {
+          updated.push({ ...s, probe: 'no-adapter' });
+          continue;
+        }
+        try {
+          const t = await adapter.track(s.trackingNumber);
+          // persist status
+          if (prisma?.shipment && t && t.status) {
+            await prisma.shipment.updateMany({ where: { trackingNumber: s.trackingNumber }, data: { status: t.status, meta: t.raw ? (typeof t.raw === 'object' ? t.raw : String(t.raw)) : undefined } }).catch(() => null);
+          }
+          updated.push({ ...s, probe: t });
+        } catch (e) {
+          updated.push({ ...s, probe: { ok: false, error: e.message } });
+        }
+      }
+      return res.json({ ok: true, shipments: updated });
+    }
+    return res.json({ ok: true, shipments: list });
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: 'FAILED_GET', message: e.message });
   }
 });
 
@@ -505,3 +661,4 @@ router.get('/:id/invoice.thermal.pdf', async (req, res) => {
 });
 
 export default router;
+

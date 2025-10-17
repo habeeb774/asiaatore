@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Shield, Truck, Clock } from 'lucide-react';
 import LazyImage from '../components/common/LazyImage';
+// Page-scoped styles for home (moved from global main.jsx)
+import '../styles/HomePage.scss';
+import '../styles/top-strips.scss';
 import { useLanguage } from '../context/LanguageContext';
 import { useProducts } from '../context/ProductsContext';
 import { useMarketing } from '../context/MarketingContext';
@@ -12,6 +15,7 @@ import HeroBannerSlider from '../components/HeroBannerSlider';
 import CategoryChips from '../components/CategoryChips';
 import { useSettings } from '../context/SettingsContext';
 import api from '../api/client';
+import BrandsStrip from '../components/home/BrandsStrip';
 
 const Home = () => {
   const { t, locale } = useLanguage();
@@ -102,7 +106,7 @@ const Home = () => {
   <HeroBannerSlider />
 
   {/* Hero Section */}
-      <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,.08)] relative overflow-hidden" aria-labelledby="hero-heading">
+  <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,.08)] relative overflow-hidden pt-2 md:pt-4" aria-labelledby="hero-heading">
         {/* subtle texture overlay */}
         <div className="pointer-events-none absolute inset-0 opacity-[.06]" style={{backgroundImage:'radial-gradient(ellipse at 20% 0%,#fff,transparent 40%), radial-gradient(ellipse at 80% 100%,#fff,transparent 40%)'}} aria-hidden="true" />
         <div className="home-hero__inner container-custom relative">
@@ -147,12 +151,14 @@ const Home = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <LazyImage
-              src="/images/hero-image.svg"
-              alt="منتجات آسيوية"
-              className="home-hero__image"
-              priority
-            />
+            <div className="home-hero__frame">
+              <LazyImage
+                src="/images/hero-image.svg"
+                alt="منتجات آسيوية"
+                className="home-hero__image"
+                priority
+              />
+            </div>
             <div className="home-hero__shape" aria-hidden="true" />
           </motion.div>
         </div>
@@ -286,6 +292,9 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+  {/* Brands strip */}
+  <BrandsStrip title={locale==='ar' ? 'علامات تجارية' : 'Popular Brands'} />
 
       {/* Blog preview (static placeholder for now) */}
       <section className="home-blog section-padding bg-white" aria-labelledby="blog-heading">

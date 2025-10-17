@@ -6,7 +6,7 @@ const STORES = [
 
 const StoresPage = () => {
   return (
-    <div className="container-custom px-4 py-12">
+    <div className="offers-page catalog-page container-custom px-4 py-8">
       <h2 className="text-2xl font-bold mb-6">المتاجر</h2>
       <ul className="space-y-3">
         {STORES.map(s => (

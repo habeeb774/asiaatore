@@ -1,9 +1,9 @@
 import prisma from '../db/client.js';
+import { whereWithDeletedAt } from '../utils/deletedAt.js';
+import { safeProductInclude } from '../db/prismaHelpers.js';
 
 // Ensure queries exclude soft-deleted records by default
-const withNotDeleted = (where = {}) => (
-  Object.prototype.hasOwnProperty.call(where, 'deletedAt') ? where : { ...where, deletedAt: null }
-);
+// Removed withNotDeleted function, using whereWithDeletedAt instead
 
 // --- Mapping helpers (kept close to service for reuse) ---
 function buildImageVariants(imagePath) {
@@ -16,8 +16,8 @@ function buildImageVariants(imagePath) {
 export function mapProduct(p) {
   if (!p) return null;
   const mainVariants = buildImageVariants(p.image);
-  const gallery = Array.isArray(p.productImages)
-    ? p.productImages
+  const gallery = Array.isArray(p.images)
+    ? p.images
         .map((img) => ({
           id: img.id,
           url: img.url,
@@ -63,31 +63,41 @@ export function mapProduct(p) {
 }
 
 // --- Query helpers ---
-const baseInclude = { productImages: { where: { deletedAt: null }, orderBy: { sort: 'asc' } }, brand: true, tierPrices: true };
-
 export async function count(where = {}) {
-  return prisma.product.count({ where: withNotDeleted(where) });
+  return prisma.product.count({ where: whereWithDeletedAt(where) });
 }
 
 export async function list(where = {}, opts = {}) {
-  const { orderBy = { createdAt: 'desc' }, include = baseInclude, skip, take } = opts;
-  return prisma.product.findMany({ where: withNotDeleted(where), orderBy, include, skip, take });
+  const { orderBy = { createdAt: 'desc' }, skip, take } = opts;
+  const include = opts.include ?? safeProductInclude();
+  // If include contains nested where objects, ensure deletedAt clause is applied where possible
+  if (include && include.images && include.images.where !== undefined) {
+    include.images.where = whereWithDeletedAt(include.images.where || {});
+  }
+  return prisma.product.findMany({ where: whereWithDeletedAt(where), orderBy, include, skip, take });
 }
 
-export async function getById(id, include = baseInclude) {
-  return prisma.product.findFirst({ where: { id, deletedAt: null }, include });
+export async function getById(id, include) {
+  const inc = include ?? safeProductInclude();
+  if (inc && inc.images && inc.images.where !== undefined) {
+    inc.images.where = whereWithDeletedAt(inc.images.where || {});
+  }
+  return prisma.product.findFirst({ where: whereWithDeletedAt({ id }), include: inc });
 }
 
 export async function create(data) {
-  return prisma.product.create({ data, include: baseInclude });
+  const include = safeProductInclude();
+  return prisma.product.create({ data, include });
 }
 
 export async function update(id, data) {
-  return prisma.product.update({ where: { id }, data, include: baseInclude });
+  const include = safeProductInclude();
+  return prisma.product.update({ where: { id }, data, include });
 }
 
 export async function remove(id) {
-  return prisma.product.update({ where: { id }, data: { deletedAt: new Date() }, include: baseInclude });
+  const include = safeProductInclude();
+  return prisma.product.update({ where: { id }, data: { deletedAt: new Date() }, include });
 }
 
 // Gallery helpers
@@ -113,7 +123,9 @@ export async function deleteImage(imageId) {
 }
 
 export async function getWithImages(productId) {
-  return prisma.product.findFirst({ where: { id: productId, deletedAt: null }, include: { productImages: { where: { deletedAt: null }, orderBy: { sort: 'asc' } }, brand: true, tierPrices: true } });
+  const include = safeProductInclude();
+  if (include.images) include.images.where = whereWithDeletedAt({ productId });
+  return prisma.product.findFirst({ where: whereWithDeletedAt({ id: productId }), include });
 }
 
 export default {

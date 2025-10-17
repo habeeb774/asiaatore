@@ -76,9 +76,9 @@ export default defineConfig(({ mode }) => {
       open: true,
       proxy: {
         '/api': {
-          arget: 'https://asiaatore-production.up.railway.app',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
         }
       }
     }

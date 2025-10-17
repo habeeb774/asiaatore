@@ -20,7 +20,7 @@ export default `#graphql
     rating: Int
     stock: Int
     brand: Brand
-    productImages: [ProductImage!]!
+  images: [ProductImage!]!
     tierPrices: [TierPrice!]!
     createdAt: String!
     updatedAt: String!

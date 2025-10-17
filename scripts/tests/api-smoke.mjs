@@ -53,7 +53,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function ensureBase() {
   if (BASE) return BASE; // user-provided
-  const ports = [4005, 4006, 4007, 4008, 4009, 4010];
+  const ports = [8829, 8830, 8831, 8832, 8833, 8834, 8835]; // try these ports
   for (const p of ports) {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {

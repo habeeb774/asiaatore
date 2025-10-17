@@ -57,6 +57,11 @@ const AdminDashboard = () => {
   const fileInputRef = useRef(null);
   // New stats
   const [stats, setStats] = useState({ todayOrders: 0, todayRevenue: 0, avgOrderValueToday: 0, pendingBankCount: 0 });
+  const [finDays, setFinDays] = useState(14);
+  const [financials, setFinancials] = useState(null); // { totals, daily }
+  const [finLoading, setFinLoading] = useState(false);
+  const [finError, setFinError] = useState(null);
+  const [recentOrders, setRecentOrders] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [sort, setSort] = useState('created_desc');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -174,10 +179,29 @@ const AdminDashboard = () => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState(null);
   const [settingsLogoFile, setSettingsLogoFile] = useState(null);
+  const [settingsForm, setSettingsForm] = useState({
+    siteNameAr: '', siteNameEn: '',
+    colorPrimary: '', colorSecondary: '', colorAccent: '',
+    supportPhone: '', supportMobile: '', supportWhatsapp: '', supportEmail: '', supportHours: '',
+    footerAboutAr: '', footerAboutEn: '',
+    linkBlog: '', linkSocial: '', linkReturns: '', linkPrivacy: '', appStoreUrl: '', playStoreUrl: ''
+  });
   // Use SettingsContext directly (must follow hooks rules)
   const settingsCtx = useSettings();
   useEffect(() => {
-    if (settingsCtx?.setting) setStoreSettings(settingsCtx.setting);
+    if (settingsCtx?.setting) {
+      setStoreSettings(settingsCtx.setting);
+      // Preload form with current values
+      const s = settingsCtx.setting;
+      setSettingsForm(f=>({
+        ...f,
+        siteNameAr: s.siteNameAr||'', siteNameEn: s.siteNameEn||'',
+        colorPrimary: s.colorPrimary||'', colorSecondary: s.colorSecondary||'', colorAccent: s.colorAccent||'',
+        supportPhone: s.supportPhone||'', supportMobile: s.supportMobile||'', supportWhatsapp: s.supportWhatsapp||'', supportEmail: s.supportEmail||'', supportHours: s.supportHours||'',
+        footerAboutAr: s.footerAboutAr||'', footerAboutEn: s.footerAboutEn||'',
+        linkBlog: s.linkBlog||'', linkSocial: s.linkSocial||'', linkReturns: s.linkReturns||'', linkPrivacy: s.linkPrivacy||'', appStoreUrl: s.appStoreUrl||'', playStoreUrl: s.playStoreUrl||''
+      }));
+    }
   }, [settingsCtx?.setting]);
   // Categories for product form (dynamic list)
   const [catList, setCatList] = useState([]);
@@ -568,6 +592,35 @@ const AdminDashboard = () => {
     } catch (e) { setSettingsError(e.message); } finally { setSettingsLoading(false); }
   };
 
+  const saveStoreSettings = async (e) => {
+    e?.preventDefault?.();
+    setSettingsLoading(true); setSettingsError(null);
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(settingsForm).map(([k, v]) => [k, v === '' ? null : v])
+      );
+      // Prefer context method if available
+      if (settingsCtx?.update) {
+        const updated = await settingsCtx.update(payload);
+        if (updated?.setting) setStoreSettings(updated.setting);
+      } else {
+        const res = await fetch('/api/settings', {
+          method: 'PATCH',
+          headers: { ...authHeadersMaybe(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(()=>null);
+        if (!res.ok) throw new Error(data?.message || 'فشل تحديث الإعدادات');
+        if (data?.setting) setStoreSettings(data.setting);
+      }
+      alert('تم حفظ الإعدادات');
+    } catch (e2) {
+      setSettingsError(e2.message);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   const submitProduct = async e => {
     e.preventDefault();
   const useFormData = imageMode === 'file' && !!productImageFile; // only switch to multipart if a file chosen
@@ -753,6 +806,29 @@ const AdminDashboard = () => {
   }, [view, auditPage, auditReload]);
 
   const refreshAudit = () => { setAuditReload(x => x + 1); };
+
+  // Load financials and recent orders when on overview
+  useEffect(() => {
+    if (view !== 'overview') return;
+    let active = true;
+    (async () => {
+      setFinLoading(true); setFinError(null);
+      try {
+        const [fin, ord] = await Promise.all([
+          adminApi.statsFinancials({ days: finDays }),
+          adminApi.listOrders({ page: 1, pageSize: 10 })
+        ]);
+        if (!active) return;
+        if (fin?.daily) setFinancials(fin);
+        if (Array.isArray(ord?.orders)) setRecentOrders(ord.orders);
+      } catch (e) {
+        if (active) setFinError(e.message);
+      } finally {
+        if (active) setFinLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [view, finDays]);
 
   // ------- Offers: loaders & handlers -------
   const loadOffers = async () => {
@@ -984,6 +1060,72 @@ const AdminDashboard = () => {
           <Stat label="إجمالي المنتجات" value={effectiveProducts.length} />
           <Stat label="المستخدمون" value={remoteUsers.length || users.length} />
           <Stat label="كل الطلبات (محلي)" value={orders.length} />
+          {/* Financials mini-chart */}
+          <div style={{...statBox, gridColumn:'1/-1'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{fontWeight:700}}>الأداء المالي</div>
+              <div>
+                <select value={finDays} onChange={e=>setFinDays(+e.target.value)} style={searchInput}>
+                  {[7,14,30,60].map(d => <option key={d} value={d}>{d} يوم</option>)}
+                </select>
+              </div>
+            </div>
+            {finLoading && <div style={{fontSize:'.7rem',color:'#64748b'}}>...تحميل</div>}
+            {finError && <div style={{fontSize:'.7rem',color:'#b91c1c'}}>خطأ: {finError}</div>}
+            {financials && (
+              <div style={{display:'grid', gap:'10px'}}>
+                <div style={{display:'flex', gap:'8px', flexWrap:'wrap'}}>
+                  <div style={miniStat}><div style={miniStatVal}>{Number(financials.totals?.totalRevenue||0).toFixed(2)}</div><div style={miniStatLbl}>إجمالي الإيراد</div></div>
+                  <div style={miniStat}><div style={miniStatVal}>{financials.totals?.totalOrders||0}</div><div style={miniStatLbl}>إجمالي الطلبات</div></div>
+                  <div style={miniStat}><div style={miniStatVal}>{Number(financials.totals?.overallAov||0).toFixed(2)}</div><div style={miniStatLbl}>متوسط السلة</div></div>
+                  <div style={miniStat}><div style={miniStatVal}>{financials.totals?.activeCustomersWindow||0}</div><div style={miniStatLbl}>عملاء نشطون</div></div>
+                </div>
+                {/* Simple inline chart using CSS bars */}
+                <div style={{display:'grid', gridTemplateColumns:`repeat(${financials.daily.length}, minmax(2px,1fr))`, gap:2, alignItems:'end', height:120, background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:6}} aria-label="مخطط الإيرادات">
+                  {(() => {
+                    const max = Math.max(1, ...financials.daily.map(d => d.revenue||0));
+                    return financials.daily.map(d => {
+                      const h = Math.round((d.revenue||0) / max * 100);
+                      return <div key={d.date} title={`${d.date} • ${Number(d.revenue||0).toFixed(2)}`} style={{height:`${h}%`, background:'linear-gradient(180deg,#69be3c,#f6ad55)', borderRadius:3}} />
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Recent orders */}
+          <div style={{...statBox, gridColumn:'1/-1'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{fontWeight:700}}>أحدث 10 طلبات</div>
+              <a href="/admin/reports" style={{fontSize:'.7rem',textDecoration:'none',color:'#69be3c'}}>عرض التقارير →</a>
+            </div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{...table, marginTop:8}}>
+                <thead>
+                  <tr><th>ID</th><th>المبلغ</th><th>الحالة</th><th>طريقة</th><th>الوقت</th><th>إجراءات</th></tr>
+                </thead>
+                <tbody>
+                  {recentOrders.map(o => (
+                    <tr key={o.id}>
+                      <td style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis'}}>{o.id}</td>
+                      <td>{o.grandTotal?.toFixed ? o.grandTotal.toFixed(2) : o.grandTotal} {o.currency}</td>
+                      <td><span style={chip(o.status)}>{o.status}</span></td>
+                      <td>{o.paymentMethod||'-'}</td>
+                      <td>{new Date(o.createdAt).toLocaleString()}</td>
+                      <td style={tdActions}>
+                        <a href={`/order/${o.id}`} style={{fontSize:'.65rem',textDecoration:'none',color:'#69be3c'}}>عرض</a>
+                        <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" style={{fontSize:'.65rem',textDecoration:'none',color:'#075985'}}>فاتورة</a>
+                      </td>
+                    </tr>
+                  ))}
+                  {!recentOrders.length && (
+                    <tr><td colSpan={6} style={emptyCell}>لا توجد طلبات</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
           <div style={{gridColumn:'1/-1'}}>
             <h3 style={subTitle}>سجل النشاط</h3>
             <ul style={{listStyle:'none',margin:0,padding:0,maxHeight:200,overflow:'auto',fontSize:'.65rem',direction:'ltr'}}>
@@ -1676,6 +1818,33 @@ const AdminDashboard = () => {
               </div>
               <p style={mutedP}>الملفات المسموحة: صور حتى 2MB. يتم إنشاء نسخة WebP محسنة تلقائياً.</p>
             </div>
+            <form onSubmit={saveStoreSettings} style={{background:'#fff',padding:'1rem',borderRadius:12,boxShadow:'0 4px 14px -6px rgba(0,0,0,.08)', display:'grid', gap:8}}>
+              <h4 style={{marginTop:0}}>تحديث الإعدادات</h4>
+              <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:8}}>
+                <input placeholder="اسم عربي" value={settingsForm.siteNameAr} onChange={e=>setSettingsForm(f=>({...f,siteNameAr:e.target.value}))} />
+                <input placeholder="Name EN" value={settingsForm.siteNameEn} onChange={e=>setSettingsForm(f=>({...f,siteNameEn:e.target.value}))} />
+                <input placeholder="#69be3c" value={settingsForm.colorPrimary} onChange={e=>setSettingsForm(f=>({...f,colorPrimary:e.target.value}))} />
+                <input placeholder="#1f2937" value={settingsForm.colorSecondary} onChange={e=>setSettingsForm(f=>({...f,colorSecondary:e.target.value}))} />
+                <input placeholder="#ef4444" value={settingsForm.colorAccent} onChange={e=>setSettingsForm(f=>({...f,colorAccent:e.target.value}))} />
+                <input placeholder="هاتف" value={settingsForm.supportPhone} onChange={e=>setSettingsForm(f=>({...f,supportPhone:e.target.value}))} />
+                <input placeholder="جوال" value={settingsForm.supportMobile} onChange={e=>setSettingsForm(f=>({...f,supportMobile:e.target.value}))} />
+                <input placeholder="واتساب" value={settingsForm.supportWhatsapp} onChange={e=>setSettingsForm(f=>({...f,supportWhatsapp:e.target.value}))} />
+                <input placeholder="Email" value={settingsForm.supportEmail} onChange={e=>setSettingsForm(f=>({...f,supportEmail:e.target.value}))} />
+                <input placeholder="ساعات الدعم" value={settingsForm.supportHours} onChange={e=>setSettingsForm(f=>({...f,supportHours:e.target.value}))} />
+                <input placeholder="عن الشركة AR" value={settingsForm.footerAboutAr} onChange={e=>setSettingsForm(f=>({...f,footerAboutAr:e.target.value}))} />
+                <input placeholder="About EN" value={settingsForm.footerAboutEn} onChange={e=>setSettingsForm(f=>({...f,footerAboutEn:e.target.value}))} />
+                <input placeholder="رابط المدونة" value={settingsForm.linkBlog} onChange={e=>setSettingsForm(f=>({...f,linkBlog:e.target.value}))} />
+                <input placeholder="روابط التواصل" value={settingsForm.linkSocial} onChange={e=>setSettingsForm(f=>({...f,linkSocial:e.target.value}))} />
+                <input placeholder="سياسة الاسترجاع" value={settingsForm.linkReturns} onChange={e=>setSettingsForm(f=>({...f,linkReturns:e.target.value}))} />
+                <input placeholder="سياسة الخصوصية" value={settingsForm.linkPrivacy} onChange={e=>setSettingsForm(f=>({...f,linkPrivacy:e.target.value}))} />
+                <input placeholder="App Store URL" value={settingsForm.appStoreUrl} onChange={e=>setSettingsForm(f=>({...f,appStoreUrl:e.target.value}))} />
+                <input placeholder="Play Store URL" value={settingsForm.playStoreUrl} onChange={e=>setSettingsForm(f=>({...f,playStoreUrl:e.target.value}))} />
+              </div>
+              <div style={{display:'flex', gap:8}}>
+                <button type="submit" style={primaryBtn} disabled={settingsLoading}>حفظ</button>
+                <button type="button" style={ghostBtn} onClick={()=> loadSettings()}>إلغاء</button>
+              </div>
+            </form>
             <div style={{background:'#fff',padding:'1rem',borderRadius:12,boxShadow:'0 4px 14px -6px rgba(0,0,0,.08)'}}>
               <h4 style={{marginTop:0}}>معلومات</h4>
               <ul style={ulClean}>
@@ -1974,6 +2143,9 @@ const grid3 = { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-
 const statBox = { background: '#fff', padding: '1rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.35rem' };
 const statValue = { fontSize: '1.6rem', fontWeight: 700, color: '#0f172a' };
 const statLabel = { fontSize: '.7rem', letterSpacing: '.5px', color: '#64748b', fontWeight: 600 };
+const miniStat = { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:'.5rem .7rem' };
+const miniStatVal = { fontSize:'.95rem', fontWeight:800 };
+const miniStatLbl = { fontSize:'.65rem', color:'#64748b', fontWeight:700 };
 const sectionWrap = { background: 'transparent', display: 'flex', flexDirection: 'column', gap: '1.25rem' };
 const formRow = { background: '#fff', padding: '1rem 1.1rem 1.25rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.8rem' };
 const formGrid = { display: 'grid', gap: '.65rem', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))' };
@@ -1996,6 +2168,21 @@ const errorText = { fontSize: '.75rem', color: '#b91c1c' };
 // Tier pricing sub-table styles
 const tierLabel = { fontSize: '.55rem', fontWeight: 600, color: '#475569' };
 const tierInput = { ...searchInput, minWidth: 90, fontSize: '.65rem', padding: '.4rem .5rem' };
+
+// Status chip style helper
+function chip(status) {
+  const base = { display:'inline-block', padding:'.15rem .45rem', borderRadius:999, fontSize:'.65rem', fontWeight:700 };
+  const map = {
+    pending: { background:'#fff7ed', color:'#9a3412', border:'1px solid #fed7aa' },
+    processing: { background:'#eff6ff', color:'#1e3a8a', border:'1px solid #bfdbfe' },
+    paid: { background:'#ecfccb', color:'#365314', border:'1px solid #d9f99d' },
+    shipped: { background:'#f0f9ff', color:'#075985', border:'1px solid #bae6fd' },
+    completed: { background:'#ecfeff', color:'#115e59', border:'1px solid #a5f3fc' },
+    cancelled: { background:'#fee2e2', color:'#7f1d1d', border:'1px solid #fecaca' },
+    pending_bank_review: { background:'#fef9c3', color:'#854d0e', border:'1px solid #fde68a' }
+  };
+  return { ...base, ...(map[status] || { background:'#f1f5f9', color:'#334155', border:'1px solid #e2e8f0' }) };
+}
 
 export default AdminDashboard;
 

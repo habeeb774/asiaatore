@@ -1,5 +1,18 @@
 /* Site-wide minimal/professional enhancements without JSX changes */
 
+/* Motion variables (tuned per device + respects prefers-reduced-motion) */
+:root {
+  --motion-ease: cubic-bezier(.2,.9,.3,1);
+  --motion-fast: .22s;
+  --motion-normal: .34s;
+}
+@media (max-width: 768px) {
+  :root { --motion-fast: .16s; --motion-normal: .22s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0ms !important; animation: none !important; }
+}
+
 /* 1) Header nav underline indicator */
 .header {
   .header-nav .nav-link {
@@ -24,16 +37,44 @@
 /* 2) Buttons polish */
 .btn-primary, .btn-outline, .btn-danger, .btn-chip, .btn-secondary {
   border-radius: var(--radius-md, 12px);
+  transition: transform var(--motion-fast) var(--motion-ease),
+              filter var(--motion-fast) var(--motion-ease),
+              box-shadow var(--motion-fast) var(--motion-ease),
+              background-color var(--motion-fast) var(--motion-ease),
+              color var(--motion-fast) var(--motion-ease);
 }
 .btn-primary { box-shadow: var(--shadow-md); }
-.btn-primary:hover { filter: brightness(1.06); }
+.btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .btn-outline { background: var(--surface-1); border-color: var(--border); }
-.btn-outline:hover { background: var(--surface-3); }
+.btn-outline:hover { background: var(--surface-3); transform: translateY(-1px); }
 .btn-danger { box-shadow: 0 10px 24px -10px rgba(220,38,38,.4); }
+/* Pressed (active) states */
+.btn-primary:active, .btn-outline:active, .btn-danger:active, .btn-chip:active, .btn-secondary:active {
+  transform: scale(.98); opacity: .96;
+}
+/* Touch adjustments: reduce hover lift on mobile where hover is emulated */
+@media (max-width: 768px) {
+  .btn-primary:hover, .btn-outline:hover { transform: translateY(-0.5px); }
+}
 
 /* 3) Product cards subtle elevate */
-.product-card { border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); background: var(--surface-1); transition: transform .35s cubic-bezier(.16,.8,.36,1), box-shadow .35s cubic-bezier(.16,.8,.36,1); }
+/* Entrance animation keyframes */
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.product-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface-1);
+  transition: transform var(--motion-normal) var(--motion-ease), box-shadow var(--motion-normal) var(--motion-ease);
+  animation: fade-in-up var(--motion-normal) var(--motion-ease) both;
+}
 .product-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); }
+/* Pressed state for cards */
+.product-card:active { transform: translateY(-2px) scale(.995); }
+/* Mobile: slightly smaller hover lift */
+@media (max-width: 768px) {
+  .product-card:hover { transform: translateY(-3px); }
+}
 .product-card .product-image { background: var(--surface-3); }
 
 /* 4) Floating side panels refinements */
@@ -67,7 +108,7 @@
 
 /* Reduced motion respect */
 @media (prefers-reduced-motion: reduce) {
-  .product-card, .btn-primary { transition: none !important; }
+  .product-card, .btn-primary, .btn-outline, .btn-danger, .btn-chip, .btn-secondary { transition: none !important; }
 }
 
 /* 11) Product details: sticky buy bar (mobile) */
@@ -79,3 +120,47 @@
 .checkout-sticky-cta { position: sticky; bottom: 0; inset-inline: 0; padding: .5rem .75rem; padding-bottom: calc(.5rem + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgba(0,0,0,.06)); }
 .checkout-sticky-cta .inner { display:flex; justify-content:space-between; align-items:center; gap:.75rem; background: var(--surface-1); border:1px solid var(--border); padding:.6rem .8rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
 .checkout-sticky-cta .sum { font: 700 0.95rem/1 var(--font-sans, system-ui); }
+
+/* 13) Mobile: hide scrollbars (preserve scroll) */
+@media (max-width: 768px) {
+  html, body {
+    -ms-overflow-style: none; /* IE and old Edge */
+    scrollbar-width: none;    /* Firefox */
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+/* Utility: apply to any scrollable container to hide scrollbars (all viewports) */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and old Edge */
+  scrollbar-width: none;    /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* 14) Checkout: top progress bar and sticky summary */
+.checkout-progress { display: grid; gap: .35rem; margin: 0 0 1rem; }
+.checkout-progress__bar { position: relative; height: 6px; background: var(--surface-3, #f3f4f6); border-radius: 999px; overflow: hidden; }
+.checkout-progress__bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary, #22c55e), var(--color-accent, #f6ad55)); border-radius: inherit; transition: width var(--motion-normal) var(--motion-ease); }
+.checkout-progress__labels { display: flex; justify-content: space-between; font-size: .8rem; color: var(--text-muted, #64748b); }
+.checkout-progress__labels .is-active { color: var(--text-strong, #0f172a); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .checkout-progress__bar span { transition: none; } }
+
+/* Field validation styles */
+.field-hint { margin-top: .25rem; font-size: .75rem; color: #dc2626; }
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid { border-color: #dc2626 !important; box-shadow: 0 0 0 2px rgba(220,38,38,.08); }
+
+/* Sticky summary on desktop; naturally full-width on mobile */
+@media (min-width: 768px) {
+  .checkout-summary { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 88px); }
+}
+
+/* 15) Field flash helper for invalid focus */
+@keyframes field-flash-kf { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.0); } 30% { box-shadow: 0 0 0 4px rgba(220,38,38,.12); } 60% { box-shadow: 0 0 0 2px rgba(220,38,38,.08); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.0); } }
+.field-flash { animation: field-flash-kf .9s var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) { .field-flash { animation: none !important; } }

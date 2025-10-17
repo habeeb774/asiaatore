@@ -19,7 +19,7 @@ function candidatesFor(base: string): string[] {
     const u = new URL(base);
     const host = u.hostname;
     const isEmu = host === '10.0.2.2';
-    const ports = [u.port || '80', '4005', '4004', '4003'];
+    const ports = [u.port || '80', '8831', '8829', '8830'];
     const uniq = new Set<string>();
     for (const p of ports) {
       if (isEmu) uniq.add(`${u.protocol}//10.0.2.2:${p}${u.pathname}`);

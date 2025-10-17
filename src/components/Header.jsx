@@ -6,6 +6,7 @@ import {
   Heart,
   Search,
   User,
+  MessageCircle as MessageSquare,
   X,
   PanelLeft,          // fallback
   PanelLeftOpen,      // أيقونة إظهار
@@ -22,6 +23,7 @@ import { localizeName } from '../utils/locale';
 import { useOrders } from '../context/OrdersContext'; // لإحضار قائمة الطلبات
 import { CheckoutContext } from '../context/CheckoutContext';
 import { useSettings } from '../context/SettingsContext';
+import { useChat } from '../context/ChatContext';
 
 const smallChipStyle = {
   background:'#f1f5f9',
@@ -250,7 +252,8 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
     { path: '/', label: 'الرئيسية' },
     { path: '/about', label: 'من نحن' },
     { path: '/products', label: 'المنتجات' },
-    { path: '/contact', label: 'اتصل بنا' }
+    { path: '/contact', label: 'اتصل بنا' },
+    { path: '/chat', label: 'محادثة' }
   ];
 
   const handleSearch = (e) => {
@@ -261,6 +264,12 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
       setIsSearchOpen(false);
     }
   };
+
+  // Chat unread badge
+  const chatCtx = (() => {
+    try { return useChat(); } catch { return null; }
+  })();
+  const unreadTotal = chatCtx?.unreadTotal || 0;
 
   const adminItems = [
     { label: 'نظرة عامة', query: 'overview' },
@@ -381,7 +390,11 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
 
   return (
     <>
-      <header className={`header ${isScrolled ? 'scrolled' : ''} ${isHiddenOnScroll ? 'hidden-on-scroll' : ''}`}>
+      {/* Skip link for keyboard users */}
+      <a href="#main-content" className="skip-link" style={{position:'absolute',left:-9999,top:'auto',width:1,height:1,overflow:'hidden'}}>
+        تخطي إلى المحتوى
+      </a>
+      <header role="banner" className={`header ${isScrolled ? 'scrolled' : ''} ${isHiddenOnScroll ? 'hidden-on-scroll' : ''}`}>
         <div className="container-custom header-inner reorganized">
           <div className="header-section header-start">
             <Link to="/" className="logo" aria-label="الصفحة الرئيسية">
@@ -427,6 +440,9 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
                       aria-current={active ? 'page' : undefined}
                     >
                       {i.label}
+                      {i.path === '/chat' && unreadTotal > 0 && (
+                        <span className="badge" style={{ marginInlineStart:6 }}>{unreadTotal}</span>
+                      )}
                     </Link>
                   </li>
                 );
@@ -562,6 +578,14 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
               {wishlistCount > 0 && <span className="badge">{wishlistCount}</span>}
             </button>
 
+            {/* دردشة: أيقونة الوصول السريع (يظهر للمستخدمين المسجلين فقط) */}
+            {user && (
+              <Link to="/chat" className="icon action-block" title="الدردشة" onClick={closePanels}>
+                <MessageSquare />
+                {unreadTotal > 0 && <span className="badge" style={{ marginInlineStart: 6 }}>{unreadTotal}</span>}
+              </Link>
+            )}
+
             {/* السلة */}
             <Link
               to="/cart"
@@ -621,7 +645,7 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
         </div>
         {/* حاوية التوست */}
         {toasts.length > 0 && (
-          <div className="toast-stack" style={{position:'fixed', top:10, left:10, zIndex:4000, display:'flex', flexDirection:'column', gap:8}} aria-live="polite" aria-atomic="false">
+          <div className="toast-stack" style={{position:'fixed', top:10, left:10, zIndex:4000, display:'flex', flexDirection:'column', gap:8}} role="status" aria-live="polite" aria-atomic="true">
             {toasts.map(t => (
               <div key={t.id} className="toast-item" style={{
                 background:'#0f172a', color:'#fff', padding:'10px 14px', borderRadius:10,

@@ -51,6 +51,12 @@ export const adminApi = {
   },
   // Stats overview
   statsOverview: () => req('/admin/stats/overview'),
+  // Financials time-series
+  statsFinancials: (params = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.append(k, v); });
+    return req('/admin/stats/financials' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
   // Order exports
   exportOrdersCsv: (params = {}) => {
     const qs = new URLSearchParams();

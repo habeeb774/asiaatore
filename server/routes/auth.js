@@ -10,6 +10,12 @@ import { sendSms } from '../utils/sms.js';
 
 const router = Router();
 
+// Feature-detection: not all databases include Session/AuthToken models.
+// When the Prisma client does not expose these models (e.g., older schema),
+// avoid calling their methods directly to prevent runtime TypeErrors.
+const HAS_PRISMA_SESSION = !!prisma.session && typeof prisma.session.create === 'function';
+const HAS_PRISMA_AUTHTOKEN = !!prisma.authToken && typeof prisma.authToken.create === 'function';
+
 // Helper to set/clear refresh cookie
 const REFRESH_COOKIE = 'rt';
 const cookieOpts = () => ({
@@ -79,13 +85,21 @@ router.post('/login', async (req, res) => {
     const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString();
     // Create or reuse a session per device; here we always create a new session for simplicity
     try {
-      await prisma.session.create({ data: { userId: user.id, refreshHash: tokenHash, userAgent, ip, expiresAt } });
+      if (HAS_PRISMA_SESSION) {
+        await prisma.session.create({ data: { userId: user.id, refreshHash: tokenHash, userAgent, ip, expiresAt } });
+      } else {
+        if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session model missing; skipping session.create');
+      }
     } catch (e) {
       // sessions table might not exist yet — fallback to legacy token
       if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.create failed; falling back to AuthToken refresh:', e.message);
     }
     // Also keep legacy AuthToken for migrations/backward compatibility (optional)
-    await prisma.authToken.create({ data: { userId: user.id, type: 'refresh', tokenHash, expiresAt, userAgent, ip } }).catch(() => {});
+    if (HAS_PRISMA_AUTHTOKEN) {
+      await prisma.authToken.create({ data: { userId: user.id, type: 'refresh', tokenHash, expiresAt, userAgent, ip } }).catch(() => {});
+    } else {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] authToken model missing; skipping authToken.create');
+    }
     // Set HTTP-only cookie
     res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
     return res.json({ ok:true, accessToken, user: { id: user.id, role: user.role, email: user.email, name: user.name } });
@@ -164,14 +178,23 @@ router.post('/refresh', async (req, res) => {
     // Try sessions first
     let session = null;
     try {
-      session = await prisma.session.findFirst({ where: { refreshHash: tokenHash, revokedAt: null, expiresAt: { gt: new Date() } } });
+      if (HAS_PRISMA_SESSION) {
+        session = await prisma.session.findFirst({ where: { refreshHash: tokenHash, revokedAt: null, expiresAt: { gt: new Date() } } });
+      } else {
+        if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session model missing; skipping session.findFirst');
+      }
     } catch (e) {
       if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.findFirst failed; using legacy path:', e.message);
     }
     let userId = session?.userId;
     if (!session) {
       // fallback to legacy AuthToken
-      const legacy = await prisma.authToken.findFirst({ where: { type: 'refresh', tokenHash, consumedAt: null, expiresAt: { gt: new Date() } } });
+      let legacy = null;
+      if (HAS_PRISMA_AUTHTOKEN) {
+        legacy = await prisma.authToken.findFirst({ where: { type: 'refresh', tokenHash, consumedAt: null, expiresAt: { gt: new Date() } } });
+      } else {
+        if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] authToken model missing; skipping authToken.findFirst');
+      }
       if (legacy) userId = legacy.userId;
       if (!userId) return res.status(401).json({ ok:false, error:'INVALID_REFRESH' });
     }
@@ -183,9 +206,13 @@ router.post('/refresh', async (req, res) => {
     const newHash = sha256(newRaw);
     const ttlMs = Number(process.env.REFRESH_TOKEN_TTL_MS || 1000*60*60*24*30);
     const newExp = new Date(Date.now() + ttlMs);
-    if (session) {
+      if (session) {
       try {
-        await prisma.session.update({ where: { id: session.id }, data: { refreshHash: newHash, lastUsedAt: new Date(), expiresAt: newExp } });
+        if (HAS_PRISMA_SESSION) {
+          await prisma.session.update({ where: { id: session.id }, data: { refreshHash: newHash, lastUsedAt: new Date(), expiresAt: newExp } });
+        } else {
+          if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session model missing; cannot update session');
+        }
       } catch (e) {
         if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.update failed; converting to legacy path:', e.message);
         session = null;
@@ -194,13 +221,22 @@ router.post('/refresh', async (req, res) => {
     if (!session) {
       // legacy path: mark token consumed and create session
       try {
-        await prisma.$transaction([
-          prisma.authToken.updateMany({ where: { type: 'refresh', tokenHash }, data: { consumedAt: new Date() } }),
-          prisma.session.create({ data: { userId, refreshHash: newHash, expiresAt: newExp, userAgent: req.headers['user-agent'] || null, ip: (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString() } })
-        ]);
+        const tx = [];
+        if (HAS_PRISMA_AUTHTOKEN) tx.push(prisma.authToken.updateMany({ where: { type: 'refresh', tokenHash }, data: { consumedAt: new Date() } }));
+        if (HAS_PRISMA_SESSION) tx.push(prisma.session.create({ data: { userId, refreshHash: newHash, expiresAt: newExp, userAgent: req.headers['user-agent'] || null, ip: (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString() } }));
+        if (tx.length) {
+          await prisma.$transaction(tx);
+        } else {
+          // If neither model exists, fallback to creating a new authToken record if possible
+          if (HAS_PRISMA_AUTHTOKEN) {
+            await prisma.authToken.create({ data: { userId, type: 'refresh', tokenHash: newHash, expiresAt: newExp } }).catch(()=>{});
+          } else {
+            if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] No session or authToken model available; cannot rotate refresh token');
+          }
+        }
       } catch (e) {
         // If session.create fails, at least rotate legacy token
-        await prisma.authToken.create({ data: { userId, type: 'refresh', tokenHash: newHash, expiresAt: newExp } }).catch(()=>{});
+        if (HAS_PRISMA_AUTHTOKEN) await prisma.authToken.create({ data: { userId, type: 'refresh', tokenHash: newHash, expiresAt: newExp } }).catch(()=>{});
       }
     }
     res.cookie(REFRESH_COOKIE, newRaw, { ...cookieOpts(), maxAge: ttlMs });

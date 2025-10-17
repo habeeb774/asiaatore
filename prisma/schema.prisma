@@ -8,41 +8,36 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String         @id @default(uuid())
+  email     String         @unique
   password  String
   name      String?
-  role      Role     @default(user)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      Role           @default(user)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  cart      CartItem[]
   orders    Order[]
   reviews   Review[]
   wishlist  WishlistItem[]
-  cart      CartItem[]
-}
-
-enum Role {
-  user
-  admin
-  seller
+  addresses Address[]
 }
 
 model Brand {
-  id           String    @id @default(uuid())
-  slug         String    @unique
-  nameAr       String
-  nameEn       String
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  nameAr        String
+  nameEn        String
   descriptionAr String?
   descriptionEn String?
-  logo         String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  products     Product[]
+  logo          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  products      Product[]
 }
 
 model Product {
-  id         String    @id @default(uuid())
-  slug       String    @unique
+  id         String             @id @default(uuid())
+  slug       String             @unique
   nameAr     String
   nameEn     String
   shortAr    String?
@@ -51,18 +46,21 @@ model Product {
   price      Float
   oldPrice   Float?
   image      String?
-  rating     Int       @default(0)
-  stock      Int       @default(0)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  rating     Int                @default(0)
+  stock      Int                @default(0)
+  deletedAt  DateTime?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
   brandId    String?
-  brand      Brand?    @relation(fields: [brandId], references: [id])
-  orderItems OrderItem[]
-  reviews    Review[]
-  wishlist   WishlistItem[]
   cart       CartItem[]
+  orderItems OrderItem[]
+  brand      Brand?             @relation(fields: [brandId], references: [id])
   images     ProductImage[]
   tierPrices ProductTierPrice[]
+  reviews    Review[]
+  wishlist   WishlistItem[]
+
+  @@index([brandId], map: "Product_brandId_fkey")
 }
 
 model Category {
@@ -80,7 +78,7 @@ model Category {
 model Order {
   id            String      @id @default(uuid())
   userId        String
-  user          User        @relation(fields: [userId], references: [id])
+  deletedAt     DateTime?
   status        String      @default("pending")
   currency      String      @default("SAR")
   subtotal      Float       @default(0)
@@ -91,92 +89,119 @@ model Order {
   paymentMeta   Json?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id])
   items         OrderItem[]
+
+  shipments     Shipment[]
+
+  @@index([userId], map: "Order_userId_fkey")
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id])
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  deletedAt DateTime?
   nameAr    String
   nameEn    String
   price     Float
-  quantity  Int      @default(1)
+  quantity  Int     @default(1)
   oldPrice  Float?
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+  @@index([productId], map: "OrderItem_productId_fkey")
+}
+
+model Shipment {
+  id             String   @id @default(uuid())
+  orderId        String
+  provider       String
+  trackingNumber String   @unique
+  status         String   @default("created")
+  meta           Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId], map: "Shipment_orderId_fkey")
 }
 
 model Review {
-  id        String   @id @default(uuid())
+  id        String       @id @default(uuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   rating    Int
   title     String?
   body      String?
   status    ReviewStatus @default(pending)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  deletedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  product   Product      @relation(fields: [productId], references: [id])
+  user      User         @relation(fields: [userId], references: [id])
 
-enum ReviewStatus {
-  pending
-  approved
-  rejected
+  @@index([productId], map: "Review_productId_fkey")
+  @@index([userId], map: "Review_userId_fkey")
 }
 
 model WishlistItem {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  deletedAt DateTime?
   createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
   @@unique([userId, productId])
+  @@index([productId], map: "WishlistItem_productId_fkey")
 }
 
 model CartItem {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  deletedAt DateTime?
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
   @@unique([userId, productId])
+  @@index([productId], map: "CartItem_productId_fkey")
 }
 
 model ProductImage {
   id        String   @id @default(uuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
   url       String
   altEn     String?
   altAr     String?
   sort      Int      @default(0)
+  deletedAt DateTime?
   createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "ProductImage_productId_fkey")
 }
 
 model ProductTierPrice {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   productId     String
-  product       Product  @relation(fields: [productId], references: [id])
   minQty        Int
   price         Float
   packagingType PackagingType @default(unit)
   noteAr        String?
   noteEn        String?
-  createdAt     DateTime @default(now())
-  @@unique([productId, minQty, packagingType])
-}
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  product       Product       @relation(fields: [productId], references: [id])
 
-enum PackagingType {
-  unit
-  carton
-  bundle
+  @@unique([productId, minQty, packagingType])
 }
 
 model MarketingFeature {
@@ -193,7 +218,7 @@ model MarketingFeature {
 }
 
 model MarketingBanner {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   location  BannerLocation
   titleAr   String?
   titleEn   String?
@@ -201,16 +226,10 @@ model MarketingBanner {
   bodyEn    String?
   image     String?
   linkUrl   String?
-  active    Boolean  @default(true)
-  sort      Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-enum BannerLocation {
-  topStrip
-  homepage
-  footer
+  active    Boolean        @default(true)
+  sort      Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 model AppLink {
@@ -224,10 +243,26 @@ model AppLink {
   updatedAt DateTime @updatedAt
 }
 
-enum Platform {
-  ios
-  android
-  web
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  label     String?
+  name      String?
+  phone     String?
+  country   String   @default("Yemen")
+  city      String
+  district  String?
+  street    String
+  building  String?
+  apartment String?
+  notes     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model AuditLog {
@@ -238,11 +273,39 @@ model AuditLog {
   userId    String?
   meta      Json?
   createdAt DateTime @default(now())
+
   @@index([entity])
   @@index([action])
   @@index([createdAt])
 }
 
+model ChatThread {
+  id        String   @id @default(uuid())
+  title     String?
+  userId    String   // owner (customer) or null for system
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages  ChatMessage[]
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  threadId  String
+  fromId    String?
+  fromName  String?
+  text      String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  thread    ChatThread @relation(fields: [threadId], references: [id])
+  from      User?      @relation(fields: [fromId], references: [id])
+
+  @@index([threadId])
+}
 
 model storesetting {
   id              String   @id @default("singleton")
@@ -268,4 +331,34 @@ model storesetting {
   playStoreUrl    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime
+}
+
+enum Role {
+  user
+  admin
+  seller
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PackagingType {
+  unit
+  carton
+  bundle
+}
+
+enum BannerLocation {
+  topStrip
+  homepage
+  footer
+}
+
+enum Platform {
+  ios
+  android
+  web
 }

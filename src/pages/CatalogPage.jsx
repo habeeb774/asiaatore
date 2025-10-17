@@ -57,7 +57,7 @@ const CatalogPage = () => {
   // No product error block; page only shows categories
 
   return (
-    <div className="catalog-page">
+    <div className="offers-page catalog-page container-custom px-4 py-8">
       <Seo title={pageTitle} description={t('catalog')} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(breadcrumbLd)}} />
       <h1 className="page-title">{t('catalog')}</h1>

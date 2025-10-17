@@ -4,18 +4,20 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppRoutes from './AppRoutes';
 import './index.css';
 // Local Cairo font (self-hosted via package)
+import '@fontsource/cairo/300.css';
 import '@fontsource/cairo/400.css';
+import '@fontsource/cairo/500.css';
+import '@fontsource/cairo/600.css';
 import '@fontsource/cairo/700.css';
+// Tajawal is loaded from Google Fonts in index.html to avoid requiring the npm package
 // SCSS bundles
 import './styles/_design-system.scss';
 import './styles/theme.scss';
-import './styles/product-details.scss';
-import './styles/ProductList.scss';
 import './styles/product-card.scss';
 import './styles/pages.scss';
 import './styles/enhancements.scss';
-import './styles/HomePage.scss'; // لاحقاً استبدل باستيراد partials
-import './styles/top-strips.scss';
+import './styles/_ui.scss';
+// Route-specific styles are imported in their pages to allow CSS code-splitting
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ProductsProvider } from './context/ProductsContext';
 import { CartProvider } from './context/CartContext';
@@ -117,13 +119,15 @@ const router = createBrowserRouter([
   }
 });
 
+const showRQDevtools = import.meta.env.VITE_SHOW_RQ_DEVTOOLS === '1';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <QueryClientProvider client={queryClient}>
     <RouterProvider
       router={router}
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     />
-    {/* Devtools only in dev */}
-    {import.meta.env.DEV ? <ReactQueryDevtools initialIsOpen={false} /> : null}
+    {/* TanStack Devtools: opt-in via VITE_SHOW_RQ_DEVTOOLS=1 */}
+    {showRQDevtools ? <ReactQueryDevtools initialIsOpen={false} /> : null}
   </QueryClientProvider>
 );

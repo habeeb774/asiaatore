@@ -1,154 +1,105 @@
 import { Router } from 'express';
 import prisma from '../db/client.js';
 import { broadcast } from '../utils/realtimeHub.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-// Helper to ensure user is authenticated
+// Ensure auth for chat endpoints
 function requireAuth(req, res, next) {
-  if (!req.user || req.user.id === 'guest') return res.status(401).json({ error: 'UNAUTHENTICATED' });
+  if (!req.user || req.user.id === 'guest') return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
   next();
 }
 
-// Create or get a thread between current user and a counterpart
-// Supported bodies:
-//  - Buyer ↔ Seller: { sellerId, productId?, orderId? }
-//  - Buyer ↔ Driver: { driverId, orderId }
-router.post('/threads', requireAuth, async (req, res) => {
-  try {
-    if (!prisma?.chatThread || !prisma?.chatMessage) {
-      return res.status(503).json({ ok: false, error: 'CHAT_SCHEMA_MISSING', message: 'Prisma client missing Chat models. Run: npx prisma generate && npx prisma db push' });
-    }
-    const caller = req.user;
-    let buyerId = caller.id;
-    let { sellerId = null, driverId = null, productId = null, orderId = null, buyerId: buyerIdBody = null } = req.body || {};
-    // If driver is calling and no explicit driverId was provided, use caller id
-    if (!driverId && caller.role === 'delivery') driverId = caller.id;
-    // If caller is driver/admin and orderId provided, resolve buyerId from order
-    if ((caller.role === 'delivery' || caller.role === 'admin') && orderId && (!buyerIdBody)) {
-      try {
-        const order = await prisma.order.findUnique({ where: { id: orderId }, select: { userId: true } });
-        if (order?.userId) buyerId = order.userId;
-      } catch {}
-    }
-    if (buyerIdBody) buyerId = buyerIdBody; // explicit override when provided
-    let thread = null;
-    if (driverId) {
-      if (!orderId) return res.status(400).json({ error: 'MISSING_ORDER_ID' });
-      // Buyer-driver unique thread per order
-      thread = await prisma.chatThread.findUnique({
-        where: { buyerId_driverId_orderId: { buyerId, driverId, orderId } },
-      }).catch(() => null);
-      if (!thread) {
-        thread = await prisma.chatThread.create({ data: { buyerId, driverId, orderId } });
-      }
-    } else {
-      if (!sellerId) return res.status(400).json({ error: 'MISSING_SELLER_ID' });
-      // Upsert a unique thread by buyer/seller/context
-      thread = await prisma.chatThread.findUnique({
-        where: { buyerId_sellerId_productId_orderId: { buyerId, sellerId, productId, orderId } },
-      }).catch(() => null);
-      if (!thread) {
-        thread = await prisma.chatThread.create({ data: { buyerId, sellerId, productId, orderId } });
-      }
-    }
-    return res.json({ ok: true, thread });
-  } catch (e) {
-    res.status(400).json({ ok: false, error: 'THREAD_CREATE_FAILED', message: e.message });
-  }
-});
-
-// List threads for current user (buyer or seller)
+// List threads for current user (or all for admin)
 router.get('/threads', requireAuth, async (req, res) => {
   try {
-    if (!prisma?.chatThread) {
-      return res.status(503).json({ ok: false, error: 'CHAT_SCHEMA_MISSING' });
-    }
     const user = req.user;
-    const as = String(req.query.as || 'buyer'); // 'buyer' | 'seller' | 'delivery'
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize || '20', 10)));
-    let where;
-    if (as === 'seller') {
-      where = { seller: { userId: user.id }, deletedAt: null };
-    } else if (as === 'delivery') {
-      where = { driverId: user.id, deletedAt: null };
-    } else {
-      where = { buyerId: user.id, deletedAt: null };
+    // ignore optional ?as param for now; schema is user-owned threads
+    if (user.role === 'admin') {
+      const threads = await prisma.chatThread.findMany({ orderBy: { updatedAt: 'desc' }, take: 100 });
+      return res.json({ ok: true, items: threads, threads });
     }
-    const [items, total] = await Promise.all([
-      prisma.chatThread.findMany({ where, orderBy: { lastMessageAt: 'desc' }, take: pageSize, skip: (page - 1) * pageSize }),
-      prisma.chatThread.count({ where }),
-    ]);
-    res.json({ ok: true, items, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+    const threads = await prisma.chatThread.findMany({ where: { userId: user.id }, orderBy: { updatedAt: 'desc' } });
+    res.json({ ok: true, items: threads, threads });
   } catch (e) {
-    res.status(400).json({ ok: false, error: 'THREAD_LIST_FAILED', message: e.message });
+    res.status(500).json({ ok: false, error: 'THREADS_LIST_FAILED', message: e.message });
   }
 });
 
-// Get messages in a thread; marks as read for the current side
+// Get messages for a thread
 router.get('/threads/:id/messages', requireAuth, async (req, res) => {
   try {
-    if (!prisma?.chatThread || !prisma?.chatMessage) {
-      return res.status(503).json({ ok: false, error: 'CHAT_SCHEMA_MISSING' });
-    }
     const user = req.user;
-    const threadId = req.params.id;
-    const thread = await prisma.chatThread.findUnique({ where: { id: threadId }, include: { seller: true } });
+    const thread = await prisma.chatThread.findUnique({ where: { id: req.params.id } });
     if (!thread) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
-  const isBuyer = thread.buyerId === user.id;
-  const isSeller = thread.seller?.userId === user.id;
-  const isDriver = thread.driverId && thread.driverId === user.id;
-  if (!isBuyer && !isSeller && !isDriver && user.role !== 'admin') return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
-
-    const messages = await prisma.chatMessage.findMany({ where: { threadId, deletedAt: null }, orderBy: { createdAt: 'asc' } });
-    // Mark as read
-    if (isBuyer) {
-      await prisma.chatThread.update({ where: { id: threadId }, data: { buyerUnread: 0 } });
-    } else if (isSeller) {
-      await prisma.chatThread.update({ where: { id: threadId }, data: { sellerUnread: 0 } });
-    }
+    if (user.role !== 'admin' && thread.userId !== user.id) return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    const messages = await prisma.chatMessage.findMany({ where: { threadId: thread.id }, orderBy: { createdAt: 'asc' } });
     res.json({ ok: true, messages });
   } catch (e) {
-    res.status(400).json({ ok: false, error: 'MESSAGE_LIST_FAILED', message: e.message });
+    res.status(500).json({ ok: false, error: 'MESSAGES_LIST_FAILED', message: e.message });
   }
 });
 
-// Send a message in a thread
-// Body: { content }
+// Send a message in a given thread (Body: { content })
 router.post('/threads/:id/messages', requireAuth, async (req, res) => {
   try {
-    if (!prisma?.chatThread || !prisma?.chatMessage) {
-      return res.status(503).json({ ok: false, error: 'CHAT_SCHEMA_MISSING' });
-    }
     const user = req.user;
     const threadId = req.params.id;
-  const { content } = req.body || {};
-    if (!content || !content.trim()) return res.status(400).json({ ok: false, error: 'EMPTY_MESSAGE' });
-    const thread = await prisma.chatThread.findUnique({ where: { id: threadId }, include: { seller: true } });
+    const { content } = req.body || {};
+    if (!content || !String(content).trim()) return res.status(400).json({ ok: false, error: 'EMPTY_MESSAGE' });
+    const thread = await prisma.chatThread.findUnique({ where: { id: threadId } });
     if (!thread) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
-    const isBuyer = thread.buyerId === user.id;
-    const isSeller = thread.seller?.userId === user.id;
-    const isDriver = thread.driverId && thread.driverId === user.id;
-    if (!isBuyer && !isSeller && !isDriver && user.role !== 'admin') return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
-
-    const role = isBuyer ? 'buyer' : (isSeller ? 'seller' : (isDriver ? 'delivery' : 'buyer'));
-    const msg = await prisma.chatMessage.create({ data: { threadId, senderId: user.id, role, content: content.trim() } });
-    // Update thread unread counters and last message
-    await prisma.chatThread.update({
-      where: { id: threadId },
-      data: {
-        lastMessageAt: new Date(),
-        lastMessage: msg.content,
-        buyerUnread: role === 'seller' || role === 'delivery' ? { increment: 1 } : undefined,
-        sellerUnread: role === 'buyer' ? { increment: 1 } : undefined,
-      },
-    });
-    // Broadcast realtime event to participants
-    broadcast('chat.message', { threadId, message: { ...msg, mine: true } }, (c) => c.userId === thread.buyerId || c.userId === thread.seller?.userId || c.userId === thread.driverId || c.role === 'admin');
-    res.status(201).json({ ok: true, message: msg });
+    if (user.role !== 'admin' && thread.userId !== user.id) return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    const msg = await prisma.chatMessage.create({ data: { threadId, fromId: user.id, fromName: user.name || user.email, text: String(content).trim() } });
+    await prisma.chatThread.update({ where: { id: threadId }, data: { updatedAt: new Date() } });
+    const payload = { threadId, message: { id: msg.id, fromId: msg.fromId, fromName: msg.fromName, text: msg.text, ts: msg.createdAt } };
+    broadcast('chat.message', payload, (c) => c.role === 'admin' || c.userId === thread.userId);
+    res.status(201).json({ ok: true, message: payload.message });
   } catch (e) {
-    res.status(400).json({ ok: false, error: 'MESSAGE_CREATE_FAILED', message: e.message });
+    res.status(500).json({ ok: false, error: 'MESSAGE_CREATE_FAILED', message: e.message });
+  }
+});
+
+// Send message (auto-create thread if missing) — Body: { threadId?, text }
+router.post('/send', requireAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    const { threadId, text } = req.body || {};
+    if (!text || !String(text).trim()) return res.status(400).json({ ok: false, error: 'MISSING_TEXT' });
+    let thread = null;
+    if (threadId) {
+      thread = await prisma.chatThread.findUnique({ where: { id: threadId } });
+      if (!thread) return res.status(404).json({ ok: false, error: 'THREAD_NOT_FOUND' });
+      if (user.role !== 'admin' && thread.userId !== user.id) return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
+    } else {
+      thread = await prisma.chatThread.create({ data: { userId: user.id, title: `دردشة ${user.name || user.email}` } });
+    }
+    const msg = await prisma.chatMessage.create({ data: { threadId: thread.id, fromId: user.id, fromName: user.name || user.email, text: String(text).trim() } });
+    await prisma.chatThread.update({ where: { id: thread.id }, data: { updatedAt: new Date() } });
+    const payload = { threadId: thread.id, message: { id: msg.id, fromId: msg.fromId, fromName: msg.fromName, text: msg.text, ts: msg.createdAt } };
+    broadcast('chat.message', payload, (c) => c.role === 'admin' || c.userId === thread.userId);
+    res.json({ ok: true, threadId: thread.id, message: payload.message });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'SEND_FAILED', message: e.message });
+  }
+});
+
+// Admin: reply to a thread
+router.post('/admin/threads/:id/reply', requireAdmin, async (req, res) => {
+  try {
+    const admin = req.user;
+    const { text } = req.body || {};
+    if (!text || !String(text).trim()) return res.status(400).json({ ok: false, error: 'MISSING_TEXT' });
+    const thread = await prisma.chatThread.findUnique({ where: { id: req.params.id } });
+    if (!thread) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    const msg = await prisma.chatMessage.create({ data: { threadId: thread.id, fromId: admin.id, fromName: admin.name || admin.email, text: String(text).trim() } });
+    await prisma.chatThread.update({ where: { id: thread.id }, data: { updatedAt: new Date() } });
+    const payload = { threadId: thread.id, message: { id: msg.id, fromId: msg.fromId, fromName: msg.fromName, text: msg.text, ts: msg.createdAt } };
+    broadcast('chat.message', payload, (c) => c.role === 'admin' || c.userId === thread.userId);
+    res.json({ ok: true, message: payload.message });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'ADMIN_REPLY_FAILED', message: e.message });
   }
 });
 

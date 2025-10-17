@@ -37,10 +37,13 @@ import sellerRoutes from './routes/sellers.js';
 import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
 import deliveryRoutes from './routes/delivery.js';
+import notificationsRoutes from './routes/notifications.js';
+import shippingWebhooksRoutes from './routes/shipping-webhooks.js';
 import { attachUser } from './middleware/auth.js';
 import { registerSse, setupWebSocket } from './utils/realtimeHub.js';
 import fs from 'fs';
 import crypto from 'crypto';
+import { execSync } from 'child_process';
 import { quoteShipping } from './utils/shipping.js';
 // Centralized Prisma client (singleton) to prevent multiple instantiations & ESM warnings
 import prisma from './db/client.js';
@@ -394,6 +397,7 @@ const allowInvalidDb =
 
 // NEW: Quick start fallback (developer convenience)
 if (!DB_URL_VALID && process.env.QUICK_START_DB === '1') {
+  // Developer convenience: inject a ready-to-use Railway MySQL URL
   const fallback = 'mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway';
   process.env.DATABASE_URL = fallback;
   dbUrl = fallback;
@@ -766,6 +770,9 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/sellers', adminSellersRouter);
+app.use('/api/notifications', notificationsRoutes);
+// Shipping webhook receiver (unauthenticated endpoint used by carriers)
+app.use('/api/shipping', shippingWebhooksRoutes);
 // Prepare conditional mounting for delivery routes; will execute after DB init
 function mountDeliveryRoutesConditionally() {
   try {
@@ -916,7 +923,7 @@ if (process.env.ENABLE_RAW_MYSQL === '1') {
   }
 }
 
-// Graceful shutdown
+// Graceful shutdown with diagnostics
 async function graceful(exitCode = 0) {
   console.log('[APP] Shutting down...');
   if (prisma) {
@@ -929,11 +936,71 @@ async function graceful(exitCode = 0) {
   }
   process.exit(exitCode);
 }
+
+// Diagnostic wrapper for signals: logs stack + active handles then delays exit briefly so logs can be captured.
+async function handleSignalWithDiagnostics(sig) {
+  try {
+    console.log('[APP] Signal', sig, 'received — collecting diagnostics...');
+    // Active handles (Node internals) - best-effort
+    try {
+      const handles = process._getActiveHandles ? process._getActiveHandles() : [];
+      console.log('[APP] Active handles count:', Array.isArray(handles) ? handles.length : 'unknown');
+    } catch (e) {
+      console.warn('[APP] Could not get active handles:', e && e.message);
+    }
+    // Active requests (if using http.Server) - best-effort
+    try {
+      const servers = process._getActiveRequests ? process._getActiveRequests() : [];
+      console.log('[APP] Active requests count (approx):', Array.isArray(servers) ? servers.length : 'unknown');
+    } catch (e) {
+      // ignore
+    }
+    // Print a small stack trace to help identify origin
+    try {
+      const err = new Error('[APP] signal stack');
+      console.log(err.stack);
+    } catch (e) {}
+    // Log parent process info (best-effort) to help find the signal origin
+    try {
+      const ppid = process.ppid || null;
+      console.log('[APP] Parent PID:', ppid);
+      if (ppid) {
+        try {
+          let out = null;
+          try {
+            out = execSync(`powershell -Command "Get-CimInstance Win32_Process -Filter \"ProcessId=${ppid}\" | Select-Object -ExpandProperty CommandLine"`, { encoding: 'utf8', stdio: ['pipe','pipe','ignore'] });
+          } catch (e) {
+            try { out = execSync(`wmic process where ProcessId=${ppid} get CommandLine /FORMAT:LIST`, { encoding: 'utf8', stdio: ['pipe','pipe','ignore'] }); } catch (e2) {}
+          }
+          if (!out) {
+            try { out = execSync(`ps -p ${ppid} -o args=`, { encoding: 'utf8', stdio: ['pipe','pipe','ignore'] }); } catch (e) {}
+          }
+          if (out) console.log('[APP] Parent process command line:', out.toString().trim());
+        } catch (e) {
+          console.warn('[APP] Could not query parent process command line:', e && e.message);
+        }
+      }
+    } catch (e) {
+      // ignore exec failures
+    }
+  } catch (e) {
+    console.warn('[APP] Diagnostics failed:', e && e.message);
+  }
+
+  // If DEBUG_SIGNALS=true, keep the process alive for inspection (do not exit).
+  if (process.env.DEBUG_SIGNALS === 'true') {
+    console.warn('[APP] DEBUG_SIGNALS=true — not exiting on signal', sig);
+    return;
+  }
+
+  // Allow 5s for logs to flush and for external watchers to attach before exit
+  setTimeout(() => {
+    try { graceful(0); } catch { process.exit(0); }
+  }, 5000);
+}
+
 ['SIGINT','SIGTERM'].forEach(sig => {
-  process.on(sig, () => {
-    console.log('[APP] Signal', sig);
-    graceful(0);
-  });
+  process.on(sig, () => handleSignalWithDiagnostics(sig));
 });
 
 function listRoutes() {
@@ -968,6 +1035,8 @@ async function startServerWithRetry(maxRetries = 5) {
       await new Promise((resolve, reject) => {
         const server = app.listen(PORT, async () => {
           console.log(`Payment stub server listening on port ${PORT}`);
+          // Helpful PID for external tooling when diagnosing unexpected signals
+          try { console.log('[APP] PID', process.pid); } catch {}
           // Optional WebSocket setup behind a flag
           if (process.env.REALTIME_WS === 'true') {
             await setupWebSocket(server);

@@ -47,6 +47,8 @@
   --color-primary-2-rgb: 134,239,172; /* fallback derived from #86efac */
   --color-accent: #2563eb;
   --color-accent-rgb: 37,99,235;
+  /* Provide secondary alias used by components */
+  --color-secondary: var(--color-primary-alt);
   --color-danger: #dc2626;
   --color-danger-2: #ef4444;
   --color-success: #15803d;

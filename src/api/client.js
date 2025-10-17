@@ -1,16 +1,13 @@
 // Determine API base: prefer Vite proxy in dev if VITE_API_URL points to the same origin (frontend port)
 const DEV = import.meta?.env?.DEV;
 const VITE_API_ENV = import.meta?.env?.VITE_API_URL;
+// Default to VITE_API_URL (if provided) otherwise '/api'.
 let API_BASE = VITE_API_ENV || '/api';
-if (DEV && VITE_API_ENV) {
-  try {
-    const u = new URL(VITE_API_ENV, (typeof window !== 'undefined' ? window.location.origin : 'http://localhost'));
-    if (typeof window !== 'undefined' && u.origin === window.location.origin) {
-      // Use relative '/api' so Vite dev proxy forwards to backend port
-      API_BASE = '/api';
-      if (import.meta?.env?.DEV) console.warn('[API] Overriding VITE_API_URL in dev to use Vite proxy (/api).');
-    }
-  } catch {}
+// In local development always prefer the Vite proxy to avoid CORS and accidental
+// direct calls to production. Force API_BASE to '/api' when DEV is true.
+if (DEV) {
+  API_BASE = '/api';
+  console.warn('[API] Development mode: forcing API_BASE to /api to use Vite proxy.');
 }
 
 async function request(path, options = {}) {

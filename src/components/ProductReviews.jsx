@@ -44,7 +44,7 @@ export default function ProductReviews({ productId }) {
       {loading && <div style={{ fontSize:'.7rem', color:'#64748b' }}>جاري التحميل...</div>}
       {error && <div style={{ fontSize:'.65rem', color:'#dc2626' }}>{error}</div>}
       {!loading && !reviews.length && <div style={{ fontSize:'.65rem', color:'#475569' }}>لا توجد مراجعات بعد.</div>}
-      <ul style={{ listStyle:'none', margin:0, padding:0, display:'flex', flexDirection:'column', gap:10 }}>
+      <ul style={{ listStyle:'none', margin:0, padding:5, display:'flex', flexDirection:'column', gap:10 }}>
         {reviews.map(r => (
           <li key={r.id} style={{ background:'#f8fafc', padding:'10px 14px', borderRadius:12 }}>
             <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>

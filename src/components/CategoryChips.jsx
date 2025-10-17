@@ -3,6 +3,7 @@ import api from '../api/client';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import Chip from './ui/Chip.jsx';
 
 const scrollShadows = 'after:content-[" "] after:absolute after:top-0 after:right-0 after:w-8 after:h-full after:pointer-events-none after:bg-gradient-to-l after:from-white after:to-transparent';
 
@@ -70,7 +71,7 @@ const CategoryChips = () => {
       <button type="button" aria-label="Scroll left" onClick={()=>scrollBy('left')} className="absolute right-1 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white/85 shadow hover:bg-white p-1 hidden sm:inline-flex">
         <ChevronLeft size={18} />
       </button>
-      <div ref={trackRef} className={`flex gap-4 overflow-x-auto pb-2 px-2 snap-x snap-mandatory ${scrollShadows}`} dir="rtl">
+      <div ref={trackRef} className={`flex gap-3 overflow-x-auto pb-2 px-2 snap-x snap-mandatory mobile-gutters hide-scrollbar ${scrollShadows}`} dir="rtl">
         {displayed.map(c => {
           const qsCat = new URLSearchParams(location.search).get('category');
           const active = (qsCat === c.slug) || location.pathname.includes(`/category/${c.slug}`);
@@ -115,42 +116,41 @@ const CategoryChips = () => {
             return Tag;
           };
           const Icon = pickIcon();
+          const label = c.name?.ar || c.name?.en || c.slug;
           return (
-            <button
+            <Chip
               key={c.id || c.slug}
-              type="button"
+              className="snap-start shrink-0"
+              variant={active ? 'primary' : 'outline'}
+              size="lg"
+              selected={active}
               onClick={() => navigate(`${baseProductsPath}?category=${encodeURIComponent(c.slug)}&page=1`)}
-              className={`group flex flex-col items-center justify-start gap-2 w-[120px] shrink-0 snap-start text-center`}
               aria-current={active ? 'page' : undefined}
             >
-              <span
-                className={`relative grid place-items-center rounded-full bg-gray-100 shadow-sm transition-all ${active ? 'ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-white' : ''}`}
-                style={{ width: 120, height: 120 }}
-                aria-hidden="true"
-              >
+              <span aria-hidden="true" style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
                 {c.image ? (
-                  <img src={c.image} alt="" style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
+                  <img src={c.image} alt="" style={{ width: 20, height: 20, objectFit:'contain' }} />
                 ) : (
-                  <Icon size={34} className={`${active ? 'text-[var(--color-primary)]' : 'text-gray-500'}`} />
+                  <Icon size={18} />
+                )}
+                <span>{label}</span>
+                {typeof c.productCount === 'number' && c.productCount > 0 && (
+                  <span style={{ fontSize: '.72rem', opacity: .75 }}>({c.productCount})</span>
                 )}
               </span>
-              <span className={`font-bold leading-tight ${active ? 'text-[var(--color-primary)]' : 'text-slate-800'}`} style={{ fontSize: '.95rem' }}>
-                {c.name?.ar || c.name?.en || c.slug}
-              </span>
-              {typeof c.productCount === 'number' && c.productCount > 0 && (
-                <span className={`text-xs ${active ? 'text-slate-500' : 'text-slate-500'}`}>{c.productCount}</span>
-              )}
-            </button>
+            </Chip>
           );
         })}
         {uniqueCats.length > MAX_DEFAULT && (
-          <button
+          <Chip
             type="button"
             onClick={() => setShowAll(s => !s)}
-            className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors flex items-center gap-2 snap-start ${showAll ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+            className="snap-start shrink-0"
+            variant={showAll ? 'soft' : 'outline'}
+            size="md"
           >
             {showAll ? (locale==='ar' ? 'إخفاء' : 'Hide') : (locale==='ar' ? 'عرض المزيد' : 'Show more')}
-          </button>
+          </Chip>
         )}
       </div>
     </div>

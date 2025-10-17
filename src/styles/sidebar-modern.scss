@@ -84,8 +84,11 @@
 .sidebar-modern[data-collapsed='true'] .nav-icon { width:42px; height:42px; }
 
 /* Tooltip (basic) */
-.nav-link[data-tip]:hover::after { content:attr(data-tip); position:absolute; inset-inline-end:-6px; top:50%; transform:translate(100%,-50%); background:#111927; color:#fff; font:600 .6rem/1 var(--font-sans); padding:.45rem .55rem; border-radius:8px; white-space:nowrap; box-shadow:0 8px 18px -8px rgba(0,0,0,.5); z-index:30; }
+.nav-link[data-tip]:hover::after { content:attr(data-tip); position:absolute; top:50%; transform:translateY(-50%); background:#111927; color:#fff; font:600 .6rem/1 var(--font-sans); padding:.45rem .55rem; border-radius:8px; white-space:nowrap; box-shadow:0 8px 18px -8px rgba(0,0,0,.5); z-index:1400; }
 .sidebar-modern[data-collapsed='false'] .nav-link::after { display:none; }
+/* RTL-aware placement: if document direction is RTL, place tooltip to the left; otherwise to the right */
+:root[dir='rtl'] .nav-link[data-tip]:hover::after { right: 100%; margin-right: 8px; left: auto; transform: translateY(-50%); }
+.nav-link[data-tip]:hover::after { left: 100%; margin-left: 8px; right: auto; }
 
 /* Footer */
 .sidebar-modern__footer { padding:.65rem .85rem .85rem; display:flex; flex-direction:column; gap:.55rem; border-top:1px solid var(--sb-border); margin-top:auto; }
@@ -102,7 +105,7 @@
     background:rgba(0,0,0,.45);
     -webkit-backdrop-filter: blur(10px); /* دعم Safari */
     backdrop-filter:blur(2px);
-    z-index:1025;
+    z-index:1200; /* below sidebar (1301) */
     opacity:0;
     visibility:hidden;
     pointer-events:none;

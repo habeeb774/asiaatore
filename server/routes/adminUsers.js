@@ -96,7 +96,11 @@ router.patch('/:id', requireAdmin, async (req, res) => {
   try {
     const body = req.body || {};
     const data = {};
-    if (body.role) data.role = body.role; // trust admin input
+    if (body.role) {
+      const allowedRoles = new Set(['user','admin','seller','delivery']);
+      if (!allowedRoles.has(body.role)) return res.status(400).json({ ok: false, error: 'INVALID_ROLE' });
+      data.role = body.role;
+    }
     if (body.name !== undefined) data.name = body.name;
     if (body.phone !== undefined) data.phone = body.phone ? String(body.phone).trim() : null;
     if (!Object.keys(data).length) return res.status(400).json({ ok: false, error: 'NO_FIELDS' });
@@ -104,7 +108,11 @@ router.patch('/:id', requireAdmin, async (req, res) => {
     audit({ action: 'user.update', entity: 'User', entityId: updated.id, userId: req.user?.id, meta: { role: updated.role } });
     res.json({ ok: true, user: { id: updated.id, email: updated.email, role: updated.role, name: updated.name } });
   } catch (e) {
+    // Prisma: record not found
     if (e.code === 'P2025') return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+    // Unique constraint violation (phone/email)
+    if (e.code === 'P2002') return res.status(409).json({ ok: false, error: 'UNIQUE_CONSTRAINT', message: e.meta?.target?.join?.(',') || 'Unique field exists' });
+    // Fallback
     res.status(400).json({ ok: false, error: 'FAILED_USER_UPDATE', message: e.message });
   }
 });

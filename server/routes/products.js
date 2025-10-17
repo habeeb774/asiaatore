@@ -9,6 +9,7 @@ import softDelete from '../utils/softDelete.js';
 import multer from 'multer';
 import sharp from 'sharp';
 import prisma from '../db/client.js';
+import { whereWithDeletedAt } from '../utils/deletedAt.js';
 
 const router = Router();
 
@@ -51,7 +52,7 @@ const { mapProduct } = productService;
 router.get('/', async (req, res) => {
   try {
     const { q, category, minPrice, maxPrice, page, pageSize, brandId, brandSlug } = req.query;
-  const where = { deletedAt: null };
+    let where = whereWithDeletedAt({});
     if (category) where.category = String(category);
     if (brandId) where.brandId = String(brandId);
     if (!brandId && brandSlug) {
@@ -77,10 +78,14 @@ router.get('/', async (req, res) => {
     const ps = pageSize ? Math.min(100, Math.max(1, parseInt(pageSize, 10))) : 20;
     if (pg) {
       const skip = (pg - 1) * ps;
+      const start = Date.now();
       const [total, list] = await Promise.all([
         productService.count(where),
         productService.list(where, { orderBy: { createdAt: 'desc' }, skip, take: ps })
       ]);
+      const dur = Date.now() - start;
+      res.setHeader('X-Query-Duration-ms', String(dur));
+      if (dur > 200) console.warn('[PRODUCTS] slow query', dur, 'ms');
       return res.json({
         items: list.map(mapProduct),
         page: pg,
@@ -89,8 +94,12 @@ router.get('/', async (req, res) => {
         totalPages: Math.ceil(total / ps)
       });
     }
-    const list = await productService.list(where, { orderBy: { createdAt: 'desc' } });
-    res.json(list.map(mapProduct));
+  const startAll = Date.now();
+  const list = await productService.list(where, { orderBy: { createdAt: 'desc' } });
+  const durAll = Date.now() - startAll;
+  res.setHeader('X-Query-Duration-ms', String(durAll));
+  if (durAll > 200) console.warn('[PRODUCTS] slow query', durAll, 'ms');
+  res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
       console.error('[PRODUCTS] List failed:', e); // eslint-disable-line no-console
@@ -149,7 +158,7 @@ router.get('/_debug', async (req, res) => {
 
 router.get('/offers', async (req, res) => {
   try {
-    const list = await productService.list({ oldPrice: { not: null } }, { orderBy: { createdAt: 'desc' } });
+  const list = await productService.list({ ...whereWithDeletedAt({}), oldPrice: { not: null } }, { orderBy: { createdAt: 'desc' } });
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
@@ -209,7 +218,7 @@ router.post('/batch/discount', requireAdmin, async (req, res) => {
         }
         byIdNew.set(String(it.id), round2(np));
       }
-      const existing = await prisma.product.findMany({ where: { id: { in: Array.from(byIdNew.keys()) }, deletedAt: null } });
+  const existing = await prisma.product.findMany({ where: whereWithDeletedAt({ id: { in: Array.from(byIdNew.keys()) } }) });
       const ops = [];
       for (const p of existing) {
         const np = byIdNew.get(p.id);
@@ -232,7 +241,7 @@ router.post('/batch/discount', requireAdmin, async (req, res) => {
       const percent = Number(body.percent);
       if (!(percent > 0 && percent < 95)) return res.status(400).json({ error: 'INVALID_PERCENT' });
       const ids = body.productIds.map(String);
-      const products = await prisma.product.findMany({ where: { id: { in: ids }, deletedAt: null } });
+  const products = await prisma.product.findMany({ where: whereWithDeletedAt({ id: { in: ids } }) });
       const ops = [];
       for (const p of products) {
         if (!(Number(p.price) > 0)) { results.skipped.push({ id: p.id, reason: 'ZERO_OR_INVALID_PRICE' }); continue; }
@@ -263,8 +272,8 @@ router.post('/batch/clear-discount', requireAdmin, async (req, res) => {
     if (!ids.length) return res.status(400).json({ error: 'INVALID_BODY', message: 'productIds[] required' });
 
     // Update in bulk, then fetch affected records for response mapping
-    await prisma.product.updateMany({ where: { id: { in: ids }, deletedAt: null }, data: { oldPrice: null } });
-    const updated = await prisma.product.findMany({ where: { id: { in: ids }, deletedAt: null } });
+  await prisma.product.updateMany({ where: whereWithDeletedAt({ id: { in: ids } }), data: { oldPrice: null } });
+  const updated = await prisma.product.findMany({ where: whereWithDeletedAt({ id: { in: ids } }) });
     for (const u of updated) {
       audit({ action: 'product.discount.clear_batch', entity: 'Product', entityId: u.id, userId: req.user?.id });
     }
@@ -278,7 +287,7 @@ router.post('/batch/clear-discount', requireAdmin, async (req, res) => {
 router.get('/catalog/summary', async (req, res) => {
   try {
     // Fetch categories that have at least one product
-    const byCategory = await prisma.product.groupBy({ by: ['category'], where: { deletedAt: null }, _count: { category: true } });
+  const byCategory = await prisma.product.groupBy({ by: ['category'], where: whereWithDeletedAt({}), _count: { category: true } });
     // For each category, get a few recent products (limit 8)
     const categories = await Promise.all(byCategory.map(async c => {
       const items = await productService.list({ category: c.category }, { orderBy: { createdAt: 'desc' }, take: 8 });

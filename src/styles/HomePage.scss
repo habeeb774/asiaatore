@@ -35,7 +35,7 @@
       background: rgba(255,255,255,0.2);
       padding: 1rem;
       border-radius: 12px;
-      margin-left: 1rem;
+      margin-inline-start: 1rem;
     }
   }
 
@@ -52,12 +52,12 @@
       @include flex-center(row, flex-start, center);
       box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 
-      .stat-icon {
+        .stat-icon {
         width: 60px;
         height: 60px;
         border-radius: 12px;
         @include flex-center;
-        margin-left: 1rem;
+        margin-inline-start: 1rem;
         font-size: 1.5rem;
 
         &.primary { background: $primary-gradient; color: $white; }
@@ -182,11 +182,10 @@
 .product-card .text-primary-red { color: var(--color-primary); }
 
 /* Ratings */
-.product-card .lucide { margin-left: 4px; }
+  .product-card .lucide { margin-inline-start: 4px; }
 .product-card .text-yellow-400 { color: #f6c85f; display:flex; gap:4px; }
 
-/* Category badge */
-.product-card .absolute.top-2 { right: 0; left: auto; }
+.product-card .absolute.top-2 { inset-inline-end: 0; inset-inline-start: auto; }
 .product-card .absolute.top-2 span,
 .product-card .product-image .badge {
   display: inline-block;
@@ -257,6 +256,7 @@
 /* ==== /End Unified Page Width ==== */
 
 .app-layout.professional-layout {
+  position: relative;
   display: flex;
   align-items: stretch;
   width: 100%;
@@ -270,7 +270,7 @@
   flex: 1;
   /* FIX: كان min-width: 100 (بدون وحدة) */
   min-width: 0; /* يسمح بالتمدد داخل flex بدون تجاوز */
-  padding: clamp(0rem,0vw,0rem) clamp(0rem,0vw,0rem) 0rem;
+  padding: clamp(0.5rem,0vw,0rem) clamp(0.6rem,0vw,0rem) 0rem;
   /* Make main column an independent scroll container */
   height: 100vh;
   overflow-y: auto;
@@ -292,6 +292,16 @@
 }
 [data-theme='dark'] .content-with-sidebar::-webkit-scrollbar-thumb { background: rgba(var(--color-primary-rgb, 34,197,94), .28); }
 [data-theme='dark'] .content-with-sidebar::-webkit-scrollbar-thumb:hover { background: rgba(var(--color-primary-rgb, 34,197,94), .36); }
+
+/* Mobile: hide vertical scrollbar on the main scroll container while keeping scroll functional */
+@media (max-width: 768px) {
+  .content-with-sidebar {
+
+    -ms-overflow-style: none; /* IE/old Edge */
+    scrollbar-width: none;    /* Firefox */
+  }
+  .content-with-sidebar::-webkit-scrollbar { display: none; }
+}
 
 /* Skip link */
 .skip-link {
@@ -748,7 +758,7 @@ header,
 .mini-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 5px 0;
   display: flex;
   flex-direction: column;
   gap: .65rem;
@@ -961,13 +971,12 @@ header,
 /* ==== /End Header Floating Panels System ==== */
 
 /* =========================================================
-   Extracted Feature Styles (Abstracted & Original Implementation-Free)
-   مصدر الإلهام: الصفحة المزودة. تمت كتابة الشيفرة بصيغة جديدة دون نسخ حرفي.
    ========================================================= */
 
 /* ======================= Modern Overhaul Layer ======================= */
 .home-page-wrapper {
   --section-gap: var(--space-section-gap);
+  padding: 5px 0 2px;
   font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-text);

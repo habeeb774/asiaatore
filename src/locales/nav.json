@@ -1,0 +1,12 @@
+{
+  "home": "home",
+  "catalog": "catalog",
+  "products": "products",
+  "offers": "offers",
+  "stores": "stores",
+  "myOrders": "myOrders",
+  "sellerKyc": "sellerKyc",
+  "admin": "admin",
+  "orders": "orders",
+  "dashboard": "dashboard"
+}

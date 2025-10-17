@@ -8,3 +8,4 @@ export const prisma = globalForPrisma.__prisma || new PrismaClient();
 if (!globalForPrisma.__prisma) globalForPrisma.__prisma = prisma;
 
 export default prisma;
+

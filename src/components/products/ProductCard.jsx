@@ -28,7 +28,7 @@ const ProductCard = ({ product, showImageBadge = true, showPriceBadge = true }) 
   const outOfStock = product.stock !== undefined && product.stock <= 0;
   return (
     <div className="product-card" data-id={product.id}>
-      <div className="product-image product-media">
+      <Link to={detailsPath} className="product-image product-media" aria-label={name}>
         <LazyImage
           src={product.image}
           alt={name}
@@ -39,9 +39,14 @@ const ProductCard = ({ product, showImageBadge = true, showPriceBadge = true }) 
   {showImageBadge && hasDiscount && <span className="discount-badge">-{discountPercent}%</span>}
         {outOfStock && <span className="gallery-indicator" style={{background:'rgba(109,1,11,.85)'}}>{locale==='ar'?'غير متوفر':'Out'}</span>}
         <div className="product-overlay">
-          <button className="quick-view-btn" onClick={() => setOpen(true)}>{t('quickView')}</button>
+          <button
+            className="quick-view-btn"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
+          >
+            {t('quickView')}
+          </button>
         </div>
-      </div>
+      </Link>
       <h3 className="product-title clamp-2">{name}</h3>
       {product.rating && (
         <div className="rating-row" aria-label={`rating ${product.rating}`}>

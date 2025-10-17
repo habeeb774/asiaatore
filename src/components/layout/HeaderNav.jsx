@@ -1,339 +1,300 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+/*
+  HeaderSidebar_Tailwind_FramerMotion.jsx
+  Tailwind + Framer Motion Header + Sidebar bundle with safe hook fallbacks.
+*/
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useSettings } from '../../context/SettingsContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Home, Menu, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import CartPanel from '../cart/CartPanel';
+import TopNav from './TopNav';
+import HeaderControls from './HeaderControls';
+import { useSidebar, SidebarProvider } from '../../context/SidebarContext';
 import { useCart } from '../../context/CartContext';
-import { localizeName } from '../../utils/locale';
-import { BookOpen, Package, BadgePercent, Store as StoreIcon, Home as HomeIcon, Menu as MenuIcon, X as CloseIcon, BarChart3 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 
-const HeaderNav = () => {
-  const [openPanel, setOpenPanel] = useState(null);
-  const { t, locale, available, setLocale } = useLanguage();
-  const { theme, setTheme } = useTheme();
-  const { user, devLoginAs, logout } = useAuth() || {};
-  const { pathname } = useLocation();
-  const { setting } = useSettings() || {};
-  const { cartItems = [], updateQuantity, removeFromCart } = useCart() || {};
-  const prefix = locale === 'ar' ? '' : `/${locale}`;
-  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : (locale==='ar' ? 'حسابي' : 'My Account'));
-  const isDev = !!(import.meta && import.meta.env && import.meta.env.DEV);
+/* (Removed local SidebarContext bridge – now using shared SidebarContext from src/context/SidebarContext.jsx) */
 
-  const cartCount = useMemo(() => (Array.isArray(cartItems) ? cartItems.reduce((s,i)=>s+(i.quantity||1),0) : 0), [cartItems]);
-  const cartTotal = useMemo(() => (Array.isArray(cartItems) ? cartItems.reduce((s,i)=> s + ((i.price||i.salePrice||0)*(i.quantity||1)), 0) : 0), [cartItems]);
-  const cartIconRef = useRef(null);
-  const menuToggleRef = useRef(null);
-  const menuPanelRef = useRef(null);
-  const menuCloseBtnRef = useRef(null);
-  const qtyBtn = { background:'#e2e8f0', border:0, borderRadius:6, width:22, height:22, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:'.7rem', fontWeight:600, color:'#0f172a' };
+/* --------------------------- Safe hook resolution --------------------------- */
+function resolveMaybeHook(name, fallbackFactory) {
+  try {
+    const v = typeof window !== 'undefined' ? window[name] : undefined;
+    if (!v) return fallbackFactory();
+    if (typeof v === 'function') {
+      try { const res = v(); if (res) return res; } catch (e) { /* ignore */ }
+    }
+    if (typeof v === 'object') return v;
+    return fallbackFactory();
+  } catch (e) {
+    return fallbackFactory();
+  }
+}
+
+const defaultLanguage = () => ({ t: (k) => k, locale: 'en', setLocale: () => {} });
+const defaultAuth = () => ({ user: null, logout: () => {} });
+const defaultCart = () => ({ cartItems: [], updateQuantity: () => {}, removeFromCart: () => {} });
+const defaultSettings = () => ({ setting: {} });
+
+const formatPrice = (n, locale = 'en') => {
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: 'SAR', maximumFractionDigits: 2 }).format(n || 0);
+  } catch (e) {
+    return (n || 0).toFixed(2) + ' SAR';
+  }
+};
+
+/* --------------------------- HeaderNav --------------------------- */
+export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
+  const location = (() => { try { return useLocation(); } catch (e) { return { pathname: '/' }; } })();
+  // Prefer real contexts; fall back to safe resolver for bundle compatibility
+  const langCtx = (() => { try { return useLanguage(); } catch { return null; } })();
+  const authCtx = (() => { try { return useAuth(); } catch { return null; } })();
+  const cartCtx = (() => { try { return useCart(); } catch { return null; } })();
+  const sidebarCtx = (() => { try { return useSidebar(); } catch { return null; } })();
+  const { t, locale, setLocale } = langCtx || resolveMaybeHook('__useLanguage__', defaultLanguage);
+  const { user } = authCtx || resolveMaybeHook('__useAuth__', defaultAuth);
+  const { cartItems = [], updateQuantity, removeFromCart } = cartCtx || resolveMaybeHook('__useCart__', defaultCart);
+  const { setting } = resolveMaybeHook('__useSettings__', defaultSettings);
+
+  const [panel, setPanel] = useState(null);
+  const cartCount = useMemo(() => Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + (i.quantity || 1), 0) : 0, [cartItems]);
+  const cartTotal = useMemo(() => Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + ((i.price || i.salePrice || 0) * (i.quantity || 1)), 0) : 0, [cartItems]);
+  const cartBtnRef = useRef(null);
 
   useEffect(() => {
-    const bump = () => {
-      const el = cartIconRef.current; if (!el) return;
-      el.classList.remove('bump');
-      // force reflow
-      // eslint-disable-next-line no-unused-expressions
-      el.offsetWidth;
-      el.classList.add('bump');
-      setTimeout(()=> el.classList.remove('bump'), 350);
+    const onKey = (e) => { if (e.key === 'Escape') setPanel(null); };
+    window.addEventListener('keydown', onKey);
+    const onCartOpen = () => setPanel('cart');
+    const onCartClose = () => setPanel(null);
+    try {
+      window.addEventListener('cart:open', onCartOpen);
+      window.addEventListener('cart:close', onCartClose);
+    } catch {}
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      try {
+        window.removeEventListener('cart:open', onCartOpen);
+        window.removeEventListener('cart:close', onCartClose);
+      } catch {}
     };
-    window.addEventListener('cart:icon-bump', bump);
-    return () => window.removeEventListener('cart:icon-bump', bump);
   }, []);
 
-  // Lock body scroll when any panel is open and allow closing by Escape
   useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    if (openPanel) document.body.style.overflow = 'hidden';
-    const onKey = (e) => {
-      if (e.key === 'Escape' && openPanel) setOpenPanel(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [openPanel]);
+    const el = cartBtnRef.current;
+    if (!el || typeof el.animate !== 'function') return;
+    try {
+      el.animate(
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }],
+        { duration: 280, easing: 'cubic-bezier(.2,.9,.3,1)' }
+      );
+    } catch (e) {}
+  }, [cartCount]);
 
-  // Sidebar bridge: reflect sidebar mobile state in header button
+  // Sidebar state via context with backward-compatible event bridge
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const onToggleSidebar = useCallback(() => {
+    if (sidebarCtx && typeof sidebarCtx.toggle === 'function') {
+      // Prefer context when available to avoid double toggles
+      sidebarCtx.toggle();
+    } else {
+      // Fallback only: emit legacy event when context is not present
+      try { window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { cmd: 'toggle' } })); } catch {}
+    }
+  }, [sidebarCtx]);
   useEffect(() => {
+    // If context is present, sync local icon state from it
+    if (sidebarCtx && typeof sidebarCtx.open === 'boolean') {
+      setIsMenuOpen(Boolean(sidebarCtx.open));
+      return;
+    }
+    // Fallback: listen to legacy state event
     const onState = (e) => {
       if (e?.detail && typeof e.detail.open === 'boolean') setIsMenuOpen(e.detail.open);
     };
     window.addEventListener('sidebar:state', onState);
     return () => window.removeEventListener('sidebar:state', onState);
+  }, [sidebarCtx]);
+  const openCart = useCallback(() => setPanel('cart'), []);
+  const closeCart = useCallback(() => setPanel(null), []);
+
+  // Elevate header when scrolled
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 6);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
-  const lastOpenRef = useRef(openPanel);
-  useEffect(() => {
-    // Restore focus to toggle after closing the menu
-    if (lastOpenRef.current === 'menu' && openPanel !== 'menu') {
-      menuToggleRef.current?.focus?.();
-    }
-    lastOpenRef.current = openPanel;
-  }, [openPanel]);
 
-  // Focus trap for the mobile menu when open
-  useEffect(() => {
-    if (!isMenuOpen) return;
-    // Move focus to close button first for quick escape
-    const btn = menuCloseBtnRef.current;
-    if (btn) btn.focus();
+  const { pathname } = location;
+  const isActive = useCallback((to) => pathname === to || pathname.startsWith(to + '/'), [pathname]);
 
-    const panel = menuPanelRef.current;
-    if (!panel) return;
-
-    const getFocusable = () => Array.from(panel.querySelectorAll(
-      'a[href], button:not([disabled]), select, textarea, input, [tabindex]:not([tabindex="-1"])'
-    )).filter(el => el.offsetParent !== null);
-
-    const onKeyDown = (e) => {
-      if (e.key !== 'Tab') return;
-      const focusable = getFocusable();
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey) {
-        if (active === first || !panel.contains(active)) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (active === last || !panel.contains(active)) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    panel.addEventListener('keydown', onKeyDown);
-    return () => panel.removeEventListener('keydown', onKeyDown);
-  }, [isMenuOpen]);
+  const isHome = (() => {
+    try {
+      const p = location?.pathname || '/';
+      return p === '/' || p === '/en' || p === '/fr';
+    } catch { return false; }
+  })();
+  const headerHeight = isHome ? 'h-14 md:h-16' : 'h-16';
 
   return (
-    <header className="header" data-menu-open={isMenuOpen ? 'true' : 'false'}>
-      <style>{`
-        @keyframes cart-bump { 50%{ transform: scale(1);} 35%{ transform: scale(1.12);} 100%{ transform: scale(1);} }
-        .cart-icon.bump { animation: cart-bump 320ms cubic-bezier(.2,.9,.3,1); }
-        /* Dim/blur overlay for panels */
-        .panel-overlay.open { background: rgba(0,0,0,.4); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
-        /* Side drawer animation (mobile) */
-        .header-panels .floating-panel.side { width: min(84vw, 360px); transition: transform .36s cubic-bezier(.2,.9,.3,1), opacity .24s; }
-        .header-panels .floating-panel.side.right { inset-inline-end: 0; transform: translateX(100%); }
-        .header-panels .floating-panel.side.left { inset-inline-start: 0; transform: translateX(-100%); }
-        .header-panels .floating-panel.side.open { transform: translateX(0); }
-        /* Mobile menu: use a side drawer; hide inline nav on small screens and show a toggle button near the logo */
-        @media (max-width: 980px){
-          .header { position: relative; }
-          .nav { display: none; }
-          .menu-toggle { display: inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; cursor:pointer; margin-inline-start:.5rem; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-          .menu-toggle:active { transform: scale(.98); }
-          .menu-toggle svg { color:#0f172a; }
-        }
-        @media (min-width: 981px){ .menu-toggle { display: none; } }
-        @media (prefers-color-scheme: dark){
-          .menu-toggle { background:#0b1220; border-color:#1f2a3a; }
-          .menu-toggle svg { color:#e5e7eb; }
-        }
-      `}</style>
-      <div className="header-start">
-        <Link to={prefix || '/'} className="logo" aria-label="Logo">
-          <span style={{ display:'inline-flex', alignItems:'center', gap:8, fontWeight:700 }}>
-            <span className="nav-icon" aria-hidden="true"><HomeIcon size={18} /></span>
-            {locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store')}
-          </span>
+    <header className={`w-full flex items-center justify-between px-4 md:px-6 ${headerHeight} sticky top-0 z-[1100] bg-white/85 dark:bg-slate-900/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b dark:border-slate-800 transition-shadow ${scrolled ? 'shadow-sm' : ''} ${className}`}>
+      {/* Skip to content for a11y */}
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[2000] px-3 py-1 rounded bg-amber-500 text-white">{t('Skip to content') || 'Skip to content'}</a>
+      <div className="flex items-center gap-3">
+        <button onClick={onToggleSidebar} aria-expanded={isMenuOpen} aria-label="Toggle menu" className="p-2 rounded-lg md:hidden bg-slate-50 dark:bg-slate-800 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+          {isMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+        <Link to="/" className="flex items-center gap-3">
+          <div className="rounded-md bg-slate-100 dark:bg-slate-800 p-2"><Home size={20} /></div>
+          <div className="hidden sm:block">
+            <div className="font-semibold text-slate-900 dark:text-slate-100">{(setting && setting.siteNameEn) || 'My Store'}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">{(setting && setting.tagline) || ''}</div>
+          </div>
         </Link>
-        {/* Mobile menu toggle next to store name */}
-        <button
-          type="button"
-          className="menu-toggle"
-          aria-label={locale==='ar' ? 'القائمة' : 'Menu'}
-          aria-expanded={isMenuOpen}
-          aria-controls="app-sidebar"
-          onClick={() => {
-            try { window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { cmd: 'toggle' } })); } catch {}
-          }}
-          title={locale==='ar' ? 'القائمة' : 'Menu'}
-          ref={menuToggleRef}
-        >
-          <span aria-hidden="true" style={{lineHeight:1, display:'inline-flex'}}>
-            {isMenuOpen ? <CloseIcon size={20} /> : <MenuIcon size={20} />}
-          </span>
-        </button>
-      </div>
-      <nav id="main-nav" className="nav" aria-label="Main navigation" onClick={() => { if (isMenuOpen) setOpenPanel(null); }}>
-        <ul className="nav-list">
-          <li className="nav-item">
-            <Link className="nav-link" to={`${prefix}/catalog`} style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <span className="nav-icon" aria-hidden="true"><BookOpen size={16} /></span>
-              <span className="nav-label">{t('catalog')}</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link className="nav-link" to={`${prefix}/products`} style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <span className="nav-icon" aria-hidden="true"><Package size={16} /></span>
-              <span className="nav-label">{t('products')}</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link className="nav-link" to={`${prefix}/offers`} style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <span className="nav-icon" aria-hidden="true"><BadgePercent size={16} /></span>
-              <span className="nav-label">{t('offers')}</span>
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link className="nav-link" to={`${prefix}/stores`} style={{display:'inline-flex',alignItems:'center',gap:6}}>
-              <span className="nav-icon" aria-hidden="true"><StoreIcon size={16} /></span>
-              <span className="nav-label">{t('stores') || (locale==='ar'?'المتاجر':'Stores')}</span>
-            </Link>
-          </li>
-          {user?.role === 'seller' && (
-            <li className="nav-item">
-              <Link className="nav-link" to={`/SellerDashboard`} style={{display:'inline-flex',alignItems:'center',gap:6}}>
-                <span className="nav-icon" aria-hidden="true"><BarChart3 size={16} /></span>
-                <span className="nav-label">{locale==='ar' ? 'لوحة البائع' : 'Seller Dashboard'}</span>
-              </Link>
-            </li>
-          )}
-        </ul>
-      </nav>
-  <div className="header-actions" style={{display:'flex', alignItems:'center', gap:'.45rem'}}>
-        {/* Language & Theme controls */}
-        <div style={{display:'flex',alignItems:'center',gap:6}}>
-          <select
-            aria-label={locale==='ar' ? 'اللغة' : 'Language'}
-            value={locale}
-            onChange={(e)=> setLocale(e.target.value)}
-            style={{fontSize:12, border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', padding:'4px 8px', borderRadius:6}}
-          >
-            {(available||['ar','en','fr']).map(l => (
-              <option key={l} value={l}>{l.toUpperCase()}</option>
-            ))}
-          </select>
-          <select
-            aria-label={locale==='ar' ? 'الوضع' : 'Theme'}
-            value={theme}
-            onChange={(e)=> setTheme(e.target.value)}
-            style={{fontSize:12, border:'1px solid #d1d5db', background:'#fff', cursor:'pointer', padding:'4px 8px', borderRadius:6}}
-          >
-            <option value="system">{locale==='ar'?'حسب النظام':'System'}</option>
-            <option value="light">{locale==='ar'?'فاتح':'Light'}</option>
-            <option value="dark">{locale==='ar'?'داكن':'Dark'}</option>
-          </select>
-        </div>
-        {user && (
-          <span className="role-badge" style={{
-            background: user.role==='admin'? 'linear-gradient(90deg,#69be3c,#f6ad55)' : '#e2e8f0',
-            color: user.role==='admin'? '#fff':'#1f2933',
-            padding: '.4rem .6rem',
-            fontSize: '.6rem',
-            borderRadius: '8px',
-            fontWeight: 600,
-            letterSpacing: '.5px'
-          }}>
-            {locale==='ar' ? (user.role==='admin' ? 'مشرف' : user.role==='seller' ? 'بائع' : 'مستخدم') : (user.role==='admin' ? 'Admin' : user.role==='seller' ? 'Seller' : 'User')}
-          </span>
-        )}
-        
-        <button
-          ref={cartIconRef}
-          className="btn-chip panel-trigger cart-icon"
-          aria-expanded={openPanel === 'cart'}
-          onClick={() => setOpenPanel(p => p === 'cart' ? null : 'cart')}
-          aria-label={locale==='ar' ? `السلة${cartCount? ` - ${cartCount} عنصر`: ''}` : `Cart${cartCount? ` - ${cartCount} items`: ''}`}
-          title={locale==='ar' ? 'السلة' : 'Cart'}
-        >
-          {t('cart')}
-          {cartCount > 0 && <span className="badge" style={{marginInlineStart:6}}>{cartCount}</span>}
-          {cartTotal > 0 && <span className="cart-total" style={{marginInlineStart:6, fontSize:'.65rem', opacity:.9}}>{cartTotal.toFixed(2)} ر.س</span>}
-        </button>
-        {/* Login vs User name */}
-        {!user ? (
-          <Link to={`${prefix}/login`} className="btn-outline" style={{ fontSize: '.7rem' }}>{t('login')}</Link>
-        ) : (
-          <Link to={`${prefix}/account/profile`} className="btn-outline" style={{ fontSize: '.7rem' }} title={locale==='ar'?'حسابي':'My account'}>
-            {displayName}
-          </Link>
-        )}
       </div>
 
-      {/* Panels container */}
-      {/* Mobile menu panel removed in favor of unified SidebarNav. The header button now toggles SidebarNav on mobile via events. */}
-      {openPanel === 'cart' && (
-        <div className="header-panels">
-          <div className={`floating-panel side right open`} role="dialog" aria-modal="true">
-            <div className="panel-header">
-              <h3>{locale==='ar'?'سلة المشتريات':'Cart'}</h3>
-              <button className="panel-close" onClick={() => setOpenPanel(null)}>✕</button>
+      <TopNav t={t} isActive={isActive} />
+
+      <HeaderControls
+        t={t}
+        locale={locale}
+        setLocale={setLocale}
+        panel={panel}
+        setPanel={setPanel}
+        cartItems={cartItems}
+        cartTotal={cartTotal}
+        updateQuantity={updateQuantity}
+        user={user}
+      />
+
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {panel === 'cart' && (
+            <CartPanel onClose={closeCart} items={cartItems} total={cartTotal} locale={locale} t={t} updateQuantity={updateQuantity} />
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </header>
+  );
+});
+
+/* --------------------------- SidebarNav --------------------------- */
+export const SidebarNav = React.memo(function SidebarNav({ className = '' }) {
+  const sidebar = useSidebar ? useSidebar() : { open: false, toggle: () => {} };
+  const { open: sidebarOpen, toggle: toggleSidebar } = sidebar || { open: false, toggle: () => {} };
+  const location = (() => { try { return useLocation(); } catch (e) { return { pathname: '/' }; } })();
+  const { pathname } = location;
+  const { locale } = resolveMaybeHook('__useLanguage__', defaultLanguage);
+  const { user } = resolveMaybeHook('__useAuth__', defaultAuth);
+  const { setting } = resolveMaybeHook('__useSettings__', defaultSettings);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => { try { const saved = localStorage.getItem('sb_collapsed'); if (saved != null) setCollapsed(saved === '1'); } catch (e) {} }, []);
+  useEffect(() => { try { localStorage.setItem('sb_collapsed', collapsed ? '1' : '0'); } catch {} }, [collapsed]);
+
+  const isAdmin = user?.role === 'admin';
+
+  const coreNav = useMemo(() => ([
+    { to: '/', label: { en: 'Home', ar: 'الرئيسية' }, icon: Home },
+    { to: '/catalog', label: { en: 'Catalog', ar: 'الكتالوج' }, icon: BookOpen },
+    { to: '/products', label: { en: 'Products', ar: 'المنتجات' }, icon: Package },
+    { to: '/offers', label: { en: 'Offers', ar: 'العروض' }, icon: BadgePercent },
+    { to: '/stores', label: { en: 'Stores', ar: 'المتاجر' }, icon: Store },
+  ]), []);
+
+  const dynamicNav = useMemo(() => {
+    const nav = [...coreNav];
+    if (user) nav.push({ to: '/my-orders', label: { en: 'My Orders', ar: 'طلباتي' }, icon: ShoppingCart });
+    if (user?.role === 'seller' || user?.role === 'admin') nav.push({ to: '/seller/kyc', label: { en: 'Seller KYC', ar: 'توثيق البائع' }, icon: Package });
+    return nav;
+  }, [coreNav, user]);
+
+  const mobile = typeof window !== 'undefined' && window.innerWidth <= 980;
+
+  return (
+    <>
+      <aside className={`fixed inset-y-0 left-0 z-40 transition-transform ${mobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'} ${collapsed ? 'w-20' : 'w-64'} bg-white dark:bg-slate-900 border-r dark:border-slate-800 ${className}`} aria-label="Main sidebar">
+        <div className="h-full flex flex-col p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{(setting && setting.siteNameEn) || 'My Store'}</div>
+              <div className="text-xs text-slate-500 hidden md:block">{(setting && setting.tagline) || ''}</div>
             </div>
-            <div className="panel-body scroll-y">
-              {cartItems.length ? (
-                <ul className="mini-list mini-cart-items" style={{display:'flex',flexDirection:'column',gap:10}}>
-                  {cartItems.map(c => {
-                    const q = c.quantity || 1;
-                    const price = (c.price || c.salePrice || 0);
-                    const oldP = c.oldPrice ?? c.originalPrice;
-                    const op = oldP != null ? +oldP : NaN;
-                    const hasDisc = Number.isFinite(op) && op > price;
-                    const discPct = hasDisc ? Math.round((1 - (price/op)) * 100) : 0;
-                    return (
-                      <li key={c.id} style={{display:'flex',alignItems:'center',gap:10}}>
-                        <div style={{width:52,height:52,flexShrink:0, background:'#f1f5f9',borderRadius:12,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          <img src={c.images?.[0] || c.image || '/images/placeholder.jpg'} alt={localizeName({ name: c.name || c.title }, locale) || ''} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                        </div>
-                        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:4}}>
-                          <span style={{fontSize:'.7rem',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{ localizeName({ name: c.name || c.title }, locale) }</span>
-                          <span style={{fontSize:'.6rem',color:'#475569'}}>
-                            {price.toFixed(2)} ر.س × {q} = <strong style={{color:'#0f172a'}}>{(price*q).toFixed(2)} ر.س</strong>
-                            {hasDisc && (
-                              <>
-                                {' '}
-                                <span style={{textDecoration:'line-through', opacity:.7}}>{op.toFixed(2)}</span>
-                                <span className="badge" style={{marginInlineStart:6, fontSize:'.55rem'}}> -{discPct}%</span>
-                              </>
-                            )}
-                          </span>
-                        </div>
-                        <div style={{display:'flex',alignItems:'center',gap:4}}>
-                          <button aria-label={locale==='ar'?'إنقاص الكمية':'Decrease'} onClick={()=> updateQuantity && updateQuantity(c.id, Math.max(1, q-1))} style={qtyBtn}>-</button>
-                          <span style={{fontSize:'.6rem',minWidth:18,textAlign:'center'}}>{q}</span>
-                          <button aria-label={locale==='ar'?'زيادة الكمية':'Increase'} onClick={()=> updateQuantity && updateQuantity(c.id, (q+1))} style={qtyBtn}>+</button>
-                          <button aria-label={locale==='ar'?'حذف':'Remove'} onClick={()=> removeFromCart && removeFromCart(c.id)} className="btn-link" style={{color:'#dc2626'}}>
-                            {locale==='ar'?'حذف':'Remove'}
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : <p className="empty">{locale==='ar'?'السلة فارغة':'Cart is empty'}</p>}
+            <div className="flex items-center gap-2">
+              <button onClick={() => mobile ? toggleSidebar() : setCollapsed(c => !c)} className="p-2 rounded-md border bg-slate-50 dark:bg-slate-800">
+                {mobile ? (sidebarOpen ? <X size={16} /> : <Menu size={16} />) : (collapsed ? <X size={16} /> : <Menu size={16} />)}
+              </button>
             </div>
-            <div className="panel-summary">
-              <div className="summary-row">
-                <span>{locale==='ar'?'الإجمالي':'Total'}</span>
-                <strong>{cartTotal.toFixed(2)} ر.س</strong>
-              </div>
-              {cartTotal < 200 && (
-                <div className="free-ship-hint" style={{fontSize:'.65rem', color:'#334155', marginTop:4}}>
-                  {locale==='ar' ? `أضِف ${(200 - cartTotal).toFixed(2)} ر.س للحصول على شحن مجاني` : `Add ${(200 - cartTotal).toFixed(2)} SAR to get free shipping`}
-                </div>
+          </div>
+
+          <nav className="flex-1 overflow-auto">
+            <ul className="flex flex-col gap-2">
+              {dynamicNav.map(item => {
+                const Icon = item.icon;
+                const active = pathname === item.to || pathname.startsWith(item.to + '/');
+                return (
+                  <li key={item.to}>
+                    <Link to={item.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${active ? 'bg-amber-50 dark:bg-amber-900/20 ring-1 ring-amber-400' : ''}`}>
+                      <div className="p-2 rounded-md bg-slate-50 dark:bg-slate-800"><Icon size={18} /></div>
+                      <div className={`flex-1 text-sm truncate ${collapsed ? 'hidden' : ''}`}>{item.label[locale] || item.label.en}</div>
+                      {!collapsed && item.badge && <div className="text-xs px-2 py-0.5 bg-amber-500 text-white rounded">{item.badge}</div>}
+                    </Link>
+                  </li>
+                );
+              })}
+
+              {isAdmin && (
+                <>
+                  <li className="mt-4 text-xs text-amber-500 font-semibold">Admin</li>
+                  <li>
+                    <Link to="/admin" aria-current={pathname.startsWith('/admin') ? 'page' : undefined} className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${pathname.startsWith('/admin') ? 'bg-amber-50 dark:bg-amber-900/20 ring-1 ring-amber-400' : ''}`}>
+                      <div className="p-2 rounded-md bg-slate-50 dark:bg-slate-800"><Home size={18} /></div>
+                      <div className={`${collapsed ? 'hidden' : ''}`}>Dashboard</div>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/admin/orders" aria-current={pathname.startsWith('/admin/orders') ? 'page' : undefined} className={`flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${pathname.startsWith('/admin/orders') ? 'bg-amber-50 dark:bg-amber-900/20 ring-1 ring-amber-400' : ''}`}>
+                      <div className="p-2 rounded-md bg-slate-50 dark:bg-slate-800"><ShoppingCart size={18} /></div>
+                      <div className={`${collapsed ? 'hidden' : ''}`}>Orders</div>
+                    </Link>
+                  </li>
+                </>
               )}
-            </div>
-            <div className="panel-footer gap">
-              <Link to={`${prefix}/cart`} onClick={() => setOpenPanel(null)} className="btn-outline w-full">{locale==='ar'?'تفاصيل السلة':'View cart'}</Link>
-              <Link to={`${prefix}/checkout`} onClick={() => setOpenPanel(null)} className="btn-primary w-full">{locale==='ar'?'إتمام الشراء':'Checkout'}</Link>
+            </ul>
+          </nav>
+
+          <div className="mt-4 text-xs text-slate-500">
+            <div className="flex items-center justify-between">
+              <div className={`${collapsed ? 'hidden' : ''}`}>v1.0</div>
+              <div className="text-right">
+                {user && <div className="text-xs">{collapsed ? user.role : `Role: ${user.role}`}</div>}
+              </div>
             </div>
           </div>
         </div>
-      )}
-  {openPanel && <div className="panel-overlay open" role="presentation" aria-hidden="true" onClick={() => setOpenPanel(null)} />}
-    </header>
+      </aside>
+
+      <AnimatePresence>
+        {mobile && sidebarOpen && (
+          <motion.div onClick={toggleSidebar} initial={{ opacity: 0 }} animate={{ opacity: 0.35 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black z-30" />
+        )}
+      </AnimatePresence>
+    </>
   );
-};
+});
+
+/* --------------------------- Convenience bundle (default export) --------------------------- */
+export function HeaderSidebarBundle({ className = '' }) {
+  return (
+    <SidebarProvider>
+      <HeaderNav className={className} />
+      <SidebarNav />
+    </SidebarProvider>
+  );
+}
 
 export default HeaderNav;
-
-const qsBtn = { background:'#f1f5f9', border:'1px solid #d1d9e2', borderRadius:6, cursor:'pointer', fontSize:'.55rem', padding:'.35rem .5rem', fontWeight:600 };
-const qsBtnAdmin = { ...qsBtn, background:'linear-gradient(90deg,#69be3c,#f6ad55)', color:'#fff', border:'0' };

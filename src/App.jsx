@@ -48,6 +48,7 @@ const Collections = lazy(() => import('./pages/Collections'));
 const Brands = lazy(() => import('./pages/Brands'));
 const CheckoutSuccess = lazy(() => import('./pages/CheckoutSuccess'));
 const Checkout = lazy(() => import('./pages/Checkout'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const SellerDashboard = lazy(() => import('./pages/admin/Sellers'));
 const PaymentMethod = lazy(() => import('./pages/PaymentMethod'));
@@ -288,7 +289,7 @@ function App() {
                                           <Route path="/cart" element={<Cart />} />
                                           <Route path="/checkout" element={
                                             <ProtectedRoute requireCart>
-                                              <Checkout />
+                                              <CheckoutPage />
                                             </ProtectedRoute>
                                           } />
                                           <Route path="/about" element={<About />} />

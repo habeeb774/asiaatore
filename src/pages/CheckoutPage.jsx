@@ -29,6 +29,7 @@ const CheckoutPage = () => {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [addrId, setAddrId] = useState('');
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const COUPON_KEY = 'my_store_last_coupon';
   const [coupon, setCoupon] = useState(()=>{ try { return localStorage.getItem(COUPON_KEY)||''; } catch { return ''; } });
   const [couponApplied, setCouponApplied] = useState(null);
@@ -94,15 +95,47 @@ const CheckoutPage = () => {
   const tax = +(taxableBase * 0.15).toFixed(2);
   const grandTotal = +(taxableBase + tax + (shippingCost || 0)).toFixed(2);
 
+  const validateField = (name, value) => {
+    const v = (value ?? '').toString();
+    switch (name) {
+      case 'name':
+        return v.trim() ? '' : 'الاسم مطلوب';
+      case 'email':
+        return v.includes('@') && /.+@.+\..+/.test(v) ? '' : 'بريد غير صالح';
+      case 'city':
+        return v.trim() ? '' : 'المدينة مطلوبة';
+      case 'line1':
+        return v.trim() ? '' : 'العنوان مطلوب';
+      case 'phone':
+        return v.trim() ? '' : 'الهاتف مطلوب';
+      default:
+        return '';
+    }
+  };
+
   const validate = () => {
-    const e = {};
-    if (!addr.name.trim()) e.name = 'الاسم مطلوب';
-    if (!addr.email.includes('@')) e.email = 'بريد غير صالح';
-    if (!addr.city.trim()) e.city = 'المدينة مطلوبة';
-    if (!addr.line1.trim()) e.line1 = 'العنوان مطلوب';
-    if (!addr.phone.trim()) e.phone = 'الهاتف مطلوب';
+    const e = {
+      name: validateField('name', addr.name),
+      email: validateField('email', addr.email),
+      city: validateField('city', addr.city),
+      line1: validateField('line1', addr.line1),
+      phone: validateField('phone', addr.phone),
+    };
+    Object.keys(e).forEach(k => { if (!e[k]) delete e[k]; });
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const onFieldChange = (name) => (e) => {
+    const val = e?.target?.value ?? '';
+    setAddr(a => ({ ...a, [name]: val }));
+    setTouched(t => ({ ...t, [name]: true }));
+    const msg = validateField(name, val);
+    setErrors(prev => {
+      const next = { ...prev };
+      if (msg) next[name] = msg; else delete next[name];
+      return next;
+    });
   };
 
   const proceedAddress = () => { if (validate()) setOpen(o=>({...o,address:false,payment:true})); };
@@ -123,11 +156,11 @@ const CheckoutPage = () => {
     items: (cartItems||[]).map(i => {
       const backendLikely = typeof i.id === 'string' && !i.id.startsWith('p_') && i.id.length > 10; // cuid length heuristic
       return {
-        productId: backendLikely ? i.id : 'custom',
+        productId: backendLikely && typeof i.id === 'string' ? i.id : 'custom',
         name: { ar: i.name?.ar || i.name || 'صنف', en: i.name?.en || i.name || 'Item' },
-        price: i.price,
-        quantity: i.quantity,
-        oldPrice: i.oldPrice || null
+        price: typeof i.price === 'number' ? i.price : Number(i.price || 0),
+        quantity: Number.isFinite(Number(i.quantity)) ? Number(i.quantity) : 1,
+        oldPrice: typeof i.oldPrice === 'number' ? i.oldPrice : (i.oldPrice ? Number(i.oldPrice) : null)
       };
     }),
     currency: 'SAR',
@@ -156,7 +189,9 @@ const CheckoutPage = () => {
       setOrderId(res.order.id);
       return res.order.id;
     } catch (e) {
-      setOrderError(e.message);
+      // Enhanced debug: log full error and any structured data returned by the API
+      try { console.error('[ORDER_CREATE_ERROR]', e); if (e?.data) console.error('[ORDER_CREATE_ERROR].data', e.data); } catch (logErr) {}
+      setOrderError(e.message || String(e));
       throw e;
     } finally { setCreating(false); }
   };
@@ -245,11 +280,24 @@ const CheckoutPage = () => {
     return null;
   };
 
+  // Progress: 3 steps => Cart(0) -> Address(1) -> Payment(2)
+  const stageIndex = open.review || open.payment || open.realpay || open.complete ? 2 : (open.address ? 1 : 0);
+  const progressPercent = Math.round(((stageIndex + 1) / 3) * 100);
+
   return (
     <div className="container-custom px-4 py-12 checkout-page-enhanced">
       {isCartEmpty && (
         <div className="mb-6"><h2 className="text-xl font-bold">السلة فارغة</h2></div>
       )}
+      {/* شريط تقدم علوي بسيط */}
+      <div className="checkout-progress mobile-gutters" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+        <div className="checkout-progress__bar"><span style={{ width: `${progressPercent}%` }} /></div>
+        <div className="checkout-progress__labels">
+          <span className={stageIndex >= 0 ? 'is-active' : ''}>السلة</span>
+          <span className={stageIndex >= 1 ? 'is-active' : ''}>العنوان</span>
+          <span className={stageIndex >= 2 ? 'is-active' : ''}>الدفع</span>
+        </div>
+      </div>
       <h1 className="text-2xl font-bold mb-6">الدفع (Checkout)</h1>
       {/* Stepper بسيط */}
       <ol className="flex items-center gap-3 text-xs text-gray-600 mb-4">
@@ -283,19 +331,19 @@ const CheckoutPage = () => {
               </div>
             </div>
           )}
-          <input id="shipping-name" name="name" autoComplete="name" className="border px-3 py-2" placeholder="الاسم" value={addr.name} onChange={e=>setAddr(a=>({...a,name:e.target.value}))} />
-          {errors.name && <div className="text-xs text-red-600">{errors.name}</div>}
-          <input id="shipping-email" name="email" type="email" autoComplete="email" className="border px-3 py-2" placeholder="البريد" value={addr.email} onChange={e=>setAddr(a=>({...a,email:e.target.value}))} />
-          {errors.email && <div className="text-xs text-red-600">{errors.email}</div>}
+          <input id="shipping-name" name="name" autoComplete="name" className={`border px-3 py-2 ${touched.name && errors.name ? 'is-invalid' : ''}`} placeholder="الاسم" value={addr.name} onChange={onFieldChange('name')} onBlur={()=>setTouched(t=>({...t,name:true}))} aria-invalid={!!(touched.name && errors.name)} aria-describedby={touched.name && errors.name ? 'err-name' : undefined} />
+          {touched.name && errors.name && <div id="err-name" className="field-hint">{errors.name}</div>}
+          <input id="shipping-email" name="email" type="email" autoComplete="email" className={`border px-3 py-2 ${touched.email && errors.email ? 'is-invalid' : ''}`} placeholder="البريد" value={addr.email} onChange={onFieldChange('email')} onBlur={()=>setTouched(t=>({...t,email:true}))} aria-invalid={!!(touched.email && errors.email)} aria-describedby={touched.email && errors.email ? 'err-email' : undefined} />
+          {touched.email && errors.email && <div id="err-email" className="field-hint">{errors.email}</div>}
           <div className="grid grid-cols-2 gap-4">
             <input id="shipping-country" name="country" autoComplete="country-name" className="border px-3 py-2" placeholder="الدولة" value={addr.country} onChange={e=>setAddr(a=>({...a,country:e.target.value}))} />
-            <input id="shipping-city" name="city" autoComplete="address-level2" className="border px-3 py-2" placeholder="المدينة" value={addr.city} onChange={e=>setAddr(a=>({...a,city:e.target.value}))} />
+            <input id="shipping-city" name="city" autoComplete="address-level2" className={`border px-3 py-2 ${touched.city && errors.city ? 'is-invalid' : ''}`} placeholder="المدينة" value={addr.city} onChange={onFieldChange('city')} onBlur={()=>setTouched(t=>({...t,city:true}))} aria-invalid={!!(touched.city && errors.city)} aria-describedby={touched.city && errors.city ? 'err-city' : undefined} />
           </div>
-          {errors.city && <div className="text-xs text-red-600">{errors.city}</div>}
-          <input id="shipping-address" name="address1" autoComplete="address-line1" className="border px-3 py-2" placeholder="العنوان" value={addr.line1} onChange={e=>setAddr(a=>({...a,line1:e.target.value}))} />
-          {errors.line1 && <div className="text-xs text-red-600">{errors.line1}</div>}
-          <input id="shipping-phone" name="tel" type="tel" autoComplete="tel" className="border px-3 py-2" placeholder="الهاتف" value={addr.phone} onChange={e=>setAddr(a=>({...a,phone:e.target.value}))} />
-          {errors.phone && <div className="text-xs text-red-600">{errors.phone}</div>}
+          {touched.city && errors.city && <div id="err-city" className="field-hint">{errors.city}</div>}
+          <input id="shipping-address" name="address1" autoComplete="address-line1" className={`border px-3 py-2 ${touched.line1 && errors.line1 ? 'is-invalid' : ''}`} placeholder="العنوان" value={addr.line1} onChange={onFieldChange('line1')} onBlur={()=>setTouched(t=>({...t,line1:true}))} aria-invalid={!!(touched.line1 && errors.line1)} aria-describedby={touched.line1 && errors.line1 ? 'err-line1' : undefined} />
+          {touched.line1 && errors.line1 && <div id="err-line1" className="field-hint">{errors.line1}</div>}
+          <input id="shipping-phone" name="tel" type="tel" autoComplete="tel" className={`border px-3 py-2 ${touched.phone && errors.phone ? 'is-invalid' : ''}`} placeholder="الهاتف" value={addr.phone} onChange={onFieldChange('phone')} onBlur={()=>setTouched(t=>({...t,phone:true}))} aria-invalid={!!(touched.phone && errors.phone)} aria-describedby={touched.phone && errors.phone ? 'err-phone' : undefined} />
+          {touched.phone && errors.phone && <div id="err-phone" className="field-hint">{errors.phone}</div>}
           <div className="flex items-center gap-3">
             <button type="button" className="btn-secondary" onClick={useMyLocation} disabled={geolocating}>
               {geolocating ? '...جارِ التحديد' : 'تحديد العنوان عبر GPS'}
@@ -363,7 +411,7 @@ const CheckoutPage = () => {
                 {!couponApplied && coupon && <div className="text-xs text-gray-500 mt-1">لا يوجد خصم فعلي (رمز غير معروف)</div>}
               </div>
             </div>
-            <div className="space-y-3 text-sm">
+            <div className="checkout-summary bg-white border rounded p-4 text-sm space-y-3">
               <div className="flex justify-between"><span>الإجمالي الفرعي</span><span>{subtotal.toFixed(2)} ر.س</span></div>
               <div className="flex justify-between"><span>الخصم</span><span>{discountFromCoupon.toFixed(2)}-</span></div>
               <div className="flex justify-between"><span>الشحن</span><span>{shippingCost.toFixed(2)} ر.س</span></div>
@@ -373,7 +421,7 @@ const CheckoutPage = () => {
               <div className="flex justify-between"><span>الضريبة</span><span>{tax.toFixed(2)} ر.س</span></div>
               <div className="border-t pt-2 flex justify-between font-bold"><span>الإجمالي</span><span>{grandTotal.toFixed(2)} ر.س</span></div>
               <button disabled={creating} className="btn-primary w-full" type="button" onClick={goReview}>{creating?'...جاري الإنشاء':'مراجعة الطلب'}</button>
-              {orderError && <div className="text-xs text-red-600">خطأ: {orderError}</div>}
+              {orderError && <div className="field-hint">خطأ: {orderError}</div>}
             </div>
           </div>
         )}
@@ -411,7 +459,7 @@ const CheckoutPage = () => {
             </div>
           </div>
           <div className="space-y-4">
-            <div className="bg-white border rounded p-4 text-sm space-y-2">
+            <div className="checkout-summary bg-white border rounded p-4 text-sm space-y-2">
               <div className="flex justify-between"><span>الإجمالي الفرعي</span><strong>{subtotal.toFixed(2)} ر.س</strong></div>
               <div className="flex justify-between"><span>الخصم</span><strong>{discountFromCoupon.toFixed(2)}-</strong></div>
               <div className="flex justify-between"><span>الشحن</span><strong>{shippingCost.toFixed(2)} ر.س</strong></div>
@@ -509,7 +557,69 @@ const CheckoutPage = () => {
       <div className="checkout-sticky-cta md:hidden">
         <div className="inner">
           <div className="sum">المجموع: <strong>{(subtotal + (shippingCost||0) - (couponApplied?.amount||0) + (+(Math.max(0, subtotal - (couponApplied?.amount||0)) * 0.15).toFixed(2))).toFixed(2)} ر.س</strong></div>
-          <button className="btn-primary">متابعة</button>
+          <div className="flex gap-2 w-full">
+          <button className="btn-secondary" onClick={()=>{
+            // Step backward
+            if (open.realpay) {
+              setOpen(o=>({...o, realpay:false, review:true}));
+              try { document.querySelector('.checkout-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+              return;
+            }
+            if (open.review) {
+              setOpen(o=>({...o, review:false, payment:true}));
+              try { document.querySelector('button[onClick*="toggle(\'payment\')"]').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+              return;
+            }
+            if (open.payment) {
+              setOpen(o=>({...o, payment:false, address:true}));
+              try { document.querySelector('button[onClick*="toggle(\'address\')"]').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+              return;
+            }
+          }}>رجوع</button>
+          <button className="btn-primary flex-1" onClick={async ()=>{
+            // Advance flow step-by-step on mobile
+            if (open.address) {
+              if (validate()) {
+                setOpen(o=>({...o,address:false,payment:true}));
+                // Smooth scroll to payment block
+                try { document.querySelector('button[onClick*="toggle(\'payment\')"]').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+              } else {
+                // Focus first invalid field and flash
+                const order = ['name','email','city','line1','phone'];
+                const first = order.find(k => !!errors[k]);
+                if (first) {
+                  const el = document.getElementById(`shipping-${first === 'line1' ? 'address' : first}`);
+                  if (el && typeof el.focus === 'function') {
+                    el.focus();
+                    try { el.classList.add('field-flash'); setTimeout(()=> el.classList.remove('field-flash'), 1000); } catch {}
+                  }
+                }
+              }
+              return;
+            }
+            if (open.payment) {
+              try {
+                await ensureOrder();
+                setOpen(o=>({...o,payment:false,review:true}));
+                // Scroll to review panel
+                try { document.querySelector('.checkout-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+              } catch {}
+              return;
+            }
+            if (open.review) {
+              setOpen(o=>({...o,realpay:true}));
+              // Scroll to real payment section
+              try { document.querySelector('div.mt-10.border.rounded.overflow-hidden')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+              return;
+            }
+            if (open.realpay) {
+              // If COD selected, just finalize, else start real payment flow
+              if (paymentMethod==='cod') { finalize(); }
+              else { /* prompt user to press primary within real payment panel */ }
+              return;
+            }
+          }}>متابعة</button>
+          </div>
         </div>
       </div>
     </div>

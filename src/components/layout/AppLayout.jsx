@@ -9,6 +9,8 @@ import { ToastProvider } from '../ui/ToastProvider';
 import { useTheme } from '../../context/ThemeContext';
 import SiteFooter from './SiteFooter';
 import FloatingCart from '../ui/FloatingCart';
+import { SidebarProvider } from '../../context/SidebarContext';
+import BottomNav from './BottomNav';
 
 const AppLayout = ({ children }) => {
   const { locale, setLocale, available } = useLanguage();
@@ -17,19 +19,24 @@ const AppLayout = ({ children }) => {
   const isHome = pathname === '/' || pathname === '/en';
   return (
     <ToastProvider>
-      <div className="app-layout professional-layout theme-minimal">
-        <SidebarNav />
-        <div className="content-with-sidebar">
-          <AnnouncementBar />
-          <HeaderNav />
-          {/* Avoid duplicating categories bar on Home. Home renders CategoryChips section itself. */}
-          {!isHome && <CategoryScroller />}
-          {/* Language & Theme selectors moved into HeaderNav */}
-          {children}
-          <SiteFooter />
+      <SidebarProvider>
+        <div className="app-layout professional-layout theme-minimal">
+          <SidebarNav />
+          <div className="content-with-sidebar">
+            <AnnouncementBar />
+            <HeaderNav />
+            {/* Avoid duplicating categories bar on Home. Home renders CategoryChips section itself. */}
+            {!isHome && <CategoryScroller />}
+            {/* Language & Theme selectors moved into HeaderNav */}
+            {children}
+            {/* Mobile spacer so content isn't hidden behind BottomNav */}
+            <div className="h-16 md:h-0" />
+            <SiteFooter />
+          </div>
+          <FloatingCart />
+          <BottomNav />
         </div>
-        <FloatingCart />
-      </div>
+      </SidebarProvider>
     </ToastProvider>
   );
 };

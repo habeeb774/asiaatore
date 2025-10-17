@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
 import { Phone, Smartphone, Mail, MessageCircle } from 'lucide-react';
@@ -32,10 +33,13 @@ const SiteFooter = () => {
     phone: isAr ? 'هاتف' : 'Phone',
     mobile: isAr ? 'جوال' : 'Mobile',
     whatsapp: isAr ? 'واتساب' : 'WhatsApp',
+    chat: isAr ? 'الدردشة' : 'Chat',
     email: isAr ? 'إيميل' : 'Email',
     playBadgeAlt: isAr ? 'احصل عليه من Google Play' : 'Get it on Google Play',
     appStoreBadgeAlt: isAr ? 'حمّل من App Store' : 'Download on the App Store'
   };
+
+  const chatPath = isAr ? '/chat' : (locale === 'en' ? '/en/chat' : '/fr/chat');
 
   const aboutFromSettings = isAr ? (setting?.footerAboutAr || '') : (setting?.footerAboutEn || '');
   const aboutLines = (aboutFromSettings?.trim())
@@ -85,10 +89,10 @@ const SiteFooter = () => {
           <div className="text-slate-700 text-center border-s border-slate-200 ps-6 md:ps-8 flex-shrink-0 min-w-[220px] sm:min-w-[260px] snap-start">
             <h3 className="mb-3 text-base font-extrabold text-amber-600">{t.support}</h3>
             <div className="grid grid-cols-2 gap-2 sm:gap-3 justify-items-center md:flex md:flex-wrap md:justify-center">
-              <a href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noreferrer" aria-label={t.whatsapp} className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
+              <Link to={chatPath} aria-label={t.chat} className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
                 <span className="flex items-center justify-center rounded-md bg-slate-100 hover:bg-slate-200 w-8 h-8 sm:w-9 sm:h-9 transition-colors"><MessageCircle size={16} /></span>
-                <span className="hidden sm:inline">{t.whatsapp}</span>
-              </a>
+                <span className="hidden sm:inline">{t.chat}</span>
+              </Link>
               <a href={`tel:${supportMobile}`} aria-label={t.mobile} className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
                 <span className="flex items-center justify-center rounded-md bg-slate-100 hover:bg-slate-200 w-8 h-8 sm:w-9 sm:h-9 transition-colors"><Smartphone size={16} /></span>
                 <span className="hidden sm:inline">{t.mobile}</span>

@@ -8,8 +8,8 @@
 :root {
   /* Typography & rendering */
   /* Ensure Cairo is the primary font across the app with sane fallbacks */
-  --font-sans: 'Cairo', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans Arabic', 'Tajawal', sans-serif;
-  font-family: 'Cairo', sans-serif;
+  --font-sans: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans Arabic', sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -74,6 +74,11 @@ html, body, #root {
   font-family: var(--font-sans);
 }
 
+/* Strong, high-specificity override to force Cairo across all text (including third-party components) */
+html body, html body *:not(code):not(kbd):not(pre):not(samp) {
+  font-family: var(--font-sans) !important;
+}
+
 /* Ensure Leaflet maps are visible and fill their container */
 .leaflet-container { width: 100%; height: 100%; }
 /* Tailwind preflight sets img{max-width:100%} which breaks Leaflet tile sizing */
@@ -97,6 +102,10 @@ html { scroll-padding-top: calc(var(--header-height) + var(--safe-top)); }
 h1,h2,h3,h4,h5,h6,p,span,label,button,input,textarea,select,small,li,dt,dd,th,td {
   font-family: var(--font-sans);
 }
+
+/* Global direction helpers (useful in components where dir may be overridden) */
+.dir-rtl { direction: rtl; }
+.dir-ltr { direction: ltr; }
 
 /* Page-specific layout rules moved to src/css/pages.scss */
 
@@ -164,3 +173,25 @@ button:focus-visible {
 .toast-error { border-color: #dc2626; }
 .toast-warn { border-color: #d97706; }
 .toast-info { border-color: #2eafff; }
+
+/* RTL helpers: prefer logical properties instead of left/right to support both dir values */
+.inset-inline-start-0 { inset-inline-start: 0; }
+.inset-inline-end-0 { inset-inline-end: 0; }
+.text-dir-ltr { direction: ltr; unicode-bidi: embed; }
+.num { direction: ltr; unicode-bidi: embed; }
+
+/* Fix for forms where placeholder alignment needs to mirror dir */
+input, textarea, select { text-align: inherit; }
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Chat page styles */
+.chat-page h2 { margin-top: 0; font-size: 1.4rem; }
+.chat-page .btn-primary { background: linear-gradient(90deg,#69be3c,#f6ad55); color: #fff; border: 0; padding: .6rem 1rem; border-radius: 10px; }
+.chat-page .chat-list { display:flex; flex-direction:column; gap:.5rem; }
+.chat-page aside { direction: rtl; }
+.chat-page main { direction: rtl; }
+
+/* Chat UI helpers */
+.chat-badge { background: #dc2626; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: .65rem; font-weight:700; display:inline-block; min-width:20px; text-align:center }
+.chat-avatar { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#e6eef8; font-weight:700 }
+.typing-indicator { font-size:.85rem; color:#64748b }

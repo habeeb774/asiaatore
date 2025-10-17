@@ -24,11 +24,11 @@ const resolvers = {
       const skip = Math.max(0, (Math.max(1,page)-1) * take)
       const [total, items] = await Promise.all([
         prisma.product.count({ where }),
-        prisma.product.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, include: { productImages: true, brand: true, tierPrices: true } })
-      ])
+        prisma.product.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, include: { images: true, brand: true, tierPrices: true } })
+      ] )
       return { items: items.map(mapProduct), page: page||1, pageSize: take, total, totalPages: Math.ceil(total / take) }
     },
-    product: async (_r, { id }) => prisma.product.findUnique({ where: { id }, include: { productImages: true, brand: true, tierPrices: true } }),
+    product: async (_r, { id }) => prisma.product.findUnique({ where: { id }, include: { images: true, brand: true, tierPrices: true } }),
     orders: async (_r, { page=1, pageSize=50, status }, ctx) => {
       const isAdmin = ctx.user?.role === 'admin'
       const where = {}

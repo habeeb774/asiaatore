@@ -3,8 +3,8 @@
 import { Platform } from 'react-native';
 
 const env = (globalThis as any)?.process?.env || {};
-// Default to 4005 (backend currently increments ports when busy: 4003→4004→4005)
-const DEFAULT_BASE = 'http://localhost:4005/api';
+// Default to 8829 (backend currently increments ports when busy: 8827→8828→8829)
+const DEFAULT_BASE = 'http://localhost:8829/api';
 
 function normalizeForEmulator(base: string) {
 	// On Android emulator, localhost inside the app points to the emulator itself, not the host.

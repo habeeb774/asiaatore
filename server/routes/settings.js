@@ -8,6 +8,9 @@ import { attachUser } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Resolve Prisma delegate for settings (handle schema naming drift: StoreSetting vs storesetting)
+const getSettingsDelegate = () => (prisma.storeSetting || prisma.storesetting || null);
+
 // Ensure settings table exists (lightweight bootstrap to avoid migration issues)
 let SETTINGS_TABLE_ENSURED = false;
 async function ensureSettingsTable() {
@@ -101,7 +104,16 @@ const upload = multer({
 router.get('/', async (_req, res) => {
   try {
     await ensureSettingsTable();
-    const setting = await prisma.storeSetting.findUnique({ where: { id: 'singleton' } });
+    const M = getSettingsDelegate();
+    let setting = null;
+    if (M && typeof M.findUnique === 'function') {
+      setting = await M.findUnique({ where: { id: 'singleton' } });
+    } else {
+      try {
+        const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
+        setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+      } catch {}
+    }
     return res.json({ ok: true, setting: setting || null });
   } catch (e) {
     // Degraded fallback: provide sane defaults to keep the UI working in dev
@@ -171,12 +183,32 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
   if (linkPrivacy !== undefined) data.linkPrivacy = linkPrivacy || null;
   if (appStoreUrl !== undefined) data.appStoreUrl = appStoreUrl || null;
   if (playStoreUrl !== undefined) data.playStoreUrl = playStoreUrl || null;
-    const updated = await prisma.storeSetting.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton', ...data },
-      update: data
-    });
-    res.json({ ok: true, setting: updated });
+    const now = new Date();
+    const M = getSettingsDelegate();
+    if (M && typeof M.upsert === 'function') {
+      const updated = await M.upsert({
+        where: { id: 'singleton' },
+        create: { id: 'singleton', ...data, updatedAt: now },
+        update: { ...data, updatedAt: now }
+      });
+      return res.json({ ok: true, setting: updated });
+    }
+    // Fallback: raw SQL
+    const fields = Object.keys(data);
+    if (!fields.length) {
+      const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
+      const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+      return res.json({ ok: true, setting });
+    }
+    const sets = fields.map(k => `${k} = ?`).join(', ');
+    const values = fields.map(k => data[k]);
+    // Ensure row exists
+    await prisma.$executeRawUnsafe('INSERT IGNORE INTO StoreSetting (id) VALUES ("singleton")');
+    // Apply update
+    await prisma.$executeRawUnsafe(`UPDATE StoreSetting SET ${sets}, updatedAt = CURRENT_TIMESTAMP(3) WHERE id = "singleton"`, ...values);
+    const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
+    const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+    return res.json({ ok: true, setting });
   } catch (e) {
     res.status(400).json({ ok: false, error: 'UPDATE_FAILED', message: e.message });
   }
@@ -197,12 +229,21 @@ router.post('/logo', attachUser, requireAdmin, (req, res) => {
       const webpPath = path.join(uploadsDir, webpName);
       await sharp(file.path).resize(300,300,{ fit:'contain', background:{ r:255,g:255,b:255,alpha:0 } }).toFormat('webp').toFile(webpPath).catch(()=>null);
       const rel = '/uploads/settings/' + (fs.existsSync(webpPath) ? webpName : file.filename);
-      const updated = await prisma.storeSetting.upsert({
-        where: { id: 'singleton' },
-        create: { id: 'singleton', logo: rel },
-        update: { logo: rel }
-      });
-      res.json({ ok:true, logo: rel, setting: updated });
+      const M = getSettingsDelegate();
+      if (M && typeof M.upsert === 'function') {
+        const updated = await M.upsert({
+          where: { id: 'singleton' },
+          create: { id: 'singleton', logo: rel, updatedAt: new Date() },
+          update: { logo: rel, updatedAt: new Date() }
+        });
+        return res.json({ ok:true, logo: rel, setting: updated });
+      }
+      // Raw SQL fallback
+      await prisma.$executeRawUnsafe('INSERT IGNORE INTO StoreSetting (id) VALUES ("singleton")');
+      await prisma.$executeRawUnsafe('UPDATE StoreSetting SET logo = ?, updatedAt = CURRENT_TIMESTAMP(3) WHERE id = "singleton"', rel);
+      const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
+      const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+      return res.json({ ok:true, logo: rel, setting });
     } catch (e) {
       res.status(500).json({ ok:false, error:'LOGO_FAILED', message: e.message });
     }

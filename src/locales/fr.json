@@ -9,8 +9,23 @@
     "home": "Accueil",
     "products": "Produits",
     "orders": "Commandes",
-    "admin": "Admin"
+    "admin": "Admin",
+    "catalog": "Catalogue",
+    "offers": "Offres",
+    "stores": "Magasins",
+    "myOrders": "Mes commandes",
+    "sellerKyc": "KYC Vendeur",
+    "dashboard": "Tableau de bord"
   },
+  "catalog": "Catalogue",
+  "offers": "Offres",
+  "stores": "Magasins",
+  "cart": "Panier",
+  "cartTitle": "Panier",
+  "emptyCart": "Panier vide",
+  "proceedCheckout": "Passer au paiement",
+  "changeLanguage": "Changer la langue",
+  "totalLabel": "Total",
   "admin": {
     "customers": {
       "title": "Clients",

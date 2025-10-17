@@ -15,7 +15,7 @@ const STATUS_FLOW = [
 function StatusTracker({ status }) {
   const idx = STATUS_FLOW.indexOf(status);
   return (
-    <div className="flex items-center gap-2 flex-wrap text-xs mt-2">
+    <div className="offers-page catalog-page container-custom px-4 py-8">
       {STATUS_FLOW.map((s, i) => {
         const reached = idx >= i;
         return (

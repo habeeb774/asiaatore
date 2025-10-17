@@ -10,18 +10,23 @@ import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Require seller role for all routes in this file
-router.use(attachUser, requireRole('seller'));
+// Attach user for all endpoints; apply role guards per-section.
+router.use(attachUser);
+
+// Feature detection: not all databases may include Seller model yet
+const HAS_PRISMA_SELLER = !!prisma.seller && typeof prisma.seller.findUnique === 'function';
 
 // Resolve sellerId for current user
 async function getSellerId(userId) {
+  if (!HAS_PRISMA_SELLER) return null;
   const sp = await prisma.seller.findUnique({ where: { userId }, select: { id: true } });
   return sp?.id || null;
 }
 
 // List products for the current seller, with pagination and basic filters
-router.get('/products', async (req, res) => {
+router.get('/products', requireRole('seller'), async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const { q, page = '1', pageSize = '20' } = req.query || {};
@@ -40,8 +45,9 @@ router.get('/products', async (req, res) => {
 });
 
 // Create a new product for the seller
-router.post('/products', async (req, res) => {
+router.post('/products', requireRole('seller'), async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const { slug, nameAr, nameEn, price, category, categoryId, image, stock = 10, shortAr, shortEn } = req.body || {};
@@ -73,8 +79,9 @@ router.post('/products', async (req, res) => {
 });
 
 // Update a product (must belong to current seller)
-router.patch('/products/:id', async (req, res) => {
+router.patch('/products/:id', requireRole('seller'), async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const id = req.params.id;
@@ -107,8 +114,9 @@ router.patch('/products/:id', async (req, res) => {
 });
 
 // Delete a product (soft delete optional later). Currently hard delete limited to seller-owned products.
-router.delete('/products/:id', async (req, res) => {
+router.delete('/products/:id', requireRole('seller'), async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const id = req.params.id;
@@ -123,8 +131,9 @@ router.delete('/products/:id', async (req, res) => {
 });
 
 // Optional: manage product images for seller-owned products
-router.post('/products/:id/images', async (req, res) => {
+router.post('/products/:id/images', requireRole('seller'), async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const id = req.params.id;
@@ -161,7 +170,7 @@ const upload = multer({
   }
 });
 
-router.post('/products/:id/upload-image', (req, res, next) => {
+router.post('/products/:id/upload-image', requireRole('seller'), (req, res, next) => {
   const ct = req.headers['content-type'] || '';
   if (!ct.startsWith('multipart/form-data')) return res.status(400).json({ error: 'INVALID_CONTENT_TYPE' });
   upload.single('image')(req, res, function(err){
@@ -174,6 +183,7 @@ router.post('/products/:id/upload-image', (req, res, next) => {
   });
 }, async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const id = req.params.id;
@@ -202,8 +212,9 @@ router.post('/products/:id/upload-image', (req, res, next) => {
 });
 
 // Seller orders
-router.get('/orders', async (req, res) => {
+router.get('/orders', requireRole('seller'), async (req, res) => {
   try {
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ error: 'SELLER_MODEL_UNAVAILABLE' });
     const sellerId = await getSellerId(req.user.id);
     if (!sellerId) return res.status(400).json({ error: 'SELLER_PROFILE_NOT_FOUND' });
     const orders = await prisma.order.findMany({
@@ -269,6 +280,8 @@ adminSellersRouter.post('/:id/reject', async (req, res) => {
 // KYC: get my seller profile
 router.get('/profile', async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ ok: false, error: 'SELLER_MODEL_UNAVAILABLE' });
     const seller = await prisma.seller.findUnique({ where: { userId: req.user.id } });
     if (!seller) return res.status(404).json({ ok: false, error: 'SELLER_PROFILE_NOT_FOUND' });
     res.json({ ok: true, seller });
@@ -280,20 +293,38 @@ router.get('/profile', async (req, res) => {
 // KYC: submit/update my KYC fields
 router.post('/profile', async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
+    if (!HAS_PRISMA_SELLER) return res.status(503).json({ ok: false, error: 'SELLER_MODEL_UNAVAILABLE' });
     const { companyName, crNumber, iban, bankName, addressText, documents } = req.body || {};
-    const seller = await prisma.seller.findUnique({ where: { userId: req.user.id } });
-    if (!seller) return res.status(404).json({ ok: false, error: 'SELLER_PROFILE_NOT_FOUND' });
-    const updated = await prisma.seller.update({ where: { id: seller.id }, data: {
-      companyName: companyName ?? seller.companyName,
-      crNumber: crNumber ?? seller.crNumber,
-      iban: iban ?? seller.iban,
-      bankName: bankName ?? seller.bankName,
-      addressText: addressText ?? seller.addressText,
-      documents: documents ?? seller.documents,
-      kycStatus: 'pending'
-    }});
-    await audit({ action: 'SELLER_KYC_SUBMIT', entity: 'Seller', entityId: updated.id, userId: req.user.id });
-    res.json({ ok: true, seller: updated });
+    // Create seller profile if it doesn't exist yet (first-time KYC)
+    const existing = await prisma.seller.findUnique({ where: { userId: req.user.id } });
+    let result;
+    if (!existing) {
+      result = await prisma.seller.create({ data: {
+        userId: req.user.id,
+        companyName: companyName || null,
+        crNumber: crNumber || null,
+        iban: iban || null,
+        bankName: bankName || null,
+        addressText: addressText || null,
+        documents: documents || null,
+        kycStatus: 'pending',
+        active: false
+      }});
+      await audit({ action: 'SELLER_KYC_CREATE', entity: 'Seller', entityId: result.id, userId: req.user.id });
+    } else {
+      result = await prisma.seller.update({ where: { id: existing.id }, data: {
+        companyName: companyName ?? existing.companyName,
+        crNumber: crNumber ?? existing.crNumber,
+        iban: iban ?? existing.iban,
+        bankName: bankName ?? existing.bankName,
+        addressText: addressText ?? existing.addressText,
+        documents: documents ?? existing.documents,
+        kycStatus: 'pending'
+      }});
+      await audit({ action: 'SELLER_KYC_SUBMIT', entity: 'Seller', entityId: result.id, userId: req.user.id });
+    }
+    res.json({ ok: true, seller: result });
   } catch (e) {
     res.status(400).json({ ok: false, error: 'SELLER_KYC_SUBMIT_FAILED', message: e.message });
   }

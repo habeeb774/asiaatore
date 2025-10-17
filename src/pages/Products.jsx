@@ -118,9 +118,7 @@ const Products = () => {
       <h1 className="page-title mb-4">{locale==='ar'?'المنتجات':'Products'}</h1>
       {/* Mobile Filters Toggle */}
       <div className="md:hidden mb-3 flex justify-between items-center">
-        <button className="btn-outline px-3 py-2 text-sm" onClick={() => setMobileFiltersOpen(true)}>
-          {locale==='ar'?'تصفية النتائج':'Filter'}
-        </button>
+       
         <div className="text-xs text-gray-600">
           {locale==='ar' ? `عرض ${Math.min(pageSlice.length, filtered.length)} من ${filtered.length}` : `Showing ${Math.min(pageSlice.length, filtered.length)} of ${filtered.length}`}
         </div>
