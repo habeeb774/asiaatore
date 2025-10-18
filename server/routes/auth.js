@@ -136,24 +136,44 @@ router.post('/register', async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const created = await prisma.user.create({ data: { email, password: hashed, name: name || null, role: 'user', phone: phone || null } });
     // Send email verification link (optional in dev)
-  const emailToken = randomToken(24);
-  const emailHash = sha256(emailToken);
-  const emailExpiresAt = new Date(Date.now() + 1000*60*60*24); // 24h
-  await prisma.authToken.create({ data: { userId: created.id, type: 'email_verify', tokenHash: emailHash, expiresAt: emailExpiresAt } });
+    const emailToken = randomToken(24);
+    const emailHash = sha256(emailToken);
+    const emailExpiresAt = new Date(Date.now() + 1000*60*60*24); // 24h
+    try {
+      if (HAS_PRISMA_AUTHTOKEN) {
+        await prisma.authToken.create({ data: { userId: created.id, type: 'email_verify', tokenHash: emailHash, expiresAt: emailExpiresAt } });
+      } else if (process.env.DEBUG_ERRORS === 'true') {
+        console.warn('[AUTH] authToken model missing; skipping email verification token');
+      }
+    } catch (e) {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] email_verify token create failed; proceeding without token:', e.message);
+    }
     const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.headers.host}`;
     const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(emailToken)}&email=${encodeURIComponent(created.email)}`;
-    await sendEmail({ to: created.email, subject: 'Verify your email', text: `Verify: ${verifyUrl}` });
+    try {
+      await sendEmail({ to: created.email, subject: 'Verify your email', text: `Verify: ${verifyUrl}` });
+    } catch (e) {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] sendEmail failed (verify); continuing:', e.message);
+    }
     const accessToken = signAccessToken({ id: created.id, role: created.role, email: created.email });
     const rawRefresh = randomToken(48);
   const ttlMs = Number(process.env.REFRESH_TOKEN_TTL_MS || 1000*60*60*24*30);
   const sessionExpiresAt = new Date(Date.now() + ttlMs);
   const tokenHash = sha256(rawRefresh);
     try {
-      await prisma.session.create({ data: { userId: created.id, refreshHash: tokenHash, expiresAt: sessionExpiresAt, userAgent: req.headers['user-agent'] || null, ip: (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString() } });
+      if (HAS_PRISMA_SESSION) {
+        await prisma.session.create({ data: { userId: created.id, refreshHash: tokenHash, expiresAt: sessionExpiresAt, userAgent: req.headers['user-agent'] || null, ip: (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString() } });
+      } else if (process.env.DEBUG_ERRORS === 'true') {
+        console.warn('[AUTH] session model missing; skipping session.create in register');
+      }
     } catch (e) {
       if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] session.create (register) failed; fallback:', e.message);
     }
-    await prisma.authToken.create({ data: { userId: created.id, type: 'refresh', tokenHash, expiresAt: sessionExpiresAt } }).catch(() => {});
+    if (HAS_PRISMA_AUTHTOKEN) {
+      await prisma.authToken.create({ data: { userId: created.id, type: 'refresh', tokenHash, expiresAt: sessionExpiresAt } }).catch(() => {});
+    } else if (process.env.DEBUG_ERRORS === 'true') {
+      console.warn('[AUTH] authToken model missing; skipping refresh token record on register');
+    }
     res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
     return res.status(201).json({ ok:true, accessToken, user: { id: created.id, role: created.role, email: created.email, name: created.name } });
   } catch (e) {

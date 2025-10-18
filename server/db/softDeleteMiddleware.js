@@ -14,41 +14,61 @@ export async function initSoftDelete(prisma) {
   });
   if (!modelsWithDeletedAt.length) return;
 
+  const hasDeletedAt = (model) => modelsWithDeletedAt.includes(model);
+
   // Register middleware
   prisma.$use(async (params, next) => {
+    const model = params.model;
+    const action = params.action;
+    const supportsSoftDelete = !!model && hasDeletedAt(model);
+
     try {
-      const model = params.model;
-      if (!model || !modelsWithDeletedAt.includes(model)) return next(params);
-
-      // Convert deletes into soft-deletes
-      if (params.action === 'delete') {
-        // delete -> update (set deletedAt)
-        params.action = 'update';
-        params.args = params.args || {};
-        params.args.data = { ...(params.args.data || {}), deletedAt: new Date() };
-        return next(params);
+      // Convert deletes into soft-deletes when supported
+      if (supportsSoftDelete && (action === 'delete' || action === 'deleteMany')) {
+        const original = { ...params };
+        try {
+          const now = new Date();
+          if (action === 'delete') {
+            params.action = 'update';
+            params.args = params.args || {};
+            params.args.data = { ...(params.args.data || {}), deletedAt: now };
+          } else {
+            params.action = 'updateMany';
+            params.args = params.args || {};
+            params.args.data = { ...(params.args.data || {}), deletedAt: now };
+          }
+          return await next(params);
+        } catch (e) {
+          // If the update fails due to unknown field, fall back to real delete to avoid crashes
+          const msg = (e && e.message) || '';
+          if (/Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg)) {
+            return await next(original);
+          }
+          throw e;
+        }
       }
-      if (params.action === 'deleteMany') {
-        params.action = 'updateMany';
-        params.args = params.args || {};
-        params.args.data = { ...(params.args.data || {}), deletedAt: new Date() };
-        return next(params);
-      }
 
-      // For read operations, inject deletedAt: null into where clauses when not explicitly filtering
+      // For read operations, inject deletedAt: null into where clauses when supported
       const readActions = new Set(['findMany','findFirst','findUnique','count','aggregate']);
-      if (readActions.has(params.action)) {
+      if (supportsSoftDelete && readActions.has(action)) {
         params.args = params.args || {};
-        // For findUnique, Prisma expects a unique where; we only augment if there is already a where object
-        if (params.args.where && typeof params.args.where === 'object') {
-          // If caller already filters deletedAt explicitly, leave it alone
-          if (!Object.prototype.hasOwnProperty.call(params.args.where, 'deletedAt')) {
-            params.args.where = { ...params.args.where, deletedAt: null };
+        const where = params.args.where;
+        if (where && typeof where === 'object' && !Object.prototype.hasOwnProperty.call(where, 'deletedAt')) {
+          // Try with deletedAt: null; if Prisma complains, retry without it
+          const attempt = { ...params, args: { ...params.args, where: { ...where, deletedAt: null } } };
+          try {
+            return await next(attempt);
+          } catch (e) {
+            const msg = (e && e.message) || '';
+            if (/Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg)) {
+              return await next(params);
+            }
+            throw e;
           }
         }
       }
 
-      return next(params);
+      return await next(params);
     } catch (e) {
       // On middleware error, log minimally but don't crash the app
       try { console.warn('[SoftDeleteMiddleware] Error in middleware:', e && e.message ? e.message : e); } catch {}
@@ -58,64 +78,3 @@ export async function initSoftDelete(prisma) {
 }
 
 export default { initSoftDelete };
-import prisma from './client.js';
-
-// Soft-delete middleware for Prisma client.
-// - Intercepts delete/deleteMany and converts them to update/updateMany setting deletedAt = new Date()
-// - Intercepts find/findMany/count/aggregate to add deletedAt: null to where clauses when model supports it
-// This is best-effort and uses the generated client's DMMF to detect fields.
-function modelHasDeletedAt(modelName) {
-  try {
-    const map = prisma._dmmf?.modelMap;
-    if (!map) return false;
-    const m = map[modelName];
-    if (!m || !Array.isArray(m.fields)) return false;
-    return m.fields.some(f => f.name === 'deletedAt');
-  } catch {
-    return false;
-  }
-}
-
-// Register middleware once
-if (prisma && typeof prisma.$use === 'function') {
-  prisma.$use(async (params, next) => {
-    try {
-      const model = params.model;
-      const action = params.action;
-
-      // Convert delete -> update (soft-delete) when model has deletedAt
-      if (model && (action === 'delete' || action === 'deleteMany')) {
-        if (modelHasDeletedAt(model)) {
-          if (action === 'delete') {
-            params.action = 'update';
-            params.args = params.args || {};
-            params.args['data'] = { ...(params.args.data || {}), deletedAt: new Date() };
-            return next(params);
-          }
-          if (action === 'deleteMany') {
-            params.action = 'updateMany';
-            params.args = params.args || {};
-            params.args['data'] = { ...(params.args.data || {}), deletedAt: new Date() };
-            return next(params);
-          }
-        }
-      }
-
-      // For read-like actions, inject deletedAt: null into where if supported
-      const readActions = new Set(['findMany','findUnique','findFirst','count','aggregate','findRaw']);
-      if (model && readActions.has(action) && modelHasDeletedAt(model)) {
-        params.args = params.args || {};
-        const where = params.args.where || {};
-        // Do not overwrite explicit deletedAt filter
-        if (where && where.deletedAt === undefined) {
-          params.args.where = { ...where, deletedAt: null };
-        }
-      }
-    } catch (e) {
-      // best-effort; fall-through to next
-    }
-    return next(params);
-  });
-}
-
-export default {};

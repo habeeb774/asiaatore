@@ -108,6 +108,7 @@ export const OrdersService = {
       const { where = {}, orderBy = { createdAt: 'desc' }, page, pageSize } = params;
   // Use helper to include deletedAt only when supported by DB schema.
   const whereNdCandidate = whereWithDeletedAt(where);
+  const whereRaw = where; // fallback without deletedAt
     const pg = page ? Math.max(1, parseInt(page, 10)) : null;
     const ps = pageSize ? Math.min(500, Math.max(1, parseInt(pageSize, 10))) : 50;
     if (pg) {
@@ -120,7 +121,23 @@ export const OrdersService = {
         ]);
         return { items: list, total, page: pg, pageSize: ps, totalPages: Math.ceil(total / ps) };
       } catch (e) {
-        // If it fails for any reason and we're in degraded mode, return empty list.
+        // Special-case: unknown arg `deletedAt` on Order model — retry without it
+        const msg = e?.message || '';
+        const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
+        if (isUnknownDeletedAt) {
+          try {
+            const [total, list] = await Promise.all([
+              prisma.order.count({ where: whereRaw }),
+              prisma.order.findMany({ where: whereRaw, orderBy, skip, take: ps, include: { items: true } }),
+            ]);
+            return { items: list, total, page: pg, pageSize: ps, totalPages: Math.ceil(total / ps) };
+          } catch (e2) {
+            if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] list retry (no deletedAt) failed', e2);
+            if (process.env.ALLOW_INVALID_DB === 'true') return { items: [], degraded: true };
+            throw e2;
+          }
+        }
+        // If it fails for any other reason and we're in degraded mode, return empty list.
         if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] list failed (pg)', e);
         if (process.env.ALLOW_INVALID_DB === 'true') return { items: [], degraded: true };
         throw e;
@@ -130,6 +147,19 @@ export const OrdersService = {
       const list = await prisma.order.findMany({ where: whereNdCandidate, orderBy, include: { items: true } });
       return { items: list };
     } catch (e) {
+      // Retry without deletedAt if unknown arg error
+      const msg = e?.message || '';
+      const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
+      if (isUnknownDeletedAt) {
+        try {
+          const list = await prisma.order.findMany({ where: whereRaw, orderBy, include: { items: true } });
+          return { items: list };
+        } catch (e2) {
+          if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] list retry (no deletedAt) failed', e2);
+          if (process.env.ALLOW_INVALID_DB === 'true') return { items: [], degraded: true };
+          throw e2;
+        }
+      }
       if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] list failed', e);
       if (process.env.ALLOW_INVALID_DB === 'true') return { items: [], degraded: true };
       throw e;
@@ -146,6 +176,16 @@ export const OrdersService = {
     try {
       return await prisma.order.findFirst({ where: whereWithDeletedAt({ id }), include: { items: true } });
     } catch (e) {
+      const msg = e?.message || '';
+      const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
+      if (isUnknownDeletedAt) {
+        try {
+          return await prisma.order.findFirst({ where: { id }, include: { items: true } });
+        } catch (e2) {
+          if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById retry (no deletedAt) failed', e2);
+          throw e2;
+        }
+      }
       if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById failed', e);
       throw e;
     }

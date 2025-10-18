@@ -1,0 +1,47 @@
+{
+  "app": {
+    "title": "Ma Boutique",
+    "searchPlaceholder": "Rechercher des produits…",
+    "noResults": "Aucun résultat",
+    "loading": "Chargement…"
+  },
+  "nav": {
+    "home": "Accueil",
+    "products": "Produits",
+    "orders": "Commandes",
+    "admin": "Admin",
+    "catalog": "Catalogue",
+    "offers": "Offres",
+    "stores": "Magasins",
+    "myOrders": "Mes commandes",
+    "sellerKyc": "KYC Vendeur",
+    "dashboard": "Tableau de bord"
+  },
+  "catalog": "Catalogue",
+  "offers": "Offres",
+  "stores": "Magasins",
+  "cart": "Panier",
+  "cartTitle": "Panier",
+  "emptyCart": "Panier vide",
+  "proceedCheckout": "Passer au paiement",
+  "changeLanguage": "Changer la langue",
+  "theme": "Thème",
+  "toggleTheme": "Basculer le thème",
+  "themeLight": "Clair",
+  "themeDark": "Sombre",
+  "themeSystemAuto": "Système (Auto)",
+  "totalLabel": "Total",
+  "mobileNavigation": "Navigation mobile",
+  "admin": {
+    "customers": {
+      "title": "Clients",
+      "add": "Ajouter",
+      "name": "Nom",
+      "email": "E-mail",
+      "role": "Rôle",
+      "status": "Statut",
+      "active": "Actif",
+      "inactive": "Inactif"
+    }
+  }
+}

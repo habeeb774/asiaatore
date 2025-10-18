@@ -720,6 +720,29 @@ app.all('/auth/login', (req, res, next) => {
   next();
 });
 
+// 405 guidance for any non-POST to /api/auth/register
+app.all('/api/auth/register', (req, res, next) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({
+      error: 'METHOD_NOT_ALLOWED',
+      expected: 'POST',
+      message: 'Use POST /api/auth/register with JSON body: { "email": "...", "password": "...", "name": "..." }'
+    });
+  }
+  next();
+});
+// Legacy alias: 405 guidance for /auth/register
+app.all('/auth/register', (req, res, next) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({
+      error: 'METHOD_NOT_ALLOWED',
+      expected: 'POST',
+      message: 'Use POST /auth/register or /api/auth/register with JSON body: { "email": "...", "password": "...", "name": "..." }'
+    });
+  }
+  next();
+});
+
 // Mount auth routes under both /api/auth and legacy /auth
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);

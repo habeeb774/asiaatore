@@ -127,7 +127,7 @@ router.get('/', async (_req, res) => {
         id: 'singleton',
         siteNameAr: 'شركة منفذ اسيا التجارية',
         siteNameEn: 'My Store',
-        logo: '/logo.svg',
+  logo: '/images/site-logo.jpg',
         colorPrimary: '#69be3c',
         colorSecondary: '#1f2937',
         colorAccent: '#ef4444',
@@ -222,30 +222,56 @@ router.post('/logo', attachUser, requireAdmin, (req, res) => {
       await ensureSettingsTable();
       const file = req.file;
       if (!file) return res.status(400).json({ ok:false, error:'NO_FILE' });
-      // create webp optimized copy
-      const ext = path.extname(file.filename);
-      const base = file.filename.slice(0, -ext.length);
-      const webpName = base + '.webp';
-      const webpPath = path.join(uploadsDir, webpName);
-      await sharp(file.path).resize(300,300,{ fit:'contain', background:{ r:255,g:255,b:255,alpha:0 } }).toFormat('webp').toFile(webpPath).catch(()=>null);
-      const rel = '/uploads/settings/' + (fs.existsSync(webpPath) ? webpName : file.filename);
-      const M = getSettingsDelegate();
-      if (M && typeof M.upsert === 'function') {
-        const updated = await M.upsert({
-          where: { id: 'singleton' },
-          create: { id: 'singleton', logo: rel, updatedAt: new Date() },
-          update: { logo: rel, updatedAt: new Date() }
-        });
-        return res.json({ ok:true, logo: rel, setting: updated });
+      // create webp optimized copy (skip for SVG), non-fatal on failure
+      const ext = (path.extname(file.filename) || '').toLowerCase();
+      const isSvg = /\.svg$/.test(ext) || /image\/svg\+xml/i.test(file.mimetype || '');
+      let rel = '/uploads/settings/' + file.filename;
+      if (!isSvg) {
+        try {
+          const base = file.filename.slice(0, -ext.length);
+          const webpName = base + '.webp';
+          const webpPath = path.join(uploadsDir, webpName);
+          await sharp(file.path)
+            .resize(300, 300, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+            .toFormat('webp')
+            .toFile(webpPath);
+          if (fs.existsSync(webpPath)) {
+            rel = '/uploads/settings/' + webpName;
+          }
+        } catch (e) {
+          try { console.warn('[SETTINGS] sharp conversion failed, using original file:', e?.message || e); } catch {}
+        }
       }
-      // Raw SQL fallback
-      await prisma.$executeRawUnsafe('INSERT IGNORE INTO StoreSetting (id) VALUES ("singleton")');
-      await prisma.$executeRawUnsafe('UPDATE StoreSetting SET logo = ?, updatedAt = CURRENT_TIMESTAMP(3) WHERE id = "singleton"', rel);
-      const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
-      const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
-      return res.json({ ok:true, logo: rel, setting });
+
+      // Try Prisma upsert first; fall back to raw SQL; if both fail, return ok with a warning
+      let setting = null;
+      try {
+        const M = getSettingsDelegate();
+        if (M && typeof M.upsert === 'function') {
+          const updated = await M.upsert({
+            where: { id: 'singleton' },
+            create: { id: 'singleton', logo: rel, updatedAt: new Date() },
+            update: { logo: rel, updatedAt: new Date() }
+          });
+          setting = updated;
+        } else {
+          await prisma.$executeRawUnsafe('INSERT IGNORE INTO StoreSetting (id) VALUES ("singleton")');
+          await prisma.$executeRawUnsafe('UPDATE StoreSetting SET logo = ?, updatedAt = CURRENT_TIMESTAMP(3) WHERE id = "singleton"', rel);
+          const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
+          setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+        }
+        return res.json({ ok:true, logo: rel, setting });
+      } catch (dbErr) {
+        try { console.error('[SETTINGS] Failed to persist logo in DB:', dbErr); } catch {}
+        // Graceful fallback: return success with warning so UI can continue
+        return res.status(200).json({ ok: true, logo: rel, warning: 'DB_SAVE_FAILED', message: dbErr?.message || String(dbErr) });
+      }
     } catch (e) {
-      res.status(500).json({ ok:false, error:'LOGO_FAILED', message: e.message });
+      // Log full error for diagnostics
+      try { console.error('[SETTINGS] LOGO upload failed:', e); } catch {}
+      const payload = { ok:false, error:'LOGO_FAILED', message: e.message };
+      if (process.env.DEBUG_ERRORS === 'true' && e?.stack) payload.stack = e.stack;
+      res.status(500).json(payload);
     }
   });
 });

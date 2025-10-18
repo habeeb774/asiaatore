@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../db/client.js';
 import { whereWithDeletedAt } from '../utils/deletedAt.js';
 import { attachUser } from '../middleware/auth.js';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -11,7 +12,13 @@ router.use(attachUser);
 router.get('/', async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
-    const list = await prisma.address.findMany({ where: whereWithDeletedAt({ userId: req.user.id }), orderBy: { createdAt: 'desc' } });
+    let list = [];
+    if (prisma.address?.findMany) {
+      list = await prisma.address.findMany({ where: whereWithDeletedAt({ userId: req.user.id }), orderBy: { createdAt: 'desc' } });
+    } else {
+      // Fallback raw SQL
+  list = await prisma.$queryRaw`SELECT id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt FROM \`Address\` WHERE userId = ${req.user.id} ORDER BY createdAt DESC`;
+    }
     res.json({ ok: true, addresses: list });
   } catch (e) {
     res.status(500).json({ ok: false, error: 'ADDR_LIST_FAILED', message: e.message });
@@ -52,8 +59,21 @@ router.post('/', async (req, res) => {
         }
       }
     }
-    const created = await prisma.address.create({ data });
-    res.status(201).json({ ok: true, address: created });
+    if (prisma.address?.create) {
+      const created = await prisma.address.create({ data });
+      res.status(201).json({ ok: true, address: created });
+    } else {
+      // Fallback raw insert
+      const id = crypto.randomUUID();
+      // Insert with explicit timestamps to satisfy NOT NULL constraints in strict SQL modes
+      await prisma.$executeRaw`
+        INSERT INTO \`Address\`
+        (id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt)
+        VALUES (${id}, ${data.userId}, ${data.label}, ${data.name}, ${data.phone}, ${data.country}, ${data.city}, ${data.district}, ${data.street}, ${data.building}, ${data.apartment}, ${data.notes}, ${data.isDefault}, NOW(), NOW())
+      `;
+      const row = (await prisma.$queryRaw`SELECT id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt FROM \`Address\` WHERE id = ${id} LIMIT 1`)[0] || null;
+      res.status(201).json({ ok: true, address: row });
+    }
   } catch (e) {
     res.status(400).json({ ok: false, error: 'ADDR_CREATE_FAILED', message: e.message });
   }
@@ -64,7 +84,12 @@ router.patch('/:id', async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     const id = req.params.id;
-    const existing = await prisma.address.findFirst({ where: whereWithDeletedAt({ id, userId: req.user.id }) });
+    let existing = null;
+    if (prisma.address?.findFirst) {
+      existing = await prisma.address.findFirst({ where: whereWithDeletedAt({ id, userId: req.user.id }) });
+    } else {
+      existing = (await prisma.$queryRaw`SELECT id FROM \`Address\` WHERE id = ${id} AND userId = ${req.user.id} LIMIT 1`)[0] || null;
+    }
     if (!existing) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
     const body = req.body || {};
     const data = {
@@ -87,8 +112,18 @@ router.patch('/:id', async (req, res) => {
         await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`;
       }
     }
-    const updated = await prisma.address.update({ where: { id }, data });
-    res.json({ ok: true, address: updated });
+    if (prisma.address?.update) {
+      const updated = await prisma.address.update({ where: { id }, data });
+      res.json({ ok: true, address: updated });
+    } else {
+      await prisma.$executeRaw`
+        UPDATE \`Address\`
+        SET label=${data.label}, name=${data.name}, phone=${data.phone}, country=${data.country}, city=${data.city}, district=${data.district}, street=${data.street}, building=${data.building}, apartment=${data.apartment}, notes=${data.notes}, isDefault=${data.isDefault}, updatedAt=NOW()
+        WHERE id=${id} AND userId=${req.user.id}
+      `;
+      const row = (await prisma.$queryRaw`SELECT id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt FROM \`Address\` WHERE id = ${id} LIMIT 1`)[0] || null;
+      res.json({ ok: true, address: row });
+    }
   } catch (e) {
     res.status(400).json({ ok: false, error: 'ADDR_UPDATE_FAILED', message: e.message });
   }
@@ -99,10 +134,20 @@ router.delete('/:id', async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ ok: false, error: 'UNAUTHENTICATED' });
     const id = req.params.id;
-    const existing = await prisma.address.findFirst({ where: whereWithDeletedAt({ id, userId: req.user.id }) });
+    let existing = null;
+    if (prisma.address?.findFirst) {
+      existing = await prisma.address.findFirst({ where: whereWithDeletedAt({ id, userId: req.user.id }) });
+    } else {
+      existing = (await prisma.$queryRaw`SELECT id FROM \`Address\` WHERE id = ${id} AND userId = ${req.user.id} LIMIT 1`)[0] || null;
+    }
     if (!existing) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
-    await prisma.address.delete({ where: { id } });
-    res.json({ ok: true });
+    if (prisma.address?.delete) {
+      await prisma.address.delete({ where: { id } });
+      res.json({ ok: true });
+    } else {
+      await prisma.$executeRaw`DELETE FROM \`Address\` WHERE id = ${id} AND userId = ${req.user.id}`;
+      res.json({ ok: true });
+    }
   } catch (e) {
     res.status(400).json({ ok: false, error: 'ADDR_DELETE_FAILED', message: e.message });
   }

@@ -183,6 +183,9 @@ npm run dev
 - Docs: /api/docs (HTML) and /api/docs.json (OpenAPI-lite)
 - Realtime: /api/events
 
+### Vercel build note (Puppeteer / PDFs)
+- Invoice PDFs at `/api/orders/:id/invoice.pdf` use Puppeteer. On Vercel, we skip downloading Chromium during build with `PUPPETEER_SKIP_DOWNLOAD=1`. At runtime, if Chromium isn’t available, the route responds with `501 PDF_NOT_AVAILABLE`. This keeps Vercel deploys fast and stable. If you need PDFs on Vercel, use an external render service or a compatible runtime.
+
 ---
 
 ## 🧭 Optional Future Additions

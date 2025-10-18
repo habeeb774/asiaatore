@@ -7,14 +7,16 @@
   "scripts": {
     "roadmap:sync": "node ./scripts/sync-roadmap-issues.js",
     "project:setup": "node ./scripts/setup-project-board.js",
-    "dev": "vite",
+    "dev": "npm run dev -w client",
     "start:simple": "node server/simple.js",
     "dev:simple": "node server/simple.js",
     "start:server": "node server/index.js",
     "dev:server": "node server/index.js",
-    "build": "vite build",
+    "build": "npm run build -w client",
     "server": "node server/index.js",
     "start": "node server/index.js",
+    "prestart": "prisma migrate deploy",
+    "postinstall": "prisma generate",
     "pm2:start": "pm2 start ecosystem.config.js && pm2 save",
     "pm2:restart": "pm2 restart my-store-server",
     "pm2:logs": "pm2 logs my-store-server",
@@ -41,21 +43,24 @@
     "products:import": "node server/scripts/importProducts.js server/data/realProducts.sample.json",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
-    "dev:all": "npm-run-all -p dev dev:server",
+    "dev:all": "npm-run-all -p dev:server dev:client",
     "dev:init": "npm run db:generate && npm run db:push && npm run db:seed",
     "dev:server:dbless": "cross-env QUICK_START_DB=1 ALLOW_INVALID_DB=true node server/index.js",
     "preview:all": "npm-run-all -p server preview",
     "check:dead": "knip --strict || exit 0",
     "check:deps": "depcheck --skip-missing",
     "check:empty-pages": "node scripts/empty-pages-report.mjs",
-  "icons:generate": "node scripts/generate-icons.mjs",
+    "icons:generate": "node scripts/generate-icons.mjs",
     "test:api": "node scripts/tests/api-smoke.mjs",
     "test:sse": "node scripts/tests/order-delivery-sse.mjs",
     "test:all": "npm run -s test:api && npm run -s test:sse",
     "dev:server:test": "cross-env PORT=4010 node server/index.js",
     "test:api:8829": "cross-env API_BASE=http://localhost:8829 node scripts/tests/api-smoke.mjs",
     "test:sse:8829": "cross-env API_BASE=http://localhost:8829 node scripts/tests/order-delivery-sse.mjs",
-    "test:all:8829": "npm run -s test:api:8829 && npm run -s test:sse:8829"
+    "test:all:8829": "npm run -s test:api:8829 && npm run -s test:sse:8829",
+    "dev:client": "npm run dev -w client",
+    "build:client": "npm run build -w client",
+    "preview:client": "npm run preview -w client"
   },
   "prisma": {
     "seed": "node ./server/db/seed.js"
@@ -132,7 +137,11 @@
     "tailwindcss": "^4.1.13",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.2",
-  "vite": "^5.4.10",
+    "vite": "^5.4.10",
     "vite-plugin-pwa": "^1.0.3"
-  }
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
 }

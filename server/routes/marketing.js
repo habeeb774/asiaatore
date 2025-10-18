@@ -51,7 +51,9 @@ function buildBannerVariants(image){
     original: image,
     thumb: base + '_thumb.webp',
     medium: base + '_md.webp',
-    large: base + '_lg.webp'
+    large: base + '_lg.webp',
+    webp: { thumb: base + '_thumb.webp', medium: base + '_md.webp', large: base + '_lg.webp' },
+    avif: { thumb: base + '_thumb.avif', medium: base + '_md.avif', large: base + '_lg.avif' }
   };
 }
 const mapBanner = b => ({ id:b.id, location:b.location, title:{ ar:b.titleAr, en:b.titleEn }, body:{ ar:b.bodyAr, en:b.bodyEn }, image:b.image, imageVariants: buildBannerVariants(b.image), linkUrl:b.linkUrl, sort:b.sort, active:b.active });
@@ -88,6 +90,11 @@ router.post('/banners', requireAdmin, bannerUploadMiddleware, async (req,res) =>
         await sharp(full).resize(320,160,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_thumb.webp');
         await sharp(full).resize(800,360,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_md.webp');
         await sharp(full).resize(1280,480,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
+        try {
+          await sharp(full).resize(320,160,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_thumb.avif');
+          await sharp(full).resize(800,360,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_md.avif');
+          await sharp(full).resize(1280,480,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_lg.avif');
+        } catch {}
       } catch{}
     }
     const created = await prisma.marketingBanner.create({ data:{
@@ -104,6 +111,11 @@ router.patch('/banners/:id', requireAdmin, bannerUploadMiddleware, async (req,re
         await sharp(full).resize(320,160,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_thumb.webp');
         await sharp(full).resize(800,360,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_md.webp');
         await sharp(full).resize(1280,480,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
+        try {
+          await sharp(full).resize(320,160,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_thumb.avif');
+          await sharp(full).resize(800,360,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_md.avif');
+          await sharp(full).resize(1280,480,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_lg.avif');
+        } catch {}
       } catch{}
     }
     const data = {
@@ -119,7 +131,11 @@ router.delete('/banners/:id', requireAdmin, async (req,res) => {
     if (existing.image && existing.image.startsWith('/uploads/marketing-banners/')) {
       const abs = path.join(process.cwd(), existing.image.replace(/^\//,''));
       const baseNoExt = abs.replace(/\.[^.]+$/, '');
-      for (const f of [abs, baseNoExt + '_thumb.webp', baseNoExt + '_md.webp', baseNoExt + '_lg.webp']) {
+      for (const f of [
+        abs,
+        baseNoExt + '_thumb.webp', baseNoExt + '_md.webp', baseNoExt + '_lg.webp',
+        baseNoExt + '_thumb.avif', baseNoExt + '_md.avif', baseNoExt + '_lg.avif'
+      ]) {
         try { fs.unlinkSync(f); } catch {}
       }
     }

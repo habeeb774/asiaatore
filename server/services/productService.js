@@ -10,7 +10,24 @@ function buildImageVariants(imagePath) {
   if (!imagePath) return null;
   if (!imagePath.startsWith('/uploads/product-images/')) return { original: imagePath };
   const base = imagePath.replace(/\.[^.]+$/, '');
-  return { original: imagePath, thumb: base + '_thumb.webp', medium: base + '_md.webp' };
+  return {
+    // Back-compat flat props
+    original: imagePath,
+    thumb: base + '_thumb.webp',
+    medium: base + '_md.webp',
+    large: base + '_lg.webp',
+    // Nested modern formats expected by frontend <picture>
+    webp: {
+      thumb: base + '_thumb.webp',
+      medium: base + '_md.webp',
+      large: base + '_lg.webp',
+    },
+    avif: {
+      thumb: base + '_thumb.avif',
+      medium: base + '_md.avif',
+      large: base + '_lg.avif',
+    },
+  };
 }
 
 export function mapProduct(p) {

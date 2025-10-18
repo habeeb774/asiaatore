@@ -318,13 +318,19 @@ router.post('/', requireAdmin, productImageMiddleware, async (req, res) => {
     let imagePath = body.image || null;
     if (req.file) {
       imagePath = '/uploads/product-images/' + req.file.filename;
-      // Generate multiple variants (thumb & medium) next to original
+      // Generate multiple variants (thumb, medium, large) next to original in WebP and AVIF
       try {
         const imageFull = req.file.path;
         const baseNoExt = imageFull.replace(/\.[^.]+$/, '');
         await sharp(imageFull).resize(180,180,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_thumb.webp');
         await sharp(imageFull).resize(600,600,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_md.webp');
         await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
+        // AVIF (best effort)
+        try {
+          await sharp(imageFull).resize(180,180,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_thumb.avif');
+          await sharp(imageFull).resize(600,600,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_md.avif');
+          await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_lg.avif');
+        } catch {}
       } catch {}
     }
     const created = await productService.create({
@@ -379,6 +385,11 @@ router.put('/:id', requireAdmin, productImageMiddleware, async (req, res) => {
         await sharp(imageFull).resize(180,180,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_thumb.webp');
         await sharp(imageFull).resize(600,600,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_md.webp');
         await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
+        try {
+          await sharp(imageFull).resize(180,180,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_thumb.avif');
+          await sharp(imageFull).resize(600,600,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_md.avif');
+          await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_lg.avif');
+        } catch {}
       } catch {}
     }
   if (body.brandId === null) data.brandId = null;
@@ -424,6 +435,11 @@ router.post('/:id/images', requireAdmin, productImageMiddleware, async (req, res
       await sharp(imageFull).resize(180,180,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_thumb.webp');
       await sharp(imageFull).resize(600,600,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_md.webp');
       await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
+      try {
+        await sharp(imageFull).resize(180,180,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_thumb.avif');
+        await sharp(imageFull).resize(600,600,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_md.avif');
+        await sharp(imageFull).resize(1200,1200,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_lg.avif');
+      } catch {}
     } catch {}
 
     // Determine next sort value
@@ -469,7 +485,11 @@ router.delete('/images/:imageId', requireAdmin, async (req, res) => {
     if (img.url.startsWith('/uploads/product-images/')) {
       const abs = path.join(process.cwd(), img.url.replace(/^\//,''));
       const baseNoExt = abs.replace(/\.[^.]+$/, '');
-      for (const f of [abs, baseNoExt + '_thumb.webp', baseNoExt + '_md.webp', baseNoExt + '_lg.webp']) {
+      for (const f of [
+        abs,
+        baseNoExt + '_thumb.webp', baseNoExt + '_md.webp', baseNoExt + '_lg.webp',
+        baseNoExt + '_thumb.avif', baseNoExt + '_md.avif', baseNoExt + '_lg.avif'
+      ]) {
         try { fs.unlinkSync(f); } catch {}
       }
     }

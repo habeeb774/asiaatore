@@ -610,11 +610,13 @@ router.get('/:id/invoice.pdf', async (req, res) => {
     qrDataUrl = `data:image/png;base64,${qrPng.toString('base64')}`;
   } catch {}
   const html = renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, theme, paper, qrDataUrl });
+    // Lazy import puppeteer; in serverless (e.g., Vercel) we may skip the Chromium download at build time
+    // via PUPPETEER_SKIP_DOWNLOAD=1. If not present at runtime, return a 501 gracefully.
     let puppeteer;
     try {
       puppeteer = (await import('puppeteer')).default;
     } catch (e) {
-      return res.status(501).json({ ok: false, error: 'PDF_NOT_AVAILABLE', message: 'Requires puppeteer to be installed on the server.' });
+      return res.status(501).json({ ok: false, error: 'PDF_NOT_AVAILABLE', message: 'Puppeteer/Chromium not available in this environment.' });
     }
     const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] });
     try {

@@ -174,12 +174,9 @@ async function main() {
     console.log('Inserted app links.');
   }
 
-  // Add 10 ready-made products with proper categoryId and valid internet images (idempotent upsert)
+  // Add 10 ready-made products with valid internet images (idempotent upsert)
   try {
-    console.log('Ensuring 10 demo products (with categoryId and images)...');
-    // Map category slug -> id
-    const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
-    const catBySlug = Object.fromEntries(categories.map(c => [c.slug, c.id]));
+    console.log('Ensuring 10 demo products (with images)...');
     const items = [
       { slug: 'catid-tea-premium', nameAr: 'شاي فاخر', nameEn: 'Premium Tea', price: 19.5, cat: 'sugar-tea-coffee' },
       { slug: 'catid-arabica-coffee', nameAr: 'قهوة أرابيكا', nameEn: 'Arabica Coffee', price: 32.0, cat: 'sugar-tea-coffee' },
@@ -195,8 +192,6 @@ async function main() {
     // Use picsum.photos as reliable HTTP image source for tests (unique per slug)
     const imageFor = (slug) => `https://picsum.photos/seed/${encodeURIComponent(slug)}/800/600`;
     for (const p of items) {
-      const categoryId = catBySlug[p.cat] || catBySlug['supermarket'] || null;
-      if (!categoryId) { console.warn('Skipping product due to missing categoryId for', p.slug); continue; }
       // Upsert product
       const prod = await prisma.product.upsert({
         where: { slug: p.slug },
@@ -204,7 +199,6 @@ async function main() {
           nameAr: p.nameAr, nameEn: p.nameEn,
           price: p.price,
           category: p.cat,
-          categoryId,
           image: imageFor(p.slug),
           stock: 25
         },
@@ -213,7 +207,6 @@ async function main() {
           nameAr: p.nameAr, nameEn: p.nameEn,
           shortAr: 'منتج للتجربة', shortEn: 'Test product',
           category: p.cat,
-          categoryId,
           price: p.price, image: imageFor(p.slug), rating: 4, stock: 25
         }
       });
@@ -226,13 +219,24 @@ async function main() {
         ] });
       }
     }
-    console.log('Ensured 10 demo products with categoryId & images.');
+    console.log('Ensured 10 demo products with images.');
   } catch (e) {
     console.warn('Demo catId products step skipped:', e.message);
   }
 
   // Ensure a demo seller and assign some products to this seller (idempotent)
   try {
+    const HAS_SELLER_MODEL = !!prisma.seller && typeof prisma.seller.upsert === 'function';
+    const PROD_HAS_SELLER_ID = (() => {
+      try {
+        const mm = prisma._dmmf?.modelMap?.Product;
+        return !!(mm && Array.isArray(mm.fields) && mm.fields.some(f => f.name === 'sellerId'));
+      } catch { return false; }
+    })();
+    if (!HAS_SELLER_MODEL || !PROD_HAS_SELLER_ID) {
+      console.log('Seller seeding skipped (Seller model or Product.sellerId not present in schema).');
+      throw new Error('SKIP_SELLER');
+    }
     const sellerEmail = 'seller@example.com';
     let sellerUser = await prisma.user.findUnique({ where: { email: sellerEmail } });
     if (!sellerUser) {
@@ -271,7 +275,11 @@ async function main() {
       else console.log('Seller assignment already in place for demo products.');
     }
   } catch (e) {
-    console.warn('Seller seeding/assignment step skipped:', e.message);
+    if (e && e.message === 'SKIP_SELLER') {
+      console.log('Seller seeding/assignment step skipped (schema does not include Seller features).');
+    } else {
+      console.warn('Seller seeding/assignment step skipped:', e.message);
+    }
   }
 
   // Store settings default (idempotent via upsert)

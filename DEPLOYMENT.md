@@ -1,3 +1,23 @@
+## Monorepo layout
+
+This project can be used as a simple root app or as a two-package workspace:
+
+my-store/
+├─ client/   ← React app (Vite)
+├─ server/   ← Express backend (Node ESM)
+├─ prisma/   ← schema/migrations
+├─ .env
+
+To migrate existing frontend files into `client/`, a helper script exists:
+
+- Run migration (one-time):
+	- `node scripts/migrate-to-client.mjs`
+- Then install and run:
+	- `npm install`
+	- `npm run dev:all` (starts client and server in parallel)
+
+Vite dev proxy still targets `/api` → backend; adjust `client/vite.config.js` if needed.
+
 # Deployment Guide
 
 This guide helps you launch the store to production safely.

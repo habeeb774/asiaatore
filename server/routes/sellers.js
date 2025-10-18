@@ -199,6 +199,11 @@ router.post('/products/:id/upload-image', requireRole('seller'), (req, res, next
       await sharp(full).resize(180,180,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_thumb.webp');
       await sharp(full).resize(600,600,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_md.webp');
       await sharp(full).resize(1200,1200,{ fit:'cover' }).toFormat('webp').toFile(baseNoExt + '_lg.webp');
+      try {
+        await sharp(full).resize(180,180,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_thumb.avif');
+        await sharp(full).resize(600,600,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_md.avif');
+        await sharp(full).resize(1200,1200,{ fit:'cover' }).toFormat('avif').toFile(baseNoExt + '_lg.avif');
+      } catch {}
     } catch {}
 
     // Attach as primary image if product has none, else append to gallery
