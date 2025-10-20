@@ -84,17 +84,17 @@ app.use(helmet({
 }));
 
 // CORS
-const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
-const corsOptions = {
-    origin: (origin, cb) => {
-        if (!origin) return cb(null, true); // allow curl/local
-        if (!allowedOrigins.length) return cb(null, true); // dev-permissive
-        if (allowedOrigins.includes(origin)) return cb(null, true);
-        return cb(new Error('Not allowed by CORS'));
-    },
-    credentials: true
-};
-app.use(cors(corsOptions));
+const parsedCorsOrigins = (process.env.CORS_ORIGIN || '')
+	.split(',')
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+const corsOrigins = parsedCorsOrigins.length > 0 ? parsedCorsOrigins : true;
+app.use(
+	cors({
+		origin: corsOrigins,
+		credentials: true
+	})
+);
 
 // Common middleware
 app.use(compression({ threshold: Number(process.env.COMPRESSION_THRESHOLD || 1024) }));
