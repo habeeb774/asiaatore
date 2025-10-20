@@ -106,9 +106,9 @@ export const OrdersService = {
   async list(params = {}) {
     try {
       const { where = {}, orderBy = { createdAt: 'desc' }, page, pageSize } = params;
-  // Use helper to include deletedAt only when supported by DB schema.
-  const whereNdCandidate = whereWithDeletedAt(where);
-  const whereRaw = where; // fallback without deletedAt
+      // Use helper to include deletedAt only when supported by DB schema.
+      const whereNdCandidate = whereWithDeletedAt(where);
+      const whereRaw = where; // fallback without deletedAt
     const pg = page ? Math.max(1, parseInt(page, 10)) : null;
     const ps = pageSize ? Math.min(500, Math.max(1, parseInt(pageSize, 10))) : 50;
     if (pg) {
@@ -173,24 +173,23 @@ export const OrdersService = {
 
   async getById(id) {
     // Some schemas don't have deletedAt; try with it first and fall back if unknown arg
-    try {
-      return await prisma.order.findFirst({ where: whereWithDeletedAt({ id }), include: { items: true } });
-    } catch (e) {
-      const msg = e?.message || '';
-      const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
-      if (isUnknownDeletedAt) {
         try {
-          return await prisma.order.findFirst({ where: { id }, include: { items: true } });
-        } catch (e2) {
-          if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById retry (no deletedAt) failed', e2);
-          throw e2;
+          return await prisma.order.findFirst({ where: whereWithDeletedAt({ id }), include: { items: true } });
+        } catch (e) {
+          const msg = e?.message || '';
+          const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
+          if (isUnknownDeletedAt) {
+            try {
+              return await prisma.order.findFirst({ where: { id }, include: { items: true } });
+            } catch (e2) {
+              if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById retry (no deletedAt) failed', e2);
+              throw e2;
+            }
+          }
+          if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById failed', e);
+          throw e;
         }
-      }
-      if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById failed', e);
-      throw e;
-    }
   },
-
   async create(input) {
     const userId = input.userId || 'guest';
     // Dev-only safety: ensure the referenced user exists to satisfy FK constraints
@@ -243,7 +242,6 @@ export const OrdersService = {
       },
       include: { items: true },
     });
-
     // Auto-create shipment if enabled. Do not block order creation on shipment errors.
     try {
       if (String(process.env.AUTO_CREATE_SHIPMENT || '').toLowerCase() === 'true') {
@@ -314,7 +312,7 @@ export const OrdersService = {
       itemsData = await normalizeItems(body.items);
     }
 
-    const shippingOverride = extractShippingOverride(body);
+  const shippingOverride = extractShippingOverride(body);
     const totals = computeTotals(itemsData, { ...body, shipping: shippingOverride });
 
     const updateData = {

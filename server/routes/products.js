@@ -94,18 +94,15 @@ router.get('/', async (req, res) => {
         totalPages: Math.ceil(total / ps)
       });
     }
-  const startAll = Date.now();
-  const list = await productService.list(where, { orderBy: { createdAt: 'desc' } });
-  const durAll = Date.now() - startAll;
-  res.setHeader('X-Query-Duration-ms', String(durAll));
-  if (durAll > 200) console.warn('[PRODUCTS] slow query', durAll, 'ms');
-  res.json(list.map(mapProduct));
+    const list = await productService.list(where, { orderBy: { createdAt: 'desc' } });
+    res.json(list.map(mapProduct));
+    // Performance header (optional)
+    // Note: If you want to include duration here as well, measure around productService.list
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
       console.error('[PRODUCTS] List failed:', e); // eslint-disable-line no-console
     }
-    // Degraded mode in development: for ANY error, try serving a static sample as a minimal fallback
-    // This makes the mobile/web app usable even when MySQL/Prisma aren't configured locally.
+    // Degraded mode: if DB is unavailable, try serving a static sample as a minimal fallback
     if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true' || (e && e.message && /Database|DB|connect/i.test(e.message))) {
       try {
         const samplePath = path.join(process.cwd(), 'server', 'data', 'realProducts.sample.json');
@@ -130,7 +127,7 @@ router.get('/', async (req, res) => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }));
-        res.setHeader('x-fallback', 'sample');
+  res.setHeader('x-fallback', 'sample');
         return res.json(mapped);
       } catch (_) {
         // ignore, fall-through
@@ -158,7 +155,7 @@ router.get('/_debug', async (req, res) => {
 
 router.get('/offers', async (req, res) => {
   try {
-  const list = await productService.list({ ...whereWithDeletedAt({}), oldPrice: { not: null } }, { orderBy: { createdAt: 'desc' } });
+    const list = await productService.list({ ...whereWithDeletedAt({}), oldPrice: { not: null } }, { orderBy: { createdAt: 'desc' } });
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {

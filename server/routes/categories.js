@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
           if (!map.has(slug)) map.set(slug, { slug, nameAr: slug, nameEn: slug, descriptionAr: null, descriptionEn: null, image: null, icon: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
         }
         const list = Array.from(map.values());
-        res.setHeader('x-fallback', 'sample-categories');
+  res.setHeader('x-fallback', 'sample-categories');
         return res.json({ ok: true, categories: list.map(c => ({
           id: c.slug,
           slug: c.slug,

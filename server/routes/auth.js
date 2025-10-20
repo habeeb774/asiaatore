@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
         return res.json({ ok:true, devFallback: true, accessToken, user: { id: dev.id, role: dev.role, email: dev.email, name: dev.name } });
       }
     }
-  const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       if (process.env.DEBUG_LOGIN === '1') console.warn('[LOGIN] Email not found:', email);
       const detailed = process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production';

@@ -1,0 +1,1 @@
+import{E as e,N as t,P as n,v as r}from"./index-HsKwDOAa.js";t();var i=n(e()),a=({products:e,wide:t})=>(0,i.jsx)(`div`,{className:`products-grid ${t?`wide`:``}`,children:e.map(e=>(0,i.jsx)(r,{product:e},e.id))});export{a as t};

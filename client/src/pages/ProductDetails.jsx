@@ -10,6 +10,7 @@ import { resolveLocalized } from '../utils/locale';
 import api from '../api/client';
 import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.jsx';
 import ZoomableImage from '../components/products/ZoomableImage.jsx';
+import LazyImage from '../components/common/LazyImage.jsx';
 
 const ProductDetails = () => {
   const { id } = useParams();
