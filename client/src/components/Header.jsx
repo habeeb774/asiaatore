@@ -740,7 +740,7 @@ const Header = ({ sidebarOpen, onToggleSidebar }) => {
                   return (
                     <li key={c.id} style={{display:'flex',alignItems:'center',gap:10}}>
                       <div style={{width:52,height:52,flexShrink:0, background:'#f1f5f9',borderRadius:12,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        <img src={c.images?.[0] || c.image || '/images/placeholder.jpg'} alt={ localizeName({ name: c.name || c.title }, locale) || '' } style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                        <img src={c.images?.[0] || c.image || '/images/hero-image.svg'} alt={ localizeName({ name: c.name || c.title }, locale) || '' } style={{width:'100%',height:'100%',objectFit:'cover'}} />
                       </div>
                       <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:4}}>
                         <span style={{fontSize:'.7rem',fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{ localizeName({ name: c.name || c.title }, locale) }</span>

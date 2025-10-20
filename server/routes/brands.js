@@ -42,6 +42,7 @@ function brandUploadMiddleware(req, res, next) {
 }
 
 const router = Router();
+const ALLOW_DEGRADED = process.env.ALLOW_INVALID_DB === 'true';
 
 function buildLogoVariants(logoPath){
   if (!logoPath) return null;
@@ -73,13 +74,24 @@ router.get('/', async (_req,res) => {
   try {
     const list = await prisma.brand.findMany({ orderBy: { createdAt: 'desc' }, include: { _count: { select: { products: true } } } });
     res.json(list.map(mapBrand));
-  } catch (e) { res.status(500).json({ error:'FAILED_LIST_BRANDS', message: e.message }); }
+  } catch (e) {
+    if (ALLOW_DEGRADED) {
+      res.setHeader('x-fallback', 'degraded');
+      return res.json([]);
+    }
+    res.status(500).json({ error:'FAILED_LIST_BRANDS', message: e.message });
+  }
 });
 
 router.get('/slug/:slug', async (req,res) => {
-  const b = await prisma.brand.findUnique({ where: { slug: req.params.slug } });
-  if (!b) return res.status(404).json({ error:'NOT_FOUND' });
-  res.json(mapBrand(b));
+  try {
+    const b = await prisma.brand.findUnique({ where: { slug: req.params.slug } });
+    if (!b) return res.status(404).json({ error:'NOT_FOUND' });
+    res.json(mapBrand(b));
+  } catch (e) {
+    if (ALLOW_DEGRADED) return res.status(404).json({ error: 'NOT_FOUND' });
+    res.status(500).json({ error:'FAILED_GET_BRAND', message:e.message });
+  }
 });
 
 router.post('/', requireAdmin, brandUploadMiddleware, async (req,res) => {

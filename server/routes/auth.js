@@ -50,7 +50,8 @@ router.post('/login', async (req, res) => {
   try {
     const parsed = loginSchema.safeParse(req.body || {});
     if (!parsed.success) {
-      return res.status(400).json({ ok:false, error: 'INVALID_INPUT', fields: parsed.error.flatten() });
+      // Align with frontend expectation for missing/invalid credentials
+      return res.status(400).json({ ok:false, error: 'MISSING_CREDENTIALS', fields: parsed.error.flatten() });
     }
     const { email, password } = parsed.data;
 
@@ -106,6 +107,7 @@ router.post('/login', async (req, res) => {
   } catch (e) {
     const msg = e?.message || '';
     const isDbErr = /Database|ECONNREFUSED|does not exist|connect/i.test(msg) || (e?.code && /^P\d+/.test(e.code));
+    try { req.log?.error({ err: e, code: e?.code, message: e?.message }, 'LOGIN route error'); } catch {}
     if (process.env.DEBUG_LOGIN === '1' || process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.error('[LOGIN] Error', { message: msg, code: e.code });
@@ -128,13 +130,36 @@ router.post('/register', async (req, res) => {
   try {
     const parsed = registerSchema.safeParse(req.body || {});
     if (!parsed.success) {
-      return res.status(400).json({ ok:false, error:'INVALID_INPUT', fields: parsed.error.flatten() });
+      return res.status(400).json({ ok:false, error:'MISSING_FIELDS', fields: parsed.error.flatten() });
     }
     const { email, password, name, phone } = parsed.data;
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ ok:false, error: 'EMAIL_EXISTS' });
     const hashed = await bcrypt.hash(password, 10);
-    const created = await prisma.user.create({ data: { email, password: hashed, name: name || null, role: 'user', phone: phone || null } });
+    // Be resilient to DBs missing some columns (e.g., role/phone). Probe columns and insert only supported fields.
+    let created;
+    try {
+      let columns = null;
+      try {
+        columns = await prisma.$queryRawUnsafe('SHOW COLUMNS FROM `User`');
+      } catch {
+        // If probe fails, fall back to full shape and let Prisma handle errors
+      }
+      const allowed = new Set(Array.isArray(columns) ? columns.map(c => String(c.Field || c.COLUMN_NAME || '').toLowerCase()) : []);
+      const data = { email, password: hashed };
+      if (!allowed.size || allowed.has('name')) data.name = name || null;
+      if (!allowed.size || allowed.has('role')) data.role = 'user';
+      if (!allowed.size || allowed.has('phone')) data.phone = phone || null;
+      created = await prisma.user.create({ data });
+    } catch (e) {
+      // Retry with minimal required fields if we hit a column error
+      const msg = e?.message || '';
+      if (/Unknown column|ER_BAD_FIELD_ERROR|doesn't exist in table|Unknown argument `?phone`?/i.test(msg)) {
+        created = await prisma.user.create({ data: { email, password: hashed, name: name || null } });
+      } else {
+        throw e;
+      }
+    }
     // Send email verification link (optional in dev)
     const emailToken = randomToken(24);
     const emailHash = sha256(emailToken);
@@ -177,7 +202,26 @@ router.post('/register', async (req, res) => {
     res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
     return res.status(201).json({ ok:true, accessToken, user: { id: created.id, role: created.role, email: created.email, name: created.name } });
   } catch (e) {
-    return res.status(500).json({ ok:false, error: 'REGISTER_FAILED', message: e.message });
+    // Structured log for debugging (captured by pino-http). Does not leak to client.
+    try { req.log?.error({ err: e, code: e?.code, message: e?.message }, 'REGISTER route error'); } catch {}
+    const msg = e?.message || '';
+    // Prisma unique constraint -> email already exists (race condition between check and insert)
+    if (e?.code === 'P2002') {
+      return res.status(409).json({ ok:false, error: 'EMAIL_EXISTS', alias: 'EMAIL_ALREADY_EXISTS', message: 'Email already registered.' });
+    }
+    // Prisma validation / enum / invalid data
+    if (e?.code && /^P20\d{2}$/.test(e.code)) {
+      return res.status(400).json({ ok:false, error: e.code, message: 'Invalid data.' });
+    }
+    const isDbConn = /Database|ECONNREFUSED|does not exist|connect|timeout/i.test(msg);
+    if (process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.error('[REGISTER] Error', { message: msg, code: e.code, stack: e.stack });
+    }
+    if (isDbConn) {
+      return res.status(503).json({ ok:false, error: 'DB_UNAVAILABLE', message: 'Database offline. Try again later.' });
+    }
+    return res.status(500).json({ ok:false, error: 'REGISTER_FAILED', message: msg || 'Unexpected error' });
   }
 });
 
@@ -327,13 +371,13 @@ router.get('/me', attachUser, async (req, res) => {
 router.patch('/me', attachUser, async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
-    const { name, phone } = req.body || {};
-    const data = {};
-    if (name !== undefined) data.name = String(name);
-    if (phone !== undefined) data.phone = phone ? String(phone).trim() : null;
+  const { name, phone } = req.body || {};
+  const data = {};
+  if (name !== undefined) data.name = String(name);
+  if (phone !== undefined) data.phone = phone ? String(phone).trim() : null;
     if (!Object.keys(data).length) return res.status(400).json({ ok:false, error:'NO_FIELDS' });
     const updated = await prisma.user.update({ where: { id: req.user.id }, data });
-    res.json({ ok: true, user: { id: updated.id, email: updated.email, role: updated.role, name: updated.name, phone: updated.phone, emailVerifiedAt: updated.emailVerifiedAt, phoneVerifiedAt: updated.phoneVerifiedAt } });
+    return res.json({ ok: true, user: { id: updated.id, email: updated.email, role: updated.role, name: updated.name, phone: updated.phone, emailVerifiedAt: updated.emailVerifiedAt, phoneVerifiedAt: updated.phoneVerifiedAt } });
   } catch (e) {
     if (e?.code === 'P2002') return res.status(409).json({ ok:false, error:'PHONE_EXISTS' });
     res.status(500).json({ ok:false, error:'UPDATE_ME_FAILED', message: e.message });

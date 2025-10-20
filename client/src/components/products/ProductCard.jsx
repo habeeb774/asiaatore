@@ -25,6 +25,7 @@ const ProductCard = ({ product, showImageBadge = true, showPriceBadge = true }) 
   const priceNum = product?.price != null ? +product.price : undefined;
   const hasDiscount = Number.isFinite(baseOld) && Number.isFinite(priceNum) && baseOld > priceNum;
   const discountPercent = hasDiscount ? Math.round( (1 - (priceNum / baseOld)) * 100 ) : null;
+  const savings = hasDiscount ? Math.max(0, baseOld - priceNum) : 0;
   const outOfStock = product.stock !== undefined && product.stock <= 0;
   return (
     <div className="product-card" data-id={product.id}>
@@ -71,6 +72,11 @@ const ProductCard = ({ product, showImageBadge = true, showPriceBadge = true }) 
         {showPriceBadge && hasDiscount && typeof discountPercent === 'number' && (
           <span className="badge-soft" style={{fontSize:'.62rem', padding:'.15rem .4rem', borderRadius:8, marginInlineStart:6}}>
             -{discountPercent}%
+          </span>
+        )}
+        {hasDiscount && savings > 0 && (
+          <span className="save-badge" aria-label={locale==='ar'?`وفرت ${savings} ر.س`:`Saved ${savings} SAR`}>
+            {locale==='ar'?`وفّرت ${savings} ر.س`:`Saved ${savings} SAR`}
           </span>
         )}
       </div>

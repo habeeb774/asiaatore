@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { api } from '../../api/client';
+import api from '../../api/client';
 import { useNavigate } from 'react-router-dom';
 
 export default function SearchOverlay() {

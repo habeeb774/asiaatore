@@ -30,18 +30,19 @@ This guide helps you launch the store to production safely.
 
 ## 1) Environment variables
 Copy `.env.example` to `.env` on the server and fill it:
-- APP_BASE_URL=https://asiaatore-production.up.railway.app
-- DATABASE_URL="mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway"
-- CORS_ORIGIN=https://manafadasiacompany.store,https://manafadasiacompany.store
+- DATABASE_URL="mysql://<user>:<pass>@<host>:<port>/<db>" (from your provider e.g. Railway)
+- APP_BASE_URL=https://manafadasiacompany.store
+- CORS_ORIGIN=https://manafadasiacompany.store
 - TRUST_PROXY=true (behind Nginx)
 - FORCE_HTTPS=true (optional, if Nginx forwards X-Forwarded-Proto)
+- SERVE_CLIENT=true (if Node should serve the built SPA from ./dist)
 
 ## 2) Install and build
 On the server:
 1. `npm ci`
 2. `npx prisma migrate deploy`
 3. Optional: `node server/db/seed.js` for initial content
-4. Build client: `npm run build`
+4. Build client (populates ./dist): `npm run build`
 
 ## 3) Start the server
 With PM2:
@@ -96,9 +97,9 @@ server {
 Then obtain/renew certs with Certbot.
 
 ## 5) Vite client configuration
-If the SPA is hosted on a separate domain from the API:
-- Set `VITE_API_URL` to the API origin before building
-- Rebuild the client if `VITE_*` values change
+- In development: use `.env.development.local` with `VITE_API_URL=/api` and set `VITE_PROXY_TARGET` to your Railway API origin.
+- In production: keep `VITE_API_URL=/api` so the built SPA calls the same origin (Nginx or Node serves and proxies /api).
+- If you deploy SPA and API on different origins, set `VITE_API_URL` to the API origin before building, enable the proper `CORS_ORIGIN`, and rebuild.
 
 ## 6) Security hardening checklist
 - CORS allowlist set via `CORS_ORIGIN`

@@ -17,6 +17,12 @@ export function initLazyImages() {
         if (src) {
           el.src = src;
           el.addEventListener('load', () => el.classList.add('is-loaded'), { once: true });
+          // On error, swap to a local inline placeholder to avoid broken images
+          el.addEventListener('error', () => {
+            const fallback = '/images/hero-image.svg';
+            el.src = fallback;
+            el.classList.add('is-loaded');
+          }, { once: true });
         }
         io.unobserve(el);
       }
@@ -175,6 +181,16 @@ export function bootHome() {
   initCounters();
   initCarousel();
   initProductCardActions();
+  // Global image error fallback for non-lazy images as well
+  qsa('img:not([data-fallback-bound])').forEach(img => {
+    img.dataset.fallbackBound = '1';
+    img.addEventListener('error', () => {
+      if (!/\.(svg|png|jpg|jpeg|webp)(\?.*)?$/i.test(img.src)) {
+        img.src = '/images/hero-image.svg';
+      }
+      img.classList.add('is-loaded');
+    }, { once: true });
+  });
   // إعادة تهيئة عند التنقل SPA (إن وجد): اربط مرة واحدة فقط لتفادي التكرار
   if (!__home_reinitBound) {
     document.addEventListener('reinit:home', () => {

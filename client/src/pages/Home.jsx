@@ -55,6 +55,15 @@ const Home = () => {
     return Number.isFinite(op) && Number.isFinite(price) && op > price;
   }).slice(0,6), [products]);
 
+  // Hero visual: pick a product image from featured → latest → fallback
+  const heroVisual = useMemo(() => {
+    const pick = (arr) => Array.isArray(arr) && arr.find(p => p?.image || (Array.isArray(p?.images) && p.images[0]));
+    const chosen = pick(featuredProducts) || pick(latestProducts) || pick(products) || null;
+  const src = chosen?.image || (Array.isArray(chosen?.images) ? chosen.images[0] : null) || '/images/hero-image.svg';
+    const alt = (chosen?.name && (chosen.name[locale] || chosen.name.ar || chosen.name.en)) || 'Featured product';
+    return { src, alt };
+  }, [featuredProducts, latestProducts, products, locale]);
+
   // Preload hero & first few product images for perceived performance
   // Preload unique image URLs only to avoid duplicate keys and wasted preloads
   const preloadImages = useMemo(() => {
@@ -137,10 +146,31 @@ const Home = () => {
             </h1>
             <p className="home-hero__lead">{t('heroLead')}</p>
             <div className="home-hero__actions" role="group" aria-label="الروابط الرئيسية">
-              
+              <Link to={baseProductsPath} className="btn-primary home-hero__btn px-6 py-3">
+                {locale==='ar' ? 'تسوق الآن' : 'Shop now'}
+              </Link>
+              <Link to="/offers" className="btn-secondary home-hero__btn px-6 py-3">
+                {locale==='ar' ? 'تصفح العروض' : 'Browse offers'}
+              </Link>
             </div>
           </motion.div>
-         
+          {/* Side visual with subtle float animation */}
+          <motion.div
+            className="home-hero__visual"
+            initial={{ opacity: 0, y: 20, rotate: -2 }}
+            animate={{ opacity: 1, y: [0, -8, 0], rotate: [-2, 0, -2] }}
+            transition={{ duration: 1.2, delay: .15, repeat: Infinity, repeatType: 'loop', ease: 'easeInOut' }}
+            style={{ position: 'absolute', insetInlineEnd: '3%', bottom: '6%', width: 'clamp(160px, 34vw, 420px)', pointerEvents: 'none' }}
+            aria-hidden="true"
+          >
+            <img
+              src={heroVisual.src}
+              alt=""
+              className="shadow-2xl rounded-2xl"
+              style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
+              loading="eager"
+            />
+          </motion.div>
         </div>
       </header>
 
@@ -178,26 +208,38 @@ const Home = () => {
         <section className="section-padding bg-white" aria-labelledby="cats-head">
           <div className="container-custom">
             <div className="home-section-head text-center">
-              <h2 id="cats-head" className="home-section-head__title">{locale==='ar'?'تصفح حسب التصنيف':'Browse by Category'}</h2>
-              <p className="home-section-head__subtitle">{locale==='ar'?'اختيارات سريعة لأفضل الأقسام':'Quick picks for top categories'}</p>
+              <h2 id="cats-head" className="home-section-head__title">{locale==='ar'?"تصفح حسب التصنيف":"Browse by Category"}</h2>
+              <p className="home-section-head__subtitle">{locale==='ar'?"اختيارات سريعة لأفضل الأقسام":"Quick picks for top categories"}</p>
             </div>
-            <div className="featured-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))'}}>
-              {topCats.map((c,i)=> (
-                <motion.div key={c.id||c.slug} initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:.45, delay:i*.04}}>
-                  <Link to={`${baseProductsPath}?category=${encodeURIComponent(c.slug)}&page=1`} className="block rounded-2xl bg-white shadow hover:shadow-2xl transition overflow-hidden">
-                    <div style={{aspectRatio:'4/3', background:'#f3f4f6', display:'grid', placeItems:'center'}}>
-                      {c.image
-                        ? <img src={c.image} alt={c.name?.ar||c.slug} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                        : <span style={{fontSize:'2rem',fontWeight:800,color:'#69be3c'}}>{(c.name?.ar||c.slug).slice(0,2)}</span>
-                      }
-                    </div>
-                    <div style={{padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontWeight:700}}>{locale==='ar'?(c.name?.ar||c.slug):(c.name?.en||c.slug)}</span>
-                      {typeof c.productCount==='number' && <span style={{fontSize:12,opacity:.7}}>{c.productCount}</span>}
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+            <div className="cats-grid" aria-live="polite">
+              {topCats.map((c,i)=> {
+                const name = locale==='ar' ? (c.name?.ar||c.slug) : (c.name?.en||c.slug);
+                const countLabel = typeof c.productCount==='number'
+                  ? (locale==='ar' ? `${c.productCount} منتج` : `${c.productCount} items`)
+                  : null;
+                const initials = (c.name?.ar||c.slug||'').slice(0,2);
+                return (
+                  <motion.div key={c.id||c.slug} initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:.45, delay:i*.04}}>
+                    <Link
+                      to={`${baseProductsPath}?category=${encodeURIComponent(c.slug)}&page=1`}
+                      className="cat-card"
+                      aria-label={name}
+                    >
+                      <div className="cat-card__media">
+                        {c.image ? (
+                          <img src={c.image} alt={name} />
+                        ) : (
+                          <div className="cat-card__placeholder" aria-hidden="true">{initials}</div>
+                        )}
+                        <div className="cat-card__overlay">
+                          <div className="cat-card__title" title={name}>{name}</div>
+                          {countLabel && <div className="cat-card__badge" aria-label={countLabel}>{countLabel}</div>}
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -211,7 +253,11 @@ const Home = () => {
             <p className="home-section-head__subtitle">{t('featuredSubtitle')}</p>
           </div>
           <div className="featured-grid" aria-live="polite">
-            {loading && <div className="py-8 text-center text-sm opacity-70">...loading</div>}
+            {loading && (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={`feat-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
+              ))
+            )}
             {!loading && featuredProducts.length === 0 && (
               <div className="py-8 text-center text-sm opacity-70">—</div>
             )}
@@ -242,7 +288,11 @@ const Home = () => {
             <h2 id="latest-heading" className="home-section-head__title">{t('latestProducts')}</h2>
           </div>
           <div className="featured-grid" aria-live="polite">
-            {loading && <div className="py-8 text-center text-sm opacity-70">{t('loading')}</div>}
+            {loading && (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={`latest-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
+              ))
+            )}
             {!loading && latestProducts.map((p,i)=> (
               <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:0.45, delay:i*0.05}}>
                 <ProductCard product={p} />
@@ -259,7 +309,11 @@ const Home = () => {
             <h2 id="discounts-heading" className="home-section-head__title">{t('discountProducts')}</h2>
           </div>
           <div className="featured-grid" aria-live="polite">
-            {loading && <div className="py-8 text-center text-sm opacity-70">{t('loading')}</div>}
+            {loading && (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={`disc-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
+              ))
+            )}
             {!loading && discountProducts.length === 0 && <div className="py-8 text-center text-sm opacity-70">—</div>}
             {!loading && discountProducts.map((p,i)=> (
               <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:0.45, delay:i*0.05}}>

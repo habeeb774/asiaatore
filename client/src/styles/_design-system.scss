@@ -73,6 +73,10 @@
 
   /* Gradients */
   --grad-primary: linear-gradient(90deg,var(--color-primary),var(--color-primary-alt));
+  /* Accessible hero gradient (red ↔ gold) with sufficient contrast on white text */
+  --color-hero-red: #b91c1c;   /* red-700 ~6.4:1 vs #fff */
+  --color-hero-gold: #92400e;  /* amber-800 ~5.8:1 vs #fff */
+  --grad-hero: linear-gradient(90deg,var(--color-hero-red),var(--color-hero-gold));
   --grad-accent: linear-gradient(90deg,#2563eb,#3b82f6);
   --grad-soft: linear-gradient(135deg,#ffffff,#f2f5f8 55%,#eef2f6);
   /* Status gradients for consistent UI tokens */
@@ -89,6 +93,16 @@
   --text-lg: 1.15rem;
   --text-xl: clamp(1.35rem,2vw,1.85rem);
   --text-2xl: clamp(1.75rem,3vw,2.4rem);
+  /* Hierarchical typography */
+  --text-h1: clamp(2.5rem, 4vw, 3rem);
+  --text-h2: clamp(1.8rem, 2.5vw, 2rem);
+  --text-section: clamp(1rem, 1.5vw, 1.125rem);
+
+  /* Weight tokens */
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+  --weight-bold: 700;
 
   /* Motion */
   --ease-standard: cubic-bezier(.4,0,.2,1);

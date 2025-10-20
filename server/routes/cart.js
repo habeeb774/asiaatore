@@ -5,6 +5,10 @@ import { attachUser } from '../middleware/auth.js';
 const router = Router();
 router.use(attachUser);
 
+// In degraded mode (ALLOW_INVALID_DB=true), Prisma calls will throw; provide safe fallbacks
+const ALLOW_DEGRADED = process.env.ALLOW_INVALID_DB === 'true';
+const isDbDisabled = (e) => ALLOW_DEGRADED || (e && (e.code === 'DB_DISABLED' || /Degraded mode: DB disabled/i.test(e.message || '')));
+
 // In development (or when ALLOW_DEV_HEADERS=true), if requests use dev headers with a user id
 // that doesn't exist in DB yet, auto-provision a minimal user to avoid FK violations on CartItem
 async function ensureDbUserIfDev(req) {
@@ -44,6 +48,7 @@ router.get('/', requireUser, async (req, res) => {
     // Normalize shape for clients expecting productId/id
     res.json({ ok: true, items: items.map(i => ({ ...i, id: i.productId })) });
   } catch (e) {
+    if (isDbDisabled(e)) return res.json({ ok: true, items: [] });
     res.status(500).json({ ok:false, error:'LIST_FAILED', message: e.message });
   }
 });
@@ -132,6 +137,7 @@ router.post('/merge', requireUser, async (req, res) => {
       if (code === 'P2003') return res.status(400).json({ ok: false, error: 'FK_CONSTRAINT', message: 'One or more products no longer exist.' });
       if (code === 'P2002') return res.status(409).json({ ok: false, error: 'DUPLICATE_ITEM', message: 'Duplicate cart item.' });
     }
+    if (isDbDisabled(e)) return res.json({ ok: true, items: [], skipped: [] });
     res.status(500).json({ ok: false, error: 'MERGE_FAILED', message: e.message });
   }
 });
@@ -180,6 +186,7 @@ router.post('/set', requireUser, async (req, res) => {
       return res.json({ ok: true, item: existing || { userId: req.user.id, productId: String(productId), quantity: qty } });
     }
   } catch (e) {
+    if (isDbDisabled(e)) return res.status(503).json({ ok: false, error: 'DB_DISABLED', message: 'Cart is unavailable in degraded mode' });
     res.status(500).json({ ok: false, error: 'SET_FAILED', message: e.message });
   }
 });
@@ -199,7 +206,8 @@ router.delete('/', requireUser, async (req, res) => {
     await prisma.$transaction(ops);
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ ok:false, error:'CLEAR_FAILED', message: e.message });
+    if (isDbDisabled(e)) return res.json({ ok: true });
+    res.status(500).json({ ok:false, error:'CLEAR_FAILED', message:e.message });
   }
 });
 
@@ -217,6 +225,7 @@ router.delete('/item/:productId', requireUser, async (req, res) => {
     ].filter(Boolean));
     res.json({ ok: true, removed: { productId, quantity: qty } });
   } catch (e) {
+    if (isDbDisabled(e)) return res.json({ ok: true, removed: { productId: String(req.params.productId || ''), quantity: 0 } });
     res.status(500).json({ ok: false, error: 'REMOVE_ITEM_FAILED', message: e.message });
   }
 });

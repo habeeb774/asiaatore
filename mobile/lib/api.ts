@@ -1,38 +1,104 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE } from './config';
+let AsyncStorage: any | null = null;
 
-let CURRENT_BASE = API_BASE; // mutable working base
+export type DeliveryOrder = {
+  id: string;
+  status?: string | null;
+  deliveryStatus: string;
+  grandTotal?: number | null;
+  userId?: string | null;
+  deliveryDriverId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  acceptedAt?: string | null;
+  outForDeliveryAt?: string | null;
+  deliveredAt?: string | null;
+  failedAt?: string | null;
+  deliveryDurationSec?: number | null;
+};
 
-async function fetchWithTimeout(url: string, init: RequestInit & { signal?: AbortSignal | null } = {}, ms = 3500) {
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), ms);
-  try {
-    const res = await fetch(url, { ...init, signal: init.signal || ac.signal });
-    return res;
-  } finally {
-    clearTimeout(t);
-  }
+type DeliveryOrdersResponse = { ok?: boolean; orders?: DeliveryOrder[] };
+type DeliveryOrderResponse = { ok?: boolean; order?: DeliveryOrder };
+
+const DEFAULT_BASES = [
+  'http://10.0.2.2:4000/api', // Android emulator -> host machine
+  'http://localhost:4000/api', // iOS simulator / local dev
+  'https://my-store-backend-production.up.railway.app/api', // prod fallback
+];
+
+// Resolve initial base from common runtime places, otherwise use first default
+let CURRENT_BASE: string = ((): string => {
+	// global override (e.g. set on window/globalThis)
+	if (typeof (globalThis as any).API_BASE === 'string') return (globalThis as any).API_BASE;
+	// node env (runtime-safe access to avoid TS requiring @types/node)
+	if ((globalThis as any).process?.env?.API_BASE) return (globalThis as any).process.env.API_BASE;
+	return DEFAULT_BASES[0];
+})();
+
+// Allow runtime override from app code
+export function setApiBase(base: string) {
+	CURRENT_BASE = base;
 }
 
-function candidatesFor(base: string): string[] {
-  try {
-    const u = new URL(base);
-    const host = u.hostname;
-    const isEmu = host === '10.0.2.2';
-    const ports = [u.port || '80', '8831', '8829', '8830'];
-    const uniq = new Set<string>();
-    for (const p of ports) {
-      if (isEmu) uniq.add(`${u.protocol}//10.0.2.2:${p}${u.pathname}`);
-      else uniq.add(`${u.protocol}//${host}:${p}${u.pathname}`);
-    }
-    return Array.from(uniq.values());
-  } catch {
-    return [base];
-  }
+// Provide candidate base list for fallback attempts
+function candidatesFor(base: string) {
+	const seen = new Set<string>();
+	const list: string[] = [];
+	// prefer the current base first, then known defaults
+	[base, ...DEFAULT_BASES].forEach(b => {
+		if (!seen.has(b)) { seen.add(b); list.push(b); }
+	});
+	return list;
+}
+
+// Minimal fetch with timeout using AbortController (no dependency)
+async function fetchWithTimeout(url: string, opts: RequestInit = {}, timeout = 3000): Promise<Response> {
+	// If AbortController not available, just call fetch (some RN environments polyfill it)
+	const AC = (globalThis as any).AbortController;
+	if (!AC) return fetch(url, opts);
+	const controller = new AC();
+	const timer = setTimeout(() => controller.abort(), timeout);
+	try {
+		const res = await fetch(url, { ...opts, signal: controller.signal } as any);
+		return res;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+async function ensureAsyncStorage() {
+	// already resolved
+	if (AsyncStorage) return;
+	try {
+		// dynamic import so TS/node won't require the package at build time
+		// @ts-ignore - allow dynamic import even if TS project module flag is stricter
+		const mod = await import('@react-native-async-storage/async-storage');
+		AsyncStorage = mod.default || mod;
+	} catch {
+		// fallback: prefer browser localStorage if available, otherwise use an in-memory shim
+		if (typeof localStorage !== 'undefined') {
+			AsyncStorage = {
+				getItem: async (k: string) => Promise.resolve(localStorage.getItem(k)),
+				setItem: async (k: string, v: string) => Promise.resolve(localStorage.setItem(k, v)),
+				removeItem: async (k: string) => Promise.resolve(localStorage.removeItem(k)),
+			};
+		} else {
+			const mem: Record<string, string> = {};
+			AsyncStorage = {
+				getItem: async (k: string) => Promise.resolve(mem[k] ?? null),
+				setItem: async (k: string, v: string) => { mem[k] = v; return Promise.resolve(); },
+				removeItem: async (k: string) => { delete mem[k]; return Promise.resolve(); },
+			};
+		}
+	}
 }
 
 async function getToken(): Promise<string | null> {
-  try { return await AsyncStorage.getItem('my_store_token'); } catch { return null; }
+	try {
+		await ensureAsyncStorage();
+		return await AsyncStorage.getItem('my_store_token');
+	} catch {
+		return null;
+	}
 }
 
 export async function request(path: string, options: RequestInit = {}) {
@@ -96,12 +162,51 @@ export const api = {
   // Orders
   listOrders: () => request('/orders'),
   // Auth
+  me: () => request('/auth/me'),
+  // Auth
   login: (email: string, password: string) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   // Cart
   cartList: () => request('/cart'),
   cartMerge: (items: Array<{ productId: string; quantity: number }>) => request('/cart/merge', { method: 'POST', body: JSON.stringify({ items }) }),
   cartSet: (productId: string, quantity: number) => request('/cart/set', { method: 'POST', body: JSON.stringify({ productId, quantity }) }),
-  cartClear: () => request('/cart', { method: 'DELETE' })
+  cartClear: () => request('/cart', { method: 'DELETE' }),
+  // Delivery
+  deliveryAssigned: async (): Promise<DeliveryOrder[]> => {
+    const data = await request('/delivery/orders/assigned') as DeliveryOrdersResponse;
+    return Array.isArray(data?.orders) ? data.orders : [];
+  },
+  deliveryPool: async (): Promise<DeliveryOrder[]> => {
+    const data = await request('/delivery/orders?pool=1') as DeliveryOrdersResponse;
+    return Array.isArray(data?.orders) ? data.orders : [];
+  },
+  deliveryHistory: async (limit = 100): Promise<DeliveryOrder[]> => {
+    const data = await request(`/delivery/orders/history?limit=${encodeURIComponent(String(limit))}`) as DeliveryOrdersResponse;
+    return Array.isArray(data?.orders) ? data.orders : [];
+  },
+  deliveryGet: async (id: string): Promise<DeliveryOrder | null> => {
+    const data = await request(`/delivery/orders/${id}`) as DeliveryOrderResponse;
+    return data?.order || null;
+  },
+  deliveryAccept: (id: string) => request(`/delivery/orders/${id}/accept`, { method: 'POST' }),
+  deliveryReject: (id: string) => request(`/delivery/orders/${id}/reject`, { method: 'POST' }),
+  deliveryStart: (id: string) => request(`/delivery/orders/${id}/start`, { method: 'POST' }),
+  deliveryComplete: async (id: string, payload: { note?: string; proofUri?: string | null }) => {
+    const form = new FormData();
+    if (payload?.note) form.append('note', payload.note);
+    if (payload?.proofUri) {
+      const uri = payload.proofUri;
+      const name = uri.split('/').pop() || `proof-${Date.now()}.jpg`;
+      const ext = name.split('.').pop()?.toLowerCase();
+      const type = ext ? `image/${ext === 'jpg' ? 'jpeg' : ext}` : 'image/jpeg';
+      form.append('proof', { uri, name, type } as any);
+    }
+    return request(`/delivery/orders/${id}/complete`, { method: 'POST', body: form });
+  },
+  deliveryFail: (id: string, reason: string) => request(`/delivery/orders/${id}/fail`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  deliveryLocation: (id: string, coords: { lat?: number; lng?: number; accuracy?: number | null; heading?: number | null; speed?: number | null }) => request(`/delivery/orders/${id}/location`, { method: 'POST', body: JSON.stringify(coords) }),
+  deliveryStatusPatch: (id: string, status: string) => request(`/delivery/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  deliveryOtpGenerate: (id: string) => request(`/delivery/orders/${id}/otp/generate`, { method: 'POST' }),
+  deliveryOtpConfirm: (id: string, code: string) => request(`/delivery/orders/${id}/otp/confirm`, { method: 'POST', body: JSON.stringify({ code }) }),
 };
 
 export default api;

@@ -11,6 +11,8 @@ import { randomToken, sha256 } from '../utils/jwt.js';
 // NOTE: 'active' field not in schema; we emulate by using meta in AuditLog if deactivated.
 
 const router = Router();
+const ALLOW_DEGRADED = process.env.ALLOW_INVALID_DB === 'true';
+const isDbDisabled = (e) => ALLOW_DEGRADED || (e && (e.code === 'DB_DISABLED' || /Degraded mode: DB disabled/i.test(e.message || '')));
 
 // Create user (admin-only)
 router.post('/', requireAdmin, async (req, res) => {
@@ -54,6 +56,7 @@ router.post('/', requireAdmin, async (req, res) => {
     audit({ action:'user.create', entity:'User', entityId: created.id, userId: req.user?.id, meta: { role, inviteSent } });
     return res.status(201).json({ ok:true, inviteSent, user: { id: created.id, email: created.email, role: created.role, name: created.name, phone: created.phone, createdAt: created.createdAt } });
   } catch (e) {
+    if (isDbDisabled(e)) return res.status(503).json({ ok:false, error:'DB_DISABLED', message:'User management is unavailable in degraded mode' });
     if (e?.code === 'P2002') {
       // Unique constraint failed (likely phone)
       return res.status(409).json({ ok:false, error:'UNIQUE_CONSTRAINT', message: e.meta?.target?.join?.(',') || 'Unique field exists' });
@@ -87,6 +90,7 @@ router.get('/', requireAdmin, async (req, res) => {
     const users = list.map(u => ({ id: u.id, email: u.email, role: u.role, name: u.name, phone: u.phone || null, createdAt: u.createdAt, active: flags[u.id] ?? true }));
     res.json({ ok: true, users, total, page, pageSize });
   } catch (e) {
+    if (isDbDisabled(e)) return res.json({ ok: true, users: [], total: 0, page: 1, pageSize: Math.min(100, Math.max(1, parseInt(req.query.pageSize) || 20)) });
     res.status(500).json({ ok: false, error: 'FAILED_USERS_LIST', message: e.message });
   }
 });
@@ -108,6 +112,7 @@ router.patch('/:id', requireAdmin, async (req, res) => {
     audit({ action: 'user.update', entity: 'User', entityId: updated.id, userId: req.user?.id, meta: { role: updated.role } });
     res.json({ ok: true, user: { id: updated.id, email: updated.email, role: updated.role, name: updated.name } });
   } catch (e) {
+    if (isDbDisabled(e)) return res.status(503).json({ ok: false, error: 'DB_DISABLED', message: 'User update unavailable in degraded mode' });
     // Prisma: record not found
     if (e.code === 'P2025') return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
     // Unique constraint violation (phone/email)
@@ -124,6 +129,7 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     audit({ action: 'user.delete', entity: 'User', entityId: removed.id, userId: req.user?.id });
     res.json({ ok: true, removed: { id: removed.id, email: removed.email } });
   } catch (e) {
+    if (isDbDisabled(e)) return res.status(503).json({ ok: false, error: 'DB_DISABLED', message: 'User delete unavailable in degraded mode' });
     if (e.code === 'P2025') return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
     res.status(400).json({ ok: false, error: 'FAILED_USER_DELETE', message: e.message });
   }

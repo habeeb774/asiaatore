@@ -23,6 +23,7 @@ export default function LazyImage({
   skeleton = true,
   priority = false,
   onLoad,
+  onError,
   ...rest
 }) {
   const containerRef = useRef(null);
@@ -95,6 +96,17 @@ export default function LazyImage({
                 setLoaded(true);
                 onLoad && onLoad(e);
               }}
+              onError={(e) => {
+                try {
+                  if (onError) return onError(e);
+                  const target = e.currentTarget;
+                  // prevent infinite loop
+                  if (!target.dataset.fallbackApplied) {
+                    target.dataset.fallbackApplied = '1';
+                    target.src = '/images/hero-image.svg';
+                  }
+                } catch {}
+              }}
               className={className}
               style={{
                 display: 'block',
@@ -120,6 +132,16 @@ export default function LazyImage({
             onLoad={(e) => {
               setLoaded(true);
               onLoad && onLoad(e);
+            }}
+            onError={(e) => {
+              try {
+                if (onError) return onError(e);
+                const target = e.currentTarget;
+                if (!target.dataset.fallbackApplied) {
+                  target.dataset.fallbackApplied = '1';
+                  target.src = '/images/hero-image.svg';
+                }
+              } catch {}
             }}
             className={className}
             style={{

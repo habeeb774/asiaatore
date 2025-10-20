@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { api } from '../api/client';
+import api from '../api/client';
 
 /**
  * MarketingContext

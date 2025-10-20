@@ -24,16 +24,23 @@ function InnerLayout() {
     secondary: data?.colorSecondary || undefined,
     accent: data?.colorAccent || undefined,
   } as any;
+
+  // add this alias to avoid the TS error "Property 'Screen' does not exist on type ..."
+  const S = Stack as any;
+
   return (
     <ThemeProvider overrides={overrides}>
       <ToastProvider>
         <CartProvider>
           <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ title: 'الرئيسية' }} />
-            <Stack.Screen name="login" options={{ title: 'دخول' }} />
-            <Stack.Screen name="orders" options={{ title: 'طلباتي' }} />
-            <Stack.Screen name="product/[id]" options={{ title: 'المنتج' }} />
+            {/* use the alias S for Screen to bypass the type mismatch */}
+            <S.Screen name="(tabs)" options={{ headerShown: false }} />
+            <S.Screen name="index" options={{ title: 'الرئيسية' }} />
+            <S.Screen name="login" options={{ title: 'دخول' }} />
+            <S.Screen name="orders" options={{ title: 'طلباتي' }} />
+            <S.Screen name="product/[id]" options={{ title: 'المنتج' }} />
+            <S.Screen name="delivery/index" options={{ title: 'مهام التوصيل' }} />
+            <S.Screen name="delivery/order/[id]" options={{ title: 'تفاصيل توصيل' }} />
           </Stack>
         </CartProvider>
       </ToastProvider>

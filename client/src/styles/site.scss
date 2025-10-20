@@ -9,17 +9,22 @@
  */
 
 /* Using modern @use modules (imports must precede any rules) */
+/* Core modular SCSS foundation */
+@use './core/variables' as *;
+@use './core/mixins' as *;
+@use './core/base';
+@use './core/components';
 /* Legacy sidebar module removed; modern sidebar styles live in sidebar-modern.scss and are imported by the component. */
 @use './_header';
 @use './product-card';
-/* Variables */
-$primary-red: #69be3c; /* استخدم ألوان مناسبة أو عدِّلها */
+/* Project-level tokens (override-friendly) */
+$primary-red: map-get(map-get($theme-colors, light), primary);
 $primary-gold: #2eafff;
-$text-dark: #0f172a;
+$text-dark: map-get(map-get($theme-colors, light), text);
 $muted: #64748b;
-$bg: #ffffff;
-$card-bg: #ffffff;
-$shadow: 0 6px 18px rgba(15,23,42,0.06);
+$bg: map-get(map-get($theme-colors, light), bg);
+$card-bg: map-get(map-get($theme-colors, light), card);
+$shadow: $shadow !default;
 
 /* Base */
 * { box-sizing: border-box; }
@@ -196,16 +201,17 @@ img { max-width: 100%; height: auto; }
 
 /* Dark mode using data-theme attribute set on <html> by ThemeProvider */
 [data-theme='dark'] {
-  --bg-color: #0b1220;
+  /* Derive from theme map */
+  --bg-color: #{map-get(map-get($theme-colors, dark), bg)};
   --header-bg: rgba(9,12,19,0.96);
   --menu-bg: #071127;
   --footer-bg: #071127;
-  --main-text-color: #184a87;
+  --main-text-color: #{map-get(map-get($theme-colors, dark), text)};
   --text-btn: #f8fafc;
-  --card-bg: #071127;
+  --card-bg: #{map-get(map-get($theme-colors, dark), card)};
   --dark-text-main: #e6eef8;
   --dark-text-sec: #9aa6b2;
-  --color-primary: #f6c85f;
+  --color-primary: #{map-get(map-get($theme-colors, dark), primary)};
   --shadow: 0 8px 30px rgba(0,0,0,0.6);
   background-color: var(--bg-color);
   color: var(--main-text-color);
@@ -349,16 +355,9 @@ html {
 
 /* Buttons */
 .btn-primary {
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
+  @include focus-ring($primary-red);
   background: linear-gradient(90deg, $primary-red, $primary-gold);
-  color:#fff;
-  padding:10px 14px;
-  border-radius: var(--radius-md, 12px);
-  border:none;
   font-weight:600;
-  cursor:pointer;
   box-shadow: 0 6px 18px rgba(43,108,176,0.12);
 }
 .btn-secondary {
@@ -486,6 +485,12 @@ h6 { font-size: var(--h6-size); line-height: var(--heading-lh); margin: 0 0 .5re
   object-fit: contain;
   display: block;
   margin-inline: auto;
+}
+/* Older phones fallback for aspect-ratio */
+@supports not (aspect-ratio: 1 / 1) {
+  .home-hero__frame { position: relative; }
+  .home-hero__frame::before { content: ""; display: block; padding-top: 62.5%; }
+  .home-hero__frame > .home-hero__image { position: absolute; inset: 0; margin: auto; }
 }
 /* Mobile-only refinements for hero visuals */
 @media (max-width: 640px) {
@@ -703,10 +708,7 @@ html {
 */
 
 /* 8) Accessibility focus utility (in case not already present globally) */
-.focus-visible-ring:focus-visible {
-  outline: 2px solid $primary-red;
-  outline-offset: 2px;
-}
+.focus-visible-ring:focus-visible { @include focus-ring($primary-red); }
 
 /* 9) Generic appearance reset utility (if needed elsewhere) */
 .appearance-none {
@@ -732,15 +734,29 @@ html {
 }
 
 /* === Utilities: micro-interactions === */
-.motion-safe-transition {
-  transition: transform .22s cubic-bezier(.2,.9,.3,1), box-shadow .22s cubic-bezier(.2,.9,.3,1), filter .22s cubic-bezier(.2,.9,.3,1);
+/* Extendable transition rules to keep interactions smooth but respectful of reduced motion */
+%motion-safe-transition {
+  transition: transform .22s cubic-bezier(.2,.9,.3,1), box-shadow .22s cubic-bezier(.2,.9,.3,1), filter .22s cubic-bezier(.2,.9,.3,1), opacity .22s ease;
+  will-change: transform, box-shadow, filter, opacity;
 }
+.motion-safe-transition { @extend %motion-safe-transition; }
+
+/* Apply to common interactive elements */
+.btn-primary, .btn-secondary, .product-card, .home-feature, .home-hero__image { @extend %motion-safe-transition; }
+
+/* Pressed affordance */
 .pressed:active { transform: scale(.985); opacity: .98; }
+
+/* Reduced motion: disable transitions where possible */
 @media (prefers-reduced-motion: reduce) {
-  .motion-safe-transition { transition: none !important; }
+  .motion-safe-transition,
+  .btn-primary, .btn-secondary, .product-card, .home-feature, .home-hero__image {
+    transition: none !important;
+  }
 }
 
 /* === Utilities: Scroll fade hint on horizontal edges === */
+.scroll-fade-x { position: relative; }
 .scroll-fade-x::before,
 .scroll-fade-x::after {
   content: "";
@@ -779,7 +795,34 @@ html {
 .snap-start { scroll-snap-align: start; }
 .snap-center { scroll-snap-align: center; }
 .snap-end { scroll-snap-align: end; }
-.h-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.h-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+
+/* iOS 12-/older Android degrade gracefully if snap unsupported */
+@supports not (scroll-snap-type: x mandatory) {
+  .snap-x, .snap-y, .snap-start, .snap-center, .snap-end { scroll-snap-type: none; }
+}
+
+/* === RTL-safe helpers and overflow reducers === */
+/* Bidi isolation and direction helpers */
+.bidi-isolate { unicode-bidi: isolate; }
+.bidi-plain   { unicode-bidi: plaintext; }
+.dir-rtl { direction: rtl; }
+.dir-ltr { direction: ltr; }
+
+/* Logical spacing/centering */
+.mx-inline-auto { margin-inline: auto; }
+.px-inline-4 { padding-inline: 1rem; }
+
+/* Prevent overflow in flex rows in any direction */
+.rtl-fix-overflow, .ltr-fix-overflow { display: flex; min-width: 0; }
+.rtl-fix-overflow > *,
+.ltr-fix-overflow > * { min-width: 0; }
+
+/* Text truncation and word breaking */
+.truncate, .text-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inline-max-100 { max-inline-size: 100%; }
+.block-max-100 { max-block-size: 100%; }
+.break-anywhere { overflow-wrap: anywhere; word-break: break-word; }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {

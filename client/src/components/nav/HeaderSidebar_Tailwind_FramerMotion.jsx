@@ -142,7 +142,7 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
                   <ul className="flex flex-col gap-3">
                     {cartItems.map(item => (
                       <li key={item.id} className="flex items-center gap-3">
-                        <img src={item.images?.[0] || item.image || '/images/placeholder.jpg'} alt={item.name || ''} className="w-14 h-14 object-cover rounded-md" />
+                        <img src={item.images?.[0] || item.image || '/images/hero-image.svg'} alt={item.name || ''} className="w-14 h-14 object-cover rounded-md" />
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-sm truncate">{item.name || item.title}</div>
                           <div className="text-xs text-slate-500">{formatPrice(item.price || item.salePrice || 0, locale)} × {item.quantity || 1}</div>

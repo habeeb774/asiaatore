@@ -1,11 +1,6 @@
-# Setup: Database via Vercel (PlanetScale)
+# Deprecated: Vercel/PlanetScale setup
 
-This project runs the API on Railway and the frontend on Vercel. You can either:
-
-- Keep using the existing Railway MySQL (simplest), or
-- Provision a new MySQL via Vercel’s PlanetScale integration and point the Railway API to it.
-
-Below are the steps for the PlanetScale route.
+This document described running the frontend on Vercel with a PlanetScale database. The project now targets Railway for the API and standard Node hosting with Nginx for the SPA. Vercel-specific steps are no longer maintained. Kept here for historical reference.
 
 ## 1) Create the database in Vercel
 
@@ -56,12 +51,12 @@ npx prisma migrate deploy
 - If backend stays on Railway: set DATABASE_URL there (PlanetScale URL), then redeploy/restart the service.
 - For local API runs: ensure `.env` has the new DATABASE_URL; start with `npm run dev:server`.
 
-The Vercel frontend already proxies client calls to `/api/*` → Railway API via `vercel.json`, so no frontend change is needed.
+In development, the Vite dev server proxies `/api/*` to your Railway API using `VITE_PROXY_TARGET`. In production, terminate TLS at Nginx and proxy `/api` to the Node server.
 
 ## 5) Verify
 
 - Open `/_health` and `/_db_ping` on the API base.
-- Hit `/api/products`, `/api/orders`, etc. from the Vercel app; no CORS expected (client forces `/api`).
+- Hit `/api/products`, `/api/orders`, etc. from the SPA; no CORS expected in dev (client forces `/api`).
 
 ## Notes
 
@@ -71,6 +66,6 @@ The Vercel frontend already proxies client calls to `/api/*` → Railway API via
 - Staying on Railway MySQL
   - You can keep the existing DATABASE_URL (as in `.env`), and everything continues to work.
 - Secrets
-  - Don’t commit DATABASE_URL. Keep it in Vercel/Railway envs or local `.env` only.
+  - Don’t commit DATABASE_URL. Keep it in Railway envs or local `.env` only.
 
 If you want, I can switch the project to PlanetScale mode (update Prisma config, push schema, and adjust envs) automatically—just say the word.

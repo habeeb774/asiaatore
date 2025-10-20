@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="My Store Logo">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#69be3c"/>
+      <stop offset="100%" stop-color="#2b7a0b"/>
+    </linearGradient>
+  </defs>
+  <rect rx="24" ry="24" width="192" height="192" fill="url(#g)"/>
+  <g fill="#fff" transform="translate(24,24)">
+    <path d="M24 24h96l-8 64H32l-8-64z" fill-opacity="0.15"/>
+    <circle cx="40" cy="120" r="8"/>
+    <circle cx="120" cy="120" r="8"/>
+    <path d="M24 24h96l-8 64H32l-8-64zm16 8l6 48h70l6-48H40z"/>
+  </g>
+  <text x="96" y="178" text-anchor="middle" font-size="14" font-family="Arial, Helvetica, sans-serif" fill="#ffffff" opacity="0.9">My Store</text>
+</svg>

@@ -28,6 +28,10 @@ model User {
   messages    ChatMessage[]
   sessions    Session[]
   authTokens  AuthToken[]
+  // Delivery back-relations
+  deliveryProfile      DeliveryProfile?
+  deliveryConfirmations DeliveryConfirmation[]
+  deliveryOtps          DeliveryOtp[]
 }
 
 model Brand {
@@ -95,14 +99,30 @@ model Order {
   grandTotal    Float       @default(0)
   paymentMethod String?
   paymentMeta   Json?
+  // Delivery fields
+  deliveryStatus      String      @default("unassigned")
+  deliveryDriverId    String?
+  acceptedAt          DateTime?
+  outForDeliveryAt    DateTime?
+  deliveredAt         DateTime?
+  failedAt            DateTime?
+  deliveryDurationSec Int?
+  deliveryLocation    Json?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   user          User        @relation(fields: [userId], references: [id])
   items         OrderItem[]
 
   shipments     Shipment[]
+  // Delivery back-relations
+  deliveryConfirmations DeliveryConfirmation[]
+  deliveryOtps          DeliveryOtp[]
 
   @@index([userId], map: "Order_userId_fkey")
+  @@index([deliveryDriverId])
+  @@index([deliveryStatus])
+  @@index([outForDeliveryAt])
+  @@index([deliveredAt])
 }
 
 model OrderItem {
@@ -287,6 +307,64 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// Delivery driver profile
+model DeliveryProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  online           Boolean  @default(false)
+  vehicleType      String?
+  licensePlate     String?
+  lastKnownLocation Json?
+  lastSeenAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([updatedAt])
+}
+
+// Delivery confirmations (proof photo, signature, or OTP)
+model DeliveryConfirmation {
+  id            String   @id @default(uuid())
+  orderId       String
+  driverId      String
+  method        String   // 'photo' | 'signature' | 'otp' | 'other'
+  photoUrl      String?
+  signatureUrl  String?
+  otpVerifiedAt DateTime?
+  otpLast4      String?
+  note          String?
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [driverId], references: [id])
+
+  @@index([orderId])
+  @@index([driverId])
+  @@index([createdAt])
+}
+
+// Delivery OTP storage
+model DeliveryOtp {
+  id         String   @id @default(uuid())
+  orderId    String
+  userId     String
+  codeHash   String
+  active     Boolean  @default(true)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([active])
+  @@index([expiresAt])
+}
+
 model ChatThread {
   id        String   @id @default(uuid())
   title     String?
@@ -345,6 +423,7 @@ enum Role {
   user
   admin
   seller
+  delivery
 }
 
 enum ReviewStatus {
@@ -400,6 +479,9 @@ model AuthToken {
   consumedAt DateTime?
   expiresAt  DateTime?
   createdAt  DateTime @default(now())
+  // Optional request context (used by server code)
+  userAgent  String?
+  ip         String?
 
   user User @relation(fields: [userId], references: [id])
 

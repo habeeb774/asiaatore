@@ -1,0 +1,29 @@
+@use 'sass:map';
+@use './variables' as *;
+
+// Theme color mixin
+@mixin theme-color($property, $color-key, $theme: light) {
+  #{$property}: map.get(map.get($theme-colors, $theme), $color-key);
+}
+
+// Backdrop blur utility
+@mixin backdrop-blur($radius) {
+  backdrop-filter: blur($radius);
+  -webkit-backdrop-filter: blur($radius);
+}
+
+// Line clamp
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  @if ($lines > 0) {
+    -webkit-line-clamp: $lines;
+  }
+}
+
+// Focus ring
+@mixin focus-ring($color) {
+  outline: 2px solid $color;
+  outline-offset: 2px;
+}

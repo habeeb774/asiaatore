@@ -1,7 +1,7 @@
 {
   "name": "my-store",
   "private": true,
-  "homepage": "https://habeeb774.github.io/Asia_PortStore",
+  "homepage": "",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -15,12 +15,14 @@
     "build": "npm run build -w client",
     "server": "node server/index.js",
     "start": "node server/index.js",
+    "start:prod": "cross-env NODE_ENV=production SERVE_CLIENT=true node server/index.js",
     "prestart": "prisma migrate deploy",
     "postinstall": "prisma generate",
     "pm2:start": "pm2 start ecosystem.config.js && pm2 save",
     "pm2:restart": "pm2 restart my-store-server",
     "pm2:logs": "pm2 logs my-store-server",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prisma:validate": "npx prisma validate",
     "migrate:deploy": "prisma migrate deploy",
@@ -75,8 +77,6 @@
     "@prisma/client": "^5.22.0",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
-    "@vercel/analytics": "^1.5.0",
-    "@vercel/speed-insights": "^1.2.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
@@ -137,7 +137,7 @@
     "tailwindcss": "^4.1.13",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.2",
-    "vite": "^5.4.10",
+    "vite": "^7.1.10",
     "vite-plugin-pwa": "^1.0.3"
   },
   "workspaces": [

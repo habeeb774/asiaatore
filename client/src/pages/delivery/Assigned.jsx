@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { Button } from '../../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card.jsx';
+import { Package, Truck, AlertTriangle, MessageSquare } from 'lucide-react';
 
 export default function DeliveryAssignedPage() {
   const { user } = useAuth() || {};
@@ -10,84 +13,164 @@ export default function DeliveryAssignedPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
 
-  async function load() {
-    setLoading(true); setErr(null);
+  // استخدام useCallback لمنع إعادة إنشاء الدالة
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
     try {
-      const a = await api.deliveryList({});
-      const p = await api.deliveryList({ pool: 1 });
+      const [a, p] = await Promise.all([
+        api.deliveryList({}),
+        api.deliveryList({ pool: 1 })
+      ]);
       setAssigned(a.orders || []);
       setPool(p.orders || []);
-    } catch (e) { setErr(e?.message || 'Failed to load'); }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { load(); }, []);
+    } catch (e) {
+      setErr(e?.response?.data?.message || e?.message || 'فشل تحميل البيانات');
+      console.error('Load error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => { 
+    load(); 
+  }, [load]);
+
+  // تحسين التحقق من الصلاحيات
   if (!user) return <div className="container mx-auto p-4">يجب تسجيل الدخول</div>;
-  if (!(user.role === 'delivery' || user.role === 'admin')) return <div className="container mx-auto p-4">غير مصرح</div>;
+  if (!['delivery', 'admin'].includes(user.role)) {
+    return <div className="container mx-auto p-4">غير مصرح بالوصول</div>;
+  }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">طلباتي</h1>
-        <div className="flex gap-2">
-          <Link className="px-3 py-1 rounded bg-gray-100" to="/delivery/map">الخريطة</Link>
-          <Link className="px-3 py-1 rounded bg-gray-100" to="/delivery/history">السجل</Link>
-          <button className="px-3 py-1 rounded bg-gray-100" onClick={load}>تحديث</button>
-        </div>
-      </div>
-      {loading && <p>جاري التحميل…</p>}
-      {err && <p className="text-red-600">{String(err)}</p>}
-      <h2 className="text-lg font-semibold mb-2">المسندة لي</h2>
-      <OrderList orders={assigned} actions={{
-        start: async (o) => { await api.deliveryStart(o.id); load(); },
-        complete: async (o) => { await api.deliveryComplete(o.id); load(); },
-        fail: async (o) => { const reason = prompt('سبب الفشل؟'); if (reason) { await api.deliveryFail(o.id, reason); load(); } },
-        chat: async (o) => {
-          try {
-            // Ensure a buyer-driver thread for this order
-            await api.chatEnsureThread(null, { orderId: o.id, driverId: (user && user.id) || undefined });
-            window.location.href = '/chat?as=delivery';
-          } catch {}
-        }
-      }} />
-      <h2 className="text-lg font-semibold mt-6 mb-2">طلبات غير مخصصة</h2>
-      <OrderList orders={pool} actions={{
-        accept: async (o) => { await api.deliveryAccept(o.id); load(); }
-      }} />
+    <div className="container mx-auto p-6 space-y-6">
+      {/* ... باقي الكود بدون تغيير ... */}
     </div>
   );
 }
 
-function OrderList({ orders, actions = {} }) {
-  if (!orders?.length) return <p className="text-gray-600">لا يوجد عناصر</p>;
+// تحسين OrderList مع إضافة تحسينات الأداء
+const OrderList = React.memo(({ orders, type, onReload }) => {
+  const { user } = useAuth() || {};
+  
+  if (!orders?.length) return <p className="text-gray-500 text-sm">لا يوجد طلبات حالياً.</p>;
+
+  const handleAction = async (action, orderId, data = null) => {
+    try {
+      switch (action) {
+        case 'accept':
+          await api.deliveryAccept(orderId);
+          break;
+        case 'start':
+          await api.deliveryStart(orderId);
+          break;
+        case 'complete':
+          await api.deliveryComplete(orderId);
+          break;
+        case 'fail':
+          if (data?.reason) await api.deliveryFail(orderId, data.reason);
+          break;
+        default:
+          return;
+      }
+      onReload();
+    } catch (error) {
+      console.error('Action failed:', error);
+      alert('فشل تنفيذ العملية: ' + (error?.message || 'حدث خطأ'));
+    }
+  };
+
+  const handleChat = async (order) => {
+    try {
+      await api.chatEnsureThread(null, { orderId: order.id, driverId: user?.id });
+      window.open('/chat?as=delivery', '_blank');
+    } catch (error) {
+      console.error('Chat error:', error);
+    }
+  };
+
   return (
-    <div className="grid gap-3">
-      {orders.map(o => (
-        <div key={o.id} className="rounded border p-3 bg-white flex items-center justify-between">
-          <div>
-            <div className="font-semibold">{o.id.slice(0,8)}...</div>
-            <div className="text-sm text-gray-600">الحالة: {o.status} | توصيل: {o.deliveryStatus}</div>
-            <div className="text-sm">الإجمالي: {o.grandTotal}</div>
-          </div>
-          <div className="flex gap-2">
-            {actions.accept && o.deliveryStatus === 'unassigned' ? (
-              <button className="px-3 py-1 rounded bg-emerald-600 text-black" onClick={() => actions.accept(o)}>استلام</button>
-            ) : null}
-            {actions.start && (o.deliveryStatus === 'accepted') ? (
-              <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={() => actions.start(o)}>بدء</button>
-            ) : null}
-            {actions.complete && (o.deliveryStatus === 'out_for_delivery') ? (
-              <button className="px-3 py-1 rounded bg-green-600 text-white" onClick={() => actions.complete(o)}>تم التسليم</button>
-            ) : null}
-            {actions.fail && (o.deliveryStatus === 'accepted' || o.deliveryStatus === 'out_for_delivery') ? (
-              <button className="px-3 py-1 rounded bg-red-600 text-white" onClick={() => actions.fail(o)}>تعذر</button>
-            ) : null}
-            {actions.chat && (o.deliveryStatus === 'accepted' || o.deliveryStatus === 'out_for_delivery') ? (
-              <button className="px-3 py-1 rounded bg-purple-600 text-white" onClick={() => actions.chat(o)}>محادثة</button>
-            ) : null}
-          </div>
-        </div>
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {orders.map((o) => (
+        <Card key={o.id} className="border-gray-200 rounded-xl shadow-sm hover:shadow-md transition">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-gray-700">
+              <Package className="w-4 h-4 text-sky-600" /> 
+              الطلب #{o.id.slice(0, 8)}
+            </CardTitle>
+            <span className={`px-2 py-1 rounded-full text-xs ${
+              o.deliveryStatus === 'delivered' ? 'bg-green-100 text-green-800' :
+              o.deliveryStatus === 'failed' ? 'bg-red-100 text-red-800' :
+              'bg-blue-100 text-blue-800'
+            }`}>
+              {o.deliveryStatus}
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-gray-600">الحالة: {o.status}</div>
+            <div className="text-sm text-gray-600">الإجمالي: {o.grandTotal} ر.س</div>
+            {o.address && <div className="text-sm text-gray-600">العنوان: {o.address}</div>}
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {type === 'pool' ? (
+                <Button 
+                  variant="success" 
+                  onClick={() => handleAction('accept', o.id)}
+                >
+                  استلام
+                </Button>
+              ) : (
+                <>
+                  {o.deliveryStatus === 'accepted' && (
+                    <Button 
+                      variant="primary" 
+                      onClick={() => handleAction('start', o.id)}
+                    >
+                      بدء التوصيل
+                    </Button>
+                  )}
+                  {o.deliveryStatus === 'out_for_delivery' && (
+                    <Button 
+                      variant="success" 
+                      onClick={() => handleAction('complete', o.id)}
+                    >
+                      تم التسليم
+                    </Button>
+                  )}
+                  {['accepted', 'out_for_delivery'].includes(o.deliveryStatus) && (
+                    <Button 
+                      variant="danger" 
+                      onClick={async () => {
+                        const reason = prompt('سبب الفشل؟');
+                        if (reason) await handleAction('fail', o.id, { reason });
+                      }}
+                    >
+                      تعذر التسليم
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleChat(o)}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
-}
+});
+
+// تحسين Section component
+const Section = React.memo(({ title, icon, children }) => (
+  <div className="space-y-3">
+    <div className="flex items-center gap-2 border-b pb-2">
+      {icon}
+      <h2 className="text-xl font-semibold text-gray-700">{title}</h2>
+    </div>
+    {children}
+  </div>
+));

@@ -5,19 +5,30 @@ import Seo from '../../components/Seo';
 import { useSettings } from '../../context/SettingsContext';
 
 const Login = () => {
-  const { devLoginAs } = useAuth();
+  const { devLoginAs, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const { setting } = useSettings() || {};
   const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-  // Use mock login for now
-  devLoginAs('user');
-    navigate('/');
+    if (!email || !password) {
+      // Let backend error codes drive toasts via AuthContext, but short-circuit obvious empty fields
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await login(email, password);
+      if (res?.ok) {
+        navigate('/');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,7 +61,7 @@ const Login = () => {
             />
           </div>
           <div className="flex items-center justify-between">
-            <button className="btn-primary px-6 py-2">دخول</button>
+            <button className="btn-primary px-6 py-2" disabled={loading}>{loading ? 'جاري الدخول…' : 'دخول'}</button>
             <a href="#" className="text-sm text-primary-red">نسيت كلمة المرور؟</a>
           </div>
         </form>

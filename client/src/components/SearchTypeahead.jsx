@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { api } from '../api/client';
+import api from '../api/client';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

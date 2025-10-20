@@ -11,7 +11,7 @@ Minimal mobile client for the My Store backend with Expo + React Native + TanSta
 ## Prerequisites
 - Node 18+
 - Expo CLI (npx expo) and device/emulator
-- Backend API running locally (defaults to https://asiaatore-production.up.railway.app)
+- Backend API running locally (defaults to https://my-store-backend-production.up.railway.app)
 
 ## Quick Start
 ```powershell

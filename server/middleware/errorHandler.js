@@ -10,6 +10,12 @@ export function errorHandler(err, req, res, next) {
   let message = 'Unexpected server error';
 
   if (err && typeof err === 'object') {
+    // Body parser JSON errors (invalid JSON payload)
+    // express.json/body-parser sets err.type = 'entity.parse.failed' and typically err.status = 400
+    const isJsonParseError = (err.type === 'entity.parse.failed') || (err instanceof SyntaxError && err.status === 400);
+    if (isJsonParseError) {
+      status = 400; code = 'BAD_JSON'; message = 'Invalid JSON payload';
+    } else
     // Prisma error mapping
     if (err.code && /^P20\d{2}$/.test(err.code)) {
       switch (err.code) {

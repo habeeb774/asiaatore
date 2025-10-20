@@ -1,5 +1,5 @@
 /* Announcement + Category scroller styling */
-.announcement-bar-modern { background:var(--grad-primary); color:#fff; font:500 .7rem/1.4 var(--font-sans); letter-spacing:.3px;border-radius: 5px; }
+.announcement-bar-modern { background:var(--grad-hero); color:#fff; font:500 .7rem/1.4 var(--font-sans); letter-spacing:.3px;border-radius: 5px; }
 .announcement-inner { max-width:var(--layout-max); padding:.45rem .9rem; margin:0 auto; display:flex; align-items:center; justify-content:center;border-radius: 10px; }
 .announcement-text { text-align:center; }
 
@@ -11,7 +11,7 @@
 .cat-pill:focus-visible { outline:2px solid #69be3c; outline-offset:2px; }
 
 .theme-minimal .cat-pill { background:#fff; }
-.dark-mode .announcement-bar-modern { background:var(--grad-primary); filter:saturate(.9) brightness(.9); }
+.dark-mode .announcement-bar-modern { background:var(--grad-hero); filter:saturate(.9) brightness(.9); }
 .dark-mode .category-scroller { background:#121e2a; border-color:#1e3042; }
 .category-scroller .cat-pill { scroll-snap-align:start; }
 .category-scroller .cat-pill { display:inline-flex; align-items:center; gap:.45rem; white-space:nowrap; padding:.45rem .8rem; border-radius:999px; background:#fff; border:1px solid #e5e7eb; color:#111827; text-decoration:none; font-size:.9rem; }

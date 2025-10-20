@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { api } from '../api/client';
+import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { localizeName } from '../utils/locale';
+import { resolveLocalized } from '../utils/locale';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
@@ -11,7 +11,8 @@ const Cart = () => {
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart, maxPerItem, addToCart } = useCart() || {};
   const lang = useLanguage();
   const locale = lang?.locale ?? 'ar';
-  const resolveName = (n) => localizeName({ name: n }, locale);
+  // Safe localization wrapper for names/titles/alt
+  const safe = (v) => String(resolveLocalized(v, locale) || '');
   const items = cartItems || [];
   const [couponCode, setCouponCode] = useState('');
   const [undo, setUndo] = useState(null); // { item, timeoutId }
@@ -67,7 +68,7 @@ const Cart = () => {
 
   const onRemove = (item) => {
     removeFromCart?.(item.id);
-    try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type:'warn', title: locale==='ar'?'تمت إزالة المنتج':'Item removed', description: resolveName(item.name || item.title) + (locale==='ar'?' — تراجع؟':' — Undo?') } })); } catch {}
+  try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type:'warn', title: locale==='ar'?'تمت إزالة المنتج':'Item removed', description: safe(item.name || item.title) + (locale==='ar'?' — تراجع؟':' — Undo?') } })); } catch {}
     // Provide 5s undo
     if (undo?.timeoutId) clearTimeout(undo.timeoutId);
     const timeoutId = setTimeout(() => setUndo(null), 5000);
@@ -145,13 +146,13 @@ const Cart = () => {
                   >
                     <div className="flex items-center gap-4 w-full sm:w-auto">
                       <LazyImage
-                        src={item.images?.[0] || '/images/placeholder.jpg'}
-                        alt={resolveName(item.name || item.title)}
+                        src={item.images?.[0] || '/images/hero-image.svg'}
+                        alt={safe(item.name || item.title)}
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                         sizes="80px"
                       />
                       <div className="min-w-0">
-                        <h3 className="font-bold text-lg mb-2 truncate">{resolveName(item.name || item.title)}</h3>
+                        <h3 className="font-bold text-lg mb-2 truncate">{safe(item.name || item.title)}</h3>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                           <span>
                             السعر:{' '}

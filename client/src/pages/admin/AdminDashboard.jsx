@@ -10,6 +10,7 @@ import { Edit3, Trash2, Plus, Save, X } from 'lucide-react';
 import ProductPicker from '../../components/admin/ProductPicker';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import Seo from '../../components/Seo';
 
 const AdminDashboard = () => {
   const { user } = useAuth() || {};
@@ -36,6 +37,7 @@ const AdminDashboard = () => {
   const params = new URLSearchParams(location.search);
   const view = params.get('view') || 'overview';
   const localePrefix = location.pathname.startsWith('/en') ? '/en' : (location.pathname.startsWith('/fr') ? '/fr' : '');
+  const locale = localePrefix === '/en' ? 'en' : (localePrefix === '/fr' ? 'fr' : 'ar');
   // New: remote data for admin specifics
   const [remoteUsers, setRemoteUsers] = useState([]);
   const [remoteAudit, setRemoteAudit] = useState([]);
@@ -284,6 +286,12 @@ const AdminDashboard = () => {
     setBrandLoading(true); setBrandError(null);
     try { const list = await api.brandsList(); setBrands(list); } catch (e) { setBrandError(e.message); } finally { setBrandLoading(false); }
   };
+  // Localized SEO title for dashboard
+  const siteName = locale === 'ar'
+    ? (settingsCtx?.setting?.siteNameAr || 'شركة منفذ اسيا التجارية')
+    : (settingsCtx?.setting?.siteNameEn || 'My Store');
+  const pageTitle = locale === 'ar' ? `لوحة التحكم | ${siteName}` : `${siteName} | Admin Dashboard`;
+  useEffect(() => { try { document.title = pageTitle; } catch {} }, [pageTitle]);
   const scanBrandIssues = async () => {
     setBrandLoading(true); setBrandError(null);
     try {
@@ -1016,7 +1024,8 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="admin-root" style={pageWrap}>
+    <div className="admin-root" style={pageWrap} dir={locale==='ar'?'rtl':'ltr'}>
+      <Seo title={pageTitle} description={locale==='ar' ? 'لوحة تحكم الإدارة' : 'Admin control panel'} />
       <h1 style={title}>لوحة التحكم</h1>
 
       {/* Two-column layout with sticky admin sidebar */}
@@ -2196,7 +2205,7 @@ export default AdminDashboard;
 
 // Lazy inline component for reviews moderation (kept here for simplicity)
 import { useState as _useState, useEffect as _useEffect } from 'react';
-import { api as _rawApi } from '../../api/client';
+import _rawApi from '../../api/client';
 
 // Inline Categories Admin manager
 const CategoriesAdmin = () => {

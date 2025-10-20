@@ -1,0 +1,23 @@
+@use './variables' as *;
+@use './mixins' as *;
+
+%card-base {
+  border-radius: var(--radius-md);
+  box-shadow: $shadow;
+  background: var(--card-bg, #fff);
+}
+
+.btn-primary {
+  @extend %card-base;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: linear-gradient(90deg, #69be3c, #2eafff);
+  color: #fff;
+  padding: 10px 14px;
+  border: none;
+  cursor: pointer;
+}
+
+.product-card { @extend %card-base; }
+.home-feature { @extend %card-base; text-align: center; }

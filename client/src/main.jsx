@@ -36,6 +36,7 @@ import './i18n';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 import { ThemeProvider } from './context/ThemeContext';
+import ScrollTopButton from './components/common/ScrollTopButton';
 // Ensure Leaflet maps render correctly across the app
 import 'leaflet/dist/leaflet.css';
 
@@ -91,6 +92,7 @@ const Providers = ({ children }) => (
                         <GlobalToastEvents />
                         {/* Global haptics: vibrate briefly on add-to-cart if supported and not reduced-motion */}
                         <HapticsEvents />
+                        <ScrollTopButton />
                         {children}
                       </ToastProvider>
                     </SettingsProvider>

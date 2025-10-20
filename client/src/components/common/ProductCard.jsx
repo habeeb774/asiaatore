@@ -34,8 +34,13 @@ const ProductCard = ({ product }) => {
   }
 
   const mainImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : product.image || '/vite.svg'
-  const hasDiscount = product.originalPrice && product.originalPrice > product.price
-  const discountPercent = hasDiscount ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0
+  // Unify discount logic: support oldPrice or originalPrice against price
+  const baseOldRaw = (product.oldPrice ?? product.originalPrice)
+  const baseOld = baseOldRaw != null ? +baseOldRaw : undefined
+  const basePrice = product.price != null ? +product.price : undefined
+  const hasDiscount = Number.isFinite(baseOld) && Number.isFinite(basePrice) && baseOld > basePrice
+  const discountPercent = hasDiscount ? Math.round(((baseOld - basePrice) / baseOld) * 100) : 0
+  const savings = hasDiscount ? Math.max(0, baseOld - basePrice) : 0
   const lang = useLanguage();
   const locale = lang?.locale ?? 'ar'
   const nameText = resolveLocalized(product.name, locale) || product.slug || 'منتج'
@@ -46,9 +51,9 @@ const ProductCard = ({ product }) => {
       <Link to={`/products/${product.id}`} className="product-image" aria-label={`عرض ${nameText}`}>
         <LazyImage src={mainImage} alt={nameText} />
         {hasDiscount && (
-          <div className="discount-badge" aria-label={`خصم ${discountPercent}%`}>
+          <span className="discount-badge" aria-label={`خصم ${discountPercent}%`}>
             -{discountPercent}%
-          </div>
+          </span>
         )}
         {Array.isArray(product.images) && product.images.length > 1 && (
           <div className="gallery-indicator" aria-label={`عدد الصور: ${product.images.length}`}>{product.images.length} صور</div>
@@ -73,7 +78,12 @@ const ProductCard = ({ product }) => {
         <div className="product-footer">
           <div className="price-row">
             <span className="new-price">{product.price} ر.س</span>
-            {hasDiscount && <span className="old-price">{product.originalPrice} ر.س</span>}
+            {hasDiscount && <span className="old-price">{baseOld} ر.س</span>}
+            {hasDiscount && (
+              <span className="save-badge" aria-label={`وفرت ${savings} ر.س`}>
+                {`وفّرت ${savings} ر.س`}
+              </span>
+            )}
           </div>
           <button
             className={`add-to-cart-btn ${addedState==='added' ? 'added' : ''} ${addedState==='max' ? 'at-max' : ''}`}

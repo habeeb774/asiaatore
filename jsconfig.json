@@ -3,13 +3,26 @@
     "allowJs": true,
     "checkJs": false,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": [],
+    "skipLibCheck": true
+  },
+  "typeAcquisition": {
+    "enable": false
   },
   "exclude": [
-    "node_modules",
+    "**/node_modules/**",
     "dist",
     "dev-dist",
     "11dist",
     "src/components/ui/badge.jsx"
+  ],
+  "include": [
+    "src/**/*",
+    "server/**/*",
+    "prisma/**/*",
+    "vite.config.*",
+    "index.html",
+    "package.json"
   ]
 }

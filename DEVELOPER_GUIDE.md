@@ -11,7 +11,7 @@ Common local issues and quick one-liners.
 
 - Verify .env before anything: DATABASE_URL must start with `mysql://`.
   - Dev helpers: `QUICK_START_DB=1` (local fallback URL), `ALLOW_INVALID_DB=true` (degraded mode), `ALLOW_DEV_HEADERS=true` (header-based fake auth).
-  - API health: https://asiaatore-production.up.railway.app/_health | DB ping: https://asiaatore-production.up.railway.app/_db_ping
+  - API health: https://my-store-backend-production.up.railway.app/_health | DB ping: https://my-store-backend-production.up.railway.app/_db_ping
 
 ### 🔧 Free a locked port (Vite at 5173 or API at 4000+)
 ```powershell
@@ -168,7 +168,7 @@ Highlights:
 1) Install Node.js 18+ and npm 9+
 2) Copy `.env.example` to `.env` and set:
    - `AUTH_SECRET` (or `JWT_SECRET`) — strong secret in production
-   - `DATABASE_URL` — a valid MySQL URL like `mysql://root:VwYplbuZmtiXYZIkVbgvxBXaCuPDCKrP@crossover.proxy.rlwy.net:14084/railway`
+   - `DATABASE_URL` — a valid MySQL URL like `mysql://root:AlvYFhUfDYXSCykrgHpncurIFgwffLmF@yamabiko.proxy.rlwy.net:23471/railway`
    - Optional Dev: `QUICK_START_DB=1`, `ALLOW_INVALID_DB=true`
 3) Install & run:
 ```powershell
@@ -178,13 +178,13 @@ npm run dev
 ```
 4) URLs:
 - Frontend (Vite): http://localhost:5173 (auto-increments if busy)
-- API: https://asiaatore-production.up.railway.app (auto-increments if busy)
+- API: https://my-store-backend-production.up.railway.app (auto-increments if busy)
 - Health: /_health, /_db_status, /_db_ping
 - Docs: /api/docs (HTML) and /api/docs.json (OpenAPI-lite)
 - Realtime: /api/events
 
-### Vercel build note (Puppeteer / PDFs)
-- Invoice PDFs at `/api/orders/:id/invoice.pdf` use Puppeteer. On Vercel, we skip downloading Chromium during build with `PUPPETEER_SKIP_DOWNLOAD=1`. At runtime, if Chromium isn’t available, the route responds with `501 PDF_NOT_AVAILABLE`. This keeps Vercel deploys fast and stable. If you need PDFs on Vercel, use an external render service or a compatible runtime.
+### Build note (Puppeteer / PDFs)
+- Invoice PDFs at `/api/orders/:id/invoice.pdf` use Puppeteer. If Chromium isn’t available in your runtime, the route responds with `501 PDF_NOT_AVAILABLE`. For constrained environments, consider an external render service.
 
 ---
 
