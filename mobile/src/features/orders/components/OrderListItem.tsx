@@ -2,7 +2,12 @@ import { formatCurrency, formatDateTime } from '../../../utils/formatters';
 
 import { Text } from 'react-native';
 
-import { OrderListItemProps } from './OrderListItem.types';
+type OrderListItemProps = {
+	order: {
+		grandTotal: number | string | null | undefined;
+		createdAt: string | number | Date;
+	};
+};
 
 const OrderListItem = ({ order }: OrderListItemProps) => {
 	return (

@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-
 export const formatCurrency = (
 	amount: number | string | null | undefined,
 	options: Intl.NumberFormatOptions & { locale?: string; currency?: string } = {}
