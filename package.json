@@ -1,4 +1,5 @@
 {
+  "$schema": "./package.schema.json",
   "name": "my-store",
   "private": true,
   "homepage": "",
@@ -62,7 +63,12 @@
     "test:all:8829": "npm run -s test:api:8829 && npm run -s test:sse:8829",
     "dev:client": "npm run dev -w client",
     "build:client": "npm run build -w client",
-    "preview:client": "npm run preview -w client"
+    "preview:client": "npm run preview -w client",
+    "test:unit": "vitest -w client",
+    "test:unit:run": "vitest run -w client",
+    "test:ui": "playwright test -c client/playwright.config.ts",
+    "test:ui:headed": "playwright test -c client/playwright.config.ts --headed",
+    "test:integration": "npm run -s dev:server:test & timeout 3 > NUL & cross-env PLAYWRIGHT_BASE_URL=http://localhost:4010 npm run -s test:ui"
   },
   "prisma": {
     "seed": "node ./server/db/seed.js"
@@ -137,7 +143,11 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.2",
     "vite": "^7.1.10",
-    "vite-plugin-pwa": "^1.0.3"
+    "vite-plugin-pwa": "^1.0.3",
+    "vitest": "^2.1.8",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@playwright/test": "^1.49.0"
   },
   "workspaces": [
     "client",

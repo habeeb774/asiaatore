@@ -7,7 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // Resolve and sanitize the proxy target from env.
 function resolveProxyTarget(env) {
   const raw = (env?.VITE_PROXY_TARGET || '').trim()
-  const fallback = 'https://my-store-backend-production.up.railway.app'
+  const fallback = 'http://localhost:4000'
   if (!raw) return fallback
   // If it's only a port number like "4000", assume localhost:http
   if (/^\d{2,5}$/.test(raw)) return `http://localhost:${raw}`

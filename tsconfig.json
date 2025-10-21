@@ -17,15 +17,19 @@
     "types": ["node"]
   },
   "include": [
-    "src",
+    "client/src",
+    "client/**/*.config.*",
+    "client/**/*.ts",
+    "client/**/*.tsx",
     "server",
-    "vite.config.js"
+    "shared",
+    "scripts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "dev-dist",
     "11dist",
-    "src/components/ui/badge.jsx"
+    "client/src/components/ui/badge.jsx"
   ]
 }

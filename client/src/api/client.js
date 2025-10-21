@@ -102,6 +102,9 @@ const api = {
   wishlistList: () => request('/wishlist'),
   wishlistAdd: productId => request('/wishlist', { method:'POST', body: JSON.stringify({ productId }) }),
   wishlistRemove: productId => request(`/wishlist/${productId}`, { method:'DELETE' }),
+  // Reviews
+  reviewsModerationList: () => request('/reviews/moderation'),
+  reviewModerate: (id, action) => request(`/reviews/${encodeURIComponent(id)}/moderate`, { method:'POST', body: JSON.stringify({ action }) }),
   // Cart
   cartList: () => request('/cart'),
   cartSet: (productId,quantity) => request('/cart/set', { method:'POST', body: JSON.stringify({ productId, quantity }) }),
@@ -120,6 +123,22 @@ const api = {
     return request('/categories' + (qs.toString() ? `?${qs.toString()}` : ''));
   },
   getCategoryBySlug: (slug) => request(`/categories/slug/${encodeURIComponent(slug)}`),
+  // Category CRUD (flat naming for consistency)
+  categoryCreate: (dataOrForm) => {
+    if (dataOrForm instanceof FormData) return request('/categories', { method: 'POST', body: dataOrForm });
+    return request('/categories', { method: 'POST', body: JSON.stringify(dataOrForm) });
+  },
+  categoryUpdate: (id, dataOrForm) => {
+    if (dataOrForm instanceof FormData) return request(`/categories/${encodeURIComponent(id)}`, { method: 'PUT', body: dataOrForm });
+    return request(`/categories/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(dataOrForm) });
+  },
+  categoryDelete: (id) => request(`/categories/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  // Back-compat aliases used in AdminDashboard inline manager
+  createCategory: function(data) { return this.categoryCreate(data); },
+  createCategoryForm: function(formData) { return this.categoryCreate(formData); },
+  updateCategory: function(id, data) { return this.categoryUpdate(id, data); },
+  updateCategoryForm: function(id, formData) { return this.categoryUpdate(id, formData); },
+  deleteCategory: function(id) { return this.categoryDelete(id); },
 
   // Brands
   brandsList: () => request('/brands'),
@@ -139,6 +158,12 @@ const api = {
   marketingAppLinkCreate: (data) => request('/marketing/app-links', { method:'POST', body: JSON.stringify(data||{}) }),
   marketingAppLinkUpdate: (id,data) => request(`/marketing/app-links/${encodeURIComponent(id)}`, { method:'PATCH', body: JSON.stringify(data||{}) }),
   marketingAppLinkDelete: (id) => request(`/marketing/app-links/${encodeURIComponent(id)}`, { method:'DELETE' }),
+
+  // Ads CRUD (Ad table)
+  listAds: () => request('/ads'),
+  createAd: (data) => request('/ads', { method: 'POST', body: JSON.stringify(data) }),
+  updateAd: (id, data) => request(`/ads/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteAd: (id) => request(`/ads/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   // Search / catalog
   searchTypeahead: (q) => request(`/search/typeahead?q=${encodeURIComponent(q||'')}`),
@@ -171,6 +196,34 @@ const api = {
   deliverySignature: (id, formData) => request(`/delivery/orders/${encodeURIComponent(id)}/signature`, { method:'POST', body: formData }),
   deliveryProfileGet: () => request('/delivery/me/profile'),
   deliveryProfileUpdate: (patch) => request('/delivery/me/profile', { method:'PATCH', body: JSON.stringify(patch||{}) }),
+  deliveryHistory: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => { if (v != null && v !== '') qs.append(k, String(v)); });
+    return request('/delivery/orders/history' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
+  // Inventory
+  inventoryList: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params||{}).forEach(([k,v]) => { if (v != null && v !== '') qs.append(k, String(v)); });
+    return request('/inventory' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
+  inventoryByProduct: (productId) => request(`/inventory/${encodeURIComponent(productId)}`),
+  inventoryLowStock: () => request('/inventory/low-stock'),
+  inventoryAdjust: (productId, payload) => request(`/inventory/${encodeURIComponent(productId)}/update`, { method:'POST', body: JSON.stringify(payload||{}) }),
+  inventoryReserve: (orderId, items, warehouseId=null) => request('/inventory/reserve', { method:'POST', body: JSON.stringify({ order_id: orderId, items, warehouse_id: warehouseId }) }),
+  inventoryRelease: (orderId) => request('/inventory/release', { method:'POST', body: JSON.stringify({ order_id: orderId }) }),
+  // Reports
+  reportInventoryMovement: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params||{}).forEach(([k,v]) => { if (v != null && v !== '') qs.append(k, String(v)); });
+    return request('/reports/inventory-movement' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
+  reportTopSelling: (params={}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params||{}).forEach(([k,v]) => { if (v != null && v !== '') qs.append(k, String(v)); });
+    return request('/reports/top-selling' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
+  reportStockValuation: () => request('/reports/stock-valuation'),
   // Add more methods as needed, all ready for audit/logging
 };
 

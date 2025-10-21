@@ -39,7 +39,7 @@ if (!database) {
   process.exit(1);
 }
 
-const host = url.hostname || 'https://my-store-backend-production.up.railway.app';
+const host = url.hostname || 'http://localhost:4000';
 const port = url.port ? Number(url.port) : 3306;
 const user = decodeURIComponent(url.username || 'root');
 const password = decodeURIComponent(url.password || '');

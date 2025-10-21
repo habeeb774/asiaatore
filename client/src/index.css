@@ -1,3 +1,26 @@
+/* === Dark/Light mode variables and classes === */
+:root {
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --secondary: #f59e0b;
+  --accent: #8b5cf6;
+  --background: #ffffff;
+  --surface: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --color-bg-light: var(--background);
+  --color-bg-dark: #1a1a1a;
+  --color-text-light: var(--text-primary);
+  --color-text-dark: #f0f0f0;
+}
+body.light-mode {
+  background-color: var(--background);
+  color: var(--text-primary);
+}
+body.dark-mode {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
 
 @tailwind base;
 @tailwind components;
@@ -5,9 +28,9 @@
 
 /* SCSS files are imported from JS (see main.jsx) to avoid PostCSS @import order issues */
 
+
+/* Typography & rendering */
 :root {
-  /* Typography & rendering */
-  /* Ensure Cairo is the primary font across the app with sane fallbacks */
   --font-sans: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans Arabic', sans-serif;
   font-family: var(--font-sans);
   line-height: 1.5;
@@ -17,22 +40,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Colors (light defaults) */
-  /* Default brand tokens (overridden at runtime by SettingsContext) */
-  --color-primary: #69be3c;
-  --color-secondary: #2eafff;
-  --color-accent: #2eafff;
-  --color-muted: #6b7280; /* gray-500 */
-  --color-bg: #ffffff;
-  --color-fg: #213547;
-  --color-success: #16a34a; /* green-600 */
-  --color-warning: #d97706; /* amber-600 */
-  --color-danger: #dc2626; /* red-600 */
-  --color-ring: rgba(99, 102, 241, 0.4); /* indigo ring */
-
   color-scheme: light;
-  color: var(--color-fg);
-  background-color: var(--color-bg);
+  color: var(--text-primary);
+  background-color: var(--background);
 
   /* Safe area insets for iOS notch devices */
   --safe-top: env(safe-area-inset-top);
@@ -44,6 +54,20 @@
   --vh: 1vh;               /* fallback */
   --dvh: 1dvh;             /* new spec */
   --app-height: var(--dvh);
+}
+
+.dark {
+  --primary: #34d399;
+  --primary-dark: #10b981;
+  --secondary: #fbbf24;
+  --accent: #a78bfa;
+  --background: #0f172a;
+  --surface: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  color-scheme: dark;
+  color: var(--text-primary);
+  background-color: var(--background);
 }
 
 /* Explicit theme classes (overrides system) */

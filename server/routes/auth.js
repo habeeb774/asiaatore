@@ -106,7 +106,7 @@ router.post('/login', async (req, res) => {
     return res.json({ ok:true, accessToken, user: { id: user.id, role: user.role, email: user.email, name: user.name } });
   } catch (e) {
     const msg = e?.message || '';
-    const isDbErr = /Database|ECONNREFUSED|does not exist|connect/i.test(msg) || (e?.code && /^P\d+/.test(e.code));
+    const isDbErr = e?.code === 'DB_DISABLED' || /Database|ECONNREFUSED|does not exist|connect/i.test(msg) || (e?.code && /^P\d+/.test(e.code));
     try { req.log?.error({ err: e, code: e?.code, message: e?.message }, 'LOGIN route error'); } catch {}
     if (process.env.DEBUG_LOGIN === '1' || process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
@@ -332,14 +332,27 @@ router.post('/logout', async (req, res) => {
 // Current user profile
 router.get('/me', attachUser, async (req, res) => {
   try {
-    // In dev or degraded mode, return a stable dev user if no auth token provided
+    const DEGRADED = process.env.ALLOW_INVALID_DB === 'true';
+    // In dev or degraded mode, return a stable user without touching DB when unauthenticated
     if (!req.user) {
-      if (DEV_AUTH_ENABLED) {
+      if (DEV_AUTH_ENABLED || DEGRADED) {
         const dev = DEV_USERS.find(u => u.role === 'user') || DEV_USERS[0];
         return res.json({ ok: true, devFallback: true, user: { id: dev.id, email: dev.email, role: dev.role, name: dev.name } });
       }
       return res.status(401).json({ ok:false, error:'UNAUTHENTICATED' });
     }
+
+    // If DB is disabled, respond with claims-based user right away
+    if (DEGRADED) {
+      const claimsUser = {
+        id: req.user.id || (DEV_USERS.find(x=>x.role==='user')?.id ?? 'dev-user'),
+        email: req.user.email || (DEV_USERS.find(x=>x.role==='user')?.email ?? 'user@example.com'),
+        role: req.user.role || 'user',
+        name: req.user.name || (DEV_USERS.find(x=>x.role==='user')?.name ?? 'Dev User')
+      };
+      return res.json({ ok: true, devFallback: true, user: claimsUser });
+    }
+
     const u = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!u) {
       // If a dev token (e.g., id like 'dev-*') or DB missing user, return claims-based user in dev
@@ -364,7 +377,14 @@ router.get('/me', attachUser, async (req, res) => {
       phoneVerifiedAt: u.phoneVerifiedAt
     };
     res.json({ ok: true, user });
-  } catch (e) { res.status(500).json({ ok:false, error:'ME_FAILED', message: e.message }); }
+  } catch (e) {
+    // Degraded mode: return a safe fallback user instead of 500
+    if (process.env.ALLOW_INVALID_DB === 'true' || DEV_AUTH_ENABLED) {
+      const dev = DEV_USERS.find(u => u.role === 'user') || DEV_USERS[0];
+      return res.json({ ok: true, devFallback: true, user: { id: req.user?.id || dev.id, email: req.user?.email || dev.email, role: req.user?.role || dev.role, name: req.user?.name || dev.name } });
+    }
+    res.status(500).json({ ok:false, error:'ME_FAILED', message: e.message });
+  }
 });
 
 // Update current user profile (name/phone)

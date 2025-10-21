@@ -127,7 +127,7 @@ router.get('/', async (_req, res) => {
         id: 'singleton',
         siteNameAr: 'شركة منفذ اسيا التجارية',
         siteNameEn: 'My Store',
-  logo: '/images/site-logo.jpg',
+  logo: '/images/site-logo.png',
         colorPrimary: '#69be3c',
         colorSecondary: '#1f2937',
         colorAccent: '#ef4444',

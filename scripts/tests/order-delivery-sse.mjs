@@ -47,9 +47,9 @@ async function ensureBase() {
   const ports = Array.from({ length: 12 }, (_, i) => 4000 + i);
   for (const p of ports) {
     try {
-      const r = await request('GET', `https://my-store-backend-production.up.railway.app:${p}/_health`);
+      const r = await request('GET', `http://localhost:4000:${p}/_health`);
       if (r.status === 200) {
-        BASE = `https://my-store-backend-production.up.railway.app:${p}`;
+        BASE = `http://localhost:4000:${p}`;
         return BASE;
       }
     } catch {}

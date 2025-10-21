@@ -12,12 +12,24 @@ import FloatingCart from '../ui/FloatingCart';
 import { SidebarProvider } from '../../context/SidebarContext';
 import BottomNav from './BottomNav';
 import SearchOverlay from '../search/SearchOverlay';
+import CartSidebar from '../cart/CartSidebar';
+import { useCart } from '../../context/CartContext';
 
 const AppLayout = ({ children }) => {
+  // Listen for cart:open event to open cart panel from anywhere
+  React.useEffect(() => {
+    const handler = () => setPanel('cart');
+    window.addEventListener('cart:open', handler);
+    return () => window.removeEventListener('cart:open', handler);
+  }, []);
   const { locale, setLocale, available } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { pathname } = useLocation();
   const isHome = pathname === '/' || pathname === '/en';
+  const [panel, setPanel] = React.useState(null);
+  // Use ESM imports for cart context
+  const { cartItems = [], updateQuantity } = useCart();
+  const cartTotal = Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + ((i.price || i.salePrice || 0) * (i.quantity || 1)), 0) : 0;
   return (
     <ToastProvider>
       <SidebarProvider>
@@ -36,7 +48,19 @@ const AppLayout = ({ children }) => {
           </div>
           <FloatingCart />
           <SearchOverlay />
-          <BottomNav />
+          <BottomNav panel={panel} setPanel={setPanel} />
+          {/* Render cart-panel if panel === 'cart' */}
+          {panel === 'cart' && (
+            <CartSidebar
+              open={true}
+              onClose={() => setPanel(null)}
+              items={cartItems}
+              total={cartTotal}
+              locale={locale}
+              t={typeof window !== 'undefined' && window.t ? window.t : (k => k)}
+              updateQuantity={updateQuantity}
+            />
+          )}
         </div>
       </SidebarProvider>
     </ToastProvider>

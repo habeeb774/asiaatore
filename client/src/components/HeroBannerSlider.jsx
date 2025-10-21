@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { useMarketing } from '../context/MarketingContext';
-import api from '../api/client';
+import { listAds } from '../api/ads';
 
 // Accessible autoplay carousel for homepage banners (location=homepage)
 // Features:
@@ -15,13 +14,21 @@ const AUTO_INTERVAL = 5000;
 
 const HeroBannerSlider = () => {
   const { locale } = useLanguage();
-  const { byLocation, loading } = useMarketing() || { byLocation:{ homepage:[] }, loading:false };
-  const banners = byLocation.homepage || [];
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const dirRtl = locale === 'ar';
   const timerRef = useRef(null);
   const sliderRef = useRef(null);
+
+  useEffect(() => {
+    setLoading(true);
+    listAds().then(ads => {
+      setBanners(ads);
+      setLoading(false);
+    });
+  }, []);
 
   const clamp = useCallback((i) => {
     const len = banners.length; if (!len) return 0; return ( (i % len) + len ) % len;
@@ -84,19 +91,20 @@ const HeroBannerSlider = () => {
             style={{ transform: `translateX(${dirRtl ? index*100 : -index*100}%)`, direction: dirRtl ? 'rtl' : 'ltr' }}
           >
             {banners.map((b, i) => {
-              const title = b.title?.[locale] || b.title?.ar || b.title?.en || '';
-              const body = b.body?.[locale] || b.body?.ar || b.body?.en || '';
+              // locale is defined from useLanguage above
+              const title = b.title || '';
+              const body = b.body || '';
               const active = i === index;
               const content = (
                 <div
                   className="absolute inset-0 flex flex-col justify-center gap-4 p-6 md:p-10 bg-gradient-to-t from-black/60 via-black/20 to-transparent text-white"
                 >
-                  {title && <h3 className="text-xl md:text-3xl font-bold drop-shadow-sm" dangerouslySetInnerHTML={{ __html: title }} />}
-                  {body && <p className="max-w-xl text-sm md:text-base opacity-90 leading-relaxed" dangerouslySetInnerHTML={{ __html: body }} />}
+                  {title && <h3 className="text-xl md:text-3xl font-bold drop-shadow-sm">{title}</h3>}
+                  {body && <p className="max-w-xl text-sm md:text-base opacity-90 leading-relaxed">{body}</p>}
                   {b.linkUrl && (
-                    <span className="inline-flex w-max items-center gap-2 bg-primary-red hover:bg-red-700 transition text-xs md:text-sm font-semibold px-4 py-2 rounded-full shadow">
+                    <a href={b.linkUrl} target="_blank" rel="noopener noreferrer" className="inline-flex w-max items-center gap-2 bg-primary-red hover:bg-red-700 transition text-xs md:text-sm font-semibold px-4 py-2 rounded-full shadow">
                       {locale==='ar' ? 'تعرف أكثر' : 'Learn more'}
-                    </span>
+                    </a>
                   )}
                 </div>
               );
@@ -108,53 +116,14 @@ const HeroBannerSlider = () => {
                   className="hero-slider__frame relative shrink-0 w-full overflow-hidden"
                 >
                   {b.image ? (
-                    b.imageVariants?.avif || b.imageVariants?.webp ? (
-                      <picture>
-                        {b.imageVariants?.avif ? (
-                          <source type="image/avif" srcSet={[
-                            b.imageVariants.avif.thumb && `${b.imageVariants.avif.thumb} 320w`,
-                            b.imageVariants.avif.medium && `${b.imageVariants.avif.medium} 800w`,
-                            b.imageVariants.avif.large && `${b.imageVariants.avif.large} 1280w`
-                          ].filter(Boolean).join(', ')} sizes="(max-width: 640px) 100vw, 100vw" />
-                        ) : null}
-                        {b.imageVariants?.webp ? (
-                          <source type="image/webp" srcSet={[
-                            b.imageVariants.webp.thumb && `${b.imageVariants.webp.thumb} 320w`,
-                            b.imageVariants.webp.medium && `${b.imageVariants.webp.medium} 800w`,
-                            b.imageVariants.webp.large && `${b.imageVariants.webp.large} 1280w`
-                          ].filter(Boolean).join(', ')} sizes="(max-width: 640px) 100vw, 100vw" />
-                        ) : null}
-                        <img
-                          src={b.imageVariants?.medium || b.image}
-                          srcSet={b.imageVariants ? [
-                            b.imageVariants.thumb && `${b.imageVariants.thumb} 320w`,
-                            b.imageVariants.medium && `${b.imageVariants.medium} 800w`,
-                            b.imageVariants.large && `${b.imageVariants.large} 1280w`
-                          ].filter(Boolean).join(', ') : undefined}
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
-                          alt={title}
-                          loading={i === 0 ? 'eager':'lazy'}
-                          fetchPriority={i === 0 ? 'high' : undefined}
-                          className="w-full h-full object-cover"
-                          decoding="async"
-                        />
-                      </picture>
-                    ) : (
-                      <img
-                        src={b.imageVariants?.medium || b.image}
-                        srcSet={b.imageVariants ? [
-                          b.imageVariants.thumb && `${b.imageVariants.thumb} 320w`,
-                          b.imageVariants.medium && `${b.imageVariants.medium} 800w`,
-                          b.imageVariants.large && `${b.imageVariants.large} 1280w`
-                        ].filter(Boolean).join(', ') : undefined}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw"
-                        alt={title}
-                        loading={i === 0 ? 'eager':'lazy'}
-                        fetchPriority={i === 0 ? 'high' : undefined}
-                        className="w-full h-full object-cover"
-                        decoding="async"
-                      />
-                    )
+                    <img
+                      src={b.image}
+                      alt={title}
+                      loading={i === 0 ? 'eager':'lazy'}
+                      fetchPriority={i === 0 ? 'high' : undefined}
+                      className="w-full h-full object-cover"
+                      decoding="async"
+                    />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300" />
                   )}
@@ -164,7 +133,7 @@ const HeroBannerSlider = () => {
               return (
                 <div key={b.id || i} className="w-full relative">
                   {b.linkUrl ? (
-                    <a href={b.linkUrl} className="block focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-red/40" onClick={()=>{ try { api.marketingTrackClick('banner', b.id); } catch{} }}>
+                    <a href={b.linkUrl} className="block focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-red/40" target="_blank" rel="noopener noreferrer">
                       {inner}
                     </a>
                   ) : inner}

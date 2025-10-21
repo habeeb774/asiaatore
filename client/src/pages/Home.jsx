@@ -16,6 +16,7 @@ import CategoryChips from '../components/CategoryChips';
 import { useSettings } from '../context/SettingsContext';
 import api from '../api/client';
 import BrandsStrip from '../components/home/BrandsStrip';
+import HomeHero from '../components/home/HomeHero';
 
 const Home = () => {
   const { t, locale } = useLanguage();
@@ -95,7 +96,7 @@ const Home = () => {
   const pageDesc = t('heroLead');
 
   return (
-    <div className="home-page-wrapper">
+  <div className="home-page-wrapper bg-white text-black dark:bg-gray-900 dark:text-gray-100 min-h-screen">
       <Seo title={pageTitle} description={pageDesc} />
       {/* Top Strip (Marketing banners location=topStrip) */}
       {byLocation.topStrip && byLocation.topStrip.length > 0 && (
@@ -115,43 +116,96 @@ const Home = () => {
   <HeroBannerSlider />
 
   {/* Hero Section */}
-  <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,.08)] relative overflow-hidden pt-2 md:pt-4" aria-labelledby="hero-heading">
+  <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white dark:bg-gray-800 dark:text-gray-200 rounded-b-2xl sm:rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,.08)] relative overflow-hidden pt-2 sm:pt-4 pb-2 sm:pb-6" aria-labelledby="hero-heading">
         {/* subtle texture overlay */}
         <div className="pointer-events-none absolute inset-0 opacity-[.06]" style={{backgroundImage:'radial-gradient(ellipse at 20% 0%,#fff,transparent 40%), radial-gradient(ellipse at 80% 100%,#fff,transparent 40%)'}} aria-hidden="true" />
-        <div className="home-hero__inner container-custom relative">
+  <div className="home-hero__inner container-custom relative px-2 sm:px-6">
           <motion.div
             className="home-hero__content"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="mb-3">
-              <span className="inline-flex items-center gap-2 text-[.8rem] font-semibold bg-white/15 border border-white/20 rounded-full px-3 py-1 shadow-sm">
+            <div className="mb-2 sm:mb-3">
+              <span className="inline-flex items-right gap-1 sm:gap-2 text-xs sm:text-[.8rem] font-semibold bg-white/15 border border-white/20 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-300" />
                 {locale==='ar' ? 'خصومات حتى 30٪' : 'Up to 30% off'}
               </span>
             </div>
-            <h1 id="hero-heading" className="home-hero__title">
-              <span className="inline-flex items-center gap-1 align-middle">
+            <h1 id="hero-heading" className="home-hero__title text-2xl sm:text-4xl font-extrabold flex flex-col gap-2 mb-2 text-center sm:text-right">
+              <span className="inline-flex items-center gap-2 align-middle justify-center sm:justify-start">
                 <img
-                  src={setting?.logoUrl || setting?.logo || '/images/site-logo.jpg'}
+                  src={setting?.logoUrl || setting?.logo || '/images/site-logo.png'}
                   alt=""
                   aria-hidden="true"
-                  className="home-hero__brand inline-block h-3 md:h-5 w-auto object-contain"
-                  style={{verticalAlign:'middle', objectFit:'contain'}}
+                  className="home-hero__brand inline-block h-8 sm:h-12 w-auto object-contain drop-shadow"
+                  style={{verticalAlign:'middle', objectFit:'contain', maxWidth:'80px'}}
                 />
-                <span>{siteName || t('heroTitle')}</span>
+                <span className="truncate max-w-[70vw]">{siteName || t('heroTitle')}</span>
               </span>
-              <span className="home-hero__subtitle">{t('heroSubtitle')}</span>
+              <span className="home-hero__subtitle text-base sm:text-xl opacity-90 mt-1">{t('heroSubtitle')}</span>
             </h1>
-            <p className="home-hero__lead">{t('heroLead')}</p>
-            <div className="home-hero__actions" role="group" aria-label="الروابط الرئيسية">
-              <Link to={baseProductsPath} className="btn-primary home-hero__btn px-6 py-3">
-                {locale==='ar' ? 'تسوق الآن' : 'Shop now'}
-              </Link>
-              <Link to="/offers" className="btn-secondary home-hero__btn px-6 py-3">
-                {locale==='ar' ? 'تصفح العروض' : 'Browse offers'}
-              </Link>
+            <p className="home-hero__lead text-sm sm:text-lg mt-2 mb-4 max-w-[90vw] text-center sm:text-right">{t('heroLead')}</p>
+            <div className="home-hero__actions sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto items-center sm:items-start" role="group" aria-label="الروابط الرئيسية">
+       {/* زر تسوق الآن */}
+          <button
+            className="mini-button bg-white/20 border border-white/30 text-white rounded-md hover:bg-white/30 transition-colors"
+            style={{
+              width: '60px',
+              height: '60px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '9px',
+              lineHeight: '10px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}
+             onClick={() => { window.location.href = `${baseProductsPath}`; }}
+          >
+            تسوق<br />الآن
+           
+          </button>
+       {/* زر تصفح العروض */}
+          <button
+             className="mini-button bg-gradient-to-r from-red-500 to-red-600 text-white rounded-md transition-colors" onClick={() => window.location.href = '/offers'} 
+            style={{
+              width: '60px',
+              height: '60px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'left',
+              justifyContent: 'center',
+              fontSize: '9px',
+              lineHeight: '10px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}
+        
+          >
+            تصفح<br />العروض
+            
+          </button>
+       {/* زر شاهد المنتجات */}
+          <button
+            className="mini-button bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md transition-colors"
+            style={{
+              width: '60px',
+              height: '60px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '9px',
+              lineHeight: '10px',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}
+            onClick={() => { window.location.href = '/products'; }}
+          >
+            شاهد<br />المنتجات
+          </button>
             </div>
           </motion.div>
           {/* Side visual with subtle float animation */}
@@ -175,14 +229,14 @@ const Home = () => {
       </header>
 
       {/* Category Chips */}
-      <div className="backdrop-blur-sm bg-white/75 supports-[backdrop-filter]:bg-white/60 border-b">
+  <div className="backdrop-blur-sm bg-white/75 dark:bg-gray-900/80 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 border-b dark:border-gray-800">
         <div className="container-custom py-3">
           <CategoryChips />
         </div>
       </div>
 
       {/* Features */}
-      <section className="home-features section-padding bg-white" aria-label="store features">
+  <section className="home-features section-padding bg-white dark:bg-gray-900" aria-label="store features">
         <div className="container-custom">
           <ul className="home-features__grid">
             {features.map((feature, index) => (
@@ -203,15 +257,17 @@ const Home = () => {
         </div>
       </section>
 
+
       {/* Category Showcase */}
       {topCats.length > 0 && (
-        <section className="section-padding bg-white" aria-labelledby="cats-head">
+        <section className="section-padding bg-white dark:bg-gray-800 dark:text-gray-300" aria-labelledby="cats-head">
           <div className="container-custom">
             <div className="home-section-head text-center">
               <h2 id="cats-head" className="home-section-head__title">{locale==='ar'?"تصفح حسب التصنيف":"Browse by Category"}</h2>
               <p className="home-section-head__subtitle">{locale==='ar'?"اختيارات سريعة لأفضل الأقسام":"Quick picks for top categories"}</p>
             </div>
-            <div className="cats-grid" aria-live="polite">
+            {/* Responsive grid for categories */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" aria-live="polite">
               {topCats.map((c,i)=> {
                 const name = locale==='ar' ? (c.name?.ar||c.slug) : (c.name?.en||c.slug);
                 const countLabel = typeof c.productCount==='number'
@@ -245,107 +301,84 @@ const Home = () => {
         </section>
       )}
 
+      {/* Brands Strip after categories */}
+      <BrandsStrip />
+      
       {/* Featured Products */}
-      <section className="home-products section-padding bg-gray-50" aria-labelledby="featured-heading">
-        <div className="container-custom">
-          <div className="home-section-head text-center">
-            <h2 id="featured-heading" className="home-section-head__title">{t('featuredProducts')}</h2>
-            <p className="home-section-head__subtitle">{t('featuredSubtitle')}</p>
-          </div>
-          <div className="featured-grid" aria-live="polite">
-            {loading && (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={`feat-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
-              ))
-            )}
-            {!loading && featuredProducts.length === 0 && (
-              <div className="py-8 text-center text-sm opacity-70">—</div>
-            )}
-            {!loading && featuredProducts.map((p, i) => (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{ duration: 0.5, delay: i * 0.06 }}
-              >
-                <ProductCard product={p} />
-              </motion.div>
-            ))}
-          </div>
-          <div className="text-center mt-12">
-            <Link to={baseProductsPath} className="btn-primary text-lg px-8 py-4">
-              {t('viewAllProducts')}
-            </Link>
-          </div>
-        </div>
-      </section>
+
+  <section className="home-products section-padding bg-gray-50 dark:bg-gray-800 dark:text-gray-200" aria-labelledby="featured-heading">
+    <div className="container-custom">
+      <div className="home-section-head text-center">
+        <h2 id="featured-heading" className="home-section-head__title">{t('featuredProducts')}</h2>
+        <p className="home-section-head__subtitle">{t('featuredSubtitle')}</p>
+      </div>
+      {/* Responsive grid for products */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" aria-live="polite">
+        {loading && (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={`feat-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
+          ))
+        )}
+        {!loading && featuredProducts.length === 0 && (
+          <div className="py-8 text-center text-sm opacity-70">—</div>
+        )}
+        {!loading && featuredProducts.map((p, i) => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.5, delay: i * 0.06 }}
+          >
+            <ProductCard product={p} />
+          </motion.div>
+        ))}
+      </div>
+      <div className="text-center mt-12">
+        <Link to={baseProductsPath} className="btn-primary text-lg px-8 py-4">
+          {t('viewAllProducts')}
+        </Link>
+      </div>
+    </div>
+  </section>
 
       {/* Latest Products */}
-      <section className="home-products section-padding bg-white" aria-labelledby="latest-heading">
-        <div className="container-custom">
-          <div className="home-section-head text-center">
-            <h2 id="latest-heading" className="home-section-head__title">{t('latestProducts')}</h2>
-          </div>
-          <div className="featured-grid" aria-live="polite">
-            {loading && (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={`latest-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
-              ))
-            )}
-            {!loading && latestProducts.map((p,i)=> (
-              <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:0.45, delay:i*0.05}}>
-                <ProductCard product={p} />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Discounts */}
-      <section className="home-products section-padding bg-gray-50" aria-labelledby="discounts-heading">
-        <div className="container-custom">
-          <div className="home-section-head text-center">
-            <h2 id="discounts-heading" className="home-section-head__title">{t('discountProducts')}</h2>
-          </div>
-          <div className="featured-grid" aria-live="polite">
-            {loading && (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={`disc-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
-              ))
-            )}
-            {!loading && discountProducts.length === 0 && <div className="py-8 text-center text-sm opacity-70">—</div>}
-            {!loading && discountProducts.map((p,i)=> (
-              <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:0.45, delay:i*0.05}}>
-                <ProductCard product={p} />
-              </motion.div>
-            ))}
-          </div>
-          <div className="text-center mt-10">
-            <Link to="/offers" className="btn-secondary px-6 py-3">{t('offers')}</Link>
-          </div>
-        </div>
-      </section>
-
-  {/* Brands strip */}
-  <BrandsStrip title={locale==='ar' ? 'علامات تجارية' : 'Popular Brands'} />
-
-      {/* Blog preview (static placeholder for now) */}
-      <section className="home-blog section-padding bg-white" aria-labelledby="blog-heading">
-        <div className="container-custom">
-          <div className="home-section-head text-center">
-            <h2 id="blog-heading" className="home-section-head__title">{t('عنا')}</h2>
-          </div>
-          <div className="blog-preview-grid">
-      
-          </div>
-          <div className="text-center mt-10">
-            <Link to="/blog" className="btn-primary px-7 py-3">{t('المزيد')}</Link>
-          </div>
-        </div>
-      </section>
+  <section className="home-products section-padding bg-white dark:bg-gray-900 dark:text-gray-200" aria-labelledby="latest-heading">
+    <div className="container-custom">
+      <div className="home-section-head text-center">
+        <h2 id="latest-heading" className="home-section-head__title">{t('latestProducts')}</h2>
+      </div>
+      {/* Responsive grid for products */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" aria-live="polite">
+        {loading && (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={`latest-skel-${i}`} className="animate-pulse bg-gray-100 h-60 rounded-xl" />
+          ))
+        )}
+        {!loading && latestProducts.map((p,i)=> (
+          <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:0.45, delay:i*0.05}}>
+            <ProductCard product={p} />
+          </motion.div>
+        ))}
+      </div>
     </div>
-  );
-};
+  </section>
+
+      {/* Homepage Marketing Slider */}
+      <HeroBannerSlider />
+
+      {/* Improved HomeHero component */}
+      <HomeHero
+        title={t('heroTitle')}
+        subtitle={t('heroSubtitle')}
+        lead={t('heroLead')}
+        shopLink={baseProductsPath}
+        infoLink={'/offers'}
+        brandImg={setting?.logoUrl || setting?.logo || '/images/site-logo.png'}
+      />
+  </div>
+);
+}
 
 export default Home;

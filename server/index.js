@@ -29,6 +29,7 @@ if (!process.env.DATABASE_URL) {
 let prisma; // will be set via dynamic import
 let attachUser;
 let authRoutes, productsRoutes, brandsRoutes, ordersRoutes, marketingRoutes, tierPricesRoutes, sellersRoutes, deliveryRoutes;
+let inventoryRoutes, reportsRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
 let adminUsersRoutes, adminStatsRoutes, adminAuditRoutes, adminSellersRoutes;
 let paypalRouter, bankRouter, stcRouter;
@@ -172,7 +173,7 @@ async function loadModulesAndMount() {
     prisma = prismaMod.default;
     const authMod = await import('./middleware/auth.js');
     attachUser = authMod.attachUser;
-    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, adminUsersR, adminStatsR, adminAuditR] = await Promise.all([
+    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, adminUsersR, adminStatsR, adminAuditR, adsR] = await Promise.all([
         import('./routes/auth.js'),
         import('./routes/products.js'),
         import('./routes/brands.js'),
@@ -181,6 +182,8 @@ async function loadModulesAndMount() {
         import('./routes/tierPrices.js'),
         import('./routes/sellers.js'),
         import('./routes/delivery.js'),
+        import('./routes/inventory.js'),
+        import('./routes/reports.js'),
         import('./paypal.js'),
         import('./bank.js'),
         import('./stc.js'),
@@ -193,10 +196,12 @@ async function loadModulesAndMount() {
         import('./routes/addresses.js'),
         import('./routes/adminUsers.js'),
         import('./routes/adminStats.js'),
-        import('./routes/adminAudit.js')
+        import('./routes/adminAudit.js'),
+        import('./routes/ads.js')
     ]);
     authRoutes = authR.default; productsRoutes = prodR.default; brandsRoutes = brandR.default; ordersRoutes = orderR.default;
     marketingRoutes = mktR.default; tierPricesRoutes = tierR.default; sellersRoutes = sellR.default; deliveryRoutes = delivR.default;
+    inventoryRoutes = invR.default; reportsRoutes = repR.default;
     paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default;
     settingsRoutes = settingsR.default; categoriesRoutes = categoriesR.default; reviewsRoutes = reviewsR.default; addressesRoutes = addressesR.default;
     adminUsersRoutes = adminUsersR.default; adminStatsRoutes = adminStatsR.default; adminAuditRoutes = adminAuditR.default;
@@ -209,6 +214,8 @@ async function loadModulesAndMount() {
     app.use('/api/products', productsRoutes);
     app.use('/api/brands', brandsRoutes);
     app.use('/api/orders', ordersRoutes);
+    app.use('/api/inventory', inventoryRoutes);
+    app.use('/api/reports', reportsRoutes);
     app.use('/api/marketing', marketingRoutes);
     app.use('/api/tier-prices', tierPricesRoutes);
     app.use('/api/sellers', sellersRoutes);
@@ -223,6 +230,7 @@ async function loadModulesAndMount() {
     app.use('/api/pay/paypal', paypalRouter);
     app.use('/api/pay/bank', bankRouter);
     app.use('/api/pay/stc', stcRouter);
+    app.use('/api/ads', adsR.default);
     // Admin routes
     if (adminUsersRoutes) app.use('/api/admin/users', adminUsersRoutes);
     if (adminStatsRoutes) app.use('/api/admin/stats', adminStatsRoutes);

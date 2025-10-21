@@ -81,7 +81,7 @@ router.post('/create', async (req, res) => {
             amount: order.grandTotal,
             currency: order.currency,
             orderId: order.id,
-            callbackUrl: process.env.STC_CALLBACK_URL || 'https://my-store-backend-production.up.railway.app/api/pay/stc/webhook'
+            callbackUrl: process.env.STC_CALLBACK_URL || 'http://localhost:4000/api/pay/stc/webhook'
           })
         });
         stcCreateResponse = await payResp.json();

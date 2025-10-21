@@ -5,13 +5,24 @@ AI coding agents (e.g., Copilot) should use this as a quick reference when gener
 
 ---
 
+## 📁 Repository Layout
+
+- `client/` — React/Vite SPA (Tailwind, Vitest, Playwright live here).
+- `server/` — Express + Prisma backend (routes, middleware, scripts, uploads).
+- `shared/` — Optional cross-cutting helpers consumed by both sides.
+- `prisma/` — Prisma schema and migrations used by the server.
+
+Only touch frontend code inside `client/` and backend code inside `server/` unless a file lives in `shared/`.
+
+---
+
 ## ⚙️ 1) Debug / Diagnostics (Windows PowerShell)
 
 Common local issues and quick one-liners.
 
 - Verify .env before anything: DATABASE_URL must start with `mysql://`.
   - Dev helpers: `QUICK_START_DB=1` (local fallback URL), `ALLOW_INVALID_DB=true` (degraded mode), `ALLOW_DEV_HEADERS=true` (header-based fake auth).
-  - API health: https://my-store-backend-production.up.railway.app/_health | DB ping: https://my-store-backend-production.up.railway.app/_db_ping
+  - API health: http://localhost:4000/_health | DB ping: http://localhost:4000/_db_ping
 
 ### 🔧 Free a locked port (Vite at 5173 or API at 4000+)
 ```powershell
@@ -178,7 +189,7 @@ npm run dev
 ```
 4) URLs:
 - Frontend (Vite): http://localhost:5173 (auto-increments if busy)
-- API: https://my-store-backend-production.up.railway.app (auto-increments if busy)
+- API: http://localhost:4000 (auto-increments if busy)
 - Health: /_health, /_db_status, /_db_ping
 - Docs: /api/docs (HTML) and /api/docs.json (OpenAPI-lite)
 - Realtime: /api/events

@@ -36,6 +36,20 @@ export default function DeliveryMapPage() {
   const [proofFile, setProofFile] = useState(null);
   const [failReason, setFailReason] = useState('');
 
+  // Load last known location from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lastLocation');
+      if (saved) {
+        const obj = JSON.parse(saved);
+        if (obj && obj.lat && obj.lng) {
+          setLast({ lat: obj.lat, lng: obj.lng, accuracy: obj.accuracy || null, at: obj.at || Date.now() });
+          setTrail((t) => t.concat([[obj.lat, obj.lng]]));
+        }
+      }
+    } catch {}
+  }, []);
+
   // استخدام useCallback لتحسين الأداء
   const fetchOrders = useCallback(async () => {
     if (!(user && ['delivery', 'admin'].includes(user.role))) return;
@@ -88,6 +102,14 @@ export default function DeliveryMapPage() {
             lng: longitude, 
             accuracy 
           }); 
+          // Update local UI state and persist
+          const loc = { lat: latitude, lng: longitude, accuracy, at: Date.now() };
+          setLast(loc);
+          setTrail((prev) => {
+            const next = prev.concat([[latitude, longitude]]);
+            return next.slice(-200); // cap trail length
+          });
+          try { localStorage.setItem('lastLocation', JSON.stringify(loc)); } catch {}
         } catch (error) {
           console.error('Location sharing error:', error);
         }
@@ -175,7 +197,45 @@ export default function DeliveryMapPage() {
     }
   }, [proofFile, stopSharing, fetchOrders]);
 
-  // useEffect hooks تبقى كما هي مع إضافة تحسينات...
+  // Fetch orders on mount and when filters change
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // SSE: subscribe to delivery events for live updates
+  useEffect(() => {
+    if (!(user && ['delivery', 'admin'].includes(user.role))) return;
+    try {
+      const es = new EventSource('/api/events');
+      esRef.current = es;
+      // delivery.updated events: update order list
+      es.addEventListener('delivery.updated', (ev) => {
+        try {
+          const data = JSON.parse(ev.data || '{}');
+          const { orderId, deliveryStatus } = data || {};
+          if (!orderId) return;
+          setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, deliveryStatus, ...data } : o)));
+        } catch {}
+      });
+      // delivery.location events: only update selected order last location display
+      es.addEventListener('delivery.location', (ev) => {
+        try {
+          const data = JSON.parse(ev.data || '{}');
+          if (data?.deliveryLocation && data.orderId === selectedId) {
+            const { lat, lng, accuracy } = data.deliveryLocation || {};
+            if (lat && lng) {
+              setLast({ lat, lng, accuracy: accuracy || null, at: Date.now() });
+              setTrail((t) => t.concat([[lat, lng]]));
+            }
+          }
+        } catch {}
+      });
+      es.onerror = () => {
+        // Ignore; keep trying or let the connection retry automatically
+      };
+      return () => { es.close(); esRef.current = null; };
+    } catch {}
+  }, [user, selectedId]);
 
   // التحقق من الصلاحيات
   if (!user) return <div className="container mx-auto p-4">يجب تسجيل الدخول</div>;
@@ -190,7 +250,140 @@ export default function DeliveryMapPage() {
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">
-      {/* ... باقي الكود مع تحسينات مشابهة للملفات السابقة ... */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Navigation className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl font-bold">خريطة التوصيل</h1>
+        </div>
+        <div className="flex items-center gap-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={pool} onChange={(e) => setPool(e.target.checked)} />
+            <span>عرض طلبات غير المخصصة (Pool)</span>
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border rounded px-2 py-1"
+            title="تصفية الحالة"
+          >
+            <option value="active">نشطة</option>
+            <option value="accepted">مقبولة</option>
+            <option value="out_for_delivery">خارج للتسليم</option>
+            <option value="delivered">تم التسليم</option>
+            <option value="failed">تعذر التسليم</option>
+            <option value="all">الكل</option>
+          </select>
+          <Button onClick={fetchOrders} disabled={loadingOrders}>{loadingOrders ? '...تحديث' : 'تحديث'}</Button>
+        </div>
+      </div>
+
+      {ordersErr && (
+        <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-red-700 text-sm flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          <span>{ordersErr}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Map */}
+        <div className="lg:col-span-2">
+          <div className="h-[70vh] rounded overflow-hidden border">
+            <MapContainer center={[24.7136, 46.6753]} zoom={12} scrollWheelZoom className="h-full w-full">
+              <InvalidateSize />
+              <FitToMarker />
+              <TileLayer
+                url={useFallbackTiles ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'}
+                attribution='&copy; OpenStreetMap contributors'
+                eventHandlers={{ tileerror: () => setUseFallbackTiles(true) }}
+              />
+              {last?.lat && last?.lng && (
+                <Marker position={[last.lat, last.lng]} />
+              )}
+              {trail.length > 1 && (
+                <Polyline positions={trail} color="#3b82f6" weight={4} opacity={0.7} />
+              )}
+            </MapContainer>
+          </div>
+          {tileErr && (
+            <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">{tileErr}</div>
+          )}
+        </div>
+
+        {/* Sidebar: orders and actions */}
+        <div className="lg:col-span-1">
+          <div className="border rounded-lg p-3 bg-white space-y-3 max-h-[70vh] overflow-auto">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">الطلبات</div>
+              <Badge color="neutral">{orders.length}</Badge>
+            </div>
+            {!orders.length && (
+              <div className="text-sm text-gray-500">لا توجد طلبات مطابقة للتصفية الحالية</div>
+            )}
+            {orders.map((o) => (
+              <div key={o.id} className={`rounded border p-2 ${selectedId === o.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  <button className="text-right" onClick={() => setSelectedId(o.id)}>
+                    <div className="font-semibold">#{o.id.slice(0,8)}...</div>
+                    <div className="text-xs text-gray-500">الحالة: {o.deliveryStatus}</div>
+                  </button>
+                  <Badge color={o.deliveryStatus === 'out_for_delivery' ? 'info' : o.deliveryStatus === 'accepted' ? 'warning' : o.deliveryStatus === 'delivered' ? 'success' : o.deliveryStatus === 'failed' ? 'danger' : 'neutral'}>
+                    {o.deliveryStatus}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {pool && (
+                    <Button size="sm" disabled={actionBusy} onClick={() => handleOrderAction('accept', o.id)}>استلام</Button>
+                  )}
+                  {!pool && o.deliveryStatus === 'accepted' && (
+                    <Button size="sm" disabled={actionBusy} onClick={() => handleOrderAction('start', o.id)}>بدء التسليم</Button>
+                  )}
+                  {!pool && o.deliveryStatus === 'out_for_delivery' && (
+                    <>
+                      <label className="text-xs cursor-pointer inline-flex items-center gap-2">
+                        <input type="file" className="hidden" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
+                        <span className="px-2 py-1 border rounded">إرفاق إثبات</span>
+                      </label>
+                      <Button size="sm" variant="success" disabled={actionBusy} onClick={() => handleOrderAction('complete', o.id)}>تم التسليم</Button>
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="border rounded px-2 py-1 text-xs"
+                          placeholder="سبب الفشل"
+                          value={failReason}
+                          onChange={(e) => setFailReason(e.target.value)}
+                        />
+                        <Button size="sm" variant="destructive" disabled={actionBusy} onClick={() => handleOrderAction('fail', o.id, { reason: failReason || 'تعذر الوصول' })}>تعذر التسليم</Button>
+                      </div>
+                    </>
+                  )}
+                  {!!last && (
+                    <a
+                      className="text-xs text-blue-600 underline"
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(last.lat + ',' + last.lng)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      فتح في الخرائط
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+            {actionErr && (
+              <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{actionErr}</div>
+            )}
+            <div className="flex items-center gap-2 pt-2 border-t">
+              {!sharing ? (
+                <Button onClick={startSharing} disabled={!selectedId}>مشاركة موقعي</Button>
+              ) : (
+                <Button variant="outline" onClick={stopSharing}>إيقاف المشاركة</Button>
+              )}
+              {last && (
+                <span className="text-xs text-gray-500">آخر تحديث: {new Date(last.at || Date.now()).toLocaleTimeString('ar-SA')}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

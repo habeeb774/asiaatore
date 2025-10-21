@@ -1,3 +1,4 @@
+import AdminSideNav from '../../components/admin/AdminSideNav';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
@@ -7,10 +8,15 @@ import { adminApi } from '../../api/admin';
 import { Edit3, Trash2, Plus, Save, X } from 'lucide-react';
 import ProductPicker from '../../components/admin/ProductPicker';
 import { useAuth } from '../../context/AuthContext';
-import { useSettings } from '../../context/SettingsContext';
+
 import Seo from '../../components/Seo';
+import AdsAdmin from '../AdsAdmin';
+import { useSettings } from '../../context/SettingsContext';
+
+import { useLanguage } from '../../context/LanguageContext';
 
 const AdminDashboard = () => {
+  const { locale } = useLanguage();
   const { user } = useAuth() || {};
   const isAdmin = user?.role === 'admin';
   const { refresh } = useOrders() || {};
@@ -1048,6 +1054,11 @@ const AdminDashboard = () => {
       </div>
 
       {/* Navigation moved to AdminSideNav; in-page tab buttons removed */}
+
+      {/* Ads Management */}
+      {view === 'ads' && (
+        <AdsAdmin />
+      )}
 
       {/* Overview */}
       {view === 'overview' && (

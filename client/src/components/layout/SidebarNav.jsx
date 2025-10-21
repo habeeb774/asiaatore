@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import '../../styles/sidebar-modern.scss';
 import { useSettings } from '../../context/SettingsContext';
 import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, BarChart3, Users, Settings, ReceiptText, Menu, X, ChevronsLeft, ChevronsRight, MessageCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /* Modern sidebar nav structure */
 const baseCoreNav = [
@@ -22,13 +23,15 @@ const adminNav = [
 ];
 
 import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import useEventListener from '../../hooks/useEventListener';
 import { useSidebar } from '../../context/SidebarContext';
 
 const SidebarNav = () => {
   const { pathname } = useLocation();
-  const { locale, t } = useLanguage();
+  const { locale, t, setLocale } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { user } = useAuth() || {};
   const { setting } = useSettings() || {};
   const isAdmin = user?.role === 'admin';
@@ -360,26 +363,35 @@ const SidebarNav = () => {
           }}
         />
       )}
-      <aside
-        className={`sidebar-modern ${isAdmin ? 'has-admin' : ''}`}
-        id="app-sidebar"
-        data-collapsed={collapsed}
-        data-open={mobileOpen}
-        role={isMobile() ? 'dialog' : undefined}
-        aria-modal={isMobile() ? 'true' : undefined}
-        tabIndex={isMobile() ? -1 : undefined}
-        ref={asideRef}
-        aria-label="Main sidebar navigation"
-        style={{
-          background: 'linear-gradient(180deg,#178a3d 0%,#0f3c1e 100%)',
-          minHeight: '100vh',
-          boxShadow: '2px 0 16px -8px rgba(0,0,0,0.10)',
-          borderRadius: '0 18px 18px 0',
-          width: collapsed ? '68px' : '88px',
-          transition: reducedMotion ? 'none' : 'width 0.18s',
-          zIndex: 1301,
-        }}
-      >
+      <AnimatePresence>
+        {(!isMobile() || mobileOpen) && (
+          <motion.aside
+            initial={isMobile() ? { x: '-100%' } : false}
+            animate={isMobile() ? { x: 0 } : false}
+            exit={isMobile() ? { x: '-100%' } : false}
+            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+            className={`sidebar-modern ${isAdmin ? 'has-admin' : ''}`}
+            id="app-sidebar"
+            data-collapsed={collapsed}
+            data-open={mobileOpen}
+            role={isMobile() ? 'dialog' : undefined}
+            aria-modal={isMobile() ? 'true' : undefined}
+            tabIndex={isMobile() ? -1 : undefined}
+            ref={asideRef}
+            aria-label="Main sidebar navigation"
+            style={{
+              background: 'linear-gradient(180deg,#178a3d 0%,#0f3c1e 100%)',
+              minHeight: '100vh',
+              boxShadow: '2px 0 16px -8px rgba(0,0,0,0.10)',
+              borderRadius: '0 18px 18px 0',
+              width: collapsed ? '68px' : '88px',
+              transition: reducedMotion ? 'none' : 'width 0.18s',
+              zIndex: 1301,
+              position: isMobile() ? 'fixed' : undefined,
+              top: 0,
+              left: 0,
+            }}
+          >
   <div className="sidebar-modern__inner" ref={listRef} style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}>
           <div className="sidebar-modern__head">
             <span className="sidebar-modern__brand" style={{fontWeight:700,fontSize:'.95rem',color:'#fff',letterSpacing:'.5px'}}>{locale==='ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store')}</span>
@@ -466,6 +478,50 @@ const SidebarNav = () => {
             )}
           </ul>
           <div className="sidebar-modern__footer" style={{marginTop:'auto',padding:'10px 0',textAlign:'center'}}>
+            {/* Theme & Language toggles */}
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+              {/* Theme toggle */}
+              <div style={{display:'flex',alignItems:'center',gap:'8px',width:'100%',justifyContent:'center'}}>
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : (theme === 'light' ? 'system' : 'dark'))}
+                  aria-label={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
+                  title={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
+                  style={{background:'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px',color:'#fff',cursor:'pointer',transition:'background 0.2s'}}
+                >
+                  {theme === 'dark' ? (
+                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m6 8h2m-2 8v2m-8-2H4m2-8H2m2.93-6.07l1.41 1.41m10.12 0l-1.41 1.41m1.41 10.12l-1.41-1.41m-10.12 0l1.41-1.41"/></svg>
+                  ) : theme === 'light' ? (
+                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-monitor"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  ) : (
+                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
+                  )}
+                </button>
+                <span style={{fontSize:'.9rem',color:'#fff',fontWeight:600}}>
+                  {theme === 'dark' ? (locale==='ar'?'داكن':'Dark') : theme === 'light' ? (locale==='ar'?'فاتح':'Light') : (locale==='ar'?'النظام':'System')}
+                </span>
+              </div>
+              {/* Language toggle */}
+              <div style={{display:'flex',alignItems:'center',gap:'8px',width:'100%',justifyContent:'center'}}>
+                <button
+                  onClick={() => setLocale('ar')}
+                  aria-label="العربية"
+                  title="العربية"
+                  style={{background:locale==='ar'?'#f6ad55':'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px 12px',color:'#fff',fontWeight:locale==='ar'?700:500,cursor:'pointer',transition:'background 0.2s'}}
+                >العربية</button>
+                <button
+                  onClick={() => setLocale('en')}
+                  aria-label="English"
+                  title="English"
+                  style={{background:locale==='en'?'#f6ad55':'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px 12px',color:'#fff',fontWeight:locale==='en'?700:500,cursor:'pointer',transition:'background 0.2s'}}
+                >English</button>
+                <button
+                  onClick={() => setLocale('fr')}
+                  aria-label="Français"
+                  title="Français"
+                  style={{background:locale==='fr'?'#f6ad55':'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px 12px',color:'#fff',fontWeight:locale==='fr'?700:500,cursor:'pointer',transition:'background 0.2s'}}
+                >Français</button>
+              </div>
+            </div>
             {/* Quick access to chat */}
             <Link
               to="/chat"
@@ -487,7 +543,9 @@ const SidebarNav = () => {
             <small style={{fontSize:'.55rem', opacity:.55,display:'block',marginTop:'2px',color:'#fff'}}>{locale==='ar'?'وضع تجريبي':'Preview mode'}</small>
           </div>
         </div>
-      </aside>
+          </motion.aside>
+        )}
+      </AnimatePresence>
       <div
         className="sidebar-modern__backdrop"
         data-open={mobileOpen}

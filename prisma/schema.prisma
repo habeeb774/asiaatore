@@ -1,3 +1,14 @@
+
+model Ad {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  image       String
+  link        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 generator client {
   provider = "prisma-client-js"
 }
@@ -50,16 +61,19 @@ model Brand {
 model Product {
   id         String             @id @default(uuid())
   slug       String             @unique
+  sku        String?            @unique
   nameAr     String
   nameEn     String
   shortAr    String?
   shortEn    String?
   category   String
   price      Float
+  costPrice  Float?
   oldPrice   Float?
   image      String?
   rating     Int                @default(0)
   stock      Int                @default(0)
+  status     ProductStatus      @default(active)
   deletedAt  DateTime?
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
@@ -71,6 +85,8 @@ model Product {
   tierPrices ProductTierPrice[]
   reviews    Review[]
   wishlist   WishlistItem[]
+  inventory  Inventory[]
+  transactions InventoryTransaction[] @relation("ProductTransactions")
 
   @@index([brandId], map: "Product_brandId_fkey")
 }
@@ -392,7 +408,7 @@ model ChatMessage {
   @@index([threadId])
 }
 
-model storesetting {
+model StoreSetting {
   id              String   @id @default("singleton")
   siteNameAr      String?
   siteNameEn      String?
@@ -431,6 +447,11 @@ enum ReviewStatus {
   rejected
 }
 
+enum ProductStatus {
+  active
+  inactive
+}
+
 enum PackagingType {
   unit
   carton
@@ -447,6 +468,75 @@ enum Platform {
   ios
   android
   web
+}
+
+// Inventory and Warehouses
+model Warehouse {
+  id        String   @id @default(uuid())
+  name      String
+  location  String?
+  capacity  Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory Inventory[]
+  transactions InventoryTransaction[] @relation("WarehouseTransactions")
+}
+
+model Inventory {
+  id                 String     @id @default(uuid())
+  productId          String
+  warehouseId        String?
+  quantity           Int        @default(0)
+  reservedQuantity   Int        @default(0)
+  lowStockThreshold  Int        @default(5)
+  location           String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  @@unique([productId, warehouseId])
+  @@index([productId])
+  @@index([warehouseId])
+}
+
+enum InventoryTransactionType {
+  inbound
+  outbound
+  adjustment
+  transfer
+}
+
+enum InventoryReferenceType {
+  sale
+  return
+  purchase
+  adjustment
+  order
+}
+
+model InventoryTransaction {
+  id              String                     @id @default(uuid())
+  productId       String
+  warehouseId     String?
+  transactionType InventoryTransactionType
+  quantity        Int
+  previousStock   Int
+  newStock        Int
+  referenceType   InventoryReferenceType
+  referenceId     String?
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime                  @default(now())
+
+  product   Product    @relation("ProductTransactions", fields: [productId], references: [id])
+  warehouse Warehouse? @relation("WarehouseTransactions", fields: [warehouseId], references: [id])
+
+  @@index([productId, createdAt])
+  @@index([warehouseId])
 }
 
 // Session model for refresh tokens / device sessions

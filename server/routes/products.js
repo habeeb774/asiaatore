@@ -10,6 +10,7 @@ import multer from 'multer';
 import sharp from 'sharp';
 import prisma from '../db/client.js';
 import { whereWithDeletedAt } from '../utils/deletedAt.js';
+import InventoryService from '../services/inventoryService.js';
 
 const router = Router();
 
@@ -345,6 +346,22 @@ router.post('/', requireAdmin, productImageMiddleware, async (req, res) => {
       stock: Number.isFinite(Number(body.stock)) ? Number(body.stock) : 0,
       brand: body.brandId ? { connect: { id: body.brandId } } : undefined,
     });
+    // Optional initial stock and low stock threshold
+    try {
+      const initial = body.initial_stock != null ? Number(body.initial_stock) : null;
+      const threshold = body.low_stock_threshold != null ? Number(body.low_stock_threshold) : null;
+      if (initial != null || threshold != null) {
+        const inv = await prisma.inventory.findFirst({ where: { productId: created.id, warehouseId: null } }).catch(() => null);
+        if (!inv) {
+          await prisma.inventory.create({ data: { productId: created.id, quantity: initial || 0, reservedQuantity: 0, lowStockThreshold: threshold != null ? threshold : 5 } }).catch(() => null);
+        } else {
+          const data = {};
+          if (initial != null) data.quantity = initial;
+          if (threshold != null) data.lowStockThreshold = threshold;
+          if (Object.keys(data).length) await prisma.inventory.update({ where: { id: inv.id }, data }).catch(() => null);
+        }
+      }
+    } catch {}
     audit({ action: 'product.create', entity: 'Product', entityId: created.id, userId: req.user?.id, meta: { slug: created.slug } });
     res.status(201).json(mapProduct(created));
   } catch (e) {
@@ -392,6 +409,13 @@ router.put('/:id', requireAdmin, productImageMiddleware, async (req, res) => {
   if (body.brandId === null) data.brandId = null;
   if (body.brandId && typeof body.brandId === 'string') data.brandId = body.brandId;
     const updated = await productService.update(req.params.id, data);
+    // Allow updating low stock threshold
+    try {
+      if (body.low_stock_threshold != null) {
+        const inv = await prisma.inventory.findFirst({ where: { productId: updated.id, warehouseId: null } });
+        if (inv) await prisma.inventory.update({ where: { id: inv.id }, data: { lowStockThreshold: Number(body.low_stock_threshold) } });
+      }
+    } catch {}
     audit({ action: 'product.update', entity: 'Product', entityId: updated.id, userId: req.user?.id, meta: { slug: updated.slug } });
     res.json(mapProduct(updated));
   } catch (e) {

@@ -47,11 +47,12 @@ export default function AdminSideNav() {
       <a href={`${prefix}/admin?view=orders`} style={isAdminViewActive('orders') ? linkActive : linkBtn}>الطلبات</a>
       <a href={`${prefix}/admin?view=audit`} style={isAdminViewActive('audit') ? linkActive : linkBtn}>السجلات</a>
       <a href={`${prefix}/admin?view=reviews`} style={isAdminViewActive('reviews') ? linkActive : linkBtn}>المراجعات</a>
-      <a href={`${prefix}/admin?view=brands`} style={isAdminViewActive('brands') ? linkActive : linkBtn}>العلامات</a>
-      <a href={`${prefix}/admin?view=offers`} style={isAdminViewActive('offers') ? linkActive : linkBtn}>العروض</a>
-      <a href={`${prefix}/admin?view=marketing`} style={isAdminViewActive('marketing') ? linkActive : linkBtn}>التسويق</a>
-      <a href={`${prefix}/admin?view=settings`} style={isAdminViewActive('settings') ? linkActive : linkBtn}>الإعدادات</a>
-      <a href={`${prefix}/admin?view=cats`} style={isAdminViewActive('cats') ? linkActive : linkBtn}>التصنيفات</a>
+  <a href={`${prefix}/admin?view=brands`} style={isAdminViewActive('brands') ? linkActive : linkBtn}>العلامات</a>
+  <a href={`${prefix}/admin?view=offers`} style={isAdminViewActive('offers') ? linkActive : linkBtn}>العروض</a>
+  <a href={`${prefix}/admin?view=ads`} style={isAdminViewActive('ads') ? linkActive : linkBtn}>الإعلانات</a>
+  <a href={`${prefix}/admin?view=marketing`} style={isAdminViewActive('marketing') ? linkActive : linkBtn}>التسويق</a>
+  <a href={`${prefix}/admin?view=settings`} style={isAdminViewActive('settings') ? linkActive : linkBtn}>الإعدادات</a>
+  <a href={`${prefix}/admin?view=cats`} style={isAdminViewActive('cats') ? linkActive : linkBtn}>التصنيفات</a>
     </nav>
   );
 }

@@ -5,6 +5,7 @@ import { whereWithDeletedAt } from '../../utils/deletedAt.js';
 import aramex from '../../services/shipping/adapters/aramex.js';
 import smsa from '../../services/shipping/adapters/smsa.js';
 import { emitOrderEvent } from '../../utils/realtimeHub.js';
+import InventoryService from '../../services/inventoryService.js';
 
 export function mapOrder(o) {
   return {
@@ -242,6 +243,17 @@ export const OrdersService = {
       },
       include: { items: true },
     });
+    // Best-effort: reserve inventory for items (skip 'custom')
+    try {
+      const toReserve = (items || [])
+        .filter(i => i.productId && i.productId !== 'custom')
+        .map(i => ({ product_id: i.productId, quantity: i.quantity }));
+      if (toReserve.length) {
+        await InventoryService.reserveStock(created.id, toReserve, { userId });
+      }
+    } catch (e) {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[ORDERS] reserveStock failed (non-fatal):', e?.message);
+    }
     // Auto-create shipment if enabled. Do not block order creation on shipment errors.
     try {
       if (String(process.env.AUTO_CREATE_SHIPMENT || '').toLowerCase() === 'true') {
@@ -334,6 +346,19 @@ export const OrdersService = {
       }
       return tx.order.update({ where: { id: existing.id }, data: updateData, include: { items: true } });
     });
+    // Side-effects: inventory reservation lifecycle on status transitions
+    try {
+      if (existing.status !== updated.status) {
+        const s = String(updated.status || '').toLowerCase();
+        if (s === 'cancelled' || s === 'canceled') {
+          await InventoryService.releaseReserved(updated.id, { userId: requesterId });
+        } else if (s === 'shipped' || s === 'completed' || s === 'paid') {
+          await InventoryService.confirmReduction(updated.id, { userId: requesterId });
+        }
+      }
+    } catch (e) {
+      if (process.env.DEBUG_ERRORS === 'true') console.warn('[ORDERS] inventory side-effect failed:', e?.message);
+    }
     return updated;
   },
 };

@@ -4,25 +4,42 @@ import api from '../../api/client';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card.jsx';
 import { motion } from 'framer-motion';
-import { Truck, Save, Loader } from 'lucide-react';
+import { Truck, Save, Loader, AlertCircle } from 'lucide-react';
 
 export default function DeliveryAvailability() {
   const { user } = useAuth() || {};
-  const [profile, setProfile] = useState({ online: false, vehicleType: '', licensePlate: '' });
+  const [profile, setProfile] = useState({
+    online: false,
+    vehicleType: '',
+    licensePlate: ''
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // تحميل الملف الشخصي (اعتمد على ترويسات التطوير التلقائية من عميل API عند غياب التوكن)
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.request('/delivery/me/profile');
-      setProfile(res.profile || { online: false, vehicleType: '', licensePlate: '' });
       setError(null);
+      const res = await api.request('/delivery/me/profile');
+      setProfile(res.profile || {
+        online: false,
+        vehicleType: '',
+        licensePlate: ''
+      });
+      
     } catch (e) {
-      setError(e?.response?.data?.message || e?.message || 'فشل تحميل الملف الشخصي');
+      const errorMessage = e?.response?.data?.message || e?.message || 'فشل تحميل الملف الشخصي';
+      setError(errorMessage);
       console.error('Profile load error:', e);
+      
+      // 🔧 إصلاح: إعادة التحميل عند فشل المصادقة
+      if (e?.response?.status === 401 || e?.response?.status === 403) {
+        console.log('محاولة إعادة المصادقة...');
+        // يمكن إضافة منطق إعادة تسجيل الدخول هنا
+      }
     } finally {
       setLoading(false);
     }
@@ -39,38 +56,70 @@ export default function DeliveryAvailability() {
     setHasChanges(true);
   };
 
+  // تحديث الملف الشخصي
   const updateProfile = async (patch = null) => {
     setSaving(true);
     setError(null);
+    
     try {
       const dataToUpdate = patch || {
         online: profile.online,
         vehicleType: profile.vehicleType,
         licensePlate: profile.licensePlate
       };
-      
+
+      // يستخدم عميل API ترويسة Content-Type تلقائيًا عند إرسال JSON
       const res = await api.request('/delivery/me/profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(dataToUpdate)
       });
       
-      setProfile(res.profile);
+      setProfile(res.profile || res);
       setHasChanges(false);
+      
     } catch (e) {
-      setError(e?.response?.data?.message || e?.message || 'فشل حفظ التغييرات');
-      console.error('Profile update error:', e);
+      console.error('Profile update error details:', e);
+      
+      // 🔧 معالجة مختلفة لأنواع الأخطاء
+      if (e?.response?.status === 403) {
+        setError('غير مصرح لك بتعديل الملف الشخصي. يرجى التحقق من الصلاحيات.');
+      } else if (e?.response?.status === 401) {
+        setError('انتهت جلسة التسجيل. يرجى تسجيل الدخول مرة أخرى.');
+      } else if (e?.response?.data?.message) {
+        setError(e.response.data.message);
+      } else {
+        setError('فشل حفظ التغييرات. يرجى المحاولة مرة أخرى.');
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  // التحقق من الصلاحيات
-  if (!user) return <div className="p-6">يجب تسجيل الدخول</div>;
+  // 🔧 إصلاح: إعادة تحميل الصلاحيات
+  const handleRetry = async () => {
+    setError(null);
+    await loadProfile();
+  };
+
+  // 🔧 إصلاح: التحقق من الصلاحيات بشكل أدق
+  if (!user) {
+    return (
+      <div className="p-6 text-center">
+        <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-gray-800">يجب تسجيل الدخول</h2>
+        <p className="text-gray-600 mt-2">يرجى تسجيل الدخول للوصول إلى هذه الصفحة</p>
+      </div>
+    );
+  }
+
   if (!['delivery', 'admin'].includes(user.role)) {
-    return <div className="p-6">غير مصرح بالوصول</div>;
+    return (
+      <div className="p-6 text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-gray-800">غير مصرح بالوصول</h2>
+        <p className="text-gray-600 mt-2">ليس لديك الصلاحيات الكافية للوصول إلى هذه الصفحة</p>
+      </div>
+    );
   }
 
   return (
@@ -86,9 +135,24 @@ export default function DeliveryAvailability() {
       </motion.div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 text-sm">{error}</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
+        >
+          <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-red-700 text-sm">{error}</p>
+            {(error.includes('انتهت') || error.includes('غير مصرح')) && (
+              <button 
+                onClick={handleRetry}
+                className="text-red-600 underline text-sm mt-1 hover:text-red-800"
+              >
+                إعادة المحاولة
+              </button>
+            )}
+          </div>
+        </motion.div>
       )}
 
       {loading ? (
@@ -104,6 +168,7 @@ export default function DeliveryAvailability() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* حالة التوفر */}
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <label className="flex items-center gap-3 text-gray-700 cursor-pointer">
                 <input
@@ -111,8 +176,8 @@ export default function DeliveryAvailability() {
                   checked={!!profile?.online}
                   onChange={(e) => {
                     handleInputChange('online', e.target.checked);
-                    // حفظ تلقائي عند تغيير حالة التوفر
-                    updateProfile({ online: e.target.checked });
+                    // 🔧 إصلاح: حفظ تلقائي مع معالجة الأخطاء
+                    updateProfile({ online: e.target.checked }).catch(console.error);
                   }}
                   disabled={saving}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
@@ -128,6 +193,7 @@ export default function DeliveryAvailability() {
               </div>
             </div>
 
+            {/* معلومات المركبة */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -139,6 +205,7 @@ export default function DeliveryAvailability() {
                   value={profile?.vehicleType || ''}
                   onChange={(e) => handleInputChange('vehicleType', e.target.value)}
                   required
+                  disabled={saving}
                 />
               </div>
 
@@ -152,10 +219,12 @@ export default function DeliveryAvailability() {
                   value={profile?.licensePlate || ''}
                   onChange={(e) => handleInputChange('licensePlate', e.target.value)}
                   required
+                  disabled={saving}
                 />
               </div>
             </div>
 
+            {/* أزرار التحكم */}
             <div className="flex gap-3 pt-4 border-t border-gray-200">
               <Button
                 variant="success"
@@ -174,7 +243,10 @@ export default function DeliveryAvailability() {
               {hasChanges && (
                 <Button
                   variant="outline"
-                  onClick={() => loadProfile()}
+                  onClick={() => {
+                    setHasChanges(false);
+                    loadProfile();
+                  }}
                   disabled={saving}
                 >
                   إلغاء

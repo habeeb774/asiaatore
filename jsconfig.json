@@ -15,14 +15,16 @@
     "dist",
     "dev-dist",
     "11dist",
-    "src/components/ui/badge.jsx"
+    "client/src/components/ui/badge.jsx"
   ],
   "include": [
-    "src/**/*",
+    "client/src/**/*",
+    "client/**/*.config.*",
+    "client/index.html",
     "server/**/*",
+    "shared/**/*",
+    "scripts/**/*",
     "prisma/**/*",
-    "vite.config.*",
-    "index.html",
     "package.json"
   ]
 }

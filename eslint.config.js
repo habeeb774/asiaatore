@@ -30,7 +30,18 @@ export default defineConfig([
   },
   // Node/Server overrides
   {
-    files: ['server/**/*.{js,jsx}', '*.config.{js,cjs}', 'vite.config.js', 'tailwind.config.js', 'ecosystem.config.cjs', 'scripts/**/*.{js,jsx}', 'mobile/**/*.{js,jsx}'],
+    files: [
+      'server/**/*.{js,jsx}',
+      '*.config.{js,cjs}',
+      'client/vite.config.js',
+      'client/tailwind.config.js',
+      'client/postcss.config.cjs',
+      'client/playwright.config.ts',
+      'client/vitest.config.ts',
+      'ecosystem.config.cjs',
+      'scripts/**/*.{js,jsx}',
+      'mobile/**/*.{js,jsx}'
+    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: { ...globals.node },

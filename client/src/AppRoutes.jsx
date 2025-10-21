@@ -15,6 +15,7 @@ import Orders from './pages/Orders';
 import MyOrders from './pages/MyOrders';
 import OrderDetails from './pages/OrderDetails';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ProductInventory from './pages/admin/ProductInventory.jsx';
 import AdminUsers from './pages/admin/AdminUsers';
 import Reports from './pages/admin/Reports';
 import SellerDashboard from './pages/seller/SellerDashboard.jsx'; 
@@ -25,6 +26,7 @@ import Customers from './pages/admin/Customers';
 import Settings from './pages/admin/Settings';
 import AccountSecurity from './pages/AccountSecurity';
 import Canonical from './components/Canonical';
+import { initAnalytics, trackPageView } from './lib/analytics';
 import { AnimatePresence, motion } from 'framer-motion';
 // NOTE: useLanguage was imported but unused; removed to prevent lint warning.
 const ProductDetailPage = React.lazy(() => import('./pages/ProductDetailPage'));
@@ -50,6 +52,8 @@ const UIPreview = React.lazy(() => import('./pages/UIPreview.jsx'));
 const RouteTracker = () => {
   const location = useLocation();
   useEffect(() => {
+    // Ensure GA initialized once in browser
+    try { initAnalytics(); } catch {}
     try {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
@@ -57,6 +61,8 @@ const RouteTracker = () => {
         path: location.pathname,
         timestamp: Date.now()
       });
+      // GA4 page_view
+      trackPageView(location.pathname);
       // Dispatch a single SPA re-init event for home enhancements (throttled per route change)
       const ev = new CustomEvent('reinit:home', {
         detail: { path: location.pathname, ts: Date.now() }
@@ -136,6 +142,7 @@ const AppRoutes = () => {
       <Routes>
         {/* Arabic default */}
   <Route path="/" element={<Home />} />
+  <Route path="/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/login" />} />
   <Route path="/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/login" />} />
           {/* Admin entry (handles legacy query redirects) */}
           <Route path="/admin" element={<AdminRedirect prefix="" />} />
@@ -238,6 +245,8 @@ const AppRoutes = () => {
   <Route path="/account/profile" element={<ProtectedRoute isAuthed={!!user} element={<ProfilePage />} redirectTo="/login" />} />
   {/* Protected admin route (Arabic default) */}
   <Route path="/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/login" />} />
+  {/* Dedicated Admin Categories page -> redirects to AdminDashboard cats view */}
+  <Route path="/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Navigate to="/admin?view=cats" replace />} redirectTo="/login" />} />
   <Route path="/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/login" />} />
   <Route path="/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/login" />} />
   <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
@@ -251,6 +260,7 @@ const AppRoutes = () => {
 
         {/* English prefixed */}
   <Route path="/en" element={<Home />} />
+  <Route path="/en/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/en/login" />} />
   <Route path="/en/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/en/login" />} />
   <Route path="/en/catalog" element={<CatalogPage />} />
   <Route path="/en/products" element={<ProductsPage />} />
@@ -350,6 +360,8 @@ const AppRoutes = () => {
   <Route path="/en/admin" element={<AdminRedirect prefix="/en" />} />
   {/* Legacy en redirect to users if query has view=users will be handled client-side (optional) */}
   <Route path="/en/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/en/login" />} />
+  {/* EN: Admin Categories */}
+  <Route path="/en/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Navigate to="/en/admin?view=cats" replace />} redirectTo="/en/login" />} />
   <Route path="/en/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/en/login" />} />
   <Route path="/en/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/en/login" />} />
   <Route path="/en/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/en/login" />} />
@@ -363,6 +375,7 @@ const AppRoutes = () => {
   {/* Duplicate /admin protected route removed (now defined above) */}
   {/* French prefixed */}
   <Route path="/fr" element={<Home />} />
+  <Route path="/fr/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/fr/login" />} />
   <Route path="/fr/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/fr/login" />} />
   <Route path="/fr/catalog" element={<CatalogPage />} />
   <Route path="/fr/products" element={<ProductsPage />} />
@@ -461,6 +474,8 @@ const AppRoutes = () => {
   {/* Protected admin route (French) with legacy query redirect */}
   <Route path="/fr/admin" element={<AdminRedirect prefix="/fr" />} />
   <Route path="/fr/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/fr/login" />} />
+  {/* FR: Admin Categories */}
+  <Route path="/fr/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Navigate to="/fr/admin?view=cats" replace />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/fr/login" />} />

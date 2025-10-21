@@ -36,56 +36,30 @@ export default function HeaderControls({ t, locale, setLocale, panel, setPanel, 
       : (t?.('themeSystemAuto') || 'System (Auto)');
 
   return (
-    <div className="flex items-center gap-2 sm:gap-3">
-      {/* Compact mobile language toggle */}
-      <button
-        type="button"
-        onClick={onCycleLanguage}
-        aria-label={(t && t('changeLanguage')) || 'Change language'}
-        title={(t && t('changeLanguage')) || 'Change language'}
-        className="sm:hidden inline-flex items-center gap-1 px-2 py-1 rounded-md border bg-white/90 dark:bg-slate-900/90 text-xs font-semibold text-slate-700 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-      >
-        <Languages size={14} /> {String(locale || '').toUpperCase()}
-      </button>
+  <div className="flex items-center gap-2 sm:gap-3 transition-colors duration-300">
+      {/* زر تغيير اللغة يظهر فقط في الشاشات الكبيرة */}
 
-      <select value={locale} onChange={e => setLocale && setLocale(e.target.value)} className="hidden sm:block text-sm border rounded px-2 py-1 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
-        <option value="en">EN</option>
-        <option value="ar">AR</option>
-        <option value="fr">FR</option>
-      </select>
+      
 
-      {/* Compact mobile theme toggle */}
-      <button
-        type="button"
-        onClick={() => setTheme && setTheme(nextTheme)}
-        aria-label={(t && t('toggleTheme')) || 'Toggle theme'}
-        title={`${(t && t('theme')) || 'Theme'}: ${themeLabel}`}
-        aria-pressed={theme !== 'system'}
-        className="inline-flex sm:hidden items-center gap-1 px-2 py-1 rounded-md border bg-white/90 dark:bg-slate-900/90 text-xs font-semibold text-slate-700 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-      >
-        <ThemeIcon size={14} />
-      </button>
+      {/* تم نقل زر تغيير الثيم إلى القائمة الجانبية */}
 
-      <button
-        type="button"
-        onClick={() => setTheme && setTheme(nextTheme)}
-        aria-label={(t && t('toggleTheme')) || 'Toggle theme'}
-        title={`${(t && t('theme')) || 'Theme'}: ${themeLabel}`}
-        aria-pressed={theme !== 'system'}
-        className="p-2 rounded-md bg-slate-50 dark:bg-slate-800 border hidden sm:inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-      >
-        <ThemeIcon size={16} />
-      </button>
-
-      <button ref={cartBtnRef} onClick={() => setPanel('cart')} aria-expanded={panel === 'cart'} aria-controls="cart-panel" className="relative p-2 rounded-md border bg-white/95 dark:bg-slate-900/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
-        <ShoppingCart size={18} />
-        {cartCount > 0 && (<span className="absolute -top-1 -right-1 text-xs font-semibold bg-amber-500 text-white rounded-full w-5 h-5 flex items-center justify-center">{cartCount}</span>)}
-      </button>
+  {/* زر السلة أصبح في BottomNav فقط */}
 
       {!user ? (
-        <Link to="/login" className="text-sm px-3 py-1 border rounded bg-white/90 dark:bg-slate-900/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">{t('login') || 'Login'}</Link>
+        <Link
+          to="/login"
+          className="border rounded bg-white/90 dark:bg-slate-950/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 flex items-center justify-center"
+          style={{ minWidth: 0, minHeight: 0, padding: 0 }}
+        >
+          {/* Icon only on mobile, text on larger screens */}
+          <User size={18} className="block sm:hidden" />
+          <span className="hidden sm:inline-block text-sm px-3 py-1">{t('login') || 'Login'}</span>
+        </Link>
       ) : (
-        <Link to="/account/profile" className="flex items-center gap-2 px-3 py-1 border rounded text-sm bg-white/90 dark:bg-slate-900/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"><User size={16} /><span className="hidden sm:inline-block">{user.name || (user.email || '').split('@')[0]}</span></Link>
+        <Link to="/account/profile" className="flex items-center gap-2 px-3 py-1 border rounded text-sm bg-white/90 dark:bg-slate-950/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300">
+          <User size={16} />
+          <span className="hidden sm:inline-block">{user.name || (user.email || '').split('@')[0]}</span>
+        </Link>
       )}
     </div>
   );

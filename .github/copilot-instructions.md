@@ -17,7 +17,7 @@ Purpose: make you productive immediately on this codebase. Keep answers concrete
 - Seed: `npm run db:seed` (creates demo data if script supports it).
 - API server: `npm run dev:server` (runs `server/index.js`). If port 4000 is busy, it auto-increments.
 - Frontend: `npm run dev` (Vite, default port 3000, proxies `/api` to backend). Open http://localhost:3000.
-- Health checks: https://my-store-backend-production.up.railway.app/_health and https://my-store-backend-production.up.railway.app/_db_ping.
+- Health checks: http://localhost:4000/_health and http://localhost:4000/_db_ping.
 
 ## Environment and config tips
 - `.env` is loaded with override; ensure `DATABASE_URL` starts with `mysql://`. Shorthands like `user:pass@host:3306/db` are normalized.
@@ -48,7 +48,7 @@ Purpose: make you productive immediately on this codebase. Keep answers concrete
 - Audit: `server/utils/audit.js` writes to `AuditLog`; call `audit({ action, entity, entityId, userId, meta })` for significant events.
 
 ## Frontend conventions
-- Vite config proxies `/api` to `VITE_PROXY_TARGET` or `https://my-store-backend-production.up.railway.app` by default (`vite.config.js`).
+- Vite config proxies `/api` to `VITE_PROXY_TARGET` or `http://localhost:4000` by default (`vite.config.js`).
 - SPA routes live in `src/pages` and `src/AppRoutes.jsx`. Components under `src/components/**`, contexts under `src/context/**`.
 - React 19 setup with `@vitejs/plugin-react`, Tailwind 4 (`tailwind.config.js`, `postcss.config.cjs`).
 
