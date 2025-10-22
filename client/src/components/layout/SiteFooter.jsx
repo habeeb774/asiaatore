@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
 import { Phone, Smartphone, Mail, MessageCircle } from 'lucide-react';
-import logo from '/logo.svg';
+
 
 const SiteFooter = () => {
   const { locale } = useLanguage();
@@ -64,7 +64,7 @@ const SiteFooter = () => {
           {/* About + logo (first column) */}
           <ul className={`text-slate-700 ${isAr ? 'text-right' : 'text-left'} flex-shrink-0 min-w-[280px] snap-start`}>
             <div className="flex items-center gap-2 mb-3">
-              <img src={logo} alt={storeName} className="h-10 w-auto" />
+              <img src={setting?.logoUrl || setting?.logo || '/logo.svg'} alt={storeName} className="h-10 w-auto" />
               <span className="sr-only">{storeName}</span>
             </div>
             <div className="text-sm leading-7 space-y-1">

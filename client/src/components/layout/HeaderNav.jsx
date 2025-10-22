@@ -12,11 +12,11 @@ import { useSidebar, SidebarProvider } from '../../context/SidebarContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 
 const defaultLanguage = () => ({ t: (k) => k, locale: 'en', setLocale: () => {} });
 const defaultAuth = () => ({ user: null, logout: () => {} });
 const defaultCart = () => ({ cartItems: [], updateQuantity: () => {}, removeFromCart: () => {} });
-const defaultSettings = () => ({ setting: {} });
 
 const resolveMaybeHook = (name, fallbackFactory) => {
   try {
@@ -39,7 +39,7 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
   const { t, locale, setLocale } = langCtx;
   const { user } = authCtx;
   const { cartItems = [], updateQuantity } = cartCtx;
-  const { setting } = resolveMaybeHook('__useSettings__', defaultSettings);
+  const { setting } = useSettings() || {};
 
   const logoSrc = useMemo(() => setting?.logoUrl || setting?.logo || '/images/site-logo.png', [setting]);
 
@@ -126,7 +126,7 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
             {isMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
           <a href="/" onClick={e => { e.preventDefault(); window.location.href = '/'; }} style={{display:'block'}}>
-            <img src={logoSrc} alt={setting?.siteNameEn || 'Logo'} className="h-9 w-auto max-w-[80px] sm:max-w-[140px] object-contain drop-shadow cursor-pointer" />
+            <img src={logoSrc} alt={setting?.siteNameEn || 'Logo'} className="h-[44px] w-auto max-w-[80px] sm:h-9 sm:max-w-[140px] object-contain drop-shadow cursor-pointer" />
           </a>
         </div>
         {/* وسط الهيدر: شريط البحث وروابط التصفح */}

@@ -1267,10 +1267,6 @@ header,
   --grad-soft: linear-gradient(135deg,#ffffff,#fafbfc 58%,#f4f6f8);
 }
 
-.theme-minimal .home-hero {
-  background: linear-gradient(90deg,#fafafa,#f2f4f5); /* تبسيط التدرج */
-  color: var(--color-text);
-}
 .theme-minimal .home-hero__title { color: var(--color-text); }
 .theme-minimal .home-hero__subtitle { color: var(--color-primary); }
 .theme-minimal .home-hero__actions .btn-primary { box-shadow: none; }
@@ -1319,7 +1315,6 @@ header,
 /* Sidebar-specific minimal overrides removed; modern sidebar handles its own theme. */
 
 /* لوضع داكن داخل المينيمال (حماية) */
-.dark-mode.theme-minimal .home-hero { background: linear-gradient(90deg,#101b26,#142330); }
 .dark-mode.theme-minimal .home-products .product-card { background:#182431; border-color:#223140; }
 .dark-mode.theme-minimal .home-feature { background:#182431; border-color:#223140; }
 .dark-mode.theme-minimal .blog-card { background:#182431; border-color:#223140; }

@@ -29,7 +29,7 @@ const Customers = () => {
   const load = React.useCallback(async () => {
     setLoading(true); setError(null);
     try {
-  const res = await api.adminUsersList({ page, pageSize });
+  const res = await api.listUsers({ page, pageSize });
       const list = res?.users || [];
       setUsers(list);
       if (typeof res?.total === 'number') setTotalRemote(res.total);

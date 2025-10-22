@@ -85,17 +85,24 @@ app.use(helmet({
 }));
 
 // CORS
-const parsedCorsOrigins = (process.env.CORS_ORIGIN || '')
-	.split(',')
-	.map((origin) => origin.trim())
-	.filter(Boolean);
-const corsOrigins = parsedCorsOrigins.length > 0 ? parsedCorsOrigins : true;
-app.use(
-	cors({
-		origin: corsOrigins,
-		credentials: true
-	})
-);
+// CORS: allow all in dev, restrict in prod
+let corsOptions;
+if (!isProd) {
+    corsOptions = {
+        origin: 'http://localhost:5173', // Vite default
+        credentials: false // allow public static assets
+    };
+} else {
+    const parsedCorsOrigins = (process.env.CORS_ORIGIN || '')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+    corsOptions = {
+        origin: parsedCorsOrigins.length > 0 ? parsedCorsOrigins : true,
+        credentials: true
+    };
+}
+app.use(cors(corsOptions));
 
 // Common middleware
 app.use(compression({ threshold: Number(process.env.COMPRESSION_THRESHOLD || 1024) }));

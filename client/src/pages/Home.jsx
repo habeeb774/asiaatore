@@ -96,7 +96,9 @@ const Home = () => {
   const pageDesc = t('heroLead');
 
   return (
-  <div className="home-page-wrapper bg-white text-black dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+
+<div className="home-page-wrapper text-black dark:bg-red-900 dark:text-gray-100 min-h-screen">
+
       <Seo title={pageTitle} description={pageDesc} />
       {/* Top Strip (Marketing banners location=topStrip) */}
       {byLocation.topStrip && byLocation.topStrip.length > 0 && (
@@ -112,122 +114,151 @@ const Home = () => {
         </div>
       )}
 
-  {/* Homepage Marketing Slider */}
-  <HeroBannerSlider />
+  {/* Hero Section with HeroBannerSlider at the top */}
+  
+<header
+      className="home-hero text-white dark:bg-gray-900 dark:text-gray-200 rounded-b-[2rem] shadow-2xl relative overflow-hidden pt-8 pb-12"
+      aria-labelledby="hero-heading"
+      style={{
+        background: 'linear-gradient(120deg, #b91c1c 0%, #ef4444 60%, #fbbf24 100%)',
+        Height: '400px'
+      }}
+    >
+       {/* Subtle overlay for depth */}
+      <div className="pointer-events-none absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(circle at 10% 20%, rgba(255,255,255,0.3) 0%, transparent 20%), radial-gradient(circle at 90% 80%, rgba(255,255,255,0.2) 0%, transparent 30%)`}} aria-hidden="true" />
+      <div
+        className={`container mx-auto relative px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12`}
+        style={locale === 'ar' ? {direction:'ltr'} : {direction:'rtl'}}
+  >
 
-  {/* Hero Section */}
-  <header className="home-hero bg-gradient-to-l from-primary-red to-primary-gold text-white dark:bg-gray-800 dark:text-gray-200 rounded-b-2xl sm:rounded-b-3xl shadow-[0_10px_30px_rgba(0,0,0,.08)] relative overflow-hidden pt-2 sm:pt-4 pb-2 sm:pb-6" aria-labelledby="hero-heading">
-        {/* subtle texture overlay */}
-        <div className="pointer-events-none absolute inset-0 opacity-[.06]" style={{backgroundImage:'radial-gradient(ellipse at 20% 0%,#fff,transparent 40%), radial-gradient(ellipse at 80% 100%,#fff,transparent 40%)'}} aria-hidden="true" />
-  <div className="home-hero__inner container-custom relative px-2 sm:px-6">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[.06]"
+        style={{
+          backgroundImage:
+            'radial-gradient(ellipse at 20% 0%,#fff,transparent 40%), radial-gradient(ellipse at 80% 100%,#fff,transparent 40%)',
+        }}
+        aria-hidden="true"
+      />
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: locale === 'ar' ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: '32px',
+            width: '100%',
+            minHeight: '340px',
+            justifyContent: 'space-between',
+            maxWidth: '101000px',
+            margin: locale === 'ar' ? '0 0 0 auto' : '0 auto 0 0',
+            justifyContent: 'space-evenly',
+            justifyItems: 'center',
+          }}
+        >
+          {/* عمود النصوص والشعار */}
           <motion.div
             className="home-hero__content"
-            initial={{ opacity: 0, x: -50 }}
+            initial={{ opacity: 0, x: locale === 'ar' ? 40 : -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
+            style={{textAlign: locale === 'ar' ? 'right' : 'left', flex: '1 1 1%', minWidth: '0'}}
           >
-            <div className="mb-2 sm:mb-3">
-              <span className="inline-flex items-right gap-1 sm:gap-2 text-xs sm:text-[.8rem] font-semibold bg-white/15 border border-white/20 rounded-full px-2 sm:px-3 py-0.5 sm:py-1 shadow-sm">
+            {/* شعار الجوال أعلى شارة الخصم */}
+            <div className="flex justify-center items-center mb-2 sm:hidden">
+              <img
+                src={setting?.logoUrl || setting?.logo || '/images/site-logo.svg'}
+                alt="logo"
+                className="block h-10 w-auto object-contain drop-shadow-lg"
+                style={{margin: 0}}
+              />
+            </div>
+            {/* شارة الخصم */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',minWidth:'120px'}}>
+              <span className="inline-flex items-start gap-2 text-sm font-semibold bg-white/15 border border-white/20 rounded-full px-3 py-1 shadow-sm">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-300" />
-                {locale==='ar' ? 'خصومات حتى 30٪' : 'Up to 30% off'}
+                {locale === 'ar' ? 'خصومات حتى 30٪' : 'Up to 30% off'}
               </span>
             </div>
-            <h1 id="hero-heading" className="home-hero__title text-2xl sm:text-4xl font-extrabold flex flex-col gap-2 mb-2 text-center sm:text-right">
-              <span className="inline-flex items-center gap-2 align-middle justify-center sm:justify-start">
-                <img
-                  src={setting?.logoUrl || setting?.logo || '/images/site-logo.png'}
-                  alt=""
-                  aria-hidden="true"
-                  className="home-hero__brand inline-block h-8 sm:h-12 w-auto object-contain drop-shadow"
-                  style={{verticalAlign:'middle', objectFit:'contain', maxWidth:'80px'}}
-                />
-                <span className="truncate max-w-[70vw]">{siteName || t('heroTitle')}</span>
-              </span>
-              <span className="home-hero__subtitle text-base sm:text-xl opacity-90 mt-1">{t('heroSubtitle')}</span>
-            </h1>
-            <p className="home-hero__lead text-sm sm:text-lg mt-2 mb-4 max-w-[90vw] text-center sm:text-right">{t('heroLead')}</p>
-            <div className="home-hero__actions sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto items-center sm:items-start" role="group" aria-label="الروابط الرئيسية">
-       {/* زر تسوق الآن */}
-          <button
-            className="mini-button bg-white/20 border border-white/30 text-white rounded-md hover:bg-white/30 transition-colors"
-            style={{
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '9px',
-              lineHeight: '10px',
-              fontWeight: '600',
-              textAlign: 'center'
-            }}
-             onClick={() => { window.location.href = `${baseProductsPath}`; }}
-          >
-            تسوق<br />الآن
-           
-          </button>
-       {/* زر تصفح العروض */}
-          <button
-             className="mini-button bg-gradient-to-r from-red-500 to-red-600 text-white rounded-md transition-colors" onClick={() => window.location.href = '/offers'} 
-            style={{
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'left',
-              justifyContent: 'center',
-              fontSize: '9px',
-              lineHeight: '10px',
-              fontWeight: '600',
-              textAlign: 'center'
-            }}
-        
-          >
-            تصفح<br />العروض
-            
-          </button>
-       {/* زر شاهد المنتجات */}
-          <button
-            className="mini-button bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md transition-colors"
-            style={{
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '9px',
-              lineHeight: '10px',
-              fontWeight: '600',
-              textAlign: 'center'
-            }}
-            onClick={() => { window.location.href = '/products'; }}
-          >
-            شاهد<br />المنتجات
-          </button>
+            <div>
+              {/* صف الشعار واسم المتجر والعنوان */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: '10px',
+                  minWidth: '180px',
+                  maxWidth: '100%',
+                  justifyContent: 'space-evenly',
+                }}
+              >
+               
+                {/* شعار واسم المتجر */}
+                <div style={{display:'flex',flexDirection: locale === 'ar' ? 'row-reverse' : 'row',alignItems:'center',gap:'10px',minWidth:'180px',maxWidth:'100%',justifyContent:'flex-center'}}>
+                  <span className="truncate max-w-[70vw] text-base sm:text-5xl font-extrabold text-center mx-auto sm:text-right sm:mx-0">{siteName || t('heroTitle')}</span>
+                  <img
+                    src={setting?.logoUrl || setting?.logo || '/images/site-logo.svg'}
+                    alt="logo"
+                    className="hidden sm:inline h-10 sm:h-14 w-auto object-contain drop-shadow-lg"
+                    style={{marginLeft: locale === 'ar' ? 0 : '8px', marginRight: locale === 'ar' ? '8px' : 0}}
+                  />
+                </div>
+                {/* العنوان */}
+                
+              </div>
+              {/* شارة الخصم والوصف */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: locale === 'ar' ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: '18px',
+                  width: '100%',
+                  marginBottom: '1px',
+                  justifyContent: 'flex-center',
+                   justifyContent: 'space-evenly',
+                }}
+              >
+                
+                {/* الوصف */}
+                <div style={{display:'flex',alignItems:'center',minWidth:'220px',maxWidth:'320px',justifyContent:'center'}}>
+                  <p className="text-base sm:text-lg opacity-95 max-w-xl" style={{textAlign:'center',margin:0,width:'100%'}}>
+                    
+                  </p>
+                </div>
+              </div>
+              {/* الأزرار في صف منفصل */}
+              <div className="flex gap-3 flex-wrap justify-center items-center sm:justify-end mt-6" style={{width:'100%'}}>
+                <button
+                    className="mini-button bg-white text-[#7c1d1d] rounded-full w-10 h-10 text-[9px] font-semibold shadow-md border border-white/30 text-center overflow-hidden flex items-center justify-center p-0 transition-all duration-300 hover:scale-105 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-200 animate-pulse"
+                  onClick={() => (window.location.href = `${baseProductsPath}`)}
+                >
+                  <span className="block w-full animate-pulse" style={{animationDuration:'1000ms'}}>{locale === 'ar' ? 'تسوق الآن' : 'Shop Now'}</span>
+                </button>
+                <button
+                    className="mini-button bg-white text-[#7c1d1d] rounded-full hover:bg-gray-100 transition-all px-2 py-1 w-8 h-5 text-[10px] font-semibold shadow-md border border-white/30 text-center overflow-hidden flex items-center justify-center"
+                  onClick={() => (window.location.href = '/offers')}
+                >
+                  {locale === 'ar' ? 'تصفح العروض' : 'View Offers'}
+                </button>
+              
+              </div>
             </div>
           </motion.div>
-          {/* Side visual with subtle float animation */}
-          <motion.div
-            className="home-hero__visual"
-            initial={{ opacity: 0, y: 20, rotate: -2 }}
-            animate={{ opacity: 1, y: [0, -8, 0], rotate: [-2, 0, -2] }}
-            transition={{ duration: 1.2, delay: .15, repeat: Infinity, repeatType: 'loop', ease: 'easeInOut' }}
-            style={{ position: 'absolute', insetInlineEnd: '3%', bottom: '6%', width: 'clamp(160px, 34vw, 420px)', pointerEvents: 'none' }}
-            aria-hidden="true"
-          >
-            <img
-              src={heroVisual.src}
-              alt=""
-              className="shadow-2xl rounded-2xl"
-              style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
-              loading="eager"
-            />
+          {/* عمود السلايدر */}
+          <motion.div initial={{ opacity: 0, y: 40, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.9, delay: 0.3, ease: 'easeOut' }} style={{flex: '1 1 0%', minWidth: '0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+            <div className="shadow-2xl rounded-3xl overflow-hidden w-full max-w-[900px] border-4 border-white/20 backdrop-blur-sm">
+              <HeroBannerSlider />
+            </div>
           </motion.div>
         </div>
+        </div>
+        
       </header>
 
+
+
+        
       {/* Category Chips */}
   <div className="backdrop-blur-sm bg-white/75 dark:bg-gray-900/80 supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 border-b dark:border-gray-800">
         <div className="container-custom py-3">
@@ -365,18 +396,9 @@ const Home = () => {
     </div>
   </section>
 
-      {/* Homepage Marketing Slider */}
-      <HeroBannerSlider />
 
-      {/* Improved HomeHero component */}
-      <HomeHero
-        title={t('heroTitle')}
-        subtitle={t('heroSubtitle')}
-        lead={t('heroLead')}
-        shopLink={baseProductsPath}
-        infoLink={'/offers'}
-        brandImg={setting?.logoUrl || setting?.logo || '/images/site-logo.png'}
-      />
+
+      {/* Improved HomeHero component removed to avoid duplicate hero/slider */}
   </div>
 );
 }

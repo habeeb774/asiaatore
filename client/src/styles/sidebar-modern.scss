@@ -1,6 +1,11 @@
 /* Modern compact sidebar theme */
+// زيادة عرض الشريط الجانبي ليظهر العنوان بجانب الأيقونة دائماً
+// تغيير عرض الشريط الجانبي إلى 80 بكسل
+// توسيع الشريط الجانبي ليظهر النصوص كاملة
+// زيادة عرض الشريط الجانبي ليظهر النصوص بشكل أوضح
+// زيادة عرض الشريط الجانبي ليظهر النص كاملاً
 .sidebar-modern {
-  --sb-width: 200px;
+  --sb-width: 320px;
   --sb-collapsed-width: 70px;
   --sb-bg: #0f172a;
   --sb-bg-alt: #16263a;
@@ -76,12 +81,25 @@
 .nav-link:hover .nav-icon { background:rgba(255,255,255,.14); }
 .nav-link[data-active='true'] .nav-icon { background:rgba(255,255,255,.15); }
 
-.nav-label { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nav-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  display: inline-block;
+  direction: inherit;
+}
 
 /* Collapsed state */
-.sidebar-modern[data-collapsed='true'] .nav-label, .sidebar-modern[data-collapsed='true'] .nav-section-label { opacity:0; visibility:hidden; pointer-events:none; }
-.sidebar-modern[data-collapsed='true'] .nav-link { justify-content:center; padding:.6rem .55rem; }
-.sidebar-modern[data-collapsed='true'] .nav-icon { width:42px; height:42px; }
+.sidebar-modern[data-collapsed='true'] .nav-label, .sidebar-modern[data-collapsed='true'] .nav-section-label {
+  opacity:1 !important;
+  visibility:visible !important;
+  pointer-events:auto !important;
+  display:inline !important;
+}
+.sidebar-modern[data-collapsed='true'] .nav-link { justify-content:flex-start; padding:.6rem .55rem; }
+.sidebar-modern[data-collapsed='true'] .nav-icon { width:34px; height:34px; }
 
 /* Tooltip (basic) */
 .nav-link[data-tip]:hover::after { content:attr(data-tip); position:absolute; top:50%; transform:translateY(-50%); background:#111927; color:#fff; font:600 .6rem/1 var(--font-sans); padding:.45rem .55rem; border-radius:8px; white-space:nowrap; box-shadow:0 8px 18px -8px rgba(0,0,0,.5); z-index:1400; }

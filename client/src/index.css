@@ -1,3 +1,8 @@
+/* Force home-hero background to use only colorPrimary and remove any gradient */
+.home-hero {
+  background-image: none !important;
+  background: var(--color-primary, #ef4444) !important;
+}
 /* === Dark/Light mode variables and classes === */
 :root {
   --primary: #10b981;

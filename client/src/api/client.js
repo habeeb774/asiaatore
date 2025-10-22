@@ -1,6 +1,9 @@
 // Full-featured API client wrapper for React / Vite projects
 // Includes logging, audit, error handling, and token management
 // Ready to use directly with secured backend endpoints
+// Full-featured API client wrapper for React / Vite projects
+// Includes logging, audit, error handling, and token management
+// Ready to use directly with secured backend endpoints
 
 const DEV = import.meta?.env?.DEV;
 const VITE_API_ENV = import.meta?.env?.VITE_API_URL;
@@ -140,6 +143,15 @@ const api = {
   updateCategoryForm: function(id, formData) { return this.categoryUpdate(id, formData); },
   deleteCategory: function(id) { return this.categoryDelete(id); },
 
+
+  // Settings (site identity/colors)
+  settingsGet: () => request('/settings'),
+  settingsUpdate: (patch) => request('/settings', { method: 'PATCH', body: JSON.stringify(patch||{}) }),
+  settingsUploadLogo: (file) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return request('/settings/logo', { method: 'POST', body: formData });
+  },
   // Brands
   brandsList: () => request('/brands'),
 

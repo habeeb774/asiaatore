@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu as MenuIcon, X as CloseIcon, Home as HomeIcon } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useSettings } from '../../context/SettingsContext';
 import { useSidebar } from '../../context/SidebarContext';
 
 // Minimal Tailwind-based AppShell combining Header + Sidebar
 export default function AppShell({ children }) {
   const { locale } = useLanguage();
+  const { setting } = useSettings() || {};
   const { open, toggle, setOpen } = useSidebar();
 
   return (
@@ -74,7 +76,12 @@ export default function AppShell({ children }) {
             <button aria-label="Toggle menu" onClick={toggle} className="p-2 rounded-md bg-slate-100 dark:bg-slate-700">
               <MenuIcon size={18} />
             </button>
-            <Link to="/" className="font-semibold">{locale === 'ar' ? 'متجري' : 'My Store'}</Link>
+            <Link to="/" className="flex items-center gap-2 font-semibold" aria-label="Logo">
+              {setting?.logoUrl || setting?.logo ? (
+                <img src={setting.logoUrl || setting.logo} alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'} className="h-8 w-auto max-w-[48px] object-contain" style={{marginInlineEnd:4}} />
+              ) : null}
+              {locale === 'ar' ? 'متجري' : 'My Store'}
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             <button className="px-3 py-1 rounded bg-emerald-500 text-white">Sign in</button>

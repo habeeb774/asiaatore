@@ -8,15 +8,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 /* Modern sidebar nav structure */
 const baseCoreNav = [
   { to: '/', labelAr: 'الرئيسية', labelEn: 'Home', navKey: 'home', icon: Home },
-  { to: '/catalog', labelAr: 'الكتالوج', labelEn: 'Catalog', navKey: 'catalog', icon: BookOpen },
   { to: '/products', labelAr: 'المنتجات', labelEn: 'Products', navKey: 'products', icon: Package },
+  { to: '/catalog', labelAr: 'الكتالوج', labelEn: 'Catalog', navKey: 'catalog', icon: BookOpen },
   { to: '/offers', labelAr: 'العروض', labelEn: 'Offers', navKey: 'offers', icon: BadgePercent },
+  { to: '/cart', labelAr: 'السلة', labelEn: 'Cart', navKey: 'cart', icon: ShoppingCart },
   { to: '/stores', labelAr: 'المتاجر', labelEn: 'Stores', navKey: 'stores', icon: Store },
-  { to: '/cart', labelAr: 'السلة', labelEn: 'Cart', icon: ShoppingCart },
 ];
 const adminNav = [
   { to: '/admin', labelAr: 'لوحة التحكم', labelEn: 'Dashboard', icon: BarChart3 },
-  { to: '/admin/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: BarChart3 },
+  { to: '/admin/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: ClipboardList },
   { to: '/admin/analytics', labelAr: 'التحليلات', labelEn: 'Analytics', icon: BarChart3 },
   { to: '/admin/customers', labelAr: 'العملاء', labelEn: 'Customers', icon: Users },
   { to: '/admin/settings', labelAr: 'الإعدادات', labelEn: 'Settings', icon: Settings },
@@ -237,7 +237,7 @@ const SidebarNav = () => {
     const Icon = item.icon;
     const iconEl = typeof Icon === 'string'
       ? <span style={{fontSize:'1.7rem'}}>{Icon}</span>
-      : (Icon ? <Icon size={28} style={{filter:active?'drop-shadow(0 2px 8px #f6ad55)':'none'}} /> : null);
+      : (Icon ? <Icon size={28} style={{filter:active?'drop-shadow(0 2px 8px #f6ad55)':'none',marginBottom:'2px'}} /> : null);
     return (
       <li key={item.to} className="nav-item" style={{width:'100%'}}>
         <Link
@@ -245,19 +245,19 @@ const SidebarNav = () => {
           className="nav-link"
           data-active={active}
           aria-current={active ? 'page' : undefined}
-          data-tip={collapsed ? text : undefined}
-          aria-label={collapsed ? text : undefined}
           style={{
             display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            width:'48px', height:'48px', borderRadius:'14px', margin:'0 auto',
+            width:'100%', minHeight:'64px', borderRadius:'14px', margin:'0 auto',
             background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
             border: active ? '2px solid #f6ad55' : '1.5px solid rgba(255,255,255,0.08)',
             boxShadow: active ? '0 2px 8px -2px #f6ad55' : 'none',
             color: active ? '#f6ad55' : '#fff',
-            fontSize: '1.7rem',
+            fontSize: '1.08rem',
             transition: 'all 0.18s',
             cursor: 'pointer',
             outline: 'none',
+            padding:'0 8px',
+            gap:'2px',
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background = active ? 'rgba(255,255,255,0.12)' : 'transparent'}
@@ -292,7 +292,7 @@ const SidebarNav = () => {
           }}
         >
           <span className="nav-icon" aria-hidden="true">{iconEl}</span>
-          <span className="nav-label" style={{fontSize:'.72rem',marginTop:'2px',fontWeight:active?700:500,opacity:active?1:.8}}>{text}</span>
+          <span className="nav-label" style={{fontSize:'.5rem',fontWeight:active?700:500,opacity:active?1:.88,whiteSpace:'nowrap',marginTop:'2px',textAlign:'center',lineHeight:'1.15'}}>{text}</span>
         </Link>
       </li>
     );
@@ -479,65 +479,74 @@ const SidebarNav = () => {
           </ul>
           <div className="sidebar-modern__footer" style={{marginTop:'auto',padding:'10px 0',textAlign:'center'}}>
             {/* Theme & Language toggles */}
-            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
-              {/* Theme toggle */}
-              <div style={{display:'flex',alignItems:'center',gap:'8px',width:'100%',justifyContent:'center'}}>
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : (theme === 'light' ? 'system' : 'dark'))}
-                  aria-label={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
-                  title={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
-                  style={{background:'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px',color:'#fff',cursor:'pointer',transition:'background 0.2s'}}
-                >
-                  {theme === 'dark' ? (
-                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m6 8h2m-2 8v2m-8-2H4m2-8H2m2.93-6.07l1.41 1.41m10.12 0l-1.41 1.41m1.41 10.12l-1.41-1.41m-10.12 0l1.41-1.41"/></svg>
-                  ) : theme === 'light' ? (
-                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-monitor"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                  ) : (
-                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
-                  )}
-                </button>
-                <span style={{fontSize:'.9rem',color:'#fff',fontWeight:600}}>
-                  {theme === 'dark' ? (locale==='ar'?'داكن':'Dark') : theme === 'light' ? (locale==='ar'?'فاتح':'Light') : (locale==='ar'?'النظام':'System')}
-                </span>
-              </div>
-              {/* Language toggle */}
-              <div style={{display:'flex',alignItems:'center',gap:'8px',width:'100%',justifyContent:'center'}}>
-                <button
-                  onClick={() => setLocale('ar')}
-                  aria-label="العربية"
-                  title="العربية"
-                  style={{background:locale==='ar'?'#f6ad55':'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px 12px',color:'#fff',fontWeight:locale==='ar'?700:500,cursor:'pointer',transition:'background 0.2s'}}
-                >العربية</button>
-                <button
-                  onClick={() => setLocale('en')}
-                  aria-label="English"
-                  title="English"
-                  style={{background:locale==='en'?'#f6ad55':'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px 12px',color:'#fff',fontWeight:locale==='en'?700:500,cursor:'pointer',transition:'background 0.2s'}}
-                >English</button>
-                <button
-                  onClick={() => setLocale('fr')}
-                  aria-label="Français"
-                  title="Français"
-                  style={{background:locale==='fr'?'#f6ad55':'rgba(255,255,255,0.10)',border:'none',borderRadius:'8px',padding:'7px 12px',color:'#fff',fontWeight:locale==='fr'?700:500,cursor:'pointer',transition:'background 0.2s'}}
-                >Français</button>
-              </div>
+            <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:'18px',marginBottom:'10px',marginTop:'2px'}}>
+              {/* زر لغة واحد دائري فقط */}
+              <button
+                onClick={() => {
+                  const langs = ['ar','en','fr'];
+                  const idx = langs.indexOf(locale);
+                  setLocale(langs[(idx+1)%langs.length]);
+                }}
+                aria-label={locale==='ar'?'تغيير اللغة':'Change language'}
+                title={locale==='ar'?'تغيير اللغة':'Change language'}
+                style={{
+                  background:'#f6ad55',
+                  border:'none',
+                  borderRadius:'50%',
+                  padding:'9px',
+                  color:'#fff',
+                  fontWeight:700,
+                  cursor:'pointer',
+                  transition:'background 0.2s',
+                  width:'38px',
+                  height:'38px',
+                  fontSize:'1.1rem',
+                  boxShadow:'0 1px 8px 0 #f6ad55',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                }}
+              >
+                {locale==='ar' ? 'ع' : locale==='en' ? 'E' : 'F'}
+              </button>
+            </div>
+            {/* Theme toggle - دائري */}
+            <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'center',marginBottom:'10px',marginTop:'0',gap:'0'}}>
+              {/* زر الثيم فقط */}
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : (theme === 'light' ? 'system' : 'dark'))}
+                aria-label={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
+                title={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
+                style={{
+                  background:'#fff',
+                  border:'2px solid #f6ad55',
+                  borderRadius:'50%',
+                  padding:'7px',
+                  color:'#222',
+                  cursor:'pointer',
+                  transition:'background 0.2s',
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  boxShadow:'0 2px 12px 0 rgba(0,0,0,0.18)',
+                  width:'34px',
+                  height:'34px',
+                  zIndex:99,
+                  position:'relative',
+                  marginInlineEnd:'2px',
+                  marginTop:'2px',
+                  marginBottom:'2px',
+                }}
+              >
+                {theme === 'dark' ? (
+                  <svg width="13" height="13" fill="none" stroke="#222" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sun"><circle cx="6.5" cy="6.5" r="3"/><path d="M6.5 0v1.5m5 5H13m-1.5 5V13m-5-1.5H0m1.5-5H0m1.36-4.57l1.1 1.1m6.68 0l-1.1 1.1m1.1 6.68l-1.1-1.1m-6.68 0l1.1-1.1"/></svg>
+                ) : theme === 'light' ? (
+                  <svg width="13" height="13" fill="none" stroke="#222" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-monitor"><rect x="1" y="2" width="11" height="8" rx="2"/><line x1="4" y1="12" x2="9" y2="12"/><line x1="6.5" y1="10" x2="6.5" y2="12"/></svg>
+                ) : (
+                  <svg width="13" height="13" fill="none" stroke="#222" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-moon"><path d="M12 8.5A5.5 5.5 0 1 1 6.5 1a4.2 4.2 0 0 0 5.5 7.5Z"/></svg>
+                )}
+              </button>
             </div>
             {/* Quick access to chat */}
-            <Link
-              to="/chat"
-              className="sidebar-mini-badge"
-              aria-label={locale==='ar' ? 'الدردشة' : 'Chat'}
-              title={locale==='ar' ? 'الدردشة' : 'Chat'}
-              style={{
-                display:'inline-flex',alignItems:'center',justifyContent:'center',
-                width:32,height:32,borderRadius:'50%',
-                background:'#16a34a', color:'#fff', border:'1px solid rgba(255,255,255,0.18)',
-                marginInlineEnd:8
-              }}
-            >
-              <MessageCircle size={16} aria-hidden="true" />
-              <span className="sr-only">{locale==='ar' ? 'الدردشة' : 'Chat'}</span>
-            </Link>
+
             <span className="sidebar-mini-badge" style={{background:'#f6ad55',color:'#fff',borderRadius:'8px',padding:'2px 10px',fontWeight:700,fontSize:'.7rem'}}>v1.0</span>
             {user && <span style={{fontSize:'.55rem', fontWeight:600, opacity:.75,display:'block',marginTop:'4px',color:'#fff'}}>{locale==='ar'?'دور:':'Role:'} {user.role}</span>}
             <small style={{fontSize:'.55rem', opacity:.55,display:'block',marginTop:'2px',color:'#fff'}}>{locale==='ar'?'وضع تجريبي':'Preview mode'}</small>

@@ -12,7 +12,7 @@
   display: inline-flex;
   align-items: center;
   gap: .5rem;
-  background: linear-gradient(90deg, #69be3c, #2eafff);
+  background: var(--color-primary, #69be3c);
   color: #fff;
   padding: 10px 14px;
   border: none;

@@ -82,8 +82,28 @@ const Settings = () => {
     e.preventDefault();
     setSaving(true); setMsg('');
     try {
-      if (!validate()) { setMsg('يرجى تصحيح الحقول المظللة'); return; }
-      const s = await update(form);
+      if (!validate()) { setMsg('يرجى تصحيح الحقول المظللة'); setSaving(false); return; }
+      // Only send changed fields that are not empty (unless original was also empty/null)
+      const changed = {};
+      if (setting) {
+        Object.keys(form).forEach(k => {
+          if (form[k] !== setting[k] && (form[k] !== '' || (setting[k] !== undefined && setting[k] !== null && setting[k] !== ''))) {
+            changed[k] = form[k];
+          }
+        });
+      } else {
+        Object.assign(changed, form);
+      }
+      if (Object.keys(changed).length === 0 && !logoFile) {
+        setMsg('لا يوجد تغييرات للحفظ'); setSaving(false); return;
+      }
+      // إذا لم تتغير الحقول النصية لكن يوجد شعار جديد، اعتبرها عملية حفظ
+      if (Object.keys(changed).length === 0 && logoFile) {
+        // فقط شعار جديد، أكمل بدون رسالة "لا يوجد تغييرات"
+      }
+      if (Object.keys(changed).length > 0) {
+        await update(changed);
+      }
       if (logoFile) {
         await uploadLogo(logoFile);
         setLogoFile(null);
@@ -91,7 +111,31 @@ const Settings = () => {
       }
       setMsg('تم الحفظ بنجاح');
     } catch (e) {
-      setMsg('فشل الحفظ: ' + e.message);
+      let msg = '';
+      const errMsg = (e && e.message) ? String(e.message) : '';
+      const details = (e && e.data && e.data.message) ? String(e.data.message) : '';
+      if (errMsg.includes('connect ECONNREFUSED') || details.includes('connect ECONNREFUSED')) {
+        msg = 'فشل الاتصال بقاعدة البيانات أو الملقم البعيد. يرجى التأكد من الاتصال والمحاولة لاحقاً.';
+      } else if (errMsg.includes('FORBIDDEN') || details.includes('Admin only')) {
+        msg = 'ليس لديك صلاحية تنفيذ هذا الإجراء. يجب أن تكون أدمن.';
+      } else if (errMsg.includes('UPDATE_FAILED') && details.includes('does not exist')) {
+        msg = 'جدول الإعدادات غير موجود في قاعدة البيانات. يرجى مزامنة قاعدة البيانات أولاً.';
+      } else if (errMsg.includes('UNAUTHENTICATED') || details.includes('UNAUTHENTICATED')) {
+        msg = 'يجب تسجيل الدخول أولاً.';
+      } else if (errMsg.includes('NOT_FOUND') || details.includes('NOT_FOUND')) {
+        msg = 'العنصر المطلوب غير موجود.';
+      } else if (errMsg.includes('INVALID') || details.includes('INVALID')) {
+        msg = 'يرجى التأكد من صحة البيانات المدخلة.';
+      } else if (errMsg.includes('password') || details.includes('password')) {
+        msg = 'يرجى التأكد من اسم المستخدم أو كلمة المرور.';
+      } else if (details) {
+        msg = 'فشل الحفظ: ' + details;
+      } else if (errMsg) {
+        msg = 'فشل الحفظ: ' + errMsg;
+      } else {
+        msg = 'حدث خطأ غير متوقع أثناء الحفظ.';
+      }
+      setMsg(msg);
     } finally {
       setSaving(false);
     }
@@ -210,7 +254,7 @@ const Settings = () => {
           <div style={{display:'grid', gap:6}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>الشعار</span>
             <div style={{display:'flex', alignItems:'center', gap:12, flexWrap:'wrap'}}>
-              {(logoPreview || setting?.logo) && <img src={logoPreview || setting.logo} alt="logo" style={{height:48, objectFit:'contain'}} />}
+              {(logoPreview || setting?.logoUrl || setting?.logo) && <img src={logoPreview || setting.logoUrl || setting.logo} alt="logo" style={{height:48, objectFit:'contain'}} />}
               <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={e=> onPickLogo(e.target.files?.[0]||null)} style={{display:'none'}} />
               <button type="button" onClick={()=> logoInputRef.current?.click()} style={{background:'#e2e8f0', color:'#0f172a', border:0, padding:'6px 10px', borderRadius:8, fontWeight:700}}>
                 اختر صورة من جهازك

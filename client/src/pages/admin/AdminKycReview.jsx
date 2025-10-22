@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../../api/client';
+import adminApi from '../../api/admin';
 
 export default function AdminKycReview() {
   const [items, setItems] = useState([]);
@@ -8,13 +8,34 @@ export default function AdminKycReview() {
   const [error, setError] = useState('');
   const load = async () => {
     setLoading(true); setError('');
-    try { const res = await api.adminSellersList({ status }); setItems(res.items || res.sellers || []); }
-    catch (e) { setError(e.data?.error || e.message); }
-    finally { setLoading(false); }
+    try {
+      const res = await adminApi.listUsers({ status });
+      setItems(res.items || res.users || []);
+    } catch (e) {
+      setError(e.data?.error || e.message);
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(()=>{ load(); }, [status]);
-  const approve = async (id) => { try { await api.adminSellerApprove(id); await load(); } catch (e) { setError(e.data?.error || e.message); } };
-  const reject = async (id) => { const reason = prompt('سبب الرفض؟') || ''; try { await api.adminSellerReject(id, reason); await load(); } catch (e) { setError(e.data?.error || e.message); } };
+  const approve = async (id) => {
+    try {
+      await adminApi.activateUser(id);
+      await load();
+    } catch (e) {
+      setError(e.data?.error || e.message);
+    }
+  };
+  const reject = async (id) => {
+    // No direct reject API, so we use deactivateUser as a placeholder
+    const reason = prompt('سبب الرفض؟') || '';
+    try {
+      await adminApi.deactivateUser(id);
+      await load();
+    } catch (e) {
+      setError(e.data?.error || e.message);
+    }
+  };
   return (
     <div className="container-custom p-4">
       <h2 className="text-xl font-bold mb-4">مراجعة KYC للبائعين</h2>

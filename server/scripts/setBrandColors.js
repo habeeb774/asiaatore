@@ -18,10 +18,11 @@ async function main() {
     // Treat secondary as accent as well for consistent theming
     const colorAccent = colorSecondary;
 
+    const now = new Date();
     const updated = await prisma.storeSetting.upsert({
       where: { id: 'singleton' },
-      create: { id: 'singleton', colorPrimary, colorSecondary, colorAccent },
-      update: { colorPrimary, colorSecondary, colorAccent }
+      create: { id: 'singleton', colorPrimary, colorSecondary, colorAccent, updatedAt: now },
+      update: { colorPrimary, colorSecondary, colorAccent, updatedAt: now }
     });
     console.log('[SETTINGS] Colors updated:', { colorPrimary: updated.colorPrimary, colorSecondary: updated.colorSecondary, colorAccent: updated.colorAccent });
     process.exit(0);

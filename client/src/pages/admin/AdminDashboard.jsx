@@ -183,6 +183,7 @@ const AdminDashboard = () => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState(null);
   const [settingsLogoFile, setSettingsLogoFile] = useState(null);
+  const logoInputRef = React.useRef(null);
   const [settingsForm, setSettingsForm] = useState({
     siteNameAr: '', siteNameEn: '',
     colorPrimary: '', colorSecondary: '', colorAccent: '',
@@ -606,9 +607,15 @@ const AdminDashboard = () => {
     e?.preventDefault?.();
     setSettingsLoading(true); setSettingsError(null);
     try {
+      // Only send fields that have a value (not null/empty/undefined)
       const payload = Object.fromEntries(
-        Object.entries(settingsForm).map(([k, v]) => [k, v === '' ? null : v])
+        Object.entries(settingsForm).filter(([_, v]) => v !== undefined && v !== null && v !== '')
       );
+      if (Object.keys(payload).length === 0) {
+        setSettingsError('يرجى تعبئة حقل واحد على الأقل قبل الحفظ.');
+        setSettingsLoading(false);
+        return;
+      }
       // Prefer context method if available
       if (settingsCtx?.update) {
         const updated = await settingsCtx.update(payload);
@@ -1619,10 +1626,38 @@ const AdminDashboard = () => {
                 ) : (
                   <div style={{fontSize:'.7rem',opacity:.7}}>لا يوجد شعار حالياً</div>
                 )}
-                <input type="file" accept="image/*" onChange={e=> setSettingsLogoFile(e.target.files?.[0]||null)} />
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                  style={{display:'none'}}
+                  onChange={e=> setSettingsLogoFile(e.target.files?.[0]||null)}
+                />
+                <button type="button" onClick={()=> logoInputRef.current?.click()} style={{background:'#e2e8f0', color:'#0f172a', border:0, padding:'6px 10px', borderRadius:8, fontWeight:700}}>
+                  اختر صورة من جهازك
+                </button>
                 {settingsLogoFile && <span style={{fontSize:'.65rem'}}>{settingsLogoFile.name}</span>}
-                <button type="button" style={primaryBtn} disabled={!settingsLogoFile || settingsLoading} onClick={uploadStoreLogo}>رفع الشعار</button>
-                <button type="button" style={ghostBtn} onClick={loadSettings}>تحديث</button>
+                <button
+                  type="button"
+                  style={primaryBtn}
+                  disabled={!settingsLogoFile || settingsLoading}
+                  onClick={async () => {
+                    setSettingsLoading(true); setSettingsError(null);
+                    try {
+                      if (settingsCtx?.uploadLogo) {
+                        const newSetting = await settingsCtx.uploadLogo(settingsLogoFile);
+                        if (newSetting) setStoreSettings(newSetting);
+                        setSettingsLogoFile(null);
+                        alert('تم رفع الشعار بنجاح');
+                      }
+                    } catch (e) {
+                      setSettingsError(e.message);
+                    } finally {
+                      setSettingsLoading(false);
+                    }
+                  }}
+                >رفع الشعار</button>
+                <button type="button" style={ghostBtn} onClick={loadSettings} disabled={settingsLoading}>تحديث</button>
               </div>
               <p style={mutedP}>الملفات المسموحة: صور حتى 2MB. يتم إنشاء نسخة WebP محسنة تلقائياً.</p>
             </div>

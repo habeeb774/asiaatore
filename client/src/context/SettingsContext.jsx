@@ -14,7 +14,17 @@ export const SettingsProvider = ({ children }) => {
       try {
         const res = await api.settingsGet();
         if (!mounted) return;
-        setSetting(res.setting || null);
+        let s = res.setting || null;
+        // إذا كان logo مساراً نسبياً، أنشئ logoUrl مطلق
+        if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
+          let base = window.location.origin;
+          // إذا كنا في dev واستخدمنا Vite، غيّر المنفذ إلى منفذ الباكند (4000)
+          if (base.includes(':517')) {
+            base = base.replace(/:\d+$/, ':4000');
+          }
+          s.logoUrl = base + s.logo;
+        }
+        setSetting(s);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -26,6 +36,8 @@ export const SettingsProvider = ({ children }) => {
 
   useEffect(() => {
     if (!setting) return;
+    // طباعة قيمة الشعار والرابط النهائي
+    console.log('[SettingsContext] logo:', setting.logo, 'logoUrl:', setting.logoUrl);
     const root = document.documentElement;
     const setLink = (rel, href) => {
       try {
@@ -64,6 +76,8 @@ export const SettingsProvider = ({ children }) => {
     if (setting.colorPrimary && setting.colorSecondary) {
       root.style.setProperty('--grad-primary', `linear-gradient(90deg, ${setting.colorPrimary}, ${setting.colorSecondary})`);
     }
+    // Debug: تحقق من القيمة الفعلية للون الأساسي
+    console.log('[SettingsContext] colorPrimary:', setting.colorPrimary);
     // Set site name in og:site_name meta for consistency
     try {
       const siteName = setting.siteNameAr || setting.siteNameEn;
@@ -77,14 +91,30 @@ export const SettingsProvider = ({ children }) => {
 
   const update = async (patch) => {
     const res = await api.settingsUpdate(patch);
-    setSetting(res.setting);
-    return res.setting;
+    let s = res.setting;
+    if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
+      let base = window.location.origin;
+      if (base.includes(':517')) {
+        base = base.replace(/:\d+$/, ':4000');
+      }
+      s.logoUrl = base + s.logo;
+    }
+    setSetting(s);
+    return s;
   };
 
   const uploadLogo = async (file) => {
     const res = await api.settingsUploadLogo(file);
-    setSetting(res.setting);
-    return res.setting.logo;
+    let s = res.setting;
+    if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
+      let base = window.location.origin;
+      if (base.includes(':517')) {
+        base = base.replace(/:\d+$/, ':4000');
+      }
+      s.logoUrl = base + s.logo;
+    }
+    if (s) setSetting(s);
+    return s || null;
   };
 
   const value = useMemo(() => ({ setting, loading, error, update, uploadLogo }), [setting, loading, error]);
