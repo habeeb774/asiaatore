@@ -1,30 +1,136 @@
 @use './_design-system' as *;
 
+// خلفية القسم
 .product-list {
   padding-block: var(--space-section-gap);
-  background: var(--color-bg-alt);
+  background: linear-gradient(135deg, #f9f7f3, #e6e1dc);
 }
 
+// عنوان القسم
 .section-title {
   text-align: center;
-  margin-bottom: 30px;
-  color: var(--color-text);
+  margin-bottom: 50px;
+  color: #333333;
   font-size: var(--text-2xl);
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: relative;
+
+  &::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background: #c49b66;
+    margin: 12px auto 0;
+    border-radius: 2px;
+  }
 }
 
+// شبكة المنتجات
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  gap: 28px;
+}
+
+// بطاقة المنتج
+.product-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.08);
+  overflow: hidden;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+  }
+}
+
+// صورة المنتج
+.product-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+// معلومات المنتج
+.product-info {
+  padding: 18px;
+  text-align: center;
+
+  .product-name {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #222222;
+  }
+
+  .product-price {
+    font-size: var(--text-md);
+    font-weight: 700;
+    color: #c49b66;
+  }
+
+  .product-badge {
+    display: inline-block;
+    background: #e6cfa3;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+// تجاوب الشبكة لجميع المقاسات
+@media (max-width: 1024px) {
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+  }
+
+  .product-image {
+    height: 200px;
+  }
 }
 
 @media (max-width: 768px) {
   .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 20px;
+  }
+
+  .product-image {
+    height: 180px;
   }
 }
 
+@media (max-width: 480px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .product-image {
+    height: 160px;
+  }
+
+  .section-title {
+    font-size: var(--text-xl);
+    margin-bottom: 30px;
+  }
+}
+
+// الحاوية العامة
 .container {
   max-width: var(--layout-max);
   margin: 0 auto;
