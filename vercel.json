@@ -15,7 +15,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/index.html"
     }
   ],
   "cleanUrls": true,
