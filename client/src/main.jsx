@@ -35,10 +35,17 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
+// AOS (Animate On Scroll) initialization — optional: will initialize if library is available
+// We try to initialize AOS if it's loaded via CDN (window.AOS) or installed as a module.
+if (typeof window !== 'undefined') {
+  // Prefer CDN-included AOS (via index.html) and initialize it if present.
+  if (window.AOS && typeof window.AOS.init === 'function') {
+    try { window.AOS.init({ duration: 600, once: true }); } catch (e) {}
+  }
+}
 import { ThemeProvider } from './context/ThemeContext';
 import ScrollTopButton from './components/common/ScrollTopButton';
-// Ensure Leaflet maps render correctly across the app
-import 'leaflet/dist/leaflet.css';
+// Leaflet CSS is imported by the map route to avoid bundling it into the main entry
 
 // In development, ensure no stale service workers/caches interfere with Vite HMR
 if (import.meta.env.DEV && typeof window !== 'undefined' && 'serviceWorker' in navigator) {

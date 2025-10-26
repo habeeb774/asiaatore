@@ -1,3 +1,5 @@
+@import './styles/ui.css';
+
 /* Force home-hero background to use only colorPrimary and remove any gradient */
 .home-hero {
   background-image: none !important;
@@ -224,3 +226,6 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 .chat-badge { background: #dc2626; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: .65rem; font-weight:700; display:inline-block; min-width:20px; text-align:center }
 .chat-avatar { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#e6eef8; font-weight:700 }
 .typing-indicator { font-size:.85rem; color:#64748b }
+
+/* Import UI token helpers and component helpers
+  NOTE: imports are handled from JS (see main.jsx) to avoid PostCSS ordering issues. */

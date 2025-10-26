@@ -1,6 +1,6 @@
 // Centralized error handler middleware: maps common error codes to structured JSON
 export function errorHandler(err, req, res, next) {
-  // eslint-disable-next-line no-console
+   
   console.error('[API Error]', { id: req.id, path: req.originalUrl, err });
 
   if (res.headersSent) return next(err);

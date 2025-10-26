@@ -10,10 +10,12 @@ import ProductPicker from '../../components/admin/ProductPicker';
 import { useAuth } from '../../context/AuthContext';
 
 import Seo from '../../components/Seo';
-import AdsAdmin from '../AdsAdmin';
+import '../../styles/AdminPage.scss';
+const AdsAdmin = React.lazy(() => import('../AdsAdmin'));
 import { useSettings } from '../../context/SettingsContext';
 
 import { useLanguage } from '../../context/LanguageContext';
+import { resolveLocalized } from '../../utils/locale';
 
 const AdminDashboard = () => {
   const { locale } = useLanguage();
@@ -87,8 +89,11 @@ const AdminDashboard = () => {
   const f = filter.toLowerCase();
 
   const filteredProducts = useMemo(() => {
-    let list = effectiveProducts.map(p => ({...p, _flatName: (p.name?.ar || p.name?.en || p.name || '').toLowerCase()}));
-    if (f) list = list.filter(p => p._flatName.includes(f));
+    let list = effectiveProducts.map(p => ({
+      ...p,
+      _flatName: (String(resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.name || '')).toLowerCase()
+    }));
+      if (f) list = list.filter(p => p._flatName.includes(f) || (resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.slug || '').toLowerCase().includes(f));
     if (categoryFilter) list = list.filter(p => p.category === categoryFilter);
     list = [...list].sort((a,b) => {
       switch (sort) {
@@ -505,8 +510,8 @@ const AdminDashboard = () => {
       list = list.filter(b => set.has(b.id));
     }
     if (brandFilter) {
-      const needle = brandFilter.toLowerCase();
-      list = list.filter(b => (b.name?.ar||'').toLowerCase().includes(needle) || (b.name?.en||'').toLowerCase().includes(needle) || (b.slug||'').toLowerCase().includes(needle));
+        const needle = brandFilter.toLowerCase(); 
+        list = list.filter(b => ((resolveLocalized(b.name, locale) || b.name?.ar || b.name?.en || b.slug || '') + '').toLowerCase().includes(needle));
     }
     list.sort((a,b)=>{
       switch (brandSort) {
@@ -781,7 +786,7 @@ const AdminDashboard = () => {
     return () => { mounted = false; };
   }, [view]);
 
-  const catOptions = useMemo(() => catList.map(c => ({ value: c.slug, label: c.name?.ar || c.name?.en || c.slug })), [catList]);
+  const catOptions = useMemo(() => catList.map(c => ({ value: c.slug, label: resolveLocalized(c.name, locale) || c.name?.ar || c.name?.en || c.slug })), [catList, locale]);
 
   // Fetch users + panel stats + initial audit logs (page 1) when entering related views
   useEffect(() => {
@@ -881,7 +886,7 @@ const AdminDashboard = () => {
   const visibleOffers = useMemo(() => {
     let list = [...offers];
     const q = (offerFilter||'').toLowerCase();
-    if (q) list = list.filter(o => (o.name?.ar||o.name?.en||'').toLowerCase().includes(q));
+    if (q) list = list.filter(o => ((resolveLocalized(o.name, locale) || o.name?.ar || o.name?.en || '') + '').toLowerCase().includes(q));
     if (offerCategoryFilter) list = list.filter(o => (o.category||'') === offerCategoryFilter);
     switch (offerSort) {
       case 'discount_desc':
@@ -920,18 +925,25 @@ const AdminDashboard = () => {
     const needle = (addDiscFilter||'').toLowerCase();
     return (apiBacked ? apiProducts : effectiveProducts)
       .filter(p => !p.oldPrice && p.price > 0)
-      .filter(p => needle ? ((p.name?.ar||p.name?.en||p.name||'').toLowerCase().includes(needle)) : true)
+      .filter(p => {
+        if (!needle) return true;
+        const name = (resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.name || '').toLowerCase();
+        return name.includes(needle);
+      })
       .slice(0, 300);
-  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter]);
+  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter, locale]);
   // For the single-product "اختر المنتج" select: optionally show all products (not just eligible)
   const availableForAddPicker = useMemo(() => {
     const needle = (addDiscFilter||'').toLowerCase();
     let list = (apiBacked ? apiProducts : effectiveProducts)
       .filter(p => (p.price||0) > 0);
     if (!addDiscShowAll) list = list.filter(p => !p.oldPrice);
-    if (needle) list = list.filter(p => (p.name?.ar||p.name?.en||p.name||'').toLowerCase().includes(needle));
+    if (needle) list = list.filter(p => {
+      const name = (resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.name || '').toLowerCase();
+      return name.includes(needle);
+    });
     return list.slice(0, 300);
-  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter, addDiscShowAll]);
+  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter, addDiscShowAll, locale]);
   const selectedAddDiscProduct = useMemo(() => {
     return availableForDiscount.find(p => p.id === addDiscForm.productId) || (apiBacked ? apiProducts.find(p=>p.id===addDiscForm.productId) : effectiveProducts.find(p=>p.id===addDiscForm.productId));
   }, [availableForDiscount, addDiscForm.productId, apiBacked, apiProducts, effectiveProducts]);
@@ -1038,7 +1050,7 @@ const AdminDashboard = () => {
       <h1 style={title}>لوحة التحكم</h1>
 
       {/* Two-column layout with sticky admin sidebar */}
-      <div style={{ display:'grid', gridTemplateColumns:'220px 1fr', gap:16 }}>
+      <div className="admin-two-col">
         <AdminSideNav />
         <div>
 
@@ -1062,14 +1074,16 @@ const AdminDashboard = () => {
 
       {/* Navigation moved to AdminSideNav; in-page tab buttons removed */}
 
-      {/* Ads Management */}
+      {/* Ads Management (lazy loaded to reduce initial admin bundle) */}
       {view === 'ads' && (
-        <AdsAdmin />
+        <React.Suspense fallback={<div style={{padding:24}}>تحميل الإعلانات...</div>}>
+          <AdsAdmin />
+        </React.Suspense>
       )}
 
       {/* Overview */}
       {view === 'overview' && (
-        <div style={grid3}>
+        <div className="admin-stat-grid">
           <Stat label="طلبات اليوم" value={stats.todayOrders} />
           <Stat label="إيراد اليوم" value={stats.todayRevenue.toFixed(2)} />
           <Stat label="متوسط السلة (اليوم)" value={stats.avgOrderValueToday.toFixed(2)} />
@@ -1296,7 +1310,7 @@ const AdminDashboard = () => {
                 return (
                   <React.Fragment key={p.id}>
                     <tr>
-                      <td>{p.name?.ar || p.name?.en || p.name}</td>
+                      <td>{resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.name}</td>
                       <td>{p.category}</td>
                       <td>{p.price}</td>
                       <td style={p.stock < 5 ? {color:'#b91c1c',fontWeight:600}:{}}>{p.stock}</td>
@@ -1384,7 +1398,7 @@ const AdminDashboard = () => {
                                       <td>{t.minQty}</td>
                                       <td>{t.price}</td>
                                       <td>{t.packagingType}</td>
-                                      <td style={{fontSize:'.6rem'}}>{t.note?.ar || t.note?.en || '—'}</td>
+                                      <td style={{fontSize:'.6rem'}}>{resolveLocalized(t.note, locale) || t.note?.ar || t.note?.en || '—'}</td>
                                       <td style={tdActions}>
                                         <button style={iconBtn} title="تعديل" onClick={()=>editTier(t)}><Edit3 size={14} /></button>
                                         <button style={iconBtnDanger} title="حذف" onClick={()=>deleteTier(t)}>✕</button>
@@ -1746,7 +1760,7 @@ const AdminDashboard = () => {
                 <div style={{fontSize:'.8rem',fontWeight:700}}>دمج علامات</div>
                 <select value={mergeTargetId} onChange={e=>setMergeTargetId(e.target.value)} style={searchInput}>
                   <option value="">— اختر الهدف —</option>
-                  {brands.map(b=> <option key={b.id} value={b.id}>{(b.name?.ar||b.name?.en||b.slug)} ({b.productCount||0})</option>)}
+                  {brands.map(b=> <option key={b.id} value={b.id}>{(resolveLocalized(b.name, locale) || b.name?.ar||b.name?.en||b.slug)} ({b.productCount||0})</option>)}
                 </select>
                 <button type="button" style={primaryBtn} disabled={!mergeTargetId || !mergeSourceIds.filter(id=>id && id!==mergeTargetId).length} onClick={()=>{
                   const sources = mergeSourceIds.filter(id=>id && id!==mergeTargetId);
@@ -1778,11 +1792,12 @@ const AdminDashboard = () => {
                   {brands.filter(b=>{
                     const n = mergeFilter.trim().toLowerCase();
                     if (!n) return true;
-                    return (b.slug||'').toLowerCase().includes(n) || (b.name?.ar||'').toLowerCase().includes(n) || (b.name?.en||'').toLowerCase().includes(n);
+                    const name = (resolveLocalized(b.name, locale) || b.name?.ar || b.name?.en || b.slug || '').toLowerCase();
+                    return (b.slug||'').toLowerCase().includes(n) || name.includes(n);
                   }).map(b=> (
                     <label key={b.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:'.75rem'}}>
                       <input type="checkbox" checked={mergeSourceIds.includes(b.id)} onChange={()=> setMergeSourceIds(prev => prev.includes(b.id) ? prev.filter(x=>x!==b.id) : [...prev, b.id])} />
-                      <span style={{opacity:.85}}>{b.name?.ar||b.name?.en||b.slug}</span>
+                      <span style={{opacity:.85}}>{resolveLocalized(b.name, locale) || b.name?.ar||b.name?.en||b.slug}</span>
                       <span style={{fontSize:'.6rem',opacity:.6}}>({b.productCount||0})</span>
                       {mergeTargetId === b.id && <span style={{fontSize:'.6rem',color:'#b91c1c'}}>← الهدف</span>}
                     </label>
@@ -1818,10 +1833,10 @@ const AdminDashboard = () => {
               {visibleBrands.map(b => (
                 <tr key={b.id}>
                   <td>{b.logo? <img src={b.logo} alt="logo" style={{width:38,height:38,objectFit:'contain'}} /> : '—'}</td>
-                  <td>{b.name?.ar || b.name?.en}</td>
+                  <td>{resolveLocalized(b.name, locale) || b.name?.ar || b.name?.en}</td>
                   <td style={{fontSize:'.6rem'}}>{b.slug}</td>
                   <td>{b.productCount || 0}</td>
-                  <td style={{fontSize:'.6rem',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis'}}>{b.description?.ar || b.description?.en || '—'}</td>
+                  <td style={{fontSize:'.6rem',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis'}}>{resolveLocalized(b.description, locale) || b.description?.ar || b.description?.en || '—'}</td>
                   <td style={tdActions}>
                     <button style={iconBtn} title="تعديل" onClick={()=> setBrandForm({ id:b.id, slug:b.slug, nameAr:b.name?.ar||'', nameEn:b.name?.en||'', descriptionAr:b.description?.ar||'', descriptionEn:b.description?.en||'', logo:b.logo||'' })}><Edit3 size={16} /></button>
                     <button style={iconBtn} title="إعادة توليد نسخ الشعار" onClick={()=>regenBrandLogos(b.id)}>↻</button>
@@ -1901,7 +1916,7 @@ const AdminDashboard = () => {
                 <tbody>
                   {visibleFeatures.map(f => (
                     <tr key={f.id}>
-                      <td>{f.title?.ar || f.title?.en}</td>
+                      <td>{resolveLocalized(f.title, locale) || f.title?.ar || f.title?.en}</td>
                       <td>{f.icon || '—'}</td>
                       <td>{f.sort}</td>
                       <td>{f.active? '✓':'✗'}</td>
@@ -1952,7 +1967,7 @@ const AdminDashboard = () => {
                     <tr key={a.id}>
                       <td>{a.platform}</td>
                       <td style={{fontSize:'.6rem',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis'}}>{a.url}</td>
-                      <td>{a.label?.ar || a.label?.en || '—'}</td>
+                      <td>{resolveLocalized(a.label, locale) || a.label?.ar || a.label?.en || '—'}</td>
                       <td>{a.active? '✓':'✗'}</td>
                       <td style={tdActions}>
                         <button style={iconBtn} onClick={()=> setAppLinkForm({ id:a.id, platform:a.platform, url:a.url, labelAr:a.label?.ar||'', labelEn:a.label?.en||'', active:!!a.active })}><Edit3 size={16} /></button>
@@ -2043,6 +2058,7 @@ import _rawApi from '../../api/client';
 
 // Inline Categories Admin manager
 const CategoriesAdmin = () => {
+  const { locale } = useLanguage();
   const [cats, setCats] = _useState([]);
   const [loading, setLoading] = _useState(false);
   const [error, setError] = _useState(null);
@@ -2159,7 +2175,7 @@ const CategoriesAdmin = () => {
           <tbody>
             {cats.map(c => (
               <tr key={c.id}>
-                <td>{c.name?.ar || c.name?.en}</td>
+                <td>{resolveLocalized(c.name, locale) || c.name?.ar || c.name?.en || c.slug}</td>
                 <td style={{fontSize:'.6rem'}}>{c.slug}</td>
                 <td style={{fontSize:'.7rem'}}>{c.icon || '—'}</td>
                 <td>{c.image ? <img src={c.image} alt="cat" style={{width:38,height:38,objectFit:'cover',borderRadius:6}} /> : '—'}</td>

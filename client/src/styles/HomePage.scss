@@ -200,37 +200,8 @@
   }
 }
 
-.product-card {
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-  border: 1px solid rgba(15,23,42,0.03);
-  background: #fff;
-}
-.product-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 26px 50px rgba(2,6,23,0.08);
-  border-color: rgba(15,23,42,0.06);
-}
-
-.product-card .product-image img { height: 220px; border-radius: 10px; }
-
-.product-card .btn-primary { padding: 8px 12px; border-radius: 10px; }
-
-.product-card .text-primary-red { color: var(--color-primary); }
-
-/* Ratings */
-  .product-card .lucide { margin-inline-start: 4px; }
-.product-card .text-yellow-400 { color: #f6c85f; display:flex; gap:4px; }
-
-.product-card .absolute.top-2 { inset-inline-end: 0; inset-inline-start: auto; }
-.product-card .absolute.top-2 span,
-.product-card .product-image .badge {
-  display: inline-block;
-  padding: 5px 8px;
-  background: rgba(var(--color-primary-rgb),0.95);
-  color: #fff;
-  border-radius: 8px;
-  font-size: 12px;
-}
+/* Generic product-card styles are centralized in _product-card.scss and imported via product-card.scss
+   to avoid duplication across pages. Page-specific overrides remain under .home-products .product-card. */
 
 /* Responsive tweaks */
 @media (max-width: 1200px) {
@@ -327,8 +298,51 @@
 /* Prevent BottomNav overlap on mobile: add breathing room at bottom */
 @media (max-width: 768px) {
   .content-with-sidebar {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
+}
+
+/* Ensure hero reserves space and CTAs are above fixed bottom nav */
+.home-hero {
+  /* increase bottom padding (important to override utility classes like pb-12 if loaded later) */
+  padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+}
+
+/* Raise stacking context for hero content so CTAs float above any fixed BottomNav */
+.home-hero .container,
+.home-hero .container-custom {
+  position: relative;
+  z-index: 60; /* above most overlays but below global toasts if any */
+}
+
+.home-hero .home-hero__content,
+.home-hero .phone-mockup-img,
+.home-hero a[aria-label],
+.home-hero .btn-primary,
+.home-hero .btn-secondary {
+  position: relative;
+  z-index: 70; /* ensure CTAs and hero content are above phone mockup and nav */
+}
+
+/* Tighten mobile-specific padding if needed (small screens) */
+@media (max-width: 420px) {
+  .home-hero { padding-bottom: calc(128px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* Background image helper to ensure proper layout and no reflow */
+.hero-bg-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Phone mockup image explicit sizing to avoid layout shifts */
+.phone-mockup-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Tighten mobile typography for very small screens */

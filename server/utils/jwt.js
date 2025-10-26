@@ -4,7 +4,7 @@ import 'dotenv/config';
 
 const SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || 'dev_insecure_secret_change_me';
 if (SECRET === 'dev_insecure_secret_change_me' && process.env.NODE_ENV === 'production') {
-  // eslint-disable-next-line no-console
+   
   console.warn('[AUTH] Using insecure default secret in production. Set AUTH_SECRET or JWT_SECRET!');
 }
 

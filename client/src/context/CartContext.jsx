@@ -21,6 +21,16 @@ export const CartProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const hasMergedRef = useRef(false);
+  // Timers map for debouncing server sync per productId
+  const syncTimersRef = useRef(new Map());
+
+  // Cleanup any pending sync timers on unmount
+  useEffect(() => () => {
+    try {
+      syncTimersRef.current.forEach(t => clearTimeout(t));
+      syncTimersRef.current.clear();
+    } catch {}
+  }, []);
 
   useEffect(() => {
     try {
@@ -126,25 +136,33 @@ export const CartProvider = ({ children }) => {
       const unit = selectTierUnit(i, quantity);
       return { ...i, quantity, price: unit };
     }));
+    // Debounce server sync per-product to avoid flooding API on rapid clicks/holds.
     if (user) {
-      (async () => {
-        try {
-          await api.cartSet(productId, quantity);
-        } catch (e) {
-          if (e?.code === 'INSUFFICIENT_STOCK' || /INSUFFICIENT_STOCK/.test(e?.message||'')) {
-            const available = Number(e?.data?.available ?? 0);
-            setCartItems(prev => prev.map(i => {
-              if (i.id !== productId) return i;
-              const next = Math.min(available, prevQty);
-              const unit = selectTierUnit(i, next);
-              return { ...i, quantity: next, price: unit };
-            }));
-            try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'error', title: 'الكمية غير متاحة', description: `المتوفر الآن: ${available}` } })); } catch {}
-          } else {
-            setError(e.message);
+      try {
+        const timers = syncTimersRef.current;
+        if (timers.has(productId)) clearTimeout(timers.get(productId));
+        const timer = setTimeout(async () => {
+          try {
+            await api.cartSet(productId, quantity);
+          } catch (e) {
+            if (e?.code === 'INSUFFICIENT_STOCK' || /INSUFFICIENT_STOCK/.test(e?.message||'')) {
+              const available = Number(e?.data?.available ?? 0);
+              setCartItems(prev => prev.map(i => {
+                if (i.id !== productId) return i;
+                const next = Math.min(available, prevQty);
+                const unit = selectTierUnit(i, next);
+                return { ...i, quantity: next, price: unit };
+              }));
+              try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'error', title: 'الكمية غير متاحة', description: `المتوفر الآن: ${available}` } })); } catch {}
+            } else {
+              setError(e.message);
+            }
+          } finally {
+            try { timers.delete(productId); } catch {}
           }
-        }
-      })();
+        }, 300);
+        timers.set(productId, timer);
+      } catch (err) { /* ignore timer errors */ }
     }
   };
 

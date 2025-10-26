@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
+import ReactLeafletCompat from '../utils/reactLeafletCompat';
 import * as paymentService from '../services/paymentService';
 import { useOrders } from '../context/OrdersContext';
 import { useCart } from '../context/CartContext';
@@ -123,7 +122,24 @@ const CheckoutPage = () => {
     };
     Object.keys(e).forEach(k => { if (!e[k]) delete e[k]; });
     setErrors(e);
+    // mark fields as touched so inline errors become visible after validation
+    setTouched(t => ({ ...t, name: true, email: true, city: true, line1: true, phone: true }));
     return Object.keys(e).length === 0;
+  };
+
+  const focusFirstInvalidField = () => {
+    try {
+      const order = ['name','email','city','line1','phone'];
+      const first = order.find(k => !!errors[k]) || order.find(k => validateField(k, addr[k]));
+      if (!first) return;
+      const id = `shipping-${first === 'line1' ? 'address' : first}`;
+      const el = document.getElementById(id);
+      if (el && typeof el.focus === 'function') {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try { el.classList.add('field-flash'); setTimeout(()=> el.classList.remove('field-flash'), 900); } catch {}
+      }
+    } catch (e) { /* no-op */ }
   };
 
   const onFieldChange = (name) => (e) => {
@@ -191,17 +207,22 @@ const CheckoutPage = () => {
     } catch (e) {
       // Enhanced debug: log full error and any structured data returned by the API
       try { console.error('[ORDER_CREATE_ERROR]', e); if (e?.data) console.error('[ORDER_CREATE_ERROR].data', e.data); } catch (logErr) {}
-      setOrderError(e.message || String(e));
+      // show friendly message to users while keeping detailed error in logs
+      setOrderError('تعذر إنشاء الطلب حالياً. الرجاء المحاولة مرة أخرى.');
       throw e;
     } finally { setCreating(false); }
   };
 
   const goReview = async () => {
-    if (!validate()) return;
+    // mark touched and validate; if invalid focus first invalid field
+    if (!validate()) { focusFirstInvalidField(); return; }
     try {
       await ensureOrder();
       setOpen(o=>({...o,address:false,payment:false,review:true}));
-    } catch {}
+    } catch (e) {
+      // ensureOrder already set friendly order error; optionally focus
+      focusFirstInvalidField();
+    }
   };
 
   const openRealPayment = async () => {
@@ -209,6 +230,7 @@ const CheckoutPage = () => {
     if (!validate()) {
       // Reopen the address section to prompt the user to fill required fields
       setOpen(o => ({ ...o, address: true, payment: false, review: false, realpay: false }));
+      focusFirstInvalidField();
       return;
     }
     try {
@@ -233,11 +255,9 @@ const CheckoutPage = () => {
   const isCartEmpty = !(cartItems?.length) && !open.complete;
 
   // --- GPS & Map helpers ---
-  const markerIcon = useMemo(() => new L.Icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+  const markerIcon = useMemo(() => ({
+    // The actual Icon object will be created by reactLeafletCompat when leaflet is loaded.
+    _placeholder: true
   }), []);
 
   const reverseGeocode = async (lat, lng) => {
@@ -270,15 +290,9 @@ const CheckoutPage = () => {
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
   };
 
-  const MapClicker = ({ onPick }) => {
-    useMapEvents({
-      click(e) {
-        const lat = e.latlng.lat; const lng = e.latlng.lng;
-        onPick && onPick({ lat, lng });
-      }
-    });
-    return null;
-  };
+  // MapClicker is rendered via the ReactLeafletCompat provider as
+  // <LeafletComponents.MapClicker /> so the local hook-based implementation
+  // is not needed here and caused a lint error for an undefined `useMapEvents`.
 
   // Progress: 3 steps => Cart(0) -> Address(1) -> Payment(2)
   const stageIndex = open.review || open.payment || open.realpay || open.complete ? 2 : (open.address ? 1 : 0);
@@ -353,24 +367,28 @@ const CheckoutPage = () => {
           {geoMsg && <div className="text-xs text-gray-600">{geoMsg}</div>}
           {coords && (
             <div className="rounded border overflow-hidden" style={{ height: 260 }}>
-              <MapContainer center={[coords.lat, coords.lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-                <Marker
-                  position={[coords.lat, coords.lng]}
-                  icon={markerIcon}
-                  draggable
-                  eventHandlers={{
-                    dragend: (e) => {
-                      const m = e.target;
-                      const ll = m.getLatLng();
-                      const next = { lat: ll.lat, lng: ll.lng };
-                      setCoords(next);
-                      reverseGeocode(next.lat, next.lng);
-                    }
-                  }}
-                />
-                <MapClicker onPick={(p) => { setCoords(p); reverseGeocode(p.lat, p.lng); }} />
-              </MapContainer>
+              <ReactLeafletCompat>
+                {(LeafletComponents) => (
+                  <LeafletComponents.MapContainer center={[coords.lat, coords.lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                    <LeafletComponents.TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
+                    <LeafletComponents.Marker
+                      position={[coords.lat, coords.lng]}
+                      icon={markerIcon}
+                      draggable
+                      eventHandlers={{
+                        dragend: (e) => {
+                          const m = e.target;
+                          const ll = m.getLatLng();
+                          const next = { lat: ll.lat, lng: ll.lng };
+                          setCoords(next);
+                          reverseGeocode(next.lat, next.lng);
+                        }
+                      }}
+                    />
+                    <LeafletComponents.MapClicker onPick={(p) => { setCoords(p); reverseGeocode(p.lat, p.lng); }} />
+                  </LeafletComponents.MapContainer>
+                )}
+              </ReactLeafletCompat>
               <div className="p-2 text-xs text-gray-500">يمكنك سحب العلامة أو النقر على الخريطة لاختيار نقطة التسليم.</div>
             </div>
           )}
@@ -522,7 +540,7 @@ const CheckoutPage = () => {
                   }
                   default: break;
                 }
-              } catch(e){ setMessage(e.message); } finally { setProcessing(false); }
+              } catch(e){ setMessage(e?.message || 'حدث خطأ أثناء بدء الدفع. الرجاء المحاولة مرة أخرى.'); } finally { setProcessing(false); }
             }}>{processing?'...جاري المعالجة':'بدء عملية الدفع'}</button>
             {paymentMethod==='bank' && bankInfo && (
               <div className="bg-gray-50 border p-4 rounded text-sm space-y-1">

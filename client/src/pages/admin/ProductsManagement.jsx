@@ -6,7 +6,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 export default function ProductsManagementLegacyRedirect() {
   const loc = useLocation();
   if (import.meta.env.MODE !== 'production') {
-    // eslint-disable-next-line no-console
+     
     console.warn('[Deprecation] /admin/ProductsManagement has moved into /admin?view=products', loc);
   }
   return <Navigate to="/admin?view=products" replace />;

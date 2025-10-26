@@ -1,12 +1,57 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button.jsx';
 import { Badge } from '../../components/ui/badge.jsx';
-import { Truck, RefreshCw, CheckCircle2, AlertCircle, FileSignature, KeyRound } from 'lucide-react';
+import RoutePlanner from '../../components/RoutePlanner';
+
+// Inline lightweight SVG icons (to avoid importing the whole icon pack for this page)
+const Truck = ({ className = '', size = 20 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M1 3h13v13H1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+    <path d="M14 8h4l3 3v5" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+    <circle cx="7" cy="18" r="1.5" fill="currentColor" />
+    <circle cx="19" cy="18" r="1.5" fill="currentColor" />
+  </svg>
+);
+const RefreshCw = ({ className = '', size = 18 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M21 10a9 9 0 1 0-3 6.7L21 10z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M21 3v7h-7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const CheckCircle2 = ({ className = '', size = 16 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.2" />
+  </svg>
+);
+const AlertCircle = ({ className = '', size = 16 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M12 8v5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <path d="M12 16h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+const FileSignature = ({ className = '', size = 14 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M16 13c.5-1 2-1 3 0s2 1 3 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const KeyRound = ({ className = '', size = 14 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="7" cy="11" r="2" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M9 11l9 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    <path d="M20 20v-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+  </svg>
+);
 
 export default function DeliveryDriverPage() {
   const { user } = useAuth() || {};
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,6 +60,7 @@ export default function DeliveryDriverPage() {
   const [signatureFile, setSignatureFile] = useState(null);
   const [failReason, setFailReason] = useState('');
   const [profile, setProfile] = useState(null);
+  const [selectedStops, setSelectedStops] = useState([]);
   const [statusFilter, setStatusFilter] = useState('active'); // active | accepted | out_for_delivery | delivered | failed | all
   const [pool, setPool] = useState(false); // show unassigned pool
   const watchIdRef = useRef(null);
@@ -177,6 +223,38 @@ export default function DeliveryDriverPage() {
     }
   }, [activeId, startLocationWatch, stopLocationWatch]);
 
+  function getCoordsFromOrder(o) {
+    // try multiple common fields
+    if (!o) return null;
+    if (o.lat && o.lng) return { lat: +o.lat, lng: +o.lng };
+    if (o.location && o.location.lat && o.location.lng) return { lat: +o.location.lat, lng: +o.location.lng };
+    if (o.deliveryLocation && o.deliveryLocation.lat && o.deliveryLocation.lng) return { lat: +o.deliveryLocation.lat, lng: +o.deliveryLocation.lng };
+    if (o.toLat && o.toLng) return { lat: +o.toLat, lng: +o.toLng };
+    if (o.destination && o.destination.lat && o.destination.lng) return { lat: +o.destination.lat, lng: +o.destination.lng };
+    if (o.address && o.address.lat && o.address.lng) return { lat: +o.address.lat, lng: +o.address.lng };
+    // try nested coordinates strings
+    if (o.coords && typeof o.coords === 'string') {
+      const parts = o.coords.split(',').map(p => p.trim());
+      if (parts.length >= 2) return { lat: +parts[0], lng: +parts[1] };
+    }
+    return null;
+  }
+
+  function toggleStopForOrder(o) {
+    const exists = selectedStops.find(s => s.id === o.id);
+    if (exists) {
+      setSelectedStops(selectedStops.filter(s => s.id !== o.id));
+      return;
+    }
+    const coords = getCoordsFromOrder(o);
+    if (!coords) {
+      setError('لا يمكن إضافة هذا الطلب للمسار — لا توجد إحداثيات.');
+      return;
+    }
+    const label = (o.customer && (o.customer.name || o.customer.fullName)) || (o.address && (o.address.line1 || o.address.display)) || `#${String(o.id).slice(0,8)}`;
+    setSelectedStops([...selectedStops, { id: o.id, lat: coords.lat, lng: coords.lng, label }]);
+  }
+
   if (!user) return <div className="min-h-screen p-4 bg-gray-50">يجب تسجيل الدخول</div>;
   if (!['delivery', 'admin'].includes(user.role)) {
     return <div className="min-h-screen p-4 bg-gray-50">غير مصرح بالوصول</div>;
@@ -216,6 +294,7 @@ export default function DeliveryDriverPage() {
               <option value="all">الكل</option>
             </select>
             <Button onClick={fetchOrders}><RefreshCw className="w-4 h-4" /></Button>
+            <Button onClick={() => navigate('/delivery/summary')}>ملخص الرحلة</Button>
           </div>
         </header>
 
@@ -235,17 +314,34 @@ export default function DeliveryDriverPage() {
               <Badge color="neutral">{orders.length}</Badge>
             </div>
             <div className="space-y-2 max-h-[70vh] overflow-auto">
-              {loading && <div className="text-sm text-gray-500">جاري التحميل...</div>}
+                  {loading && (
+                    <div className="space-y-2">
+                      {/* simple skeletons */}
+                      <div className="h-12 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-12 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-12 bg-gray-100 rounded animate-pulse" />
+                    </div>
+                  )}
               {!loading && orders.length === 0 && (
                 <div className="text-sm text-gray-500">لا توجد طلبات مطابقة للتصفية الحالية</div>
               )}
               {orders.map((o) => (
                 <div key={o.id} className={`rounded border p-2 ${activeId === o.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}>
                   <div className="flex items-center justify-between">
-                    <button className="text-right" onClick={() => setActiveId(o.id)}>
+                    <div className="flex items-center gap-2">
+                      {/* select this order to include in the route planner */}
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!!selectedStops.find(s => s.id === o.id)}
+                          onChange={() => toggleStopForOrder(o)}
+                        />
+                      </label>
+                      <button className="text-right" onClick={() => setActiveId(o.id)}>
                       <div className="font-semibold">#{o.id.slice(0,8)}...</div>
                       <div className="text-xs text-gray-500">الحالة: {o.deliveryStatus}</div>
                     </button>
+                    </div>
                     <Badge color={o.deliveryStatus === 'out_for_delivery' ? 'info' : o.deliveryStatus === 'accepted' ? 'warning' : o.deliveryStatus === 'delivered' ? 'success' : o.deliveryStatus === 'failed' ? 'danger' : 'neutral'}>
                       {o.deliveryStatus}
                     </Badge>
@@ -292,19 +388,23 @@ export default function DeliveryDriverPage() {
             </div>
           </div>
 
-          {/* Active order details */}
+          {/* Active order details + Route planner */}
           <div className="bg-white rounded-lg shadow-sm border p-4">
-            <h3 className="font-semibold mb-2">تفاصيل الطلب</h3>
-            {!activeId && <div className="text-sm text-gray-500">اختر طلباً من القائمة لعرض التفاصيل</div>}
-            {activeId && (
-              <div className="space-y-3">
-                <div className="text-sm">المعرف: <span className="font-mono">{activeId}</span></div>
-                <div className="text-xs text-gray-500">استخدم صفحة الخريطة لعرض الموقع الحي</div>
-                <div className="pt-2 border-t">
-                  <Button onClick={fetchOrders} size="sm" variant="outline"><RefreshCw className="w-4 h-4" /> تحديث</Button>
+            <h3 className="font-semibold mb-2">خريطة وتخطيط المسار</h3>
+            <RoutePlanner stops={selectedStops} />
+            <div className="mt-4">
+              <h4 className="font-semibold mb-2">تفاصيل الطلب</h4>
+              {!activeId && <div className="text-sm text-gray-500">اختر طلباً من القائمة لعرض التفاصيل</div>}
+              {activeId && (
+                <div className="space-y-3">
+                  <div className="text-sm">المعرف: <span className="font-mono">{activeId}</span></div>
+                  <div className="text-xs text-gray-500">استخدم الخريطة أعلاه لعرض الطريق الحي</div>
+                  <div className="pt-2 border-t">
+                    <Button onClick={fetchOrders} size="sm" variant="outline"><RefreshCw className="w-4 h-4" /> تحديث</Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>

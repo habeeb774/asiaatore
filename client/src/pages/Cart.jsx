@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '../lib/framerLazy';
 import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import LazyImage from '../components/common/LazyImage';
@@ -42,6 +42,18 @@ const Cart = () => {
 
   // Cleanup any timers on unmount
   useEffect(() => () => { clearInterval(repeatTimerRef.current); clearTimeout(holdTimerRef.current); }, []);
+
+  // Prefetch checkout chunk when cart has items (idle-time) to speed up navigation
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+    try {
+      if (typeof requestIdleCallback === 'function') {
+  requestIdleCallback(() => { import('/src/pages/CheckoutPage.jsx'); }, { timeout: 1500 });
+      } else {
+  setTimeout(() => { import('/src/pages/CheckoutPage.jsx'); }, 1500);
+      }
+    } catch {}
+  }, [items.length]);
 
   // Long-press handlers for quantity buttons
   const startRepeat = (fn) => {
@@ -83,6 +95,17 @@ const Cart = () => {
     addToCart?.(it, it.quantity || 1);
   };
 
+  // Keyboard handler for quantity input: allow arrows and Enter
+  const onQtyKeyDown = (e, item) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault(); updateQuantity?.(item.id, (item.quantity || 1) + 1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault(); updateQuantity?.(item.id, Math.max(1, (item.quantity || 1) - 1));
+    } else if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  };
+
   if (items.length === 0) {
     return (
       <div className="pt-20 min-h-screen bg-gray-50">
@@ -119,6 +142,16 @@ const Cart = () => {
           {/* عناصر السلة */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-lg">
+              {/* Inline undo banner (appears when an item was removed) */}
+              {undo?.item && (
+                <div className="p-4 bg-yellow-50 border-b border-yellow-100 flex items-center justify-between">
+                  <div className="text-sm text-yellow-800">{locale==='ar'?'تمت إزالة عنصر من السلة':'Item removed from cart'}</div>
+                  <div className="flex items-center gap-2">
+                    <button className="text-sm btn-secondary px-3 py-1" onClick={undoRemove}>{locale==='ar'?'تراجع':'Undo'}</button>
+                    <button className="text-sm text-gray-500" onClick={()=>{ if (undo?.timeoutId) { clearTimeout(undo.timeoutId); setUndo(null); } }}>{locale==='ar'?'إغلاق':'Dismiss'}</button>
+                  </div>
+                </div>
+              )}
               <AnimatePresence initial={false}>
               {items.map((item, index) => {
                 const quantity = item?.quantity && item.quantity > 0 ? item.quantity : 1;
@@ -150,6 +183,9 @@ const Cart = () => {
                         alt={safe(item.name || item.title)}
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                         sizes="80px"
+                        width={80}
+                        height={80}
+                        decoding="async"
                       />
                       <div className="min-w-0">
                         <h3 className="font-bold text-lg mb-2 truncate">{safe(item.name || item.title)}</h3>
@@ -180,7 +216,7 @@ const Cart = () => {
                     </div>
 
                     <div className="flex items-center justify-end gap-4 flex-wrap sm:flex-nowrap">
-                      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
                         <button
                           type="button"
                           onClick={() => canDecrease && updateQuantity?.(item.id, Math.max(1, quantity - 1))}
@@ -194,9 +230,19 @@ const Cart = () => {
                         >
                           <Minus size={16} />
                         </button>
-                        <span className="px-4 py-1 border-l border-r border-gray-300 min-w-12 text-center text-sm font-semibold">
-                          {quantity}
-                        </span>
+                        <input
+                          aria-label={locale==='ar' ? 'كمية المنتج' : 'Quantity'}
+                          type="number"
+                          min={1}
+                          max={limit}
+                          value={quantity}
+                          onChange={(e) => {
+                            const v = Math.max(1, Math.min(limit, Number(e.target.value || 1)));
+                            updateQuantity?.(item.id, v);
+                          }}
+                          onKeyDown={(e) => onQtyKeyDown(e, item)}
+                          className="px-4 py-1 border-l border-r border-gray-300 min-w-12 text-center text-sm font-semibold appearance-none"
+                        />
                         <button
                           type="button"
                           onClick={() => canIncrease && updateQuantity?.(item.id, quantity + 1)}
@@ -296,7 +342,7 @@ const Cart = () => {
       </div>
 
       {/* Sticky mobile checkout bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="fixed inset-x-0 bottom-0 z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} role="region" aria-label={locale==='ar'?'شريط الدفع':'Checkout bar'}>
         <div className="mx-3 mb-3 rounded-2xl shadow-2xl bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border border-gray-200 p-3 flex items-center gap-3">
           <div className="flex-1">
             <div className="text-xs text-gray-600">الإجمالي</div>
@@ -309,7 +355,7 @@ const Cart = () => {
               <div className="text-[11px] text-emerald-700">✓ شحن مجاني</div>
             )}
           </div>
-          <Link to="/checkout" className="btn-primary px-5 py-3 text-base font-bold">إتمام الشراء</Link>
+          <Link to="/checkout" className="btn-primary px-5 py-3 text-base font-bold" aria-disabled={totalValue<=0} tabIndex={totalValue<=0? -1 : 0}>إتمام الشراء</Link>
         </div>
       </div>
     </div>

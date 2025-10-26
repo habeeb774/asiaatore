@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../api/client';
+import { useLanguage } from '../../context/LanguageContext';
+import { resolveLocalized } from '../../utils/locale';
 
 export default function StockAdjustModal({ open, onClose, product, onAdjusted }) {
   const [quantity, setQuantity] = useState('');
@@ -7,6 +9,8 @@ export default function StockAdjustModal({ open, onClose, product, onAdjusted })
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const { locale } = useLanguage();
 
   if (!open || !product) return null;
 
@@ -33,7 +37,7 @@ export default function StockAdjustModal({ open, onClose, product, onAdjusted })
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <h2 className="text-lg font-bold mb-2">تعديل مخزون المنتج</h2>
-        <div className="mb-2 text-sm text-gray-700">{product.name?.ar || product.nameAr} (SKU: {product.sku || '-'})</div>
+  <div className="mb-2 text-sm text-gray-700">{resolveLocalized(product?.name, locale) || product.nameAr || product.name?.ar || product.name?.en || (product.slug || '')} (SKU: {product.sku || '-'})</div>
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
             <label className="block mb-1">الكمية الجديدة</label>

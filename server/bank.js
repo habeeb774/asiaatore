@@ -43,11 +43,11 @@ router.post('/init', async (req, res) => {
     order = await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'bank', paymentMeta: newMeta, status: 'pending_bank_review' } });
     audit({ action: 'order.bank.init', entity: 'Order', entityId: orderId, userId: order.userId, meta: { reference } });
     // Lightweight server log
-    // eslint-disable-next-line no-console
+     
     console.log('[BANK] init', { orderId, reference });
     res.json({ ok: true, bank: { ...BANK_ACCOUNT, reference } });
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error('[BANK] init error', e);
     res.status(500).json({ ok: false, error: 'BANK_INIT_FAILED', message: e.message });
   }
@@ -107,7 +107,7 @@ router.post('/upload', attachUser, (req, res, next) => {
     audit({ action: 'order.bank.receipt', entity: 'Order', entityId: order.id, userId: req.user?.id, meta: { receiptUrl: relPath } });
     res.json({ ok: true, receiptUrl: relPath });
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error('[BANK] upload error', e);
     res.status(500).json({ ok: false, error: 'BANK_UPLOAD_FAILED', message: e.message });
   }
@@ -141,7 +141,7 @@ router.post('/confirm', attachUser, async (req, res) => {
     try { await sendEmail({ to: updated.userId, subject: 'Bank Transfer Confirmed', text: `Order ${updated.id} marked as paid.` }); } catch {/* ignore */}
     res.json({ ok: true, orderId: order.id, status: 'paid' });
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error('[BANK] confirm error', e);
     res.status(500).json({ ok: false, error: 'BANK_CONFIRM_FAILED', message: e.message });
   }
@@ -171,7 +171,7 @@ router.post('/reject', attachUser, async (req, res) => {
     try { await sendEmail({ to: updated.userId, subject: 'Bank Transfer Rejected', text: `Order ${updated.id} was rejected. Reason: ${reason || 'N/A'}` }); } catch {/* ignore */}
     res.json({ ok: true, orderId: order.id, status: 'cancelled' });
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.error('[BANK] reject error', e);
     res.status(500).json({ ok: false, error: 'BANK_REJECT_FAILED', message: e.message });
   }

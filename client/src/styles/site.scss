@@ -922,3 +922,36 @@ html {
   * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
+// === Footer Responsive Fixes ===
+.site-footer {
+  overflow-x: hidden;
+  background: #fff;
+  @media (max-width: 640px) {
+    font-size: 0.85rem;
+    .footer-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .footer-links, .footer-support, .footer-about, .footer-app-badges {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+    .footer-link, .footer-support-link {
+      font-size: 0.95em;
+    }
+    .footer-icon, .footer-app-badge img {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+    }
+    .footer-app-badges {
+      gap: 0.5rem;
+    }
+    .footer-brand {
+      font-size: 1.1em;
+    }
+  }
+}
+

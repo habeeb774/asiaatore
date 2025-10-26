@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -33,7 +33,35 @@ export const LanguageProvider = ({ children, initialLocale }) => {
   const t = useCallback((key) => i18t(key), [i18t]);
 
   const value = useMemo(() => ({ locale, setLocale, t, available: ['ar','en','fr'] }), [locale, t, setLocale]);
+
+  // sync document lang/dir and add a helper class for RTL styles
+  useEffect(() => {
+    try {
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = locale || 'ar';
+        document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+        if (locale === 'ar') document.documentElement.classList.add('is-rtl');
+        else document.documentElement.classList.remove('is-rtl');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [locale]);
+
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
 
-export const useLanguage = () => useContext(LanguageContext);
+export const useLanguage = () => {
+  const ctx = useContext(LanguageContext);
+  if (!ctx) {
+    // Provide a safe fallback when the provider is missing (prevents destructure errors)
+    // Keep the fallback minimal and compatible with callers.
+    return {
+      t: (k) => k,
+      locale: 'ar',
+      setLocale: () => {},
+      available: ['ar', 'en', 'fr']
+    };
+  }
+  return ctx;
+};

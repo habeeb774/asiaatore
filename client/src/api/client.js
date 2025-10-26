@@ -9,12 +9,19 @@ const DEV = import.meta?.env?.DEV;
 const VITE_API_ENV = import.meta?.env?.VITE_API_URL;
 let API_BASE = '/api';
 if (typeof VITE_API_ENV === 'string' && VITE_API_ENV.trim()) {
-  if (VITE_API_ENV.startsWith('/')) API_BASE = VITE_API_ENV;
-  else if (typeof window !== 'undefined') {
+  const v = VITE_API_ENV.replace(/\/$/, '');
+  // If it's a relative path (starts with /), use it as-is.
+  if (v.startsWith('/')) {
+    API_BASE = v;
+  } else {
+    // Try to parse as absolute URL. If valid, use the origin (protocol://host:port)
     try {
-      const u = new URL(VITE_API_ENV);
-      if (u.origin === window.location.origin) API_BASE = u.pathname || '/api';
-    } catch {}
+      const u = new URL(v);
+      API_BASE = u.origin; // don't include pathname
+    } catch {
+      // Fallback: use the raw value (best-effort)
+      API_BASE = v;
+    }
   }
 }
 if (DEV) API_BASE = API_BASE || '/api';
@@ -108,6 +115,8 @@ const api = {
   // Reviews
   reviewsModerationList: () => request('/reviews/moderation'),
   reviewModerate: (id, action) => request(`/reviews/${encodeURIComponent(id)}/moderate`, { method:'POST', body: JSON.stringify({ action }) }),
+  // جلب مراجعات منتج معين
+  reviewsListForProduct: (productId) => request(`/reviews?productId=${encodeURIComponent(productId)}`),
   // Cart
   cartList: () => request('/cart'),
   cartSet: (productId,quantity) => request('/cart/set', { method:'POST', body: JSON.stringify({ productId, quantity }) }),

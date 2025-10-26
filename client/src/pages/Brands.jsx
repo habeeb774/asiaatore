@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import LazyImage from '../components/common/LazyImage';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
+import { resolveLocalized } from '../utils/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import Seo from '../components/Seo';
@@ -89,7 +90,7 @@ const Brands = () => {
         <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {loading && Array.from({ length: 10 }).map((_,i)=> <BrandSkeleton key={i} />)}
           {!loading && filtered.map(b => {
-            const name = locale==='ar' ? (b.name?.ar || b.slug) : (b.name?.en || b.slug);
+            const name = resolveLocalized(b.name, locale) || b.name?.ar || b.name?.en || b.slug;
             const active = preselect && preselect === b.slug;
             return (
               <div key={b.id} className={`group relative bg-white border rounded-xl p-4 flex flex-col items-center gap-3 shadow hover:shadow-md transition ${active?'ring-2 ring-primary-red':''}`}>

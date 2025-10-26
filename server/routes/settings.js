@@ -55,7 +55,20 @@ async function ensureSettingsTable() {
       "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS appStoreUrl TEXT NULL",
       "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS playStoreUrl TEXT NULL"
     ];
+    // New columns for hero and top-strip visuals
+    const newAlters = [
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroBackgroundImage TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroBackgroundGradient TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroCenterImage TEXT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroAutoplayInterval INT NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS topStripEnabled TINYINT(1) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS topStripAutoscroll TINYINT(1) NULL",
+      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS topStripBackground TEXT NULL"
+    ];
     for (const sql of alters) {
+      try { await prisma.$executeRawUnsafe(sql); } catch { /* ignore if not supported */ }
+    }
+    for (const sql of newAlters) {
       try { await prisma.$executeRawUnsafe(sql); } catch { /* ignore if not supported */ }
     }
     // Ensure singleton row
@@ -64,7 +77,7 @@ async function ensureSettingsTable() {
     `);
     SETTINGS_TABLE_ENSURED = true;
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.warn('[SETTINGS] ensure table failed (may already exist):', e.message);
     SETTINGS_TABLE_ENSURED = true; // avoid spamming
   }
@@ -131,6 +144,14 @@ router.get('/', async (_req, res) => {
         colorPrimary: '#69be3c',
         colorSecondary: '#1f2937',
         colorAccent: '#ef4444',
+        // hero & top-strip fallbacks
+        heroBackgroundImage: 'https://picsum.photos/seed/hero/1600/900',
+        heroBackgroundGradient: 'linear-gradient(90deg,#69be3c 0%, #0ea5e9 100%)',
+        heroCenterImage: null,
+        heroAutoplayInterval: 6000,
+        topStripEnabled: true,
+        topStripAutoscroll: true,
+        topStripBackground: '#fde68a',
         taxNumber: null,
         supportPhone: null,
         supportMobile: null,
@@ -161,7 +182,10 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
   const { siteNameAr, siteNameEn, colorPrimary, colorSecondary, colorAccent,
     taxNumber, supportPhone, supportMobile, supportWhatsapp, supportEmail, supportHours,
     footerAboutAr, footerAboutEn,
-    linkBlog, linkSocial, linkReturns, linkPrivacy, appStoreUrl, playStoreUrl } = req.body || {};
+    linkBlog, linkSocial, linkReturns, linkPrivacy, appStoreUrl, playStoreUrl,
+    // new visual fields
+    logo, heroBackgroundImage, heroBackgroundGradient, heroCenterImage, heroAutoplayInterval,
+    topStripEnabled, topStripAutoscroll, topStripBackground } = req.body || {};
   try {
     const data = {};
     if (siteNameAr !== undefined) data.siteNameAr = siteNameAr || null;
@@ -177,6 +201,15 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
     if (supportHours !== undefined) data.supportHours = supportHours || null;
     if (footerAboutAr !== undefined) data.footerAboutAr = footerAboutAr || null;
     if (footerAboutEn !== undefined) data.footerAboutEn = footerAboutEn || null;
+  // visual fields
+  if (logo !== undefined) data.logo = logo || null;
+  if (heroBackgroundImage !== undefined) data.heroBackgroundImage = heroBackgroundImage || null;
+  if (heroBackgroundGradient !== undefined) data.heroBackgroundGradient = heroBackgroundGradient || null;
+  if (heroCenterImage !== undefined) data.heroCenterImage = heroCenterImage || null;
+  if (heroAutoplayInterval !== undefined) data.heroAutoplayInterval = heroAutoplayInterval || null;
+  if (topStripEnabled !== undefined) data.topStripEnabled = topStripEnabled ? 1 : 0;
+  if (topStripAutoscroll !== undefined) data.topStripAutoscroll = topStripAutoscroll ? 1 : 0;
+  if (topStripBackground !== undefined) data.topStripBackground = topStripBackground || null;
   if (linkBlog !== undefined) data.linkBlog = linkBlog || null;
   if (linkSocial !== undefined) data.linkSocial = linkSocial || null;
   if (linkReturns !== undefined) data.linkReturns = linkReturns || null;

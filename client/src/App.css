@@ -5,6 +5,17 @@
   font-family: var(--font-sans, 'Cairo', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
 }
 
+:root {
+  --font-main: 'PingARLT', 'Cairo', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --color-primary: #6a9324;
+  --color-primary-dark: #446d00;
+  --color-primary-light: #90b94a;
+  --color-bg-1: #F3FFDF;
+  --color-bg-2: #F0F4E9;
+  --color-contrast: #1F1F1F;
+  --color-reverse: #fffff0;
+}
+
 /* Header Styles */
 .header {
   background: rgba(255, 255, 255, 0.95);
@@ -552,3 +563,84 @@ th {
 .product-card-grid > .product-card {
   margin: 0;
 }
+
+/* ====== Loading overlays (loader-init + content-loading) ====== */
+.content-loading, .loader-init {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  z-index: 9999;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+.content-loading--hidden,
+.loader-init--hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.loader-init::after {
+  content: "";
+  width: 36px;
+  height: 36px;
+  border: 3px solid #eee;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: loading 0.75s linear infinite;
+}
+
+@keyframes loading {
+  from { transform: rotate(0turn); }
+  to { transform: rotate(1turn); }
+}
+
+/* Circular segmented loader used in some places */
+.lds-spinner {
+  margin:auto;
+  height: 160px;
+  width: 160px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.lds-spinner div { transform-origin: 30px 20px; }
+.lds-spinner div:after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 2px;
+  left: 37px;
+  width: 6px;
+  height: 19px;
+  border-radius: 20%;
+  animation: color 1.2s ease-in-out infinite;
+}
+
+@keyframes color {
+  0% { background-color: var(--color-primary); }
+  100% { background-color: white; }
+}
+
+/* ====== Motion & Hover polish ====== */
+.product-card, custom-salla-product-card, .card .product-image img {
+  transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+.product-card:hover, custom-salla-product-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.12);
+}
+.product-image:hover img {
+  transform: scale(1.06);
+  filter: brightness(1.02);
+}
+
+/* subtle focus states */
+.btn:focus, a:focus, button:focus { outline: none; box-shadow: 0 0 0 4px rgba(106,147,36,0.12); }

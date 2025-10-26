@@ -51,12 +51,7 @@ router.post('/', async (req, res) => {
         await prisma.address.updateMany({ where: whereWithDeletedAt({ userId: req.user.id }), data: { isDefault: false } });
       } else {
         // Fallback: use raw SQL to clear defaults for this user. Use parameterized query to avoid injection.
-        try {
-          await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`;
-        } catch (er) {
-          // If raw SQL fails, rethrow original error to be handled below
-          throw er;
-        }
+        await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`;
       }
     }
     if (prisma.address?.create) {

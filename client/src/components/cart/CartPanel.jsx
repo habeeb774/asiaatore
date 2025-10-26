@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from '../../lib/framerLazy';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 

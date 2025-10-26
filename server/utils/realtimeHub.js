@@ -9,10 +9,17 @@ const sseClients = new Set();
 const wsClients = new Set(); // populated only if WS is enabled
 
 function registerSse(res, user) {
-  const client = { kind: 'sse', res, userId: user?.id || 'guest', role: user?.role || 'guest' };
-  sseClients.add(client);
-  res.on('close', () => sseClients.delete(client));
-  return client;
+  try {
+    const client = { kind: 'sse', res, userId: user?.id || 'guest', role: user?.role || 'guest' };
+    sseClients.add(client);
+    res.on('close', () => sseClients.delete(client));
+    return client;
+  } catch (e) {
+    // Defensive: ensure caller cannot crash the server when registering SSE clients
+    try { console.warn('[Realtime] registerSse failed', e && e.message); } catch (__) {}
+    try { res.end(); } catch (__) {}
+    return null;
+  }
 }
 
 function sseSend(res, event, data) {

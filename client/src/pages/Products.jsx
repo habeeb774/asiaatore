@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import ProductFilters from '../components/products/ProductFilters';
 import ProductGrid from '../components/products/ProductGrid';
 import ProductGridSkeleton from '../components/products/ProductGridSkeleton.jsx';
-import { useProducts, useProductPrefetch } from '../api/products';
+import { useProducts, useProductPrefetch, useNextPagePrefetch } from '../api/products';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
 import { useSettings } from '../context/SettingsContext';
@@ -17,18 +17,50 @@ const Products = () => {
   const siteName = locale === 'ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const pageTitle = locale === 'ar' ? `المنتجات | ${siteName}` : `${siteName} | Products`;
 
-  // Server fetch params (unpaginated); pagination is handled on client
-  const serverParams = useMemo(() => ({
+  // Server fetch params (we'll debounce updates and request by page)
+  const initialQs = useMemo(() => ({
     q: new URLSearchParams(location.search).get('q') || undefined,
     category: new URLSearchParams(location.search).get('category') || undefined,
   }), [location.search]);
 
-  const { data, isLoading, isFetching, error, refetch } = useProducts(serverParams);
-  const prefetchProduct = useProductPrefetch();
-
   // Match CatalogPage filter model for consistent UI/UX
   const pageSize = 12;
-  const [filters, setFilters] = useState({ category: '', sort: 'new', min: '', max: '', rating: '', discount: false, page: 1 });
+
+  // Local filters state
+  const [serverParams, setServerParams] = useState({ ...initialQs, page: 1, pageSize });
+  const { data: serverData, isLoading, isFetching, error, refetch } = useProducts(serverParams);
+  const prefetchProduct = useProductPrefetch();
+  const [filters, setFilters] = useState({ q: initialQs.q || '', category: initialQs.category || '', sort: 'new', min: '', max: '', rating: '', discount: false, page: 1 });
+
+  // Debounced server query params to avoid spamming API while user types
+  const debounceTimer = useRef(null);
+  useEffect(() => {
+    // whenever category/q in location changes, reset server params and page
+    setServerParams(prev => ({ ...prev, ...initialQs, page: 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQs.q, initialQs.category]);
+
+  // Sync filters -> debounced server params (only q/category/min/max affect server)
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setServerParams(prev => ({
+        ...prev,
+        page: 1,
+        pageSize,
+        q: filters.q || undefined,
+        category: filters.category || undefined,
+        minPrice: filters.min || undefined,
+        maxPrice: filters.max || undefined,
+      }));
+    }, 300);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [filters.q, filters.category, filters.min, filters.max]);
+
+  // Whenever serverParams.page changes, ensure filters.page stays in sync
+  useEffect(() => {
+    if (Number(filters.page) !== Number(serverParams.page)) setFilters(f => ({ ...f, page: Number(serverParams.page) || 1 }));
+  }, [serverParams.page]);
 
   // sync from query string whenever it changes
   useEffect(() => {
@@ -60,12 +92,25 @@ const Products = () => {
     }
   }, [filters]);
 
+  // Accumulate pages when user loads more
+  const [accItems, setAccItems] = useState([]);
+  useEffect(() => {
+    const items = Array.isArray(serverData) ? serverData : (Array.isArray(serverData?.items) ? serverData.items : []);
+    const page = Number(serverData?.page || serverParams.page || 1);
+    if (page <= 1) {
+      setAccItems(items || []);
+    } else if (items && items.length) {
+      setAccItems(prev => {
+        // avoid duplicates by id
+        const byId = new Set(prev.map(p => p.id));
+        const appended = items.filter(p => !byId.has(p.id));
+        return prev.concat(appended);
+      });
+    }
+  }, [serverData?.items, serverData, serverParams.page]);
+
   const filtered = useMemo(() => {
-    // Support both shapes: array or { items: [] }
-    const baseItems = Array.isArray(data)
-      ? data
-      : (Array.isArray(data?.items) ? data.items : []);
-    let list = baseItems.slice();
+    let list = accItems.slice();
     if (filters.category) list = list.filter(p => p.category === filters.category);
     if (filters.min) list = list.filter(p => +p.price >= +filters.min);
     if (filters.max) list = list.filter(p => +p.price <= +filters.max);
@@ -79,14 +124,22 @@ const Products = () => {
     if (filters.sort === 'price-asc') list.sort((a,b) => +a.price - +b.price);
     if (filters.sort === 'price-desc') list.sort((a,b) => +b.price - +a.price);
     return list;
-  }, [filters, data]);
+  }, [filters, accItems]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(filters.page, totalPages);
-  const pageSlice = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // If server returned page metadata, use it; otherwise fallback to client-side calc
+  const total = serverData?.total ?? (Array.isArray(serverData) ? serverData.length : (serverData?.items?.length || 0));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Number(serverData?.page || filters.page || 1);
+  const pageSlice = filtered.slice(0, currentPage * pageSize);
+  useEffect(() => { if (filters.page !== currentPage) setFilters(f => ({ ...f, page: currentPage })); }, [currentPage]);
+
+  // Prefetch next page when available
+  const prefetchNextPage = useNextPagePrefetch(serverParams, currentPage < totalPages);
   useEffect(() => {
-    if (filters.page !== currentPage) setFilters(f => ({ ...f, page: currentPage }));
-  }, [currentPage, filters.page]);
+    if (currentPage < totalPages) {
+      try { prefetchNextPage(); } catch {}
+    }
+  }, [currentPage, totalPages, serverParams.q, serverParams.category, serverParams.minPrice, serverParams.maxPrice]);
 
   const makePageList = () => {
     const pages = [];
@@ -200,27 +253,18 @@ const Products = () => {
           {error && <p className="text-red-600 text-sm">{locale==='ar'?'فشل التحميل':'Failed to load products.'}</p>}
           {!isLoading && !error && pageSlice.length === 0 && <p>{locale==='ar'?'لا توجد نتائج':'No results'}</p>}
           {!isLoading && !error && pageSlice.length > 0 && <ProductGrid products={pageSlice} />}
-          {totalPages > 1 && (
-            <div className="pagination flex gap-2 justify-center items-center mt-6">
+
+          {/* Load more / incremental pagination */}
+          {currentPage < totalPages && (
+            <div className="flex justify-center mt-6">
               <button
-                className="btn-outline px-3 py-1 text-sm disabled:opacity-50"
-                disabled={currentPage===1}
-                onClick={() => setFilters(f => ({...f, page: f.page-1}))}
-              >{locale==='ar'?'السابق':'Prev'}</button>
-              {makePageList().map((p, i) => p === '…' ? (
-                <span key={`e${i}`} className="px-2 text-gray-400">…</span>
-              ) : (
-                <button
-                  key={p}
-                  className={`px-3 py-1 rounded ${p===currentPage? 'btn-primary' : 'btn-outline text-sm'}`}
-                  onClick={() => setFilters(f => ({...f, page: p}))}
-                >{p}</button>
-              ))}
-              <button
-                className="btn-outline px-3 py-1 text-sm disabled:opacity-50"
-                disabled={currentPage===totalPages}
-                onClick={() => setFilters(f => ({...f, page: f.page+1}))}
-              >{locale==='ar'?'التالي':'Next'}</button>
+                className="btn-primary px-4 py-2"
+                onClick={() => {
+                  setServerParams(prev => ({ ...prev, page: (Number(prev.page) || 1) + 1 }));
+                  setFilters(f => ({ ...f, page: (Number(f.page) || 1) + 1 }));
+                }}
+                disabled={isFetching}
+              >{isFetching ? (locale==='ar' ? 'جارٍ التحميل...' : 'Loading...') : (locale==='ar' ? 'تحميل المزيد' : 'Load more')}</button>
             </div>
           )}
         </section>

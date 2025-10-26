@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from '../lib/framerLazy';
 import { ArrowRight, Star, Truck, Shield, Clock, Heart, Share2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -58,6 +58,31 @@ const ProductDetails = () => {
   const discountPercent = hasDiscount ? Math.round((1 - (priceNum / oldPrice)) * 100) : 0;
   const outOfStock = product?.stock != null && product.stock <= 0;
 
+  // swipe gestures for switching images on mobile (declare hooks before any early returns)
+  const swipeRef = useRef(null);
+  useEffect(() => {
+    const el = swipeRef.current; if (!el) return;
+    let startX = 0, currentX = 0, touching = false, delta = 0;
+    const onTouchStart = (e) => { touching = true; startX = e.touches[0].clientX; };
+    const onTouchMove = (e) => { if (!touching) return; currentX = e.touches[0].clientX; delta = currentX - startX; };
+    const onTouchEnd = () => {
+      if (!touching) return; touching = false;
+      if (Math.abs(delta) > 50) {
+        if (delta < 0) setSelectedImage((i)=> Math.min((product?.gallery?.length||1)-1, i+1));
+        else setSelectedImage((i)=> Math.max(0, i-1));
+      }
+      delta = 0;
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [product?.gallery?.length]);
+
   if (loading) return (
     <div className="container-custom px-4 py-8" aria-busy="true" aria-live="polite">
       <ProductDetailSkeleton />
@@ -82,30 +107,6 @@ const ProductDetails = () => {
     }
   };
 
-  // swipe gestures for switching images on mobile
-  const swipeRef = useRef(null);
-  useEffect(() => {
-    const el = swipeRef.current; if (!el) return;
-    let startX = 0, currentX = 0, touching = false, delta = 0;
-    const onTouchStart = (e) => { touching = true; startX = e.touches[0].clientX; };
-    const onTouchMove = (e) => { if (!touching) return; currentX = e.touches[0].clientX; delta = currentX - startX; };
-    const onTouchEnd = () => {
-      if (!touching) return; touching = false;
-      if (Math.abs(delta) > 50) {
-        if (delta < 0) setSelectedImage((i)=> Math.min((product?.gallery?.length||1)-1, i+1));
-        else setSelectedImage((i)=> Math.max(0, i-1));
-      }
-      delta = 0;
-    };
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [product?.gallery?.length]);
 
   return (
     <div className="pt-20 min-h-screen bg-gray-50 product-details-page">
@@ -139,7 +140,7 @@ const ProductDetails = () => {
             {product.gallery?.length > 1 && (
               <div className="flex gap-3 overflow-x-auto no-scrollbar py-1 snap-x snap-mandatory" role="tablist" aria-label="thumbnails">
                 {product.gallery.map((img, idx) => (
-                  <button
+                    <button
                     key={img.id || idx}
                     onClick={()=>setSelectedImage(idx)}
                     role="tab"
@@ -148,7 +149,7 @@ const ProductDetails = () => {
                   >
                     <LazyImage
                       src={img.variants?.thumb || img.variants?.medium || img.url}
-                      alt={img.alt?.ar || img.alt?.en || 'صورة'}
+                      alt={resolveLocalized(img.alt, locale) || img.alt?.ar || img.alt?.en || 'صورة'}
                       className="w-full h-full object-cover"
                       sizes="80px"
                       skeleton={true}
@@ -163,9 +164,9 @@ const ProductDetails = () => {
           {/* معلومات المنتج */}
           <div>
             <div className="bg-white rounded-2xl p-8 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4">
                 <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                  {product.category}
+                  {resolveLocalized(product.category, locale) || product.category}
                 </span>
                 <div className="flex items-center space-x-4 space-x-reverse">
                   <button 
@@ -190,8 +191,8 @@ const ProductDetails = () => {
               <h1 className="text-3xl font-bold mb-4">{nameText}</h1>
               {product.brand && (
                 <div className="mb-4 text-sm text-gray-600 flex items-center gap-2">
-                  <span className="px-2 py-1 bg-gray-100 rounded">{product.brand.name?.ar}</span>
-                  {product.brand.logo && <img src={product.brand.logo} alt={product.brand.name?.ar} className="h-6 object-contain" />}
+                  <span className="px-2 py-1 bg-gray-100 rounded">{resolveLocalized(product.brand.name, locale) || product.brand.name?.ar || product.brand.name?.en}</span>
+                  {product.brand.logo && <img src={product.brand.logo} alt={resolveLocalized(product.brand.name, locale) || product.brand.name?.ar || product.brand.name?.en} className="h-6 object-contain" />}
                 </div>
               )}
 
@@ -242,7 +243,7 @@ const ProductDetails = () => {
                           <tr key={t.id} className={quantity >= t.minQty ? 'bg-amber-50' : ''}>
                             <td className="p-2">{t.minQty}+</td>
                             <td className="p-2 font-medium">{t.price.toFixed(2)} ر.س</td>
-                            <td className="p-2 text-xs">{t.note?.ar || ''}</td>
+                            <td className="p-2 text-xs">{resolveLocalized(t.note, locale) || t.note?.ar || ''}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -267,7 +268,7 @@ const ProductDetails = () => {
                   {(product.features || []).map((feature, index) => (
                     <li key={index} className="flex items-center space-x-2 space-x-reverse">
                       <div className="feature-dot"></div>
-                      <span className="text-gray-600">{feature}</span>
+                      <span className="text-gray-600">{resolveLocalized(feature, locale) || feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -351,7 +352,7 @@ const ProductDetails = () => {
                   <div className="relative mb-4">
                     <img
                       src={relatedProduct.displayImage || relatedProduct.image || placeholderImg}
-                      alt={relatedProduct.name || 'منتج'}
+                      alt={resolveLocalized(relatedProduct.name, locale) || 'منتج'}
                       className="w-full h-48 object-cover rounded-lg"
                       onError={(e)=>{ e.currentTarget.src = placeholderImg; }}
                     />

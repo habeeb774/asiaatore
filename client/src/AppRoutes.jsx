@@ -3,31 +3,35 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import { ChatProvider } from './context/ChatContext.jsx';
 import { RouteErrorBoundary, PageFallback } from './components/routing/RouteBoundary';
-import Home from './pages/Home';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
-import Cart from './pages/Cart';
-import CheckoutPage from './pages/CheckoutPage'; // upgraded checkout with address-before-payment
-import { LoginPage, RegisterPage, ForgotPasswordPage } from './pages/auth/index.js';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage.jsx';
-import VerifyEmailPage from './pages/auth/VerifyEmailPage.jsx';
-import Orders from './pages/Orders';
-import MyOrders from './pages/MyOrders';
-import OrderDetails from './pages/OrderDetails';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import ProductInventory from './pages/admin/ProductInventory.jsx';
 import AdminUsers from './pages/admin/AdminUsers';
 import Reports from './pages/admin/Reports';
-import SellerDashboard from './pages/seller/SellerDashboard.jsx'; 
-import DeliveryDashboard from './pages/delivery/DeliveryDashboard.jsx';
 import BankTransfers from './pages/admin/BankTransfers';
 import Analytics from './pages/admin/Analytics';
 import Customers from './pages/admin/Customers';
 import Settings from './pages/admin/Settings';
 import AccountSecurity from './pages/AccountSecurity';
+
+// Lazy load heavy pages to split bundles per-route
+const Home = React.lazy(() => import('./pages/Home'));
+const Cart = React.lazy(() => import('./pages/Cart'));
+const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+const LoginPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.LoginPage })));
+const RegisterPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPage.jsx'));
+const VerifyEmailPage = React.lazy(() => import('./pages/auth/VerifyEmailPage.jsx'));
+const Orders = React.lazy(() => import('./pages/Orders'));
+const MyOrders = React.lazy(() => import('./pages/MyOrders'));
+const OrderDetails = React.lazy(() => import('./pages/OrderDetails'));
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const ProductInventory = React.lazy(() => import('./pages/admin/ProductInventory.jsx'));
+const SellerDashboard = React.lazy(() => import('./pages/seller/SellerDashboard.jsx'));
+const DeliveryDashboard = React.lazy(() => import('./pages/delivery/DeliveryDashboard.jsx'));
 import Canonical from './components/Canonical';
 import { initAnalytics, trackPageView } from './lib/analytics';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from './lib/framerLazy';
 // NOTE: useLanguage was imported but unused; removed to prevent lint warning.
 const ProductDetailPage = React.lazy(() => import('./pages/ProductDetailPage'));
 const StoresPage = React.lazy(() => import('./pages/StoresPage'));
@@ -46,6 +50,7 @@ const AdminKycReview = React.lazy(() => import('./pages/admin/AdminKycReview.jsx
 const DeliveryMap = React.lazy(() => import('./pages/delivery/Map.jsx'));
 const DeliveryHistory = React.lazy(() => import('./pages/delivery/History.jsx'));
 const DeliveryAvailability = React.lazy(() => import('./pages/delivery/Availability.jsx'));
+const DeliverySummary = React.lazy(() => import('./pages/delivery/DeliverySummary.jsx'));
 const UIPreview = React.lazy(() => import('./pages/UIPreview.jsx'));
 // Home page now fully implemented (replaces placeholder)
 
@@ -225,6 +230,18 @@ const AppRoutes = () => {
       />
     }
   />
+  <Route
+    path="/delivery/summary"
+    element={
+      <ProtectedRoute
+        isAuthed={!!user}
+        userRole={userRole}
+        requiredRoles={['delivery','admin']}
+        element={<DeliverySummary />}
+        redirectTo="/login"
+      />
+    }
+  />
   <Route path="/DeliveryDashboard" element={<Navigate to="/delivery" replace />} />
   {/* Seller dashboard (protected) */}
   <Route
@@ -335,6 +352,18 @@ const AppRoutes = () => {
         userRole={userRole}
         requiredRoles={['delivery','admin']}
         element={<DeliveryAvailability />}
+        redirectTo="/en/login"
+      />
+    }
+  />
+  <Route
+    path="/en/delivery/summary"
+    element={
+      <ProtectedRoute
+        isAuthed={!!user}
+        userRole={userRole}
+        requiredRoles={['delivery','admin']}
+        element={<DeliverySummary />}
         redirectTo="/en/login"
       />
     }
@@ -450,6 +479,18 @@ const AppRoutes = () => {
         userRole={userRole}
         requiredRoles={['delivery','admin']}
         element={<DeliveryAvailability />}
+        redirectTo="/fr/login"
+      />
+    }
+  />
+  <Route
+    path="/fr/delivery/summary"
+    element={
+      <ProtectedRoute
+        isAuthed={!!user}
+        userRole={userRole}
+        requiredRoles={['delivery','admin']}
+        element={<DeliverySummary />}
         redirectTo="/fr/login"
       />
     }

@@ -3,11 +3,13 @@ import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+// The visualizer plugin is optional; import it dynamically at build time
+// to avoid hard failures when it's not installed in the environment.
 
 // Resolve and sanitize the proxy target from env.
 function resolveProxyTarget(env) {
   const raw = (env?.VITE_PROXY_TARGET || '').trim()
-  const fallback = 'http://localhost:4000'
+  const fallback = 'http://localhost:8829'
   if (!raw) return fallback
   // If it's only a port number like "4000", assume localhost:http
   if (/^\d{2,5}$/.test(raw)) return `http://localhost:${raw}`
@@ -30,9 +32,29 @@ function resolveProxyTarget(env) {
 // Use env to configure proxy target so frontend links to whichever backend is running
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const proxyTarget = resolveProxyTarget(env)
+
+  // Dynamically load the visualizer plugin only when requested.
+  let visualizerPlugin = null
+  if (env.VISUALIZE === 'true' || process.env.VISUALIZE === 'true') {
+    try {
+      const mod = await import('rollup-plugin-visualizer')
+      if (mod && mod.visualizer) {
+        visualizerPlugin = mod.visualizer({
+          filename: fileURLToPath(new URL('./reports/treemap.html', import.meta.url)),
+          template: 'treemap',
+          gzipSize: true,
+          brotliSize: true
+        })
+      }
+    } catch (e) {
+      // Not fatal: continue without visualizer
+      console.warn('[vite] rollup-plugin-visualizer not available, skipping treemap')
+    }
+  }
+
   return {
     envDir: __dirname,
     plugins: [
@@ -120,8 +142,35 @@ export default defineConfig(({ mode }) => {
         },
         // Disable SW in dev to avoid caching stale bundles while debugging
         devOptions: { enabled: false }
-      })
+      }),
+      // Generate a treemap HTML file when VISUALIZE=true is set in environment
+      visualizerPlugin
     ],
+    build: {
+      // Warn earlier about large chunks and help Rollup split common deps
+      chunkSizeWarningLimit: 350,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react-dom')) return 'vendor.react-dom'
+              if (id.includes('react') && !id.includes('react-dom')) return 'vendor.react'
+              if (id.includes('react-router') || id.includes('history') || id.includes('@remix-run')) return 'vendor.router'
+              if (id.includes('@tanstack') || id.includes('react-query')) return 'vendor.tanstack'
+              if (id.includes('framer-motion')) return 'vendor.motion'
+              if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor.leaflet'
+              if (id.includes('i18next')) return 'vendor.i18next'
+              if (id.includes('zustand')) return 'vendor.zustand'
+              if (id.includes('@fontsource') || id.includes('@font-face') || id.includes('fontsource')) return 'vendor.fonts'
+              if (id.includes('lodash')) return 'vendor.lodash'
+              return 'vendor'
+            }
+          }
+        }
+      }
+      // Add a small hook to emit a treemap when VISUALIZE=true is set
+      ,rollupOptionsHook: undefined
+    },
     css: {
       postcss: './postcss.config.cjs'
     },
@@ -133,7 +182,12 @@ export default defineConfig(({ mode }) => {
       // Expose dev server on LAN for testing on real devices
       host: true,
       hmr: {
-        clientPort: 5173,
+        // Ensure HMR client connects to the Vite dev server port by default.
+        // This project uses port 5173 for the Vite dev server; previously this
+        // was set to 4000 which causes the browser to try ws://localhost:4000
+        // and fail when the backend isn't proxying HMR. Allow override via
+        // VITE_HMR_CLIENT_PORT if needed by developers.
+        clientPort: Number(env.VITE_HMR_CLIENT_PORT || 5173),
         host: 'localhost',
         protocol: 'ws',
         overlay: true

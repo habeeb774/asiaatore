@@ -56,7 +56,7 @@ export function ChatProvider({ children }) {
     } catch (e) {
       // ignore if EventSource not available or endpoint not present
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [currentThread?.id]);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export function ChatProvider({ children }) {
     };
     window.addEventListener('storage', storageHandler);
     return () => window.removeEventListener('storage', storageHandler);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [currentThread?.id]);
 
   const sendMessage = ({ text, from, threadId = 'default' }) => {

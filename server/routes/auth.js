@@ -109,7 +109,7 @@ router.post('/login', async (req, res) => {
     const isDbErr = e?.code === 'DB_DISABLED' || /Database|ECONNREFUSED|does not exist|connect/i.test(msg) || (e?.code && /^P\d+/.test(e.code));
     try { req.log?.error({ err: e, code: e?.code, message: e?.message }, 'LOGIN route error'); } catch {}
     if (process.env.DEBUG_LOGIN === '1' || process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
+       
       console.error('[LOGIN] Error', { message: msg, code: e.code });
     }
     if (isDbErr) {
@@ -215,7 +215,7 @@ router.post('/register', async (req, res) => {
     }
     const isDbConn = /Database|ECONNREFUSED|does not exist|connect|timeout/i.test(msg);
     if (process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
+       
       console.error('[REGISTER] Error', { message: msg, code: e.code, stack: e.stack });
     }
     if (isDbConn) {

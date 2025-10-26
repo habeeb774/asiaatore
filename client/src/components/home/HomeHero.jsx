@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { resolveLocalized } from '../../utils/locale';
+import { motion, AnimatePresence } from '../../lib/framerLazy';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // --- Mock Implementations & Data (for a runnable single-file demo) ---
 
 // 1. Mock External Libraries
-const motion = { // Mock for framer-motion
-  div: ({ children, initial, animate, transition, whileInView, viewport, ...props }) => <div {...props}>{children}</div>,
-  li: ({ children, initial, animate, transition, whileInView, viewport, ...props }) => <li {...props}>{children}</li>,
-};
 const Link = ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>; // Mock for react-router-dom
 const Truck = (props) => <svg {...props} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>;
 const Shield = (props) => <svg {...props} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
@@ -30,6 +29,8 @@ const translations = {
     featuredSubtitle: 'Handpicked deals just for you',
     latestProducts: 'Latest Arrivals',
     viewAllProducts: 'View All Products',
+    shopNow: 'Shop Now',
+    saleBadge: 'Up to 30% off',
   },
   ar: {
     home: 'الرئيسية',
@@ -46,6 +47,8 @@ const translations = {
     featuredSubtitle: 'عروض مختارة خصيصًا لك',
     latestProducts: 'أحدث المنتجات',
     viewAllProducts: 'عرض كل المنتجات',
+    shopNow: 'تسوق الآن',
+    saleBadge: 'خصومات حتى 30٪',
   },
 };
 const mockProducts = [
@@ -67,12 +70,12 @@ const mockCategories = [
 
 
 // 3. Mock Contexts & Hooks
-const LanguageContext = React.createContext();
-const useLanguage = () => React.useContext(LanguageContext);
+import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
 const useProducts = () => ({ products: mockProducts, loading: false });
 const useMarketing = () => ({ byLocation: { topStrip: [], homepage: [], footer: [] }, features: [] });
-const api = { listCategories: () => Promise.resolve({ categories: mockCategories }) };
+// client API wrapper (real project provides ../../api/client)
+import api from '../../api/client';
 
 
 // 4. Mock Components
@@ -81,15 +84,15 @@ const CategoryChips = () => <div className="p-2 text-center text-sm text-gray-50
 const BrandsStrip = () => <div className="py-8 text-center bg-gray-200 dark:bg-gray-700 text-sm text-gray-500">[Brands Strip Placeholder]</div>;
 const HeroBannerSlider = () => (
     <div className="relative w-full aspect-[4/3] bg-gray-700">
-      <img src="https://placehold.co/900x675/ef4444/white?text=Hero+Banner" alt="Hero banner placeholder" className="w-full h-full object-cover"/>
+      <img src="https://placehold.co/900x675/ef4444/white?text=Hero+Banner" alt="Hero banner placeholder" className="w-full h-full object-cover" width={900} height={675} decoding="async" fetchPriority="high" loading="eager"/>
       <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
         <h2 className="text-white text-3xl font-bold">Featured Product</h2>
       </div>
     </div>
 );
 const ProductCard = ({ product }) => {
-    const { locale } = useLanguage();
-    const name = product.name[locale] || product.name.en;
+  const { locale } = useLanguage();
+  const name = resolveLocalized(product?.name, locale) || String(product?.name || product?.title || '');
     return (
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm h-full flex flex-col">
             <img src={product.image} alt={name} className="w-full h-40 object-cover" />
@@ -109,50 +112,167 @@ const ProductCard = ({ product }) => {
 // The original HeroSection component, now refactored as HomeHero
 const HomeHero = () => {
   const { locale, t } = useLanguage();
-  const { setting } = useSettings();
-  const siteName = locale === 'ar' ? (setting?.siteNameAr) : (setting?.siteNameEn);
-  const baseProductsPath = '/products';
+  const { setting } = useSettings() || {};
+  const { byLocation = {} } = useMarketing() || {};
+  // Prefer a featured product image for fallback when no ads provided
+  const { products } = useProducts() || { products: [] };
+  const firstFeatured = Array.isArray(products) ? (products.find(p => p.oldPrice || p.isFeatured || p.featured) || products[0]) : null;
+
+  const siteName = locale === 'ar' ? (setting?.siteNameAr || setting?.siteNameEn) : (setting?.siteNameEn || setting?.siteNameAr);
+  const baseProductsPath = locale === 'ar' ? '/products' : '/en/products';
+
+  // hero background: support image, an array of colors, or a gradient string from settings
+  const heroBgImage = setting?.heroBackgroundImage || setting?.heroImage || null;
+  const heroBgGradient = setting?.heroBackgroundGradient || setting?.heroBgGradient || 'linear-gradient(135deg,#16a34a66,#05966944)';
+
+  // compute final background style (priority: image > colors array -> gradient string > default)
+  let heroStyle = {};
+  if (heroBgImage) {
+    heroStyle = {
+      backgroundImage: `url('${heroBgImage}')`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
+  } else if (Array.isArray(setting?.heroBackgroundColors) && setting.heroBackgroundColors.length) {
+    const cols = setting.heroBackgroundColors.join(', ');
+    heroStyle = { background: `linear-gradient(90deg, ${cols})` };
+  } else if (typeof setting?.heroBackgroundGradient === 'string' && setting.heroBackgroundGradient.trim()) {
+    heroStyle = { background: setting.heroBackgroundGradient };
+  } else {
+    heroStyle = { background: heroBgGradient };
+  }
+
+  // Ads / banners to show in the hero slider come from marketing byLocation.homepage
+  const heroAds = (byLocation && Array.isArray(byLocation.homepage) && byLocation.homepage.length) ? byLocation.homepage : [];
+
+  // Also try to fetch ads from the /ads endpoint (managed by AdsAdmin). Prefer active ads from API.
+  const [adsSlides, setAdsSlides] = useState([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await api.listAds();
+        // Support several response shapes: [] or { ads: [] }
+        const items = Array.isArray(list) ? list : (Array.isArray(list?.ads) ? list.ads : []);
+        const active = Array.isArray(items) ? items.filter(a => (a.active == null ? true : !!a.active)) : [];
+        const mapped = active.map(a => ({ src: a.image || a.imageUrl || a.imageUrl, link: a.link || a.linkUrl || null, title: a.title || a.titleEn || a.titleAr || '' }));
+        if (mounted && mapped.length) setAdsSlides(mapped);
+      } catch (err) {
+        // ignore - fallback to marketing byLocation or settings
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const slidesData = (adsSlides && adsSlides.length) ? adsSlides : (heroAds.length ? heroAds.map(a => ({ src: a.image || a.imageUrl, link: a.linkUrl || a.link, title: a.titleEn || a.titleAr || a.title })) : [ { src: (setting && (setting.heroCenterImage || setting.heroImage)) || (firstFeatured && firstFeatured.image) || '/images/hero-bottle.png', link: null, title: siteName } ]);
+
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [direction, setDirection] = useState(1); // 1 = next, -1 = prev
+  const sliderRef = React.useRef(null);
+  const prevIndexRef = React.useRef(0);
+
+  // autoplay if multiple slides and not paused
+  React.useEffect(() => {
+    if (paused || slidesData.length <= 1) return;
+  const id = setInterval(() => { setDirection(1); setIndex(i => (i >= slidesData.length - 1 ? 0 : i + 1)); }, setting?.heroAutoplayInterval || 4500);
+    return () => clearInterval(id);
+  }, [slidesData.length, paused, setting]);
+
+  // touch handlers
+  const touchStart = React.useRef(0);
+  const touchDelta = React.useRef(0);
+  const SWIPE_THRESHOLD = 30;
+  const onTouchStart = (e) => { touchStart.current = e.touches ? e.touches[0].clientX : e.clientX; touchDelta.current = 0; };
+  const onTouchMove = (e) => { const x = e.touches ? e.touches[0].clientX : e.clientX; touchDelta.current = x - touchStart.current; };
+  const onTouchEnd = () => {
+    const d = touchDelta.current;
+    if (Math.abs(d) > SWIPE_THRESHOLD) {
+      if (d < 0) { setDirection(1); setIndex(i => Math.min(slidesData.length - 1, i + 1)); }
+      else { setDirection(-1); setIndex(i => Math.max(0, i - 1)); }
+    }
+    touchStart.current = 0; touchDelta.current = 0;
+  };
+
+  const prev = () => { setDirection(-1); setIndex(i => Math.max(0, i - 1)); };
+  const next = () => { setDirection(1); setIndex(i => Math.min(slidesData.length - 1, i + 1)); };
 
   return (
     <header
-      className="home-hero text-white dark:text-gray-200 rounded-b-[2rem] relative overflow-hidden pt-8 pb-12"
+      className="home-hero text-white relative overflow-hidden pt-6 pb-10 w-full"
       aria-labelledby="hero-heading"
-      style={{
-        background: 'var(--color-primary, #ef4444) !important',
-        backgroundImage: 'none !important',
-        border: '4px solid var(--color-primary, #ef4444)',
-        boxShadow: '0 0 32px 0 var(--color-primary, #ef4444)'
-      }}
+      dir={locale === 'ar' ? 'rtl' : 'ltr'}
+      style={heroStyle}
     >
-  {/* تم حذف طبقة overlay حتى تظهر الخلفية مباشرة من var(--color-primary) */}
-      <div className="container mx-auto relative px-4 sm:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-       
-        <motion.div className="home-hero__content order-2 lg:order-1 text-center lg:text-right" initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-          <div className="mb-4 flex justify-center lg:justify-start">
-            <span className="inline-flex items-center gap-2 text-sm font-bold bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-4 py-2 shadow-lg">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              {locale === 'ar' ? 'خصومات حتى 30٪' : 'Up to 30% off'}
-            </span>
+      {/* subtle overlay */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.25))' }} />
+
+      <div className="container-fixed mx-auto relative px-4 sm:px-8 z-20">
+        {/* store name centered at the top of hero */}
+        <div className="text-center mb-4">
+          <div className="text-sm text-white/90 font-semibold">{setting?.tagline || ''}</div>
+          <h1 id="hero-heading" className="text-white text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">{siteName || t('heroTitle')}</h1>
+        </div>
+
+        {/* slider area */}
+        <div ref={sliderRef} className="relative rounded-xl overflow-hidden shadow-xl" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          <div className="w-full h-[30vh] relative">
+            <AnimatePresence initial={false} custom={direction}>
+              {
+                slidesData && slidesData.length > 0 && (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: direction > 0 ? 40 : -40, scale: 0.995 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: direction > 0 ? -40 : 40, scale: 0.99 }}
+                    transition={{ duration: 0.48, ease: [0.2, 0.8, 0.2, 1] }}
+                    className="absolute inset-0 w-full h-full"
+                    custom={direction}
+                  >
+                    {slidesData[index]?.link ? (
+                      <a href={slidesData[index].link} target="_blank" rel="noopener noreferrer" className="block w-full h-full flex items-center justify-center">
+                        <div className="w-[90%] h-[90%] sm:w-[85%] sm:h-[85%] md:w-[75%] md:h-[80%] lg:w-2/3 lg:h-[80%] xl:w-3/5 xl:h-[85%] max-w-[1200px] rounded overflow-hidden">
+                          <img src={slidesData[index].src} alt={slidesData[index].title || `${siteName} slide ${index+1}`} className="w-full h-full object-contain" loading="lazy" />
+                        </div>
+                      </a>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-[90%] h-[90%] sm:w-[85%] sm:h-[85%] md:w-[75%] md:h-[80%] lg:w-2/3 lg:h-[80%] xl:w-3/5 xl:h-[85%] max-w-[1200px] rounded overflow-hidden">
+                          <img src={slidesData[index]?.src} alt={slidesData[index]?.title || `${siteName} slide ${index+1}`} className="w-full h-full object-contain" loading="lazy" />
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              }
+            </AnimatePresence>
+            {/* arrows were side-positioned; (removed from inside image - will render below hero) */}
+            {/* arrows were side-positioned; moved below the hero for better mobile layout */}
           </div>
-          <h1 id="hero-heading" className="text-4xl sm:text-5xl md:text-6xl font-black flex flex-col gap-4 mb-4">
-            <span className="inline-flex items-center gap-4 justify-center lg:justify-start flex-col sm:flex-row">
-              <img src={setting?.logoUrl || setting?.logo || '/logo.svg'} alt="logo" className="h-14 sm:h-16 w-auto object-contain drop-shadow-lg rounded-xl bg-white/10 p-2" />
-              <span className="truncate max-w-[70vw] bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">{siteName || t('heroTitle')}</span>
-            </span>
-            <span className="text-xl sm:text-2xl md:text-3xl font-semibold opacity-95 mt-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">{t('heroSubtitle')}</span>
-          </h1>
-          <p className="text-lg sm:text-xl opacity-95 mb-7 max-w-2xl mx-auto lg:mx-0 leading-relaxed">{t('heroLead')}</p>
-          <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4 mt-6">
-            <button className="px-7 py-4 bg-white/25 backdrop-blur-sm border border-white/40 text-white rounded-xl hover:bg-white/35 hover:scale-105 transition-all duration-300 font-bold shadow-lg flex items-center justify-center gap-2" onClick={() => (window.location.href = `${baseProductsPath}`)}>
-              {locale === 'ar' ? 'تسوق الآن' : 'Shop Now'}
+
+          {/* center content over the slider: buttons */}
+          <div className="absolute inset-0 flex items-end justify-center pb-8 z-40 pointer-events-none">
+            <div className="pointer-events-auto text-center">
+              <div className="flex items-center gap-4 justify-center">
+                <button onClick={() => (window.location.href = baseProductsPath)} className="px-6 py-3 bg-emerald-600 text-white rounded-full font-bold shadow-lg hover:scale-105 transition">{t('shopNow')}</button>
+                <Link to="/about" className="px-5 py-3 border border-white/30 rounded-full text-white/95">{t('about') || 'About'}</Link>
+              </div>
+            </div>
+          </div>
+          {/* dots removed per request */}
+        </div>
+
+        {/* Navigation buttons placed below the hero (aligned to the right) */}
+        {slidesData.length > 1 && (
+          <div className="mt-6 flex justify-end gap-3 z-40 pointer-events-auto">
+            <button onClick={() => { prev(); setPaused(true); setTimeout(()=>setPaused(false), 1200); }} aria-label="Previous slide" className="w-6 h-6 p-0.5 bg-[var(--color-primary)] text-white rounded-full shadow-md hover:scale-105 transition-transform flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/10">
+              <ChevronLeft size={20} strokeWidth={2} />
+            </button>
+            <button onClick={() => { next(); setPaused(true); setTimeout(()=>setPaused(false), 1200); }} aria-label="Next slide" className="w-6 h-6 p-0.5 bg-[var(--color-primary)] text-white rounded-full shadow-md hover:scale-105 transition-transform flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/10">
+              <ChevronRight size={20} strokeWidth={2} />
             </button>
           </div>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 40, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.9, delay: 0.3, ease: 'easeOut' }} className="w-full h-full flex justify-center order-1 lg:order-2">
-          <div className="shadow-2xl rounded-3xl overflow-hidden w-full max-w-[900px] border-4 border-white/20 backdrop-blur-sm">
-            <HeroBannerSlider />
-          </div>
-        </motion.div>
+        )}
       </div>
     </header>
   );
@@ -176,6 +296,32 @@ const Home1 = () => {
   const topCats = React.useMemo(() => {
     return mockCategories.sort((a,b)=> (b.productCount||0)-(a.productCount||0)).slice(0,6);
   }, [cats]);
+
+  // Horizontal categories carousel refs/state
+  const catsRef = React.useRef(null);
+  const [catsPaused, setCatsPaused] = React.useState(false);
+
+  const scrollNextCats = () => {
+    const el = catsRef.current;
+    if (!el) return;
+    const step = Math.max(160, Math.floor(el.clientWidth * 0.7));
+    el.scrollBy({ left: step, behavior: 'smooth' });
+  };
+  const scrollPrevCats = () => {
+    const el = catsRef.current;
+    if (!el) return;
+    const step = Math.max(160, Math.floor(el.clientWidth * 0.7));
+    el.scrollBy({ left: -step, behavior: 'smooth' });
+  };
+
+  // autoplay carousel
+  React.useEffect(() => {
+    if (catsPaused) return;
+    const id = setInterval(() => {
+      scrollNextCats();
+    }, 3000);
+    return () => clearInterval(id);
+  }, [catsPaused]);
 
   const baseProductsPath = '/products';
 
@@ -224,30 +370,7 @@ const Home1 = () => {
         </div>
       </section>
       
-      {topCats.length > 0 && (
-        <section className="section-padding bg-white dark:bg-gray-900" aria-labelledby="cats-head">
-          <div className="container-custom mx-auto">
-            <div className="home-section-head text-center">
-              <h2 id="cats-head" className="home-section-head__title">{locale === 'ar' ? "تصفح حسب التصنيف" : "Browse by Category"}</h2>
-            </div>
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" aria-live="polite">
-                {topCats.map((c, i) => {
-                    const name = locale==='ar' ? (c.name?.ar||c.slug) : (c.name?.en||c.slug);
-                    return (
-                        <motion.div key={c.id||c.slug} initial={{opacity:0,y:18}} whileInView={{opacity:1,y:0}} viewport={{once:true, margin:'-60px'}} transition={{duration:.45, delay:i*.04}}>
-                            <Link to={`${baseProductsPath}?category=${encodeURIComponent(c.slug)}`} className="block group">
-                                <div className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
-                                   <img src={c.image} alt={name} className="w-full h-full object-cover"/>
-                                </div>
-                                <h3 className="mt-3 text-center font-semibold text-gray-700 dark:text-gray-300">{name}</h3>
-                            </Link>
-                        </motion.div>
-                    );
-                })}
-            </div>
-          </div>
-        </section>
-      )}
+     
 
       <BrandsStrip />
 
@@ -264,7 +387,7 @@ const Home1 = () => {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Link to={baseProductsPath} className="inline-block text-white font-bold px-8 py-3 rounded-lg transition-colors" style={{background:'var(--color-primary)', border:'none'}}>
+            <Link to={baseProductsPath} className="inline-block text-white font-bold px-8 py-3 rounded-lg transition-colors bg-[var(--color-primary)] border-none">
               {t('viewAllProducts')}
             </Link>
           </div>
@@ -338,13 +461,13 @@ const GlobalStyles = () => (
     .dark .home-section-head__title {
         color: #f9fafb;
     }
-    .home-features__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      list-style: none;
-      padding: 0;
-    }
-  `}</style>
+      .home-features__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        list-style: none;
+        padding: 0;
+      }
+    `}</style>
 );
 

@@ -14,6 +14,7 @@ import BottomNav from './BottomNav';
 import SearchOverlay from '../search/SearchOverlay';
 import CartSidebar from '../cart/CartSidebar';
 import { useCart } from '../../context/CartContext';
+import PageLoader from '../common/PageLoader';
 
 const AppLayout = ({ children }) => {
   // Listen for cart:open event to open cart panel from anywhere
@@ -34,6 +35,7 @@ const AppLayout = ({ children }) => {
     <ToastProvider>
       <SidebarProvider>
         <div className="app-layout professional-layout theme-minimal">
+          <PageLoader />
           <SidebarNav />
           <div className="content-with-sidebar">
             <AnnouncementBar />

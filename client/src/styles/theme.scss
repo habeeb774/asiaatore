@@ -17,6 +17,17 @@
 
   --border: rgba(2,6,23,0.08);
   --text-muted: var(--color-muted);
+
+  /* Brand colors (derived from provided logo) */
+  --brand-green: #7cc243; /* background green */
+  --brand-green-rgb: 124,194,67;
+  --brand-orange: #fdaa42; /* arch */
+  --brand-orange-rgb: 253,170,66;
+  --brand-red: #d62828; /* main M */
+  --brand-red-rgb: 214,40,40;
+  --brand-blue: #1572e8; /* text blue */
+  --brand-blue-rgb: 21,114,232;
+  --brand-accent: #ffd166;
 }
 
 @media (prefers-color-scheme: dark) {

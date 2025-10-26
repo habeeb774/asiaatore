@@ -1,0 +1,27 @@
+/* Admin page layout improvements */
+.admin-two-col {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 16px;
+}
+
+/* Ensure sidebar and content stack on small screens */
+@media (max-width: 900px) {
+  .admin-two-col {
+    grid-template-columns: 1fr;
+  }
+  .admin-two-col > *:first-child {
+    /* sidebar moves after main content on small screens for better UX */
+    order: 2;
+  }
+}
+
+/* Improve stat boxes spacing */
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .admin-stat-grid { grid-template-columns: 1fr; }
+}

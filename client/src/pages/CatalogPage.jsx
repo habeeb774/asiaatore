@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui/skeleton.jsx';
 import { useLanguage } from '../context/LanguageContext';
+import { resolveLocalized } from '../utils/locale';
 import Seo from '../components/Seo';
 import { useSettings } from '../context/SettingsContext';
 import api from '../api/client';
@@ -107,12 +108,12 @@ const CatalogPage = () => {
                   >
                     <div style={{aspectRatio:'4/3', background:'#f3f4f6', display:'grid', placeItems:'center'}}>
                       {c.image
-                        ? <img src={c.image} alt={c.name?.[locale] || c.name?.ar || c.slug} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                        : <span style={{fontSize:'2rem',fontWeight:800,color:'var(--color-primary)'}}>{(c.name?.[locale] || c.name?.ar || c.slug).toString().slice(0,2)}</span>
+                        ? <img src={c.image} alt={resolveLocalized(c.name, locale) || c.name?.ar || c.slug} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                        : <span style={{fontSize:'2rem',fontWeight:800,color:'var(--color-primary)'}}>{(resolveLocalized(c.name, locale) || c.name?.ar || c.slug).toString().slice(0,2)}</span>
                       }
                     </div>
                     <div style={{padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontWeight:700}}>{locale==='ar'?(c.name?.ar||c.slug):(c.name?.en||c.slug)}</span>
+                      <span style={{fontWeight:700}}>{resolveLocalized(c.name, locale) || c.name?.ar || c.name?.en || c.slug}</span>
                       {typeof c.productCount==='number' && <span style={{fontSize:12,opacity:.7}}>{c.productCount}</span>}
                     </div>
                   </button>

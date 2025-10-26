@@ -298,7 +298,16 @@ async function main() {
       siteNameEn: 'My Store',
       colorPrimary: '#69be3c',
       colorSecondary: '#f6ad55',
-      colorAccent: '#0ea5e9'
+      colorAccent: '#0ea5e9',
+      // sensible defaults for hero and top-strip
+      logo: '/images/site-logo.png',
+      heroBackgroundImage: 'https://picsum.photos/seed/hero/1600/900',
+      heroBackgroundGradient: 'linear-gradient(90deg,#69be3c 0%, #0ea5e9 100%)',
+      heroCenterImage: 'https://picsum.photos/seed/hero-center/400/400',
+      heroAutoplayInterval: 6000,
+      topStripEnabled: true,
+      topStripAutoscroll: true,
+      topStripBackground: '#fde68a'
     }
   });
   console.log('Store settings ensured (singleton).');

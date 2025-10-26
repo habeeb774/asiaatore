@@ -12,7 +12,7 @@ export async function audit({ action, entity, entityId, userId, meta }) {
       }
     });
   } catch (e) {
-    // eslint-disable-next-line no-console
+     
     console.warn('Audit log failed:', e.message);
   }
 }

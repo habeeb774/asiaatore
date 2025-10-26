@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '../../lib/framerLazy';
 import { Menu as MenuIcon, X as CloseIcon, Home as HomeIcon } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useSidebar } from '../../context/SidebarContext';
+import SafeImage from '../common/SafeImage';
 
 // Minimal Tailwind-based AppShell combining Header + Sidebar
 export default function AppShell({ children }) {
@@ -78,7 +79,7 @@ export default function AppShell({ children }) {
             </button>
             <Link to="/" className="flex items-center gap-2 font-semibold" aria-label="Logo">
               {setting?.logoUrl || setting?.logo ? (
-                <img src={setting.logoUrl || setting.logo} alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'} className="h-8 w-auto max-w-[48px] object-contain" style={{marginInlineEnd:4}} />
+                <SafeImage src={setting.logoUrl || setting.logo} alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'} className="h-8 w-auto max-w-[48px] object-contain" style={{marginInlineEnd:4}} />
               ) : null}
               {locale === 'ar' ? 'متجري' : 'My Store'}
             </Link>

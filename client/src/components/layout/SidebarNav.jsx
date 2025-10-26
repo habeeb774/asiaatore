@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import '../../styles/sidebar-modern.scss';
 import { useSettings } from '../../context/SettingsContext';
 import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, BarChart3, Users, Settings, ReceiptText, Menu, X, ChevronsLeft, ChevronsRight, MessageCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '../../lib/framerLazy';
 
 /* Modern sidebar nav structure */
 const baseCoreNav = [
@@ -35,7 +35,11 @@ const SidebarNav = () => {
   const { user } = useAuth() || {};
   const { setting } = useSettings() || {};
   const isAdmin = user?.role === 'admin';
-  const { open: ctxOpen, toggle: ctxToggle, setOpen: ctxSetOpen } = (() => { try { return useSidebar(); } catch { return {}; } })();
+  // Safe sidebar context hook: call at top-level inside a small custom hook so rules-of-hooks are preserved
+  function useSafeSidebar() {
+    try { return useSidebar(); } catch { return {}; }
+  }
+  const { open: ctxOpen, toggle: ctxToggle, setOpen: ctxSetOpen } = useSafeSidebar();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(Boolean(ctxOpen));
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -202,15 +206,14 @@ const SidebarNav = () => {
   useEffect(() => {
     if (typeof ctxOpen === 'boolean') setMobileOpen(Boolean(ctxOpen));
   }, [ctxOpen]);
-  // Only listen to legacy events if context hook is not available
-  if (!ctxSetOpen && !ctxToggle) {
-    useEventListener('sidebar:toggle', (e) => {
-      const cmd = (e && e.detail != null && typeof e.detail === 'object' && 'cmd' in e.detail) ? e.detail.cmd : e?.detail;
-      if (cmd === 'toggle') setMobileOpen((v) => !v);
-      else if (cmd === 'open') setMobileOpen(true);
-      else if (cmd === 'close') setMobileOpen(false);
-    });
-  }
+  // Always register legacy event listener, but make the handler a no-op if modern context is available.
+  useEventListener('sidebar:toggle', (e) => {
+    if (ctxSetOpen || ctxToggle) return; // prefer context-driven behavior
+    const cmd = (e && e.detail != null && typeof e.detail === 'object' && 'cmd' in e.detail) ? e.detail.cmd : e?.detail;
+    if (cmd === 'toggle') setMobileOpen((v) => !v);
+    else if (cmd === 'open') setMobileOpen(true);
+    else if (cmd === 'close') setMobileOpen(false);
+  });
 
   // Broadcast sidebar state so Header button can reflect it (aria-expanded/icon)
   useEffect(() => {

@@ -101,7 +101,7 @@ router.get('/', async (req, res) => {
     // Note: If you want to include duration here as well, measure around productService.list
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
-      console.error('[PRODUCTS] List failed:', e); // eslint-disable-line no-console
+      console.error('[PRODUCTS] List failed:', e);  
     }
     // Degraded mode: if DB is unavailable, try serving a static sample as a minimal fallback
     if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true' || (e && e.message && /Database|DB|connect/i.test(e.message))) {
@@ -160,7 +160,7 @@ router.get('/offers', async (req, res) => {
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
-      console.error('[PRODUCTS] Offers failed:', e); // eslint-disable-line no-console
+      console.error('[PRODUCTS] Offers failed:', e);  
     }
     if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true' || (e && e.message && /Database|DB|connect/i.test(e.message))) {
       try {

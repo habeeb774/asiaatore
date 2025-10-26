@@ -8,6 +8,7 @@ import compression from 'compression';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 import cookieParser from 'cookie-parser';
+import { registerSse } from './utils/realtimeHub.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -20,7 +21,7 @@ if (!process.env.DATABASE_URL) {
     // Do not force a fallback DB in degraded mode; allow routes that don't need DB to work
     if (shouldQuickStart && !allowDegraded) {
         process.env.DATABASE_URL = fallback;
-        // eslint-disable-next-line no-console
+         
         console.warn('[DB] QUICK_START_DB applied. Using fallback DATABASE_URL for dev.');
     }
 }
@@ -33,7 +34,7 @@ let inventoryRoutes, reportsRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
 let adminUsersRoutes, adminStatsRoutes, adminAuditRoutes, adminSellersRoutes;
 let paypalRouter, bankRouter, stcRouter;
-let wishlistRoutes, cartRoutes, searchRoutes;
+let wishlistRoutes, cartRoutes, searchRoutes, supportRoutes;
 
 const app = express();
 let PORT = Number(process.env.PORT) || 4000;
@@ -86,11 +87,12 @@ app.use(helmet({
 
 // CORS
 // CORS: allow all in dev, restrict in prod
+
 let corsOptions;
 if (!isProd) {
     corsOptions = {
-        origin: 'http://localhost:5173', // Vite default
-        credentials: false // allow public static assets
+        origin: '*', // السماح للجميع في التطوير
+        credentials: false
     };
 } else {
     const parsedCorsOrigins = (process.env.CORS_ORIGIN || '')
@@ -104,8 +106,29 @@ if (!isProd) {
 }
 app.use(cors(corsOptions));
 
-// Common middleware
+// تأكد أن static للـ uploads بعد CORS مباشرة
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) { try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch { /* ignore */ } }
+// Ensure compression runs early so static responses (including uploads) are compressed when appropriate
 app.use(compression({ threshold: Number(process.env.COMPRESSION_THRESHOLD || 1024) }));
+
+// Add a small middleware to set Cache-Control headers for uploads responses explicitly
+app.use('/uploads', (req, res, next) => {
+    try {
+        if (isProd) {
+            // 30 days caching for uploaded assets in production
+            res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+        } else {
+            // short caching in dev to allow quick refreshes
+            res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+    } catch (e) { /* ignore */ }
+    next();
+});
+
+app.use('/uploads', express.static(uploadsDir, { maxAge: isProd ? '7d' : 0 }));
+
+// Common middleware
 app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -124,10 +147,8 @@ if (process.env.RATE_LIMIT_PAY_ENABLE === 'true') app.use('/api/pay', payLimiter
 // Placeholder middleware until auth is loaded
 app.use((req, _res, next) => next());
 
-// Serve uploads statically
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) { try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch { /* ignore */ } }
-app.use('/uploads', express.static(uploadsDir, { maxAge: isProd ? '7d' : 0 }));
+
+// Serve uploads statically (تم نقل التعريف بعد CORS)
 
 // Serve client public icons/images for PWA assets when backend is accessed directly
 try {
@@ -156,22 +177,30 @@ app.get('/_health', async (_req, res) => { await pingDb(); res.json({ ok: true, 
 app.get('/api/health', async (_req, res) => { await pingDb(); res.json({ status: DB_STATUS.connected ? 'ok' : 'degraded', db: DB_STATUS }); });
 
 // Simple SSE endpoint for app notifications (keep-alive)
-const clients = new Set();
 app.get('/api/events', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders?.();
-    const client = { res };
-    clients.add(client);
-    res.write(`event: ping\n`);
-    res.write(`data: ${JSON.stringify({ t: Date.now() })}\n\n`);
-    const keep = setInterval(() => {
-        if (res.writableEnded) return;
-        res.write(`event: ping\n`);
-        res.write(`data: ${JSON.stringify({ t: Date.now() })}\n\n`);
-    }, 25_000);
-    req.on('close', () => { clearInterval(keep); clients.delete(client); });
+    try {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        if (typeof res.flushHeaders === 'function') res.flushHeaders();
+        // register client in unified realtime hub which manages heartbeats
+        const sseClient = registerSse(res, req.user);
+        if (!sseClient) {
+            // If registration failed for any reason, return a clear error for easier debugging
+            if (!res.headersSent) return res.status(500).json({ error: 'SSE_REGISTER_FAILED', message: 'Failed to register event listener' });
+            try { res.end(); } catch (e) { /* ignore */ }
+            return;
+        }
+        // initial hello
+        try { res.write(`event: hello\n`); res.write(`data: ${JSON.stringify({ ok: true, t: Date.now() })}\n\n`); } catch(e) { /* ignore write errors */ }
+    } catch (err) {
+        // Log error and return a JSON error body for easier debugging
+        apiLogger.error({ err, path: req.path, method: req.method }, 'SSE /api/events failed');
+        if (!res.headersSent) {
+            return res.status(500).json({ error: 'SSE_SETUP_FAILED', message: 'Failed to open event stream' });
+        }
+        try { res.end(); } catch (e) { /* ignore */ }
+    }
 });
 
 // Dynamically import prisma and routes, then mount them
@@ -180,7 +209,7 @@ async function loadModulesAndMount() {
     prisma = prismaMod.default;
     const authMod = await import('./middleware/auth.js');
     attachUser = authMod.attachUser;
-    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, adminUsersR, adminStatsR, adminAuditR, adsR] = await Promise.all([
+    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR] = await Promise.all([
         import('./routes/auth.js'),
         import('./routes/products.js'),
         import('./routes/brands.js'),
@@ -201,6 +230,7 @@ async function loadModulesAndMount() {
         import('./routes/cart.js'),
         import('./routes/search.js'),
         import('./routes/addresses.js'),
+    import('./routes/support.js'),
         import('./routes/adminUsers.js'),
         import('./routes/adminStats.js'),
         import('./routes/adminAudit.js'),
@@ -211,6 +241,7 @@ async function loadModulesAndMount() {
     inventoryRoutes = invR.default; reportsRoutes = repR.default;
     paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default;
     settingsRoutes = settingsR.default; categoriesRoutes = categoriesR.default; reviewsRoutes = reviewsR.default; addressesRoutes = addressesR.default;
+    supportRoutes = supportR.default;
     adminUsersRoutes = adminUsersR.default; adminStatsRoutes = adminStatsR.default; adminAuditRoutes = adminAuditR.default;
     // sellers module also exports an admin router for KYC
     adminSellersRoutes = sellR.adminSellersRouter;
@@ -234,6 +265,7 @@ async function loadModulesAndMount() {
     app.use('/api/wishlist', wishlistRoutes);
     app.use('/api/cart', cartRoutes);
     app.use('/api/search', searchRoutes);
+    app.use('/api/support', supportRoutes);
     app.use('/api/pay/paypal', paypalRouter);
     app.use('/api/pay/bank', bankRouter);
     app.use('/api/pay/stc', stcRouter);

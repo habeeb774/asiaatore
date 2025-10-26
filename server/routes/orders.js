@@ -116,7 +116,7 @@ router.post('/', async (req, res) => {
     } catch (zerr) {
       // Zod v4 internal error guard: fall back to permissive parsing
       if (process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
+         
         console.warn('[ORDERS] Zod parsing failed; using permissive fallback:', zerr?.message);
         if (process.env.DEBUG_ERRORS === 'true') {
           try { console.debug('[ORDERS] Incoming body (raw):', JSON.stringify(req.body)); } catch (e) { console.debug('[ORDERS] Incoming body (raw) - cannot stringify', req.body); }

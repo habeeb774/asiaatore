@@ -15,14 +15,44 @@ export const SettingsProvider = ({ children }) => {
         const res = await api.settingsGet();
         if (!mounted) return;
         let s = res.setting || null;
+        // Normalize possible older values that stored uploads with an /api prefix
+        if (s && s.logo && typeof s.logo === 'string') {
+          // If someone stored '/api/uploads/..' convert to '/uploads/..' so the client uses the backend static path
+          if (s.logo.startsWith('/api/uploads')) s.logo = s.logo.replace(/^\/api/, '');
+        }
         // إذا كان logo مساراً نسبياً، أنشئ logoUrl مطلق
         if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
+          // Prefer explicit VITE_API_URL when set (developer override)
+          const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
           let base = window.location.origin;
-          // إذا كنا في dev واستخدمنا Vite، غيّر المنفذ إلى منفذ الباكند (4000)
-          if (base.includes(':517')) {
-            base = base.replace(/:\d+$/, ':4000');
+          if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
+            // Ensure no trailing slash
+            const normalized = viteApi.replace(/\/$/, '');
+            s.logoUrl = normalized + s.logo;
+          } else {
+            // Fast initial fallback: use current origin so UI shows something immediately
+            s.logoUrl = base + s.logo;
+            // If we're running under Vite dev server, attempt async non-blocking discovery of backend
+            if (base.includes(':517')) {
+              (async () => {
+                const ports = [4000, 4001, 3000, 3001];
+                for (let port of ports) {
+                  const candidate = base.replace(/:\d+$/, ':' + port) + s.logo;
+                  try {
+                    // Use fetch HEAD to check availability (async, won't block rendering)
+                    const resp = await fetch(candidate, { method: 'HEAD' });
+                    if (resp && resp.ok) {
+                      if (!mounted) return;
+                      // update setting object copy so React notices change
+                      setSetting(prev => prev ? { ...prev, logoUrl: candidate } : { ...s, logoUrl: candidate });
+                      return;
+                    }
+                  } catch (_) { /* ignore and try next port */ }
+                }
+                // nothing found — keep origin-based logoUrl
+              })();
+            }
           }
-          s.logoUrl = base + s.logo;
         }
         setSetting(s);
       } catch (e) {
@@ -92,12 +122,20 @@ export const SettingsProvider = ({ children }) => {
   const update = async (patch) => {
     const res = await api.settingsUpdate(patch);
     let s = res.setting;
+    if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/api/uploads')) {
+      s.logo = s.logo.replace(/^\/api/, '');
+    }
     if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
-      let base = window.location.origin;
-      if (base.includes(':517')) {
-        base = base.replace(/:\d+$/, ':4000');
+      const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
+      if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
+        s.logoUrl = viteApi.replace(/\/$/, '') + s.logo;
+      } else {
+        let base = window.location.origin;
+        if (base.includes(':517')) {
+          base = base.replace(/:\d+$/, ':4000');
+        }
+        s.logoUrl = base + s.logo;
       }
-      s.logoUrl = base + s.logo;
     }
     setSetting(s);
     return s;
@@ -106,12 +144,20 @@ export const SettingsProvider = ({ children }) => {
   const uploadLogo = async (file) => {
     const res = await api.settingsUploadLogo(file);
     let s = res.setting;
+    if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/api/uploads')) {
+      s.logo = s.logo.replace(/^\/api/, '');
+    }
     if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
-      let base = window.location.origin;
-      if (base.includes(':517')) {
-        base = base.replace(/:\d+$/, ':4000');
+      const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
+      if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
+        s.logoUrl = viteApi.replace(/\/$/, '') + s.logo;
+      } else {
+        let base = window.location.origin;
+        if (base.includes(':517')) {
+          base = base.replace(/:\d+$/, ':4000');
+        }
+        s.logoUrl = base + s.logo;
       }
-      s.logoUrl = base + s.logo;
     }
     if (s) setSetting(s);
     return s || null;

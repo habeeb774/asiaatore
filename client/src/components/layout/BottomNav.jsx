@@ -4,16 +4,34 @@ import { Home, Grid2x2, BadgePercent, ShoppingCart, User, Package } from 'lucide
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { motion } from 'framer-motion';
+import { motion } from '../../lib/framerLazy';
 
 export default function BottomNav() {
-  const { locale, t } = (() => { try { return useLanguage(); } catch { return { locale: 'ar', t: k => k }; } })();
-  const { user } = (() => { try { return useAuth(); } catch { return { user: null }; } })();
-  const location = (() => { try { return useLocation(); } catch { return { pathname: '/' }; } })();
-  const navigate = (() => { try { return useNavigate(); } catch { return () => {}; } })();
-  const { cartItems = [] } = (() => { try { return useCart(); } catch { return { cartItems: [] }; } })();
-  // Receive panel and setPanel from props
-  const { panel, setPanel } = typeof arguments[0] === 'object' ? arguments[0] : {};
+  // Safe wrappers: call hooks at top-level inside small custom hooks so ESLint rules-of-hooks are satisfied
+  function useSafeLanguage() {
+    try { return useLanguage(); } catch { return { locale: 'ar', t: k => k }; }
+  }
+  function useSafeAuth() {
+    try { return useAuth(); } catch { return { user: null }; }
+  }
+  function useSafeCart() {
+    try { return useCart(); } catch { return { cartItems: [] }; }
+  }
+  function useSafeLocation() {
+    try { return useLocation(); } catch { return { pathname: '/' }; }
+  }
+  function useSafeNavigate() {
+    try { return useNavigate(); } catch { return () => {}; }
+  }
+
+  // accept props normally
+  const { panel, setPanel } = arguments[0] && typeof arguments[0] === 'object' ? arguments[0] : {};
+
+  const { locale, t } = useSafeLanguage();
+  const { user } = useSafeAuth();
+  const location = useSafeLocation();
+  const navigate = useSafeNavigate();
+  const { cartItems = [] } = useSafeCart();
 
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -59,18 +77,19 @@ export default function BottomNav() {
     window.addEventListener('scroll', onScroll, { passive: true });
 
     let vv;
+    let onResize;
     try {
       vv = window.visualViewport;
       if (vv) {
         const baseH = vv.height;
-        const onResize = () => setHidden(baseH - vv.height > 120);
+        onResize = () => setHidden(baseH - vv.height > 120);
         vv.addEventListener('resize', onResize);
       }
     } catch {}
 
     return () => {
       window.removeEventListener('scroll', onScroll);
-      try { vv && vv.removeEventListener && vv.removeEventListener('resize', onResize); } catch {}
+      try { vv && vv.removeEventListener && onResize && vv.removeEventListener('resize', onResize); } catch {}
     };
   }, []);
 
@@ -85,17 +104,29 @@ export default function BottomNav() {
 
   const NavItem = ({ item }) => {
     const { key, label, icon: Icon, isActive, onClick } = item;
+    const getLabel = (val) => {
+      if (typeof val === 'string') return val;
+      if (!val) return '';
+      try {
+        // If label is an object like { ar: '...', en: '...' }, prefer current locale
+        if (typeof val === 'object') {
+          return (val[locale] || val.en || val.ar || Object.values(val)[0] || '') + '';
+        }
+        return String(val);
+      } catch (e) { return '' + val; }
+    };
+    const displayLabel = getLabel(label);
     return (
       <motion.button
         type="button"
         whileTap={{ scale: 0.92 }}
-        aria-label={typeof label === 'string' ? label : key}
+  aria-label={displayLabel || key}
         aria-current={isActive ? 'page' : undefined}
         onClick={onClick}
         className={`flex-1 h-14 flex flex-col items-center justify-center gap-1 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isActive ? 'text-amber-600' : 'text-slate-700 dark:text-slate-300'}`}
       >
         <Icon size={18} />
-        <span className="leading-none">{label}</span>
+        <span className="leading-none">{displayLabel}</span>
       </motion.button>
     );
   };
@@ -124,7 +155,7 @@ export default function BottomNav() {
               type="button"
               whileTap={{ scale: 0.92 }}
               whileHover={{ scale: 1.08 }}
-              aria-label={typeof cartItem.label === 'string' ? cartItem.label : 'cart'}
+              aria-label={(function(){ try { if (typeof cartItem.label === 'string') return cartItem.label; if (cartItem.label && typeof cartItem.label === 'object') return cartItem.label[locale] || cartItem.label.en || cartItem.label.ar || 'cart'; return String(cartItem.label || 'cart'); } catch { return 'cart'; } })()}
               onClick={() => {
                 cartItem.onClick();
                 setPulse(true);

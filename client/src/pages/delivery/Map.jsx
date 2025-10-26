@@ -1,23 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import ReactLeafletCompat from '../../utils/reactLeafletCompat.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Badge } from '../../components/ui/badge.jsx';
 import { Navigation, Upload, AlertCircle } from 'lucide-react';
+import DriverSupport from '../../components/DriverSupport.jsx';
 
-// إصلاح أيقونة Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
+// Leaflet setup is performed by reactLeafletCompat when the map components are requested.
 
 export default function DeliveryMapPage() {
   const { user } = useAuth() || {};
-  const [logs, setLogs] = useState([]);
   const [last, setLast] = useState(null);
   const [trail, setTrail] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -157,7 +150,7 @@ export default function DeliveryMapPage() {
             o.id === orderId ? { ...o, deliveryStatus: 'out_for_delivery' } : o
           ));
           break;
-        case 'complete':
+        case 'complete': {
           let body;
           if (proofFile) {
             const fd = new FormData();
@@ -173,6 +166,7 @@ export default function DeliveryMapPage() {
           stopSharing();
           setProofFile(null);
           break;
+        }
         case 'fail':
           if (!data?.reason) {
             setActionErr('اذكر سبب الفشل');
@@ -237,16 +231,13 @@ export default function DeliveryMapPage() {
     } catch {}
   }, [user, selectedId]);
 
+
+
   // التحقق من الصلاحيات
   if (!user) return <div className="container mx-auto p-4">يجب تسجيل الدخول</div>;
   if (!['delivery', 'admin'].includes(user.role)) {
     return <div className="container mx-auto p-4">غير مصرح بالوصول</div>;
   }
-
-  const selectedOrder = useMemo(() => 
-    orders.find(o => o.id === selectedId), 
-    [orders, selectedId]
-  );
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">
@@ -288,21 +279,55 @@ export default function DeliveryMapPage() {
         {/* Map */}
         <div className="lg:col-span-2">
           <div className="h-[70vh] rounded overflow-hidden border">
-            <MapContainer center={[24.7136, 46.6753]} zoom={12} scrollWheelZoom className="h-full w-full">
-              <InvalidateSize />
-              <FitToMarker />
-              <TileLayer
-                url={useFallbackTiles ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'}
-                attribution='&copy; OpenStreetMap contributors'
-                eventHandlers={{ tileerror: () => setUseFallbackTiles(true) }}
-              />
-              {last?.lat && last?.lng && (
-                <Marker position={[last.lat, last.lng]} />
-              )}
-              {trail.length > 1 && (
-                <Polyline positions={trail} color="#3b82f6" weight={4} opacity={0.7} />
-              )}
-            </MapContainer>
+            <ReactLeafletCompat>
+              {(LeafletComponents) => {
+                // Define small helpers here so they can access Leaflet's useMap from the loaded bundle
+                const FitToMarker = () => {
+                  const map = LeafletComponents.useMap();
+                  useEffect(() => {
+                    try {
+                      const lastLoc = JSON.parse(localStorage.getItem('lastLocation'));
+                      if (lastLoc?.lat && lastLoc?.lng) {
+                        map.setView([lastLoc.lat, lastLoc.lng], Math.max(map.getZoom(), 14), { animate: true });
+                      }
+                    } catch {}
+                  }, [map]);
+                  return null;
+                };
+
+                const InvalidateSize = () => {
+                  const map = LeafletComponents.useMap();
+                  useEffect(() => {
+                    const handleResize = () => map.invalidateSize();
+                    const timer = setTimeout(handleResize, 100);
+                    window.addEventListener('resize', handleResize);
+                    return () => {
+                      clearTimeout(timer);
+                      window.removeEventListener('resize', handleResize);
+                    };
+                  }, [map]);
+                  return null;
+                };
+
+                return (
+                  <LeafletComponents.MapContainer center={[24.7136, 46.6753]} zoom={12} scrollWheelZoom className="h-full w-full">
+                    <InvalidateSize />
+                    <FitToMarker />
+                    <LeafletComponents.TileLayer
+                      url={useFallbackTiles ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'}
+                      attribution='&copy; OpenStreetMap contributors'
+                      eventHandlers={{ tileerror: () => { setUseFallbackTiles(true); setTileErr('فشل تحميل بلاطات الخريطة — سيتم استخدام خريطة بديلة'); } }}
+                    />
+                    {last?.lat && last?.lng && (
+                      <LeafletComponents.Marker position={[last.lat, last.lng]} />
+                    )}
+                    {trail.length > 1 && (
+                      <LeafletComponents.Polyline positions={trail} color="#3b82f6" weight={4} opacity={0.7} />
+                    )}
+                  </LeafletComponents.MapContainer>
+                );
+              }}
+            </ReactLeafletCompat>
           </div>
           {tileErr && (
             <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">{tileErr}</div>
@@ -371,6 +396,9 @@ export default function DeliveryMapPage() {
             {actionErr && (
               <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{actionErr}</div>
             )}
+            <div className="pt-3 border-t">
+              <DriverSupport orderId={selectedId} user={user} />
+            </div>
             <div className="flex items-center gap-2 pt-2 border-t">
               {!sharing ? (
                 <Button onClick={startSharing} disabled={!selectedId}>مشاركة موقعي</Button>
@@ -388,28 +416,7 @@ export default function DeliveryMapPage() {
   );
 }
 
-// مكونات الخريطة المساعدة
-const FitToMarker = () => {
-  const map = useMap();
-  useEffect(() => {
-    const last = JSON.parse(localStorage.getItem('lastLocation'));
-    if (last?.lat && last?.lng) {
-      map.setView([last.lat, last.lng], Math.max(map.getZoom(), 14), { animate: true });
-    }
-  }, [map]);
-  return null;
-};
-
-const InvalidateSize = () => {
-  const map = useMap();
-  useEffect(() => {
-    const handleResize = () => map.invalidateSize();
-    const timer = setTimeout(handleResize, 100);
-    window.addEventListener('resize', handleResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [map]);
-  return null;
-};
+// Note: helper map components are defined inline inside the ReactLeafletCompat render
+// above so they use the LeafletComponents provided by the runtime wrapper. Keeping
+// global definitions that call `useMap()` directly caused lint/runtime errors when
+// Leaflet wasn't loaded during SSR or before the runtime wrapper runs.

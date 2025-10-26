@@ -3,6 +3,15 @@ import { Link } from 'react-router-dom';
 import { ShoppingCart, User, Sun, Moon, Monitor, Languages } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
+// safe wrapper hook: calls useTheme but catches when context is not available
+function useSafeTheme() {
+  try {
+    return useTheme();
+  } catch (e) {
+    return { theme: 'system', setTheme: () => {} };
+  }
+}
+
 export default function HeaderControls({ t, locale, setLocale, panel, setPanel, cartItems, cartTotal, updateQuantity, user }) {
   const cartBtnRef = useRef(null);
   const cartCount = Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + (i.quantity || 1), 0) : 0;
@@ -26,7 +35,7 @@ export default function HeaderControls({ t, locale, setLocale, panel, setPanel, 
   }, [cartCount]);
 
   // Theme toggle (cycles: system -> light -> dark)
-  const { theme, setTheme } = (() => { try { return useTheme(); } catch { return { theme: 'system', setTheme: () => {} }; } })();
+  const { theme, setTheme } = useSafeTheme();
   const nextTheme = useMemo(() => (theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'), [theme]);
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
   const themeLabel = theme === 'dark'

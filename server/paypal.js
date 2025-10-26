@@ -264,7 +264,7 @@ router.post('/create-order', async (req, res) => {
 
   return res.json({ ok: true, localOrderId: order.id, paypalOrderId: createData.id, approvalUrl: approval ? approval.href : null, currency: workingCurrency });
   } catch (err) {
-    console.error('create-order error', err); // eslint-disable-line no-console
+    console.error('create-order error', err);  
     return res.status(500).json({ ok: false, error: 'INTERNAL', message: err.message });
   }
 });
@@ -302,7 +302,7 @@ router.post('/capture', async (req, res) => {
 
     return res.json({ ok: true, status: newStatus, capture: captureData, orderId: order.id });
   } catch (err) {
-    console.error('capture error', err); // eslint-disable-line no-console
+    console.error('capture error', err);  
     return res.status(500).json({ ok: false, error: 'INTERNAL', message: err.message });
   }
 });
