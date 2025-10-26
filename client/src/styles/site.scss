@@ -1,23 +1,16 @@
-/* TODO(JS): PaymentStatusWatcher is undefined in App.jsx.
-   - Ensure you import it: import PaymentStatusWatcher from './components/PaymentStatusWatcher';
-   - Or define a stub: const PaymentStatusWatcher = PaymentStatusWatcher || (() => null);
-   - Or guard usage: if (typeof PaymentStatusWatcher !== 'undefined') { ... }
-   This cannot be fixed from SCSS.
+/* ====================================================== */
+/* Elegant & Responsive SCSS for E-Commerce Home Page   */
+/* ====================================================== */
 
-   NOTE(Network): tawk.to 400 error indicates invalid / missing widget credentials or blocked request.
-   Verify property ID / script snippet and that ad/script blockers are not interfering.
- */
-
-/* Using modern @use modules (imports must precede any rules) */
-/* Core modular SCSS foundation */
+/* Core imports */
 @use './core/variables' as *;
 @use './core/mixins' as *;
 @use './core/base';
 @use './core/components';
-/* Legacy sidebar module removed; modern sidebar styles live in sidebar-modern.scss and are imported by the component. */
 @use './_header';
 @use './product-card';
-/* Project-level tokens (override-friendly) */
+
+/* Theme overrides */
 $primary-red: map-get(map-get($theme-colors, light), primary);
 $primary-gold: #2eafff;
 $text-dark: map-get(map-get($theme-colors, light), text);
@@ -26,47 +19,147 @@ $bg: map-get(map-get($theme-colors, light), bg);
 $card-bg: map-get(map-get($theme-colors, light), card);
 $shadow: $shadow !default;
 
-/* Base */
+/* ------------------------ */
+/* Base & Typography        */
+/* ------------------------ */
 * { box-sizing: border-box; }
-html,body,#root { height: 100%; }
-html, body {
-  overflow-x: hidden;
-}
-body {
-  font-family: var(--font-sans, 'Cairo', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial);
-  margin: 0;
-  color: var(--text, $text-dark);
-  background: #f8fafc;
-  line-height: 1.45;
-  -webkit-font-smoothing: antialiased;
-}
-/* Responsive defaults */
+html, body, #root { height: 100%; margin:0; overflow-x:hidden; font-family: var(--font-main,'Cairo',system-ui); -webkit-font-smoothing: antialiased; }
 img { max-width: 100%; height: auto; }
 
 :root {
-  --header-height: 72px; /* restored default header height */
+  --header-height: 72px;
+  --font-main: 'Cairo';
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 
-  /* Direction / locale (use index.html lang/direction) */
+  /* Hero */
+  --h1-size: clamp(2.125rem, 4.8vw, 3.125rem);
+  --h2-size: clamp(1.75rem, 3.8vw, 2.25rem);
+  --h3-size: clamp(1.375rem, 2.8vw, 1.5rem);
 
-  /* Tailwind compatibility variables (defaults) */
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x: initial;
-  --tw-pan-y: initial;
-  --tw-pinch-zoom: initial;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position: initial;
-  --tw-gradient-via-position: initial;
-  --tw-gradient-to-position: initial;
-  --tw-ordinal: initial;
-  --tw-slashed-zero: initial;
+  /* Colors */
+  --color-primary: $primary-red;
+  --color-secondary: $primary-gold;
+  --main-text-color: $text-dark;
+  --card-bg: $card-bg;
+  --bg-color: #f8fafc;
+  --shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+/* Dark mode */
+[data-theme='dark'], .theme-dark {
+  --bg-color: #0b1220;
+  --main-text-color: #cbd5e1;
+  --card-bg: #0b1220;
+  --shadow: 0 8px 30px rgba(0,0,0,0.5);
+  --color-primary: #f6c85f;
+}
+
+/* Headings */
+h1 { font-size: var(--h1-size); line-height:1.2; margin:0 0 .75rem; font-weight:800; }
+h2 { font-size: var(--h2-size); line-height:1.2; margin:0 0 .75rem; font-weight:700; }
+
+/* ------------------------ */
+/* Layout Utilities         */
+/* ------------------------ */
+.container-custom { width:100%; max-width:100%; margin:0 auto; padding-inline:clamp(12px,2vw,40px); }
+.container-fixed { width:100%; max-width:1280px; margin:0 auto; padding-inline:clamp(16px,2vw,48px); }
+.full-bleed { width:100vw; position:relative; left:50%; margin-inline-start:-50vw; margin-inline-end:-50vw; }
+@supports(width:100dvw) { .full-bleed { width:100dvw; margin-inline-start:-50dvw; margin-inline-end:-50dvw; } }
+.min-w-0 { min-width:0; }
+.px-4 { padding-inline:1rem; }
+.py-8 { padding-block:2rem; }
+.py-12 { padding-block:3rem; }
+.mb-6 { margin-bottom:1.5rem; }
+.text-center { text-align:center; }
+
+/* ------------------------ */
+/* Buttons                  */
+/* ------------------------ */
+.btn-primary {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  font-weight:600;
+  border-radius: var(--radius-md);
+  box-shadow:0 6px 18px rgba(43,108,176,0.12);
+  cursor:pointer;
+  padding:10px 16px;
+  transition: all .25s ease;
+}
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 10px 24px rgba(43,108,176,0.18); }
+.btn-secondary {
+  background:#fff;
+  color: var(--main-text-color);
+  padding:10px 14px;
+  border-radius: var(--radius-md);
+  border:1px solid rgba(15,23,42,0.06);
+  cursor:pointer;
+}
+
+/* ------------------------ */
+/* Hero Section             */
+/* ------------------------ */
+.home-hero {
+  position:relative;
+  padding-block: clamp(32px,6vw,64px);
+}
+.home-hero__inner { display:flex; flex-direction:column; gap:1.5rem; }
+@media(min-width:900px) { .home-hero__inner { flex-direction:row; align-items:center; justify-content:space-between; } }
+.home-hero__title { font-size: clamp(2rem,4.4vw,3.4rem); font-weight:700; line-height:1.1; display:flex; flex-direction:column; gap:.6rem; }
+.home-hero__subtitle { font-size:clamp(1.1rem,2vw,1.6rem); font-weight:600; }
+.home-hero__lead { font-size:1rem; max-width:46ch; opacity:.9; margin-bottom:1.25rem; }
+.home-hero__actions { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:flex-start; }
+.home-hero__visual { position:relative; max-width:460px; width:100%; }
+.home-hero__frame { aspect-ratio:16/10; max-height:clamp(180px,42vh,260px); display:grid; place-items:center; }
+.home-hero__image { width:100%; height:100%; object-fit:contain; border-radius:var(--radius-xl); box-shadow:0 1.25rem 3rem -0.75rem rgba(0,0,0,.3); }
+
+/* Mobile tweaks */
+@media(max-width:640px) {
+  .home-hero__inner { gap:1rem; text-align:center; }
+  .home-hero__visual { max-width:min(88%,360px); margin-inline:auto; order:0; }
+  .home-hero__content { order:1; }
+  .home-hero__actions { justify-content:center; gap:.5rem; }
+}
+
+/* ------------------------ */
+/* Features Grid            */
+/* ------------------------ */
+.home-features__grid {
+  display:grid;
+  gap:2rem;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+}
+.home-feature {
+  text-align:center;
+  padding:1.75rem 1.25rem;
+  border-radius:var(--radius-md);
+  background:#fff;
+  box-shadow:0 4px 16px -6px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.06);
+  transition: transform .4s cubic-bezier(.16,.8,.36,1), box-shadow .4s cubic-bezier(.16,.8,.36,1);
+}
+.home-feature:hover { transform:translateY(-6px); box-shadow:0 12px 32px -4px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.1); }
+.home-feature__icon { display:inline-flex; padding:.875rem; border-radius:50%; background:linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color:#fff; margin-bottom:1rem; }
+.home-feature__title { font-size:1.125rem; font-weight:700; margin:0 0 .5rem; }
+.home-feature__text { font-size:.95rem; color:#555; line-height:1.6; }
+
+/* ------------------------ */
+/* Products Grid            */
+/* ------------------------ */
+.products-grid, .featured-grid {
+  display:grid;
+  gap:clamp(0.75rem,2.5vw,1.5rem);
+  grid-template-columns:repeat(auto-fit,minmax(clamp(180px,45vw,240px),1fr));
+}
+.home-products .product-card {
+  background:#fff;
+  border-radius:var(--radius-md);
+  box-shadow:0 4px 18px -4px rgba(0,0,0,.08),0 2px 6px -2px rgba(0,0,0,.06);
+  transition: transform .55s cubic-bezier(.16,.8,.36,1), box-shadow .55s cubic-bezier(.16,.8,.36,1);
+}
+.home-products .product-card:hover {
+  transform:translateY(-8px);
+  box-shadow:0 14px 38px -6px rgba(0,0,0,.18),0 4px 10px -2px rgba(0,0,0,.12);  --tw-slashed-zero: initial;
   --tw-numeric-figure: initial;
   --tw-numeric-spacing: initial;
   --tw-numeric-fraction: initial;
