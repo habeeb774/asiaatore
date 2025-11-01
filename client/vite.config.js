@@ -153,8 +153,11 @@ export default defineConfig(async ({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('react-dom')) return 'vendor.react-dom'
-              if (id.includes('react') && !id.includes('react-dom')) return 'vendor.react'
+              // Keep React and ReactDOM together in the same vendor chunk to
+              // avoid circular initialization issues that can occur when
+              // they are split into separate chunks (observed as runtime
+              // "Cannot set properties of undefined (setting 'Activity')").
+              if (id.includes('react')) return 'vendor.react'
               if (id.includes('react-router') || id.includes('history') || id.includes('@remix-run')) return 'vendor.router'
               if (id.includes('@tanstack') || id.includes('react-query')) return 'vendor.tanstack'
               if (id.includes('framer-motion')) return 'vendor.motion'
@@ -218,6 +221,19 @@ export default defineConfig(async ({ mode }) => {
               console.warn('[vite-proxy] /api error:', err?.message || err);
             });
           },
+        }
+        ,
+        '/uploads': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false
+        }
+        ,
+        '/api/uploads': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '')
         }
       }
     }
