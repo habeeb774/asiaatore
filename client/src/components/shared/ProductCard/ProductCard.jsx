@@ -147,7 +147,10 @@ const ProductCard = ({
                 src={product.image}
                 alt={resolveLocalized(product?.name, locale) || ''}
                 loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                decoding="async"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                fetchpriority="low"
+                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100"
               />
             ) : (
               <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">

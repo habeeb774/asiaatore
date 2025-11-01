@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, Suspense, lazy, startTransition } from 'react';
+import React, { useMemo, useState, useEffect, Suspense, lazy, startTransition, useDeferredValue } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from '../lib/framerLazy';
 import ProductCard, { ProductCardSkeleton } from '../components/shared/ProductCard';
@@ -25,6 +25,7 @@ const Home = () => {
   const { t, locale } = useLanguage();
   const { setting } = useSettings() || {};
   const { products, loading } = useProducts() || { products: [], loading: false };
+  const deferredProducts = useDeferredValue(products || []);
   const { features: marketingFeatures, byLocation } = useMarketing() || { byLocation:{ topStrip:[], homepage:[], footer:[]}, features:[] };
   const [cats, setCats] = useState([]);
   const [featuredIndex, setFeaturedIndex] = useState(0);
@@ -76,9 +77,9 @@ const Home = () => {
   const baseProductsPath = locale === 'en' ? '/en/products' : '/products';
 
   // Featured products: derive from loaded products instead of treating a page component as data
-  const featuredProducts = useMemo(()=> (products || []).slice(0,6), [products]);
-  const latestProducts = useMemo(()=> (products || []).slice(-6).reverse(), [products]);
-  const DiscountedSlider = useMemo(()=> (products || []).filter(p => p.oldPrice && p.oldPrice > p.price).slice(0,6), [products]);
+  const featuredProducts = useMemo(()=> (deferredProducts || []).slice(0,6), [deferredProducts]);
+  const latestProducts = useMemo(()=> (deferredProducts || []).slice(-6).reverse(), [deferredProducts]);
+  const DiscountedSlider = useMemo(()=> (deferredProducts || []).filter(p => p.oldPrice && p.oldPrice > p.price).slice(0,6), [deferredProducts]);
 
   const siteName = locale==='ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store');
   const pageTitle = locale==='ar' ? `${t('home')} | ${siteName}` : `${siteName} | ${t('home')}`;
@@ -138,8 +139,9 @@ const Home = () => {
             <section className="relative py-12 md:py-16 bg-gradient-to-t from-white to-emerald-50">
                   <div className="container mx-auto px-2 sm:px-4 lg:px-8">
                   <ProductSlider
-                    products={products}
+                    products={deferredProducts}
                     title={locale === 'ar' ? 'المنتجات المميزة' : 'Featured Products'}
+                    limit={12}
                   />
                 </div>
             </section>
