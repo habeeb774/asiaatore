@@ -1,284 +1,121 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { resolveLocalized } from '../../utils/locale';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from '../../lib/framerLazy';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-// --- Mock Implementations & Data (for a runnable single-file demo) ---
-
-// 1. Mock External Libraries
-const Link = ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>; // Mock for react-router-dom
-const Truck = (props) => <svg {...props} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>;
-const Shield = (props) => <svg {...props} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
-const Clock = (props) => <svg {...props} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
-
-
-// 2. Mock Data
-const translations = {
-  en: {
-    home: 'Home',
-    heroTitle: 'Your Awesome Store',
-    heroSubtitle: 'Discover Quality, Style, and Innovation',
-    heroLead: 'Explore our curated collection of high-quality products. Shop now and enjoy exclusive deals and fast shipping worldwide.',
-    featureFreeShippingTitle: 'Free Shipping',
-    featureFreeShippingDesc: 'On all orders over $50',
-    featureQualityTitle: 'Quality Guarantee',
-    featureQualityDesc: 'Products inspected for quality',
-    featureFastDeliveryTitle: 'Fast Delivery',
-    featureFastDeliveryDesc: 'Get your order in 2-3 days',
-    featuredProducts: 'Featured Products',
-    featuredSubtitle: 'Handpicked deals just for you',
-    latestProducts: 'Latest Arrivals',
-    viewAllProducts: 'View All Products',
-    shopNow: 'Shop Now',
-    saleBadge: 'Up to 30% off',
-  },
-  ar: {
-    home: 'الرئيسية',
-    heroTitle: 'متجرك الرائع',
-    heroSubtitle: 'اكتشف الجودة والأناقة والابتكار',
-    heroLead: 'استكشف مجموعتنا المختارة من المنتجات عالية الجودة. تسوق الآن واستمتع بصفقات حصرية وشحن سريع لجميع أنحاء العالم.',
-    featureFreeShippingTitle: 'شحن مجاني',
-    featureFreeShippingDesc: 'على جميع الطلبات فوق 50 دولار',
-    featureQualityTitle: 'ضمان الجودة',
-    featureQualityDesc: 'منتجات مفحوصة لضمان الجودة',
-    featureFastDeliveryTitle: 'توصيل سريع',
-    featureFastDeliveryDesc: 'استلم طلبك خلال 2-3 أيام',
-    featuredProducts: 'المنتجات المميزة',
-    featuredSubtitle: 'عروض مختارة خصيصًا لك',
-    latestProducts: 'أحدث المنتجات',
-    viewAllProducts: 'عرض كل المنتجات',
-    shopNow: 'تسوق الآن',
-    saleBadge: 'خصومات حتى 30٪',
-  },
-};
-const mockProducts = [
-    { id: 1, name: { en: 'Quantum Laptop', ar: 'لابتوب كوانتوم' }, price: 999, oldPrice: 1299, stock: 50, image: 'https://placehold.co/400x400/ef4444/white?text=Laptop' },
-    { id: 2, name: { en: 'Stellar Smartwatch', ar: 'ساعة ذكية ستيلر' }, price: 199, stock: 150, image: 'https://placehold.co/400x400/3b82f6/white?text=Watch' },
-    { id: 3, name: { en: 'Acoustic Pods', ar: 'سماعات أذن' }, price: 89, stock: 200, image: 'https://placehold.co/400x400/22c55e/white?text=Pods' },
-    { id: 4, name: { en: 'Cyber Gaming Mouse', ar: 'فأرة ألعاب سايبر' }, price: 49, oldPrice: 69, stock: 80, image: 'https://placehold.co/400x400/8b5cf6/white?text=Mouse' },
-    { id: 5, name: { en: 'HD Webcam', ar: 'كاميرا ويب' }, price: 59, stock: 120, image: 'https://placehold.co/400x400/f97316/white?text=Webcam' },
-    { id: 6, name: { en: 'Mechanical Keyboard', ar: 'لوحة مفاتيح ميكانيكية' }, price: 129, stock: 90, image: 'https://placehold.co/400x400/14b8a6/white?text=Keyboard' },
-];
-const mockCategories = [
-    { id: 1, slug: 'laptops', name: { ar: 'لابتوبات', en: 'Laptops' }, productCount: 45, image: 'https://placehold.co/200x200/ef4444/white?text=Laptops' },
-    { id: 2, slug: 'mobiles', name: { ar: 'جوالات', en: 'Mobiles' }, productCount: 88, image: 'https://placehold.co/200x200/3b82f6/white?text=Mobiles' },
-    { id: 3, slug: 'audio', name: { ar: 'صوتيات', en: 'Audio' }, productCount: 102, image: 'https://placehold.co/200x200/22c55e/white?text=Audio' },
-    { id: 4, slug: 'accessories', name: { ar: 'إكسسوارات', en: 'Accessories' }, productCount: 150, image: 'https://placehold.co/200x200/8b5cf6/white?text=Accessories' },
-    { id: 5, slug: 'gaming', name: { ar: 'ألعاب', en: 'Gaming' }, productCount: 76, image: 'https://placehold.co/200x200/f97316/white?text=Gaming' },
-    { id: 6, slug: 'cameras', name: { ar: 'كاميرات', en: 'Cameras' }, productCount: 32, image: 'https://placehold.co/200x200/14b8a6/white?text=Cameras' },
-];
-
-
-// 3. Mock Contexts & Hooks
+import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
-const useProducts = () => ({ products: mockProducts, loading: false });
-const useMarketing = () => ({ byLocation: { topStrip: [], homepage: [], footer: [] }, features: [] });
-// client API wrapper (real project provides ../../api/client)
-import api from '../../api/client';
 
-
-// 4. Mock Components
-const Seo = ({ title }) => { React.useEffect(() => { document.title = title; }, [title]); return null; };
-const CategoryChips = () => <div className="p-2 text-center text-sm text-gray-500">[Category Chips Placeholder]</div>;
-const BrandsStrip = () => <div className="py-8 text-center bg-gray-200 dark:bg-gray-700 text-sm text-gray-500">[Brands Strip Placeholder]</div>;
-const HeroBannerSlider = () => (
-    <div className="relative w-full aspect-[4/3] bg-gray-700">
-      <img src="https://placehold.co/900x675/ef4444/white?text=Hero+Banner" alt="Hero banner placeholder" className="w-full h-full object-cover" width={900} height={675} decoding="async" fetchPriority="high" loading="eager"/>
-      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-        <h2 className="text-white text-3xl font-bold">Featured Product</h2>
-      </div>
+// Lightweight, memoized image with lazy loading
+const OptimizedImage = React.memo(({ src, alt, className }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <div className={`${className} bg-gray-200 transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+      <img src={src} alt={alt} loading="lazy" decoding="async" onLoad={() => setIsLoaded(true)} className="w-full h-full object-cover" />
     </div>
-);
-const ProductCard = ({ product }) => {
-  const { locale } = useLanguage();
-  const name = resolveLocalized(product?.name, locale) || String(product?.name || product?.title || '');
-    return (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm h-full flex flex-col">
-            <img src={product.image} alt={name} className="w-full h-40 object-cover" />
-            <div className="p-3 flex-grow flex flex-col">
-                <h3 className="text-sm font-semibold truncate flex-grow" title={name}>{name}</h3>
-                <div className="flex items-center gap-2 mt-2">
-                    <p className="text-md font-bold text-red-600">${product.price}</p>
-                    {product.oldPrice && <p className="text-xs text-gray-500 line-through">${product.oldPrice}</p>}
-                </div>
-            </div>
-        </div>
-    );
-};
+  );
+});
 
-// --- Refactored Components ---
+// Slide body content (texts and CTAs)
+const SlideContent = React.memo(({ slide, locale, t }) => (
+  <motion.div key={slide.id} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }} transition={{ duration: 0.6, delay: 0.2 }} className="space-y-6">
+    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.5, delay: 0.4 }} className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold border border-white/30">
+      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+      {t('saleBadge')}
+    </motion.div>
+    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
+      <span className="block bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">{slide.title}</span>
+    </h1>
+    <p className="text-xl sm:text-2xl md:text-3xl text-white/90 font-light max-w-2xl mx-auto leading-relaxed">{slide.subtitle}</p>
+    <motion.div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}>
+      <a href="/products" className="inline-flex items-center justify-center bg-transparent text-white border-2 border-white/50 px-8 py-4 rounded-lg font-semibold text-lg backdrop-blur-sm hover:bg-white/10 hover:border-white transition-all duration-300 min-w-[200px]">{locale==='ar'?'تسوق الآن':'Shop Now'}</a>
+      <a href="/about" className="inline-flex items-center justify-center bg-transparent text-white border-2 border-white/50 px-8 py-4 rounded-lg font-semibold text-lg backdrop-blur-sm hover:bg-white/10 hover:border-white transition-all duration-300 min-w-[200px]">{locale==='ar'?'تعرف علينا':'About Us'}</a>
+    </motion.div>
+  </motion.div>
+));
 
-// The original HeroSection component, now refactored as HomeHero
+// Background slide (only active is displayed)
+const Slide = React.memo(({ slide, isActive }) => (
+  <motion.div key={slide.id} initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: isActive ? 1 : 0, scale: isActive ? 1 : 1.05 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.7, ease: 'easeInOut' }} className="absolute inset-0 w-full h-full" style={{ display: isActive ? 'block' : 'none' }}>
+    <OptimizedImage src={slide.src} alt={slide.title} className="w-full h-full" />
+    <div className="absolute inset-0" style={{ background: slide.overlay }} />
+    <div className="absolute inset-0 bg-black/20" />
+  </motion.div>
+));
+
 const HomeHero = () => {
   const { locale, t } = useLanguage();
-  const { setting } = useSettings() || {};
-  const { byLocation = {} } = useMarketing() || {};
-  // Prefer a featured product image for fallback when no ads provided
-  const { products } = useProducts() || { products: [] };
-  const firstFeatured = Array.isArray(products) ? (products.find(p => p.oldPrice || p.isFeatured || p.featured) || products[0]) : null;
+  const { setting } = useSettings();
 
-  const siteName = locale === 'ar' ? (setting?.siteNameAr || setting?.siteNameEn) : (setting?.siteNameEn || setting?.siteNameAr);
-  const baseProductsPath = locale === 'ar' ? '/products' : '/en/products';
+  const baseProductsPath = '/products';
+  const slidesData = useMemo(() => [
+    { id: 1, src: 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'عروض خاصة':'Special Offers', subtitle: locale==='ar'?'خصومات تصل إلى 50%':'Up to 50% Discount', link: baseProductsPath, overlay: 'linear-gradient(135deg, rgba(102,126,234,0.8) 0%, rgba(118,75,162,0.8) 100%)' },
+    { id: 2, src: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'أحدث المنتجات':'New Arrivals', subtitle: locale==='ar'?'اكتشف مجموعتنا الجديدة':'Discover Our New Collection', link: baseProductsPath+'?sort=newest', overlay: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(249,115,22,0.8) 100%)' },
+    { id: 3, src: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'شحن مجاني':'Free Shipping', subtitle: locale==='ar'?'لطلبات فوق 200 ريال':'For Orders Over 200 SAR', link: '/shipping-info', overlay: 'linear-gradient(135deg, rgba(16,185,129,0.8) 0%, rgba(5,150,105,0.8) 100%)' }
+  ], [locale]);
 
-  // hero background: support image, an array of colors, or a gradient string from settings
-  const heroBgImage = setting?.heroBackgroundImage || setting?.heroImage || null;
-  const heroBgGradient = setting?.heroBackgroundGradient || setting?.heroBgGradient || 'linear-gradient(135deg,#16a34a66,#05966944)';
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
 
-  // compute final background style (priority: image > colors array -> gradient string > default)
-  let heroStyle = {};
-  if (heroBgImage) {
-    heroStyle = {
-      backgroundImage: `url('${heroBgImage}')`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    };
-  } else if (Array.isArray(setting?.heroBackgroundColors) && setting.heroBackgroundColors.length) {
-    const cols = setting.heroBackgroundColors.join(', ');
-    heroStyle = { background: `linear-gradient(90deg, ${cols})` };
-  } else if (typeof setting?.heroBackgroundGradient === 'string' && setting.heroBackgroundGradient.trim()) {
-    heroStyle = { background: setting.heroBackgroundGradient };
-  } else {
-    heroStyle = { background: heroBgGradient };
-  }
+  const autoPlayRef = useRef(null);
+  const touchStartRef = useRef(0);
+  useEffect(() => () => { if (autoPlayRef.current) clearInterval(autoPlayRef.current); }, []);
 
-  // Ads / banners to show in the hero slider come from marketing byLocation.homepage
-  const heroAds = (byLocation && Array.isArray(byLocation.homepage) && byLocation.homepage.length) ? byLocation.homepage : [];
+  const goToSlide = useCallback((i) => setCurrentIndex(i), []);
+  const goToNext = useCallback(() => setCurrentIndex((p) => (p === slidesData.length - 1 ? 0 : p + 1)), [slidesData.length]);
+  const goToPrev = useCallback(() => setCurrentIndex((p) => (p === 0 ? slidesData.length - 1 : p - 1)), [slidesData.length]);
 
-  // Also try to fetch ads from the /ads endpoint (managed by AdsAdmin). Prefer active ads from API.
-  const [adsSlides, setAdsSlides] = useState([]);
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await api.listAds();
-        // Support several response shapes: [] or { ads: [] }
-        const items = Array.isArray(list) ? list : (Array.isArray(list?.ads) ? list.ads : []);
-        const active = Array.isArray(items) ? items.filter(a => (a.active == null ? true : !!a.active)) : [];
-        const mapped = active.map(a => ({ src: a.image || a.imageUrl || a.imageUrl, link: a.link || a.linkUrl || null, title: a.title || a.titleEn || a.titleAr || '' }));
-        if (mounted && mapped.length) setAdsSlides(mapped);
-      } catch (err) {
-        // ignore - fallback to marketing byLocation or settings
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  const slidesData = (adsSlides && adsSlides.length) ? adsSlides : (heroAds.length ? heroAds.map(a => ({ src: a.image || a.imageUrl, link: a.linkUrl || a.link, title: a.titleEn || a.titleAr || a.title })) : [ { src: (setting && (setting.heroCenterImage || setting.heroImage)) || (firstFeatured && firstFeatured.image) || '/images/hero-bottle.png', link: null, title: siteName } ]);
-
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [direction, setDirection] = useState(1); // 1 = next, -1 = prev
-  const sliderRef = React.useRef(null);
-  const prevIndexRef = React.useRef(0);
-
-  // autoplay if multiple slides and not paused
-  React.useEffect(() => {
-    if (paused || slidesData.length <= 1) return;
-  const id = setInterval(() => { setDirection(1); setIndex(i => (i >= slidesData.length - 1 ? 0 : i + 1)); }, setting?.heroAutoplayInterval || 4500);
-    return () => clearInterval(id);
-  }, [slidesData.length, paused, setting]);
-
-  // touch handlers
-  const touchStart = React.useRef(0);
-  const touchDelta = React.useRef(0);
-  const SWIPE_THRESHOLD = 30;
-  const onTouchStart = (e) => { touchStart.current = e.touches ? e.touches[0].clientX : e.clientX; touchDelta.current = 0; };
-  const onTouchMove = (e) => { const x = e.touches ? e.touches[0].clientX : e.clientX; touchDelta.current = x - touchStart.current; };
-  const onTouchEnd = () => {
-    const d = touchDelta.current;
-    if (Math.abs(d) > SWIPE_THRESHOLD) {
-      if (d < 0) { setDirection(1); setIndex(i => Math.min(slidesData.length - 1, i + 1)); }
-      else { setDirection(-1); setIndex(i => Math.max(0, i - 1)); }
+    if (!isAutoPlaying || isHovering) {
+      if (autoPlayRef.current) { clearInterval(autoPlayRef.current); autoPlayRef.current = null; }
+      return;
     }
-    touchStart.current = 0; touchDelta.current = 0;
-  };
+    autoPlayRef.current = setInterval(goToNext, setting?.heroAutoplayInterval || 5000);
+    return () => { if (autoPlayRef.current) { clearInterval(autoPlayRef.current); autoPlayRef.current = null; } };
+  }, [isAutoPlaying, isHovering, goToNext, setting]);
 
-  const prev = () => { setDirection(-1); setIndex(i => Math.max(0, i - 1)); };
-  const next = () => { setDirection(1); setIndex(i => Math.min(slidesData.length - 1, i + 1)); };
+  const handleTouchStart = useCallback((e) => { touchStartRef.current = e.targetTouches[0].clientX; }, []);
+  const handleTouchEnd = useCallback((e) => { const end = e.changedTouches[0].clientX; const diff = touchStartRef.current - end; if (Math.abs(diff) > 50) (diff > 0 ? goToNext() : goToPrev()); }, [goToNext, goToPrev]);
+
+  const progressKey = useRef(0);
+  useEffect(() => { progressKey.current += 1; }, [currentIndex]);
 
   return (
-    <header
-      className="home-hero text-white relative overflow-hidden pt-6 pb-10 w-full"
-      aria-labelledby="hero-heading"
-      dir={locale === 'ar' ? 'rtl' : 'ltr'}
-      style={heroStyle}
-    >
-      {/* subtle overlay */}
-      <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.25))' }} />
-
-      <div className="container-fixed mx-auto relative px-4 sm:px-8 z-20">
-        {/* store name centered at the top of hero */}
-        <div className="text-center mb-4">
-          <div className="text-sm text-white/90 font-semibold">{setting?.tagline || ''}</div>
-          <h1 id="hero-heading" className="text-white text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">{siteName || t('heroTitle')}</h1>
-        </div>
-
-        {/* slider area */}
-        <div ref={sliderRef} className="relative rounded-xl overflow-hidden shadow-xl" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <div className="w-full h-[30vh] relative">
-            <AnimatePresence initial={false} custom={direction}>
-              {
-                slidesData && slidesData.length > 0 && (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: direction > 0 ? 40 : -40, scale: 0.995 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: direction > 0 ? -40 : 40, scale: 0.99 }}
-                    transition={{ duration: 0.48, ease: [0.2, 0.8, 0.2, 1] }}
-                    className="absolute inset-0 w-full h-full"
-                    custom={direction}
-                  >
-                    {slidesData[index]?.link ? (
-                      <a href={slidesData[index].link} target="_blank" rel="noopener noreferrer" className="block w-full h-full flex items-center justify-center">
-                        <div className="w-[90%] h-[90%] sm:w-[85%] sm:h-[85%] md:w-[75%] md:h-[80%] lg:w-2/3 lg:h-[80%] xl:w-3/5 xl:h-[85%] max-w-[1200px] rounded overflow-hidden">
-                          <img src={slidesData[index].src} alt={slidesData[index].title || `${siteName} slide ${index+1}`} className="w-full h-full object-contain" loading="lazy" />
-                        </div>
-                      </a>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-[90%] h-[90%] sm:w-[85%] sm:h-[85%] md:w-[75%] md:h-[80%] lg:w-2/3 lg:h-[80%] xl:w-3/5 xl:h-[85%] max-w-[1200px] rounded overflow-hidden">
-                          <img src={slidesData[index]?.src} alt={slidesData[index]?.title || `${siteName} slide ${index+1}`} className="w-full h-full object-contain" loading="lazy" />
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                )
-              }
-            </AnimatePresence>
-            {/* arrows were side-positioned; (removed from inside image - will render below hero) */}
-            {/* arrows were side-positioned; moved below the hero for better mobile layout */}
-          </div>
-
-          {/* center content over the slider: buttons */}
-          <div className="absolute inset-0 flex items-end justify-center pb-8 z-40 pointer-events-none">
-            <div className="pointer-events-auto text-center">
-              <div className="flex items-center gap-4 justify-center">
-                <button onClick={() => (window.location.href = baseProductsPath)} className="px-6 py-3 bg-emerald-600 text-white rounded-full font-bold shadow-lg hover:scale-105 transition">{t('shopNow')}</button>
-                <Link to="/about" className="px-5 py-3 border border-white/30 rounded-full text-white/95">{t('about') || 'About'}</Link>
-              </div>
+    <section className="relative h-screen min-h-[520px] max-h-[800px] overflow-hidden" dir={locale==='ar'?'rtl':'ltr'} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="relative w-full h-full">
+        {slidesData.map((slide, idx) => (<Slide key={slide.id} slide={slide} isActive={idx===currentIndex} />))}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto text-center text-white">
+              <AnimatePresence mode="wait">
+                <SlideContent slide={slidesData[currentIndex]} locale={locale} t={t} />
+              </AnimatePresence>
             </div>
           </div>
-          {/* dots removed per request */}
         </div>
-
-        {/* Navigation buttons placed below the hero (aligned to the right) */}
-        {slidesData.length > 1 && (
-          <div className="mt-6 flex justify-end gap-3 z-40 pointer-events-auto">
-            <button onClick={() => { prev(); setPaused(true); setTimeout(()=>setPaused(false), 1200); }} aria-label="Previous slide" className="w-6 h-6 p-0.5 bg-[var(--color-primary)] text-white rounded-full shadow-md hover:scale-105 transition-transform flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/10">
-              <ChevronLeft size={20} strokeWidth={2} />
-            </button>
-            <button onClick={() => { next(); setPaused(true); setTimeout(()=>setPaused(false), 1200); }} aria-label="Next slide" className="w-6 h-6 p-0.5 bg-[var(--color-primary)] text-white rounded-full shadow-md hover:scale-105 transition-transform flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/30 border border-white/10">
-              <ChevronRight size={20} strokeWidth={2} />
-            </button>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <button onClick={goToPrev} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 active:scale-95" aria-label={locale==='ar'?'السابق':'Previous'}><ChevronLeft size={20} /></button>
+            <button onClick={() => setIsAutoPlaying(!isAutoPlaying)} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 active:scale-95" aria-label={isAutoPlaying ? (locale==='ar'?'إيقاف':'Pause') : (locale==='ar'?'تشغيل':'Play')}>{isAutoPlaying ? <Pause size={16} /> : <Play size={16} />}</button>
+            <button onClick={goToNext} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 active:scale-95" aria-label={locale==='ar'?'التالي':'Next'}><ChevronRight size={20} /></button>
           </div>
-        )}
+          <div className="flex items-center gap-2 sm:gap-3 ml-2 sm:ml-4">
+            {slidesData.map((_, idx) => (<button key={idx} onClick={() => goToSlide(idx)} className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${idx===currentIndex ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/70'}`} aria-label={locale==='ar'?`انتقل إلى الشريحة ${idx+1}`:`Go to slide ${idx+1}`} />))}
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
+          <motion.div className="h-full bg-white" initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: (setting?.heroAutoplayInterval || 5000) / 1000, ease: 'linear' }} key={progressKey.current} />
+        </div>
       </div>
-    </header>
+      <motion.div className="absolute bottom-4 left-1/2 -translate-x-1/2 cursor-pointer" animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }} onClick={() => window.scrollBy({ top: window.innerHeight - 200, behavior: 'smooth' })}>
+        <div className="w-5 h-8 sm:w-6 sm:h-10 border-2 border-white/50 rounded-full flex justify-center">
+          <motion.div className="w-1 h-2 sm:h-3 bg-white/70 rounded-full mt-2" animate={{ y: [0, 8, 0] }} transition={{ duration: 2, repeat: Infinity }} />
+        </div>
+      </motion.div>
+    </section>
   );
 };
 
-// The new Home component from your prompt
+
 const Home1 = () => {
   const { t, locale } = useLanguage();
   const { setting } = useSettings() || {};
@@ -412,62 +249,5 @@ const Home1 = () => {
   );
 }
 
-export default HomeHero;
-
-// --- Main App Component ---
-
-const LanguageProvider = ({ children }) => {
-    const [locale, setLocale] = useState('ar');
-    const t = (key) => translations[locale]?.[key] || key;
-    const value = { locale, setLocale, t };
-    
-    // Set document direction based on locale
-    React.useEffect(() => {
-        document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
-    }, [locale]);
-    
-    return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-};
-
-
-const LanguageToggle = () => {
-    const { locale, setLocale } = useLanguage();
-    return (
-        <button
-          onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
-          className="bg-white/30 backdrop-blur-md text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:bg-white/40 transition-colors"
-        >
-          {locale === 'ar' ? 'Switch to English' : 'التحويل إلى العربية'}
-        </button>
-    );
-}
-
-// Basic styles to replicate SCSS structure
-const GlobalStyles = () => (
-  <style>{`
-    .section-padding {
-      padding-top: 4rem;
-      padding-bottom: 4rem;
-    }
-    .home-section-head {
-        margin-bottom: 2.5rem;
-    }
-    .home-section-head__title {
-        font-size: 2.25rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        color: #1f2937;
-    }
-    .dark .home-section-head__title {
-        color: #f9fafb;
-    }
-      .home-features__grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        list-style: none;
-        padding: 0;
-      }
-    `}</style>
-);
+export default React.memo(HomeHero);
 
