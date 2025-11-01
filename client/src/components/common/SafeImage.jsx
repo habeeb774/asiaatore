@@ -4,14 +4,28 @@ import React, { useEffect, useRef, useState } from 'react';
 // attempting to load new src values. Prevents visual flicker when
 // the app briefly switches to an unavailable URL.
 export default function SafeImage({ src, alt, className = '', style = {}, ...rest }) {
-  const [current, setCurrent] = useState(src || '');
-  const lastGood = useRef(src || '');
+  const normalizeSrc = (input) => {
+    if (!input || typeof input !== 'string') return '';
+    let s = input.trim();
+    // Strip accidental /api prefix for static uploads
+    if (s.startsWith('/api/uploads')) s = s.replace(/^\/api/, '');
+    // Ensure leading slash for uploads paths like 'uploads/...'
+    if (s.startsWith('uploads/')) s = '/' + s;
+    // Expand placeholder shorthand like "600x400?text=..."
+    if (/^\d{2,4}x\d{2,4}(\?.*)?$/.test(s)) s = `https://via.placeholder.com/${s}`;
+    return s;
+  };
+
+  const initial = normalizeSrc(src);
+  const [current, setCurrent] = useState(initial || '');
+  const lastGood = useRef(initial || '');
   const pending = useRef(null);
 
   useEffect(() => {
     // if src is same as current, nothing to do
     if (!src) return;
-    if (src === current) return;
+    const next = normalizeSrc(src);
+    if (next === current) return;
 
     // cancel previous pending
     if (pending.current) {
@@ -23,8 +37,8 @@ export default function SafeImage({ src, alt, className = '', style = {}, ...res
     const img = new Image();
     pending.current = img;
     img.onload = () => {
-      lastGood.current = src;
-      setCurrent(src);
+      lastGood.current = next;
+      setCurrent(next);
       pending.current = null;
     };
     img.onerror = () => {
@@ -32,7 +46,7 @@ export default function SafeImage({ src, alt, className = '', style = {}, ...res
       pending.current = null;
     };
     // start loading
-    img.src = src;
+    img.src = next;
 
     // cleanup if unmounted
     return () => {
@@ -46,7 +60,7 @@ export default function SafeImage({ src, alt, className = '', style = {}, ...res
 
   // If nothing has loaded yet, try to show the plain src so browser can attempt
   // (useful for very first render). The component will update to lastGood when loaded.
-  const shown = current || src || '';
+  const shown = current || normalizeSrc(src) || '';
 
   return (
     <img src={shown} alt={alt} className={className} style={style} {...rest} />

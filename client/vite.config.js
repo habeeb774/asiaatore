@@ -222,6 +222,19 @@ export default defineConfig(async ({ mode }) => {
             });
           },
         }
+        ,
+        '/uploads': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false
+        }
+        ,
+        '/api/uploads': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '')
+        }
       }
     }
   }
