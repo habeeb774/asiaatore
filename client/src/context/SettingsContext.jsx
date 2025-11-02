@@ -26,9 +26,16 @@ export const SettingsProvider = ({ children }) => {
           const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
           let base = window.location.origin;
           if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
-            // Ensure no trailing slash
-            const normalized = viteApi.replace(/\/$/, '');
-            s.logoUrl = normalized + s.logo;
+            // Build absolute URL using the backend origin. If viteApi is absolute, use its origin; if relative, fall back to window.origin
+            try {
+              const abs = new URL(viteApi, window.location.origin);
+              const origin = abs.origin; // drop any '/api' path
+              s.logoUrl = new URL(s.logo, origin).href;
+            } catch {
+              const normalized = String(viteApi).replace(/\/$/, '');
+              // If viteApi inadvertently includes '/api', make sure uploads don't inherit it
+              s.logoUrl = normalized.replace(/\/(api)(?:$|\/)/, '/') + s.logo;
+            }
           } else {
             // Fast initial fallback: use current origin so UI shows something immediately
             s.logoUrl = base + s.logo;
@@ -128,7 +135,13 @@ export const SettingsProvider = ({ children }) => {
     if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
       const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
       if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
-        s.logoUrl = viteApi.replace(/\/$/, '') + s.logo;
+        try {
+          const abs = new URL(viteApi, window.location.origin);
+          const origin = abs.origin;
+          s.logoUrl = new URL(s.logo, origin).href;
+        } catch {
+          s.logoUrl = viteApi.replace(/\/$/, '').replace(/\/(api)(?:$|\/)/, '/') + s.logo;
+        }
       } else {
         let base = window.location.origin;
         if (base.includes(':517')) {
@@ -150,7 +163,13 @@ export const SettingsProvider = ({ children }) => {
     if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
       const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
       if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
-        s.logoUrl = viteApi.replace(/\/$/, '') + s.logo;
+        try {
+          const abs = new URL(viteApi, window.location.origin);
+          const origin = abs.origin;
+          s.logoUrl = new URL(s.logo, origin).href;
+        } catch {
+          s.logoUrl = viteApi.replace(/\/$/, '').replace(/\/(api)(?:$|\/)/, '/') + s.logo;
+        }
       } else {
         let base = window.location.origin;
         if (base.includes(':517')) {

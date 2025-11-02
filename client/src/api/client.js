@@ -10,14 +10,16 @@ const VITE_API_ENV = import.meta?.env?.VITE_API_URL;
 let API_BASE = '/api';
 if (typeof VITE_API_ENV === 'string' && VITE_API_ENV.trim()) {
   const v = VITE_API_ENV.replace(/\/$/, '');
-  // If it's a relative path (starts with /), use it as-is.
+  // If it's a relative path (starts with /), use it as-is (e.g., '/api').
   if (v.startsWith('/')) {
     API_BASE = v;
   } else {
-    // Try to parse as absolute URL. If valid, use the origin (protocol://host:port)
+    // Absolute URL: preserve pathname so '/api' is kept when provided
     try {
       const u = new URL(v);
-      API_BASE = u.origin; // don't include pathname
+      // Ensure pathname doesn't end with '/'
+      const path = (u.pathname || '').replace(/\/$/, '');
+      API_BASE = u.origin + path;
     } catch {
       // Fallback: use the raw value (best-effort)
       API_BASE = v;
