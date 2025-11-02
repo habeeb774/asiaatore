@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "framework": "static",
-  "installCommand": "",
-  "buildCommand": "",
-  "outputDirectory": ".gh-pages",
+  "framework": "vite",
+  "installCommand": "PUPPETEER_SKIP_DOWNLOAD=1 npm install --include=dev",
+  "buildCommand": "npm run build",
+  "outputDirectory": "client/dist",
   "rewrites": [
     {
       "source": "/api/:path*",

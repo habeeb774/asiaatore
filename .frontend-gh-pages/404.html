@@ -37,10 +37,10 @@
             p2.rel = 'preconnect'; p2.href = 'https://fonts.gstatic.com'; p2.crossOrigin = '';
             head.appendChild(p2);
             var p3 = document.createElement('link');
-            p3.rel = 'preload'; p3.as = 'style'; p3.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap';
+            p3.rel = 'preload'; p3.as = 'style'; p3.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap';
             head.appendChild(p3);
             var p4 = document.createElement('link');
-            p4.rel = 'stylesheet'; p4.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap';
+            p4.rel = 'stylesheet'; p4.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap';
             head.appendChild(p4);
           }
         }catch(e){/* ignore */}
@@ -60,7 +60,6 @@
     <!-- SEO / OG -->
     <meta name="description" content="شركة منفذ اسيا التجارية">
     <meta name="keywords" content="مواد غذائية بالجملة اون لاين  سوبر ماركت مواد غذائية مخفضة">
-  <link rel="canonical" href="" />
     <meta property="og:description" content="شركة منفذ اسيا للمواد الغذائية">
     <meta property="og:title" content="شركة منفذ اسيا للمواد الغذائية">
     <meta property="og:type" content="store">
@@ -114,20 +113,6 @@
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({"page":{"pageName":"home","mobileApp":0},"store":{"store":"Asia"},"customer":{"isGuest":true}});
     </script>
-    <!-- Canonical URL setter: normalize to origin + pathname (no query/hash) -->
-    <script>
-      (function(){
-        try{
-          var loc = window.location || {};
-          var origin = loc.origin || (loc.protocol + '//' + loc.host);
-          var path = (loc.pathname || '/').replace(/\/$/, '') || '/';
-          var href = origin + path;
-          var link = document.querySelector('link[rel="canonical"]');
-          if (!link) { link = document.createElement('link'); link.setAttribute('rel','canonical'); (document.head||document.documentElement).appendChild(link); }
-          link.setAttribute('href', href);
-        }catch(e){}
-      })();
-    </script>
     <!-- Prefetching Home route removed: indexing/build previously produced a malformed replacement in dist/index.html on Windows builds.
          If you want to prefetch the Home chunk, add a safe <link rel="modulepreload"> to the generated asset in a post-build step.
          For now we avoid dynamic import() in index.html to prevent build-time string-replacement bugs. -->
@@ -163,17 +148,17 @@
         }catch(e){/* no-op */}
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-B9WgXUd4.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/vendor-CKneRQof.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor.router-BdFOcp8q.js">
+    <script type="module" crossorigin src="/assets/index-8VDXgoeV.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-CF_-ATCh.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor.router-2GzHiivc.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor.i18next-COqwnjR1.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor.zustand-BuMo4m-J.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor.tanstack-K6OTystZ.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor.leaflet-Dl6I9sMh.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor.react-BIXKTxlu.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-DyYrs08G.css">
+    <link rel="modulepreload" crossorigin href="/assets/vendor.leaflet-U7UpOlxs.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor.react-C0fmYGW5.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-DI6YXsSq.css">
     <link rel="stylesheet" crossorigin href="/assets/vendor-B1-rhOTE.css">
-  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <script>
       (function(){
