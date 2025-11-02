@@ -1,221 +1,343 @@
-import React, { useState } from 'react';
-import SafeImage from '../../common/SafeImage';
+
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useCart } from '../../../context/CartContext';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import QuickViewModal from '../../products/QuickViewModal';
+import LazyImage from '../../common/LazyImage';
 import { resolveLocalized } from '../../../utils/locale';
-import { Heart, ShoppingCart, BarChart3, Eye } from 'lucide-react';
 
-const ProductCard = ({
-  product,
-  variant = 'default',
-  onAddToCart,
-  onViewDetails,
-  onAddToWishlist,
-  onCompare,
-  showRating = true,
-  showBadges = true,
-  showActions = true,
-  className = ''
+// مكونات فرعية محسنة للأداء
+const ProductBadges = memo(({ 
+  product, 
+  hasDiscount, 
+  discountPercent, 
+  outOfStock, 
+  showImageBadge, 
+  locale 
 }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [quantity, setQuantity] = useState(1);
-
-  const { locale } = useLanguage();
-
-  const getVariantStyles = () => {
-    const variants = {
-      default: 'bg-white shadow-sm hover:shadow-md',
-      compact: 'bg-gray-50 border border-gray-200',
-      featured: 'bg-gradient-to-br from-white to-blue-50 shadow-lg',
-      simple: 'bg-transparent border-none shadow-none'
-    };
-    return variants[variant] || variants.default;
-  };
-
-  const calculatePrice = () => {
-    if (!product) return 0;
-    if (product.discount) {
-      const discountAmount = (product.price * product.discount) / 100;
-      return product.price - discountAmount;
-    }
-    return product.price;
-  };
-
-  const renderBadges = () => {
-    if (!showBadges || !product) return null;
-
-    const badges = [];
-    if (product.isNew) {
-      badges.push({ label: 'جديد', color: 'bg-green-500' });
-    }
-    if (product.discount) {
-      badges.push({ label: `%${product.discount}`, color: 'bg-red-500' });
-    }
-    if (product.isBestSeller) {
-      badges.push({ label: 'الأكثر مبيعاً', color: 'bg-purple-500' });
-    }
-
-    return (
-      <div className="absolute top-2 left-2 flex flex-col gap-1">
-        {badges.map((badge, index) => (
-          <span
-            key={index}
-            className={`${badge.color} text-white text-xs px-2 py-1 rounded-full`}
-          >
-            {badge.label}
-          </span>
-        ))}
-      </div>
-    );
-  };
-
-  const renderRating = () => {
-    if (!showRating || !product?.rating) return null;
-
-    return (
-      <div className="flex items-center gap-1 mb-2">
-        <div className="flex text-yellow-400">
-          {'★'.repeat(Math.floor(product.rating))}
-          {'☆'.repeat(5 - Math.floor(product.rating))}
-        </div>
-        <span className="text-sm text-gray-600">({product.reviewCount})</span>
-      </div>
-    );
-  };
-
-  const renderActions = () => {
-    if (!showActions || !product) return null;
-
-    return (
-      <div className={`flex gap-2 transition-all duration-300 ${
-        isHovered ? 'opacity-100' : 'opacity-0'
-      }`}>
-        <button
-          onClick={() => onAddToCart?.(product, quantity)}
-          className="flex-1 bg-primary text-white py-2 px-3 rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
-        >
-          <ShoppingCart size={16} />
-          أضف للسلة
-        </button>
-
-        <div className="flex gap-1">
-          <button
-            onClick={() => onAddToWishlist?.(product)}
-            className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            title="أضف للمفضلة"
-          >
-            <Heart size={16} />
-          </button>
-          <button
-            onClick={() => onCompare?.(product)}
-            className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            title="قارن المنتج"
-          >
-            <BarChart3 size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div
-      className={`relative rounded-lg border border-gray-200 overflow-hidden transition-all duration-300 ${getVariantStyles()} ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <>
+      {product.badge && (
+        <span className="badge">
+          {locale === 'ar' ? 'جديد' : 'New'}
+        </span>
+      )}
+      {showImageBadge && hasDiscount && (
+        <span className="discount-badge">
+          -{discountPercent}%
+        </span>
+      )}
+      {outOfStock && (
+        <span 
+          className="gallery-indicator" 
+          style={{ background: 'rgba(109,1,11,.85)' }}
+        >
+          {locale === 'ar' ? 'غير متوفر' : 'Out'}
+        </span>
+      )}
+    </>
+  );
+});
+
+const RatingStars = memo(({ rating }) => {
+  if (!rating) return null;
+  
+  return (
+    <div className="rating-row" aria-label={`rating ${rating}`}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <span 
+          key={i} 
+          className={`star ${i <= rating ? '' : 'off'}`}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+});
+
+const PriceDisplay = memo(({ 
+  price, 
+  baseOld, 
+  hasDiscount, 
+  discountPercent, 
+  savings, 
+  showPriceBadge, 
+  locale 
+}) => {
+  return (
+    <div className="price-row">
+      <span className="price">
+        {price} {locale === 'ar' ? 'ر.س' : 'SAR'}
+      </span>
+      
+      {Number.isFinite(baseOld) && (
+        <span className="old">{baseOld}</span>
+      )}
+      
+      {showPriceBadge && hasDiscount && typeof discountPercent === 'number' && (
+        <span 
+          className="badge-soft" 
+          style={{
+            fontSize: '.62rem', 
+            padding: '.15rem .4rem', 
+            borderRadius: 8, 
+            marginInlineStart: 6
+          }}
+        >
+          -{discountPercent}%
+        </span>
+      )}
+      
+      {hasDiscount && savings > 0 && (
+        <span 
+          className="save-badge" 
+          aria-label={locale === 'ar' ? `وفرت ${savings} ر.س` : `Saved ${savings} SAR`}
+        >
+          {locale === 'ar' ? `وفّرت ${savings} ر.س` : `Saved ${savings} SAR`}
+        </span>
+      )}
+    </div>
+  );
+});
+
+const AddToCartButton = memo(({ 
+  product, 
+  currentQty, 
+  maxPerItem, 
+  outOfStock, 
+  locale, 
+  t, 
+  onAddToCart 
+}) => {
+  const [btnState, setBtnState] = useState('idle');
+  const reachedMax = currentQty >= (maxPerItem || 10);
+  
+  // تحديث حالة الزر عند تغيير الكمية
+  useEffect(() => {
+    if (reachedMax) {
+      setBtnState('max');
+    } else if (btnState === 'max') {
+      setBtnState('idle');
+    }
+  }, [reachedMax, btnState]);
+  
+  const handleClick = useCallback(() => {
+    if (outOfStock || reachedMax) return;
+    
+    const result = onAddToCart(product, 1);
+    if (result?.ok) {
+      const willMax = (currentQty + 1) >= (maxPerItem || 10);
+      setBtnState(willMax ? 'max' : 'added');
+      
+      const timer = setTimeout(() => {
+        setBtnState(willMax ? 'max' : 'idle');
+      }, 1400);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    return result;
+  }, [product, currentQty, maxPerItem, outOfStock, reachedMax, onAddToCart]);
+  
+  const getButtonText = useCallback(() => {
+    if (outOfStock) {
+      return locale === 'ar' ? 'غير متوفر' : 'Out of stock';
+    }
+    if (reachedMax) {
+      return locale === 'ar' ? 'الحد الأقصى' : 'Max';
+    }
+    if (btnState === 'added') {
+      return locale === 'ar' ? '✓ تمت الإضافة' : '✓ Added';
+    }
+    return t('addToCart');
+  }, [outOfStock, reachedMax, btnState, locale, t]);
+  
+  const getAriaLabel = useCallback(() => {
+    if (outOfStock) {
+      return locale === 'ar' ? 'غير متوفر' : 'Out of stock';
+    }
+    if (reachedMax) {
+      return locale === 'ar' ? 'الحد الأقصى' : 'Max reached';
+    }
+    return t('addToCart');
+  }, [outOfStock, reachedMax, locale, t]);
+  
+  return (
+    <button
+      className={`primary ${btnState === 'added' ? 'added' : ''} ${btnState === 'max' ? 'at-max' : ''}`}
+      disabled={outOfStock || reachedMax}
+      onClick={handleClick}
+      aria-label={getAriaLabel()}
     >
-      {/* Image area: circular for 'featured' variant, square otherwise */}
-      <div className={variant === 'featured' ? 'flex items-center justify-center p-6 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900' : 'relative aspect-square overflow-hidden'}>
-        {variant === 'featured' ? (
-          <div className="w-36 h-36 rounded-full overflow-hidden bg-white shadow-inner flex items-center justify-center">
-            {product?.image ? (
-              <SafeImage
-                src={product.image}
-                alt={resolveLocalized(product?.name, locale) || ''}
-                loading="lazy"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="feather feather-image"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {product?.image ? (
-              <SafeImage
-                src={product.image}
-                alt={resolveLocalized(product?.name, locale) || ''}
-                loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="feather feather-image"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
-              </div>
-            )}
-            {renderBadges()}
+      {getButtonText()}
+    </button>
+  );
+});
 
-            <button
-              onClick={() => onViewDetails?.(product)}
-              className={`absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg transition-all duration-300 ${
-                isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
-              }`}
-              title="عرض سريع"
-            >
-              <Eye size={16} />
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className="p-4">
-        {product?.category && (
-          <span className="text-xs text-gray-500 uppercase tracking-wide">
-            {product.category}
-          </span>
-        )}
-
-        <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-primary transition-colors cursor-pointer">
-          {resolveLocalized(product?.name, locale)}
-        </h3>
-
-        {renderRating()}
-
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg font-bold text-gray-900">
-            {Number(calculatePrice()).toFixed(2)} ر.س
-          </span>
-          {product?.discount && (
-            <span className="text-sm text-gray-500 line-through">
-              {Number(product.price).toFixed(2)} ر.س
-            </span>
-          )}
+// المكون الرئيسي المحسن
+const ProductCard = ({ 
+  product, 
+  showImageBadge = true, 
+  showPriceBadge = true, 
+  priority = false 
+}) => {
+  const { locale, t } = useLanguage();
+  const { addToCart, cartItems, maxPerItem } = useCart() || { 
+    addToCart: () => ({}), 
+    cartItems: [], 
+    maxPerItem: 10 
+  };
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  
+  // استخدام useMemo للبيانات المشتقة
+  const name = useMemo(() => 
+    resolveLocalized(product?.name ?? product?.title, locale) || 
+    (typeof product?.name === 'string' ? product.name : product?.title) || '',
+    [product, locale]
+  );
+  
+  const detailsPath = useMemo(() => 
+    `${locale === 'ar' ? '' : '/' + locale}/product/${product.id}`,
+    [locale, product.id]
+  );
+  
+  // حساب الخصومات والأسعار
+  const { baseOld, priceNum, hasDiscount, discountPercent, savings, outOfStock } = useMemo(() => {
+    const baseOldRaw = (product?.oldPrice ?? product?.originalPrice);
+    const baseOld = baseOldRaw != null ? +baseOldRaw : undefined;
+    const priceNum = product?.price != null ? +product.price : undefined;
+    const hasDiscount = Number.isFinite(baseOld) && Number.isFinite(priceNum) && baseOld > priceNum;
+    const discountPercent = hasDiscount ? Math.round((1 - (priceNum / baseOld)) * 100) : null;
+    const savings = hasDiscount ? Math.max(0, baseOld - priceNum) : 0;
+    const outOfStock = product.stock !== undefined && product.stock <= 0;
+    
+    return { baseOld, priceNum, hasDiscount, discountPercent, savings, outOfStock };
+  }, [product]);
+  
+  // البحث عن المنتج في السلة
+  const currentItem = useMemo(() => 
+    cartItems?.find(i => i.id === product.id),
+    [cartItems, product.id]
+  );
+  
+  const currentQty = currentItem?.quantity || 0;
+  
+  // معالج إضافة إلى السلة
+  const handleAddToCart = useCallback((product, quantity) => {
+    const result = addToCart(product, quantity);
+    
+    if (result?.reason === 'AUTH_REQUIRED') {
+      const from = location.pathname + (location.search || '');
+      navigate('/login', { state: { from } });
+    }
+    
+    return result;
+  }, [addToCart, navigate, location]);
+  
+  // معالج العرض السريع
+  const handleQuickView = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(true);
+  }, []);
+  
+  // مصادر الصور المحسنة
+  const imageSources = useMemo(() => ({
+    avifSrcSet: product.imageVariants?.avif ? [
+      product.imageVariants.avif.thumb && `${product.imageVariants.avif.thumb} 200w`,
+      product.imageVariants.avif.medium && `${product.imageVariants.avif.medium} 400w`,
+      product.imageVariants.avif.large && `${product.imageVariants.avif.large} 800w`
+    ].filter(Boolean).join(', ') : undefined,
+    
+    webpSrcSet: product.imageVariants?.webp ? [
+      product.imageVariants.webp.thumb && `${product.imageVariants.webp.thumb} 200w`,
+      product.imageVariants.webp.medium && `${product.imageVariants.webp.medium} 400w`,
+      product.imageVariants.webp.large && `${product.imageVariants.webp.large} 800w`
+    ].filter(Boolean).join(', ') : undefined
+  }), [product.imageVariants]);
+  
+  return (
+    <div className="product-card" data-id={product.id}>
+      <Link to={detailsPath} className="product-image product-media" aria-label={name}>
+        <LazyImage
+          src={product.imageVariants?.thumb || product.image}
+          alt={name}
+          className="w-full h-full object-cover"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 240px"
+          avifSrcSet={imageSources.avifSrcSet}
+          webpSrcSet={imageSources.webpSrcSet}
+          width={400}
+          height={400}
+          priority={priority}
+        />
+        
+        <ProductBadges
+          product={product}
+          hasDiscount={hasDiscount}
+          discountPercent={discountPercent}
+          outOfStock={outOfStock}
+          showImageBadge={showImageBadge}
+          locale={locale}
+        />
+        
+        <div className="product-overlay">
+          <button
+            className="quick-view-btn"
+            onClick={handleQuickView}
+          >
+            {t('quickView')}
+          </button>
         </div>
-
-        {product?.stock && (
-          <div className="mb-3">
-            <div className="flex justify-between text-xs text-gray-600 mb-1">
-              <span>المخزون:</span>
-              <span>{product.stock} متبقي</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-1">
-              <div
-                className="bg-green-500 h-1 rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min((product.stock / 100) * 100, 100)}%`
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {renderActions()}
+      </Link>
+      
+      <h3 className="product-title clamp-2">{name}</h3>
+      
+      <RatingStars rating={product.rating} />
+      
+      <PriceDisplay
+        price={product.price}
+        baseOld={baseOld}
+        hasDiscount={hasDiscount}
+        discountPercent={discountPercent}
+        savings={savings}
+        showPriceBadge={showPriceBadge}
+        locale={locale}
+      />
+      
+      <div className="actions">
+        <AddToCartButton
+          product={product}
+          currentQty={currentQty}
+          maxPerItem={maxPerItem}
+          outOfStock={outOfStock}
+          locale={locale}
+          t={t}
+          onAddToCart={handleAddToCart}
+        />
+        
+        <Link to={detailsPath}>
+          {t('details')}
+        </Link>
       </div>
+      
+      {open && (
+        <QuickViewModal 
+          product={product} 
+          onClose={() => setOpen(false)} 
+        />
+      )}
     </div>
   );
 };
 
+export default memo(ProductCard);
+
+// Skeleton and grid helpers expected by callers (e.g., Home, grids)
 export const ProductCardSkeleton = () => (
   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-pulse">
     <div className="aspect-square bg-gray-300" />
@@ -233,5 +355,3 @@ export const ProductCardGrid = ({ children, columns = 4 }) => (
     {children}
   </div>
 );
-
-export default ProductCard;
