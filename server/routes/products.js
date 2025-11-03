@@ -331,6 +331,28 @@ router.post('/', requireAdmin, productImageMiddleware, async (req, res) => {
         } catch {}
       } catch {}
     }
+    // Preflight duplicate detection: check by slug, sku, or exact name (AR/EN) case-insensitive
+    try {
+      const slug = (body.slug || '').trim();
+      const sku = (body.sku || '').trim();
+      const nameAr = (body.nameAr || body.name?.ar || '').trim();
+      const nameEn = (body.nameEn || body.name?.en || '').trim();
+      const ors = [];
+      if (slug) ors.push({ slug });
+      if (sku) ors.push({ sku });
+      if (nameAr) ors.push({ nameAr: { equals: nameAr, mode: 'insensitive' } });
+      if (nameEn) ors.push({ nameEn: { equals: nameEn, mode: 'insensitive' } });
+      if (ors.length) {
+        const dup = await prisma.product.findFirst({ where: whereWithDeletedAt({ OR: ors }) }).catch(() => null);
+        if (dup) {
+          let field = 'name';
+          if (slug && dup.slug?.toLowerCase() === slug.toLowerCase()) field = 'slug';
+          else if (sku && dup.sku?.toLowerCase?.() === sku.toLowerCase()) field = 'sku';
+          return res.status(409).json({ error: 'DUPLICATE_PRODUCT', field, existingId: dup.id, message: 'Duplicate product' });
+        }
+      }
+    } catch {}
+
     const created = await productService.create({
       slug: body.slug || `product-${Date.now()}`,
       nameAr: body.nameAr || body.name?.ar || 'منتج جديد',
@@ -365,7 +387,19 @@ router.post('/', requireAdmin, productImageMiddleware, async (req, res) => {
     audit({ action: 'product.create', entity: 'Product', entityId: created.id, userId: req.user?.id, meta: { slug: created.slug } });
     res.status(201).json(mapProduct(created));
   } catch (e) {
-    if (e.code === 'P2002') return res.status(409).json({ error: 'SLUG_EXISTS' });
+    if (e.code === 'P2002') {
+      // Unique constraint failed; try to detect which field
+      const target = e?.meta?.target;
+      let field = 'unique';
+      if (typeof target === 'string') {
+        if (/slug/i.test(target)) field = 'slug';
+        if (/sku/i.test(target)) field = 'sku';
+      } else if (Array.isArray(target)) {
+        if (target.some(t => /slug/i.test(String(t)))) field = 'slug';
+        else if (target.some(t => /sku/i.test(String(t)))) field = 'sku';
+      }
+      return res.status(409).json({ error: 'DUPLICATE_PRODUCT', field });
+    }
     if (e.code === 'P2025') return res.status(400).json({ error: 'BRAND_NOT_FOUND', message: 'Invalid brandId' });
     res.status(400).json({ error: 'FAILED_CREATE', message: e.message });
   }
@@ -524,3 +558,87 @@ router.delete('/images/:imageId', requireAdmin, async (req, res) => {
 });
 
 export default router;
+// --- Bulk import / upsert endpoints ---
+// Upsert products by slug or sku. Body: { items: [{ slug?, sku?, nameAr, nameEn, category, price, oldPrice?, brandSlug?, stock?, tierPrices?: [{ minQty, price, packagingType? }] , image? }] }
+router.post('/batch/upsert', requireAdmin, async (req, res) => {
+  try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (!items.length) return res.status(400).json({ error:'INVALID_BODY', message:'items[] required' });
+    const results = [];
+    for (const raw of items.slice(0, 500)) {
+      const slug = raw.slug?.trim() || undefined;
+      const sku = raw.sku?.trim() || undefined;
+      const data = {
+        slug,
+        sku,
+        nameAr: raw.nameAr || raw.name?.ar,
+        nameEn: raw.nameEn || raw.name?.en,
+        shortAr: raw.shortAr || raw.short?.ar || null,
+        shortEn: raw.shortEn || raw.short?.en || null,
+        category: raw.category || 'general',
+        price: Number(raw.price) || 0,
+        oldPrice: raw.oldPrice != null ? Number(raw.oldPrice) : null,
+        image: raw.image || null
+      };
+      if (!data.nameAr || !data.nameEn) { results.push({ ok:false, error:'MISSING_NAME', slug, sku }); continue; }
+      // Resolve brand by slug (optional)
+      let brandId = null;
+      if (raw.brandId) brandId = raw.brandId;
+      else if (raw.brandSlug) {
+        const b = await prisma.brand.findUnique({ where: { slug: String(raw.brandSlug) }, select: { id: true } }).catch(()=>null);
+        brandId = b?.id || null;
+      }
+      if (brandId) data.brandId = brandId;
+      // Upsert by sku if available else slug else create
+      let prod = null;
+      if (sku) {
+        prod = await prisma.product.upsert({ where: { sku }, create: { ...data }, update: { ...data } });
+      } else if (slug) {
+        prod = await prisma.product.upsert({ where: { slug }, create: { ...data }, update: { ...data } });
+      } else {
+        prod = await prisma.product.create({ data });
+      }
+      // Stock update
+      if (raw.stock != null) {
+        await InventoryService.updateStock(prod.id, Number(raw.stock)).catch(()=>null);
+      }
+      // Tier prices (replace)
+      if (Array.isArray(raw.tierPrices)) {
+        await prisma.productTierPrice.deleteMany({ where: { productId: prod.id } }).catch(()=>null);
+        const rows = raw.tierPrices
+          .map(t => ({ productId: prod.id, minQty: Number(t.minQty)||1, price: Number(t.price)||0, packagingType: t.packagingType || 'unit', noteAr: t.noteAr||t.note?.ar||null, noteEn: t.noteEn||t.note?.en||null }))
+          .filter(t => t.price >= 0 && t.minQty >= 1)
+          .slice(0, 20);
+        if (rows.length) await prisma.productTierPrice.createMany({ data: rows }).catch(()=>null);
+      }
+      results.push({ ok:true, id: prod.id, slug: prod.slug, sku: prod.sku });
+    }
+    res.json({ ok:true, results });
+  } catch (e) {
+    res.status(400).json({ error:'BATCH_UPSERT_FAILED', message: e.message });
+  }
+});
+
+// Mass price/stock adjust. Body: { updates: [{ id|slug|sku, price?, oldPrice?, stock? }] }
+router.post('/batch/stock-price', requireAdmin, async (req, res) => {
+  try {
+    const upd = Array.isArray(req.body?.updates) ? req.body.updates : [];
+    if (!upd.length) return res.status(400).json({ error:'INVALID_BODY', message:'updates[] required' });
+    const results = [];
+    for (const u of upd.slice(0, 1000)) {
+      const where = u.id ? { id: String(u.id) } : (u.sku ? { sku: String(u.sku) } : (u.slug ? { slug: String(u.slug) } : null));
+      if (!where) { results.push({ ok:false, error:'NO_IDENTIFIER' }); continue; }
+      const existing = await prisma.product.findFirst({ where }).catch(()=>null);
+      if (!existing) { results.push({ ok:false, error:'NOT_FOUND' }); continue; }
+      const data = {};
+      if (u.price != null) data.price = Number(u.price);
+      if (u.oldPrice === null) data.oldPrice = null; else if (u.oldPrice != null) data.oldPrice = Number(u.oldPrice);
+      const updated = Object.keys(data).length ? await prisma.product.update({ where: { id: existing.id }, data }) : existing;
+      if (u.stock != null) await InventoryService.updateStock(existing.id, Number(u.stock)).catch(()=>null);
+      results.push({ ok:true, id: updated.id, slug: updated.slug, sku: updated.sku });
+    }
+    res.json({ ok:true, results });
+  } catch (e) {
+    res.status(400).json({ error:'BATCH_STOCK_PRICE_FAILED', message: e.message });
+  }
+});

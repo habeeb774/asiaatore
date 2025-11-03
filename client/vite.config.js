@@ -63,20 +63,27 @@ export default defineConfig(async ({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
         manifest: {
-          name: env.VITE_APP_NAME || 'My Store',
-          short_name: env.VITE_APP_SHORT_NAME || 'Store',
-          description: env.VITE_APP_DESC || 'متجر إلكتروني حديث',
+          name: env.VITE_APP_NAME || 'متجرنا الحديث',
+          short_name: env.VITE_APP_SHORT_NAME || 'المتجر',
+          description: env.VITE_APP_DESC || 'متجر إلكتروني حديث للمنتجات والعروض اليومية',
           theme_color: '#69be3c',
           background_color: '#ffffff',
           display: 'standalone',
+          display_override: ['standalone', 'browser'],
           dir: 'rtl',
           lang: 'ar',
           scope: '/',
           start_url: '/',
           orientation: 'portrait-primary',
+          categories: ['shopping', 'lifestyle', 'ecommerce'],
           icons: [
-            { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
-            { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png' }
+            { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          ],
+          shortcuts: [
+            { name: 'العروض', short_name: 'العروض', description: 'تصفح أحدث الخصومات', url: '/offers', icons: [{ src: '/icons/pwa-192.png', sizes: '192x192' }] },
+            { name: 'السلة', short_name: 'سلة', description: 'متابعة مشترياتك الحالية', url: '/cart', icons: [{ src: '/icons/pwa-192.png', sizes: '192x192' }] }
           ]
         },
         workbox: {
@@ -100,6 +107,10 @@ export default defineConfig(async ({ mode }) => {
               options: {
                 cacheName: 'products-cache',
                 cacheableResponse: { statuses: [200] },
+                expiration: {
+                  maxEntries: 200,
+                  maxAgeSeconds: 60 * 60 * 6 // keep catalog results for 6 hours
+                }
               }
             },
             {
@@ -110,12 +121,30 @@ export default defineConfig(async ({ mode }) => {
               handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'offers-catalog-cache',
-                cacheableResponse: { statuses: [200] }
+                cacheableResponse: { statuses: [200] },
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 3
+                }
+              }
+            },
+            {
+              // User cart should stay fresh but keep last snapshot for brief offline use
+              urlPattern: ({ url, request }) => request.method === 'GET' && url.origin === self.location.origin && url.pathname.startsWith('/api/cart'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'cart-cache',
+                networkTimeoutSeconds: 4,
+                cacheableResponse: { statuses: [200] },
+                expiration: {
+                  maxEntries: 20,
+                  maxAgeSeconds: 60 * 30
+                }
               }
             },
             {
               // Generic same-origin API GET calls; fallback to network-first
-              urlPattern: ({ url, request }) => request.method === 'GET' && url.origin === self.location.origin && url.pathname.startsWith('/api/') && url.pathname !== '/api/events',
+              urlPattern: ({ url, request }) => request.method === 'GET' && url.origin === self.location.origin && url.pathname.startsWith('/api/') && url.pathname !== '/api/events' && !url.pathname.startsWith('/api/cart'),
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'api-cache',
@@ -184,17 +213,18 @@ export default defineConfig(async ({ mode }) => {
       open: true,
       // Expose dev server on LAN for testing on real devices
       host: true,
-      hmr: {
-        // Ensure HMR client connects to the Vite dev server port by default.
-        // This project uses port 5173 for the Vite dev server; previously this
-        // was set to 4000 which causes the browser to try ws://localhost:4000
-        // and fail when the backend isn't proxying HMR. Allow override via
-        // VITE_HMR_CLIENT_PORT if needed by developers.
-        clientPort: Number(env.VITE_HMR_CLIENT_PORT || 5173),
-        host: 'localhost',
-        protocol: 'ws',
-        overlay: true
-      },
+      hmr: (() => {
+        const config = {
+          host: env.VITE_HMR_CLIENT_HOST || 'localhost',
+          protocol: env.VITE_HMR_CLIENT_PROTOCOL || 'ws',
+          overlay: true
+        };
+        const rawPort = env.VITE_HMR_CLIENT_PORT && Number(env.VITE_HMR_CLIENT_PORT);
+        if (rawPort) {
+          config.clientPort = rawPort;
+        }
+        return config;
+      })(),
       proxy: {
         '/api': {
           target: proxyTarget,

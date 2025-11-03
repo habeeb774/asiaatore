@@ -67,10 +67,11 @@ export default function ReactLeafletCompat({ children }) {
     MapClicker: (props) => {
       const map = mods.useMap();
       React.useEffect(() => {
-        const handler = (e) => props.onPick && props.onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
-        map.on('click', handler);
-        return () => map.off('click', handler);
-      }, [map]);
+        if (!map || typeof map.on !== 'function') return;
+        const handler = (e) => { try { props?.onPick && props.onPick({ lat: e?.latlng?.lat, lng: e?.latlng?.lng }); } catch {} };
+        try { map.on('click', handler); } catch {}
+        return () => { try { map && typeof map.off === 'function' && map.off('click', handler); } catch {} };
+      }, [map, props?.onPick]);
       return null;
     }
   };

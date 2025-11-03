@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
-import { Button } from '../../components/ui/Button.jsx';
-import { Input } from '../../components/ui/input.jsx';
-import { Label } from '../../components/ui/label.jsx';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -62,32 +61,48 @@ const RegisterPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>إنشاء حساب</CardTitle>
+          <CardDescription>أدخل بياناتك لإنشاء حساب جديد.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3" aria-describedby={errors.root ? 'register-error' : undefined}>
-            <div className="grid gap-1">
-              <Label htmlFor="name">الاسم</Label>
-              <Input id="name" placeholder="الاسم" {...register('name')} />
-            </div>
-            <div className="grid gap-1">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
-              <Input id="email" type="email" autoComplete="email" placeholder="example@mail.com" {...register('email')} />
-              {errors.email && <p className="text-xs text-red-600" role="alert">{errors.email.message}</p>}
-            </div>
-            <div className="grid gap-1">
-              <Label htmlFor="password">كلمة المرور</Label>
-              <Input id="password" type="password" autoComplete="new-password" placeholder="••••••••" {...register('password')} />
-              {errors.password && <p className="text-xs text-red-600" role="alert">{errors.password.message}</p>}
-            </div>
-            <div className="grid gap-1">
-              <Label htmlFor="confirm">تأكيد كلمة المرور</Label>
-              <Input id="confirm" type="password" autoComplete="new-password" placeholder="••••••••" {...register('confirm')} />
-              {errors.confirm && <p className="text-xs text-red-600" role="alert">{errors.confirm.message}</p>}
-            </div>
+            <Input
+              id="name"
+              label="الاسم"
+              placeholder="الاسم"
+              error={errors.name?.message}
+              {...register('name')}
+            />
+            <Input
+              id="email"
+              type="email"
+              label="البريد الإلكتروني"
+              autoComplete="email"
+              placeholder="example@mail.com"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+            <Input
+              id="password"
+              type="password"
+              label="كلمة المرور"
+              autoComplete="new-password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+            <Input
+              id="confirm"
+              type="password"
+              label="تأكيد كلمة المرور"
+              autoComplete="new-password"
+              placeholder="••••••••"
+              error={errors.confirm?.message}
+              {...register('confirm')}
+            />
             {errors.root && (
               <div id="register-error" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{errors.root.message}</div>
             )}
-            <Button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-[#69be3c] to-amber-400">{isSubmitting? '...جاري' : 'تسجيل'}</Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full">{isSubmitting? '...جاري' : 'تسجيل'}</Button>
             <p className="mt-1 text-[0.72rem]">لديك حساب؟ <Link to="/login" className="underline">دخول</Link></p>
           </form>
         </CardContent>

@@ -2,9 +2,11 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import Button from '../../components/ui/Button.jsx';
-import { Badge } from '../../components/ui/badge.jsx';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import RoutePlanner from '../../components/RoutePlanner';
+// Shared admin styles for skeletons
+import '../../styles/AdminPage.scss';
 
 // Inline lightweight SVG icons (to avoid importing the whole icon pack for this page)
 const Truck = ({ className = '', size = 20 }) => (
@@ -261,15 +263,15 @@ export default function DeliveryDriverPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 bg-gray-50">
+    <div className="min-h-screen p-4" style={{ background: 'var(--color-bg)' }}>
       <div className="max-w-6xl mx-auto">
-        <header className="flex items-center justify-between py-4 mb-4 bg-white rounded-lg shadow-sm px-4">
+        <header className="flex items-center justify-between py-4 mb-4 rounded-lg shadow-sm px-4" style={{ background:'var(--color-surface)', border:'1px solid var(--color-border-soft)' }}>
           <div className="flex items-center gap-3">
-            <Truck className="w-6 h-6 text-blue-600" />
+            <Truck className="w-6 h-6" style={{ color: 'var(--color-primary)' }} />
             <div>
-              <h2 className="text-xl font-semibold text-gray-800">لوحة تحكم الموزع</h2>
+              <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>لوحة تحكم الموزع</h2>
               {profile && (
-                <p className="text-xs text-gray-600 mt-0.5">
+                <p className="text-xs mt-0.5" style={{ color:'var(--color-text-soft)' }}>
                   الحالة: {profile?.profile?.status || profile?.status || '—'}
                 </p>
               )}
@@ -299,7 +301,7 @@ export default function DeliveryDriverPage() {
         </header>
 
         {error && (
-          <div className="p-3 mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 flex items-center gap-2">
+          <div className="p-3 mb-4 rounded-lg flex items-center gap-2" style={{ background:'rgba(220,38,38,0.08)', border:'1px solid rgba(220,38,38,0.25)', color:'#7f1d1d' }}>
             <AlertCircle className="w-4 h-4" />
             <span className="text-sm">{error}</span>
             <button onClick={() => setError(null)} className="ml-auto text-red-500 hover:text-red-700">✕</button>
@@ -308,7 +310,7 @@ export default function DeliveryDriverPage() {
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Orders list */}
-          <div className="bg-white rounded-lg shadow-sm border p-3">
+          <div className="rounded-lg shadow-sm border p-3" style={{ background:'var(--color-surface)', borderColor:'var(--color-border-soft)' }}>
             <div className="flex items-center justify-between mb-2">
               <div className="font-semibold">الطلبات</div>
               <Badge color="neutral">{orders.length}</Badge>
@@ -316,17 +318,17 @@ export default function DeliveryDriverPage() {
             <div className="space-y-2 max-h-[70vh] overflow-auto">
                   {loading && (
                     <div className="space-y-2">
-                      {/* simple skeletons */}
-                      <div className="h-12 bg-gray-100 rounded animate-pulse" />
-                      <div className="h-12 bg-gray-100 rounded animate-pulse" />
-                      <div className="h-12 bg-gray-100 rounded animate-pulse" />
+                      {/* skeletons */}
+                      <div className="skeleton h-12" />
+                      <div className="skeleton h-12" />
+                      <div className="skeleton h-12" />
                     </div>
                   )}
               {!loading && orders.length === 0 && (
                 <div className="text-sm text-gray-500">لا توجد طلبات مطابقة للتصفية الحالية</div>
               )}
               {orders.map((o) => (
-                <div key={o.id} className={`rounded border p-2 ${activeId === o.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}>
+                <div key={o.id} className={`rounded border p-2`} style={activeId === o.id ? { borderColor: 'rgba(var(--color-primary-rgb),0.45)', background:'rgba(var(--color-primary-rgb),0.06)' } : { borderColor: 'var(--color-border-soft)', background:'var(--color-surface)' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {/* select this order to include in the route planner */}
@@ -338,8 +340,8 @@ export default function DeliveryDriverPage() {
                         />
                       </label>
                       <button className="text-right" onClick={() => setActiveId(o.id)}>
-                      <div className="font-semibold">#{o.id.slice(0,8)}...</div>
-                      <div className="text-xs text-gray-500">الحالة: {o.deliveryStatus}</div>
+                      <div className="font-semibold" style={{ color:'var(--color-text)' }}>#{o.id.slice(0,8)}...</div>
+                      <div className="text-xs" style={{ color:'var(--color-text-faint)' }}>الحالة: {o.deliveryStatus}</div>
                     </button>
                     </div>
                     <Badge color={o.deliveryStatus === 'out_for_delivery' ? 'info' : o.deliveryStatus === 'accepted' ? 'warning' : o.deliveryStatus === 'delivered' ? 'success' : o.deliveryStatus === 'failed' ? 'danger' : 'neutral'}>
@@ -389,16 +391,16 @@ export default function DeliveryDriverPage() {
           </div>
 
           {/* Active order details + Route planner */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
+          <div className="rounded-lg shadow-sm border p-4" style={{ background:'var(--color-surface)', borderColor:'var(--color-border-soft)' }}>
             <h3 className="font-semibold mb-2">خريطة وتخطيط المسار</h3>
             <RoutePlanner stops={selectedStops} />
             <div className="mt-4">
               <h4 className="font-semibold mb-2">تفاصيل الطلب</h4>
-              {!activeId && <div className="text-sm text-gray-500">اختر طلباً من القائمة لعرض التفاصيل</div>}
+              {!activeId && <div className="text-sm" style={{ color:'var(--color-text-faint)' }}>اختر طلباً من القائمة لعرض التفاصيل</div>}
               {activeId && (
                 <div className="space-y-3">
-                  <div className="text-sm">المعرف: <span className="font-mono">{activeId}</span></div>
-                  <div className="text-xs text-gray-500">استخدم الخريطة أعلاه لعرض الطريق الحي</div>
+                  <div className="text-sm" style={{ color:'var(--color-text)' }}>المعرف: <span className="font-mono">{activeId}</span></div>
+                  <div className="text-xs" style={{ color:'var(--color-text-faint)' }}>استخدم الخريطة أعلاه لعرض الطريق الحي</div>
                   <div className="pt-2 border-t">
                     <Button onClick={fetchOrders} size="sm" variant="outline"><RefreshCw className="w-4 h-4" /> تحديث</Button>
                   </div>

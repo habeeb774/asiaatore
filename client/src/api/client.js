@@ -10,16 +10,14 @@ const VITE_API_ENV = import.meta?.env?.VITE_API_URL;
 let API_BASE = '/api';
 if (typeof VITE_API_ENV === 'string' && VITE_API_ENV.trim()) {
   const v = VITE_API_ENV.replace(/\/$/, '');
-  // If it's a relative path (starts with /), use it as-is (e.g., '/api').
+  // If it's a relative path (starts with /), use it as-is.
   if (v.startsWith('/')) {
     API_BASE = v;
   } else {
-    // Absolute URL: preserve pathname so '/api' is kept when provided
+    // Try to parse as absolute URL. If valid, use the origin (protocol://host:port)
     try {
       const u = new URL(v);
-      // Ensure pathname doesn't end with '/'
-      const path = (u.pathname || '').replace(/\/$/, '');
-      API_BASE = u.origin + path;
+      API_BASE = u.origin; // don't include pathname
     } catch {
       // Fallback: use the raw value (best-effort)
       API_BASE = v;
@@ -27,6 +25,13 @@ if (typeof VITE_API_ENV === 'string' && VITE_API_ENV.trim()) {
   }
 }
 if (DEV) API_BASE = API_BASE || '/api';
+
+const DEFAULT_TIMEOUT = (() => {
+  const hasViteVal = typeof import.meta?.env?.VITE_API_TIMEOUT_MS === 'string' && import.meta.env.VITE_API_TIMEOUT_MS;
+  const raw = hasViteVal ? import.meta.env.VITE_API_TIMEOUT_MS : undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 12000; // 12s default
+})();
 
 async function request(path, options = {}) {
   const url = API_BASE + path;
@@ -45,10 +50,24 @@ async function request(path, options = {}) {
     headers['x-user-role'] = devUser?.role || 'admin';
   }
 
+  // Abort/timeout guard to prevent UI freezing on hanging requests
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const needCreds = path.startsWith('/auth');
+  const isSse = path === '/events' || path === '/api/events' || url.endsWith('/api/events');
+  const timeoutMs = typeof options.timeout === 'number' ? options.timeout : DEFAULT_TIMEOUT;
+  let timeoutId = null;
+  if (!isSse && timeoutMs > 0) {
+    timeoutId = setTimeout(() => { try { controller.abort('timeout'); } catch {} }, timeoutMs);
+  }
   try {
-    const needCreds = path.startsWith('/auth');
-    res = await fetch(url, { headers, ...options, ...(needCreds ? { credentials: 'include' } : {}) });
-  } catch (e) { throw new Error('Network error: ' + e.message); }
+    res = await fetch(url, { headers, signal, ...options, ...(needCreds ? { credentials: 'include' } : {}) });
+  } catch (e) {
+    const reason = (e && (e.name === 'AbortError' || e === 'timeout')) ? `Timeout after ${timeoutMs}ms` : e?.message || 'Unknown error';
+    throw Object.assign(new Error('Network error: ' + reason), { code: 'NETWORK', reason });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 
   // Handle 401 auto-refresh once
   if (res.status === 401 && !options._retry) {
@@ -67,6 +86,17 @@ async function request(path, options = {}) {
     } catch {}
   }
 
+  // Dev convenience: if still 401 and in dev, retry once with dev headers even if a stale token exists
+  if (DEV && res.status === 401 && !options._retryDev && !path.startsWith('/auth')) {
+    try {
+      let devUser = null;
+      try { const raw = localStorage.getItem('my_store_user'); if (raw) devUser = JSON.parse(raw); } catch {}
+      const devHeaders = { ...headers, 'x-user-id': devUser?.id || 'dev-admin', 'x-user-role': devUser?.role || 'admin' };
+      const retryRes = await fetch(url, { headers: devHeaders, ...options, _retryDev: true });
+      if (retryRes.ok) return retryRes.json();
+    } catch {}
+  }
+
   if (!res.ok) {
     let bodyText = '';
     let parsed;
@@ -74,7 +104,9 @@ async function request(path, options = {}) {
     if (bodyText) { try { parsed = JSON.parse(bodyText); } catch {} }
     const method = (options.method || 'GET').toUpperCase();
     const msg = `API Error ${res.status} ${res.statusText} (${method} ${path})` + (parsed?.error ? ` code=${parsed.error}` : '');
-    if (DEV) console.error('[API]', msg);
+    // Reduce console noise for expected denials and when caller opts out
+    const suppressLog = options && options.suppressLog === true;
+    if (DEV && !suppressLog && !(res.status === 401 || res.status === 403)) console.error('[API]', msg);
     if (parsed && typeof parsed === 'object') return Promise.reject(Object.assign(new Error(msg), { code: parsed.error, data: parsed, status: res.status }));
     throw new Error(msg);
   }
@@ -130,11 +162,11 @@ const api = {
   bankReject: (orderId,reason) => request('/pay/bank/reject', { method:'POST', body: JSON.stringify({ orderId, reason }) }),
   
   // Categories
-  listCategories: (params) => {
+  listCategories: (params, options) => {
     const qs = new URLSearchParams();
     const p = params || {};
     if (p.withCounts) qs.append('withCounts', String(p.withCounts));
-    return request('/categories' + (qs.toString() ? `?${qs.toString()}` : ''));
+    return request('/categories' + (qs.toString() ? `?${qs.toString()}` : ''), options || {});
   },
   getCategoryBySlug: (slug) => request(`/categories/slug/${encodeURIComponent(slug)}`),
   // Category CRUD (flat naming for consistency)
@@ -163,6 +195,13 @@ const api = {
     formData.append('logo', file);
     return request('/settings/logo', { method: 'POST', body: formData });
   },
+  // Invoices / WhatsApp
+  whatsappHealth: (options={}) => request('/invoices/_whatsapp', options || {}),
+  whatsappSendInvoiceByOrder: (orderId) => request(`/invoices/by-order/${encodeURIComponent(orderId)}/whatsapp`, { method:'POST' }),
+  // Env & DB management (admin)
+  envGet: () => request('/env'),
+  envUpdate: (scope, entries) => request('/env', { method: 'PATCH', body: JSON.stringify({ scope, entries }) }),
+  envDbTest: (payload) => request('/env/db/test', { method: 'POST', body: JSON.stringify(payload||{}) }),
   // Brands
   brandsList: () => request('/brands'),
 
@@ -224,6 +263,12 @@ const api = {
     Object.entries(params).forEach(([k,v]) => { if (v != null && v !== '') qs.append(k, String(v)); });
     return request('/delivery/orders/history' + (qs.toString() ? `?${qs.toString()}` : ''));
   },
+  // Shipping
+  shippingQuote: (payload) => request('/shipping/quote', { method:'POST', body: JSON.stringify({ address: payload || {} }) }),
+  orderShipments: (orderId, opts={}) => request(`/orders/${encodeURIComponent(orderId)}/ship` + (opts.refresh ? `?refresh=1` : '')),
+  // Instance setup
+  setupStatus: () => request('/setup/status'),
+  setupAdmin: (payload) => request('/setup/admin', { method:'POST', body: JSON.stringify(payload||{}) }),
   // Inventory
   inventoryList: (params={}) => {
     const qs = new URLSearchParams();

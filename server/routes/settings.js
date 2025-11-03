@@ -38,39 +38,9 @@ async function ensureSettingsTable() {
         updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-    // Ensure new columns exist even if table pre-existed
-    const alters = [
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS taxNumber VARCHAR(64) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportPhone VARCHAR(64) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportMobile VARCHAR(64) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportWhatsapp VARCHAR(64) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportEmail VARCHAR(128) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS supportHours VARCHAR(128) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS footerAboutAr TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS footerAboutEn TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkBlog TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkSocial TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkReturns TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS linkPrivacy TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS appStoreUrl TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS playStoreUrl TEXT NULL"
-    ];
-    // New columns for hero and top-strip visuals
-    const newAlters = [
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroBackgroundImage TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroBackgroundGradient TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroCenterImage TEXT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS heroAutoplayInterval INT NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS topStripEnabled TINYINT(1) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS topStripAutoscroll TINYINT(1) NULL",
-      "ALTER TABLE StoreSetting ADD COLUMN IF NOT EXISTS topStripBackground TEXT NULL"
-    ];
-    for (const sql of alters) {
-      try { await prisma.$executeRawUnsafe(sql); } catch { /* ignore if not supported */ }
-    }
-    for (const sql of newAlters) {
-      try { await prisma.$executeRawUnsafe(sql); } catch { /* ignore if not supported */ }
-    }
+    // Column creation is now handled by Prisma migrations/db push.
+    // Older MySQL versions don't support "ADD COLUMN IF NOT EXISTS" and would spam errors here.
+    // We intentionally skip best-effort ALTERs to keep logs clean; the Prisma schema defines all columns.
     // Ensure singleton row
     await prisma.$executeRawUnsafe(`
       INSERT IGNORE INTO StoreSetting (id, siteNameAr, siteNameEn) VALUES ('singleton','شركة منفذ اسيا التجارية','My Store');
@@ -127,6 +97,20 @@ router.get('/', async (_req, res) => {
         setting = Array.isArray(rows) && rows.length ? rows[0] : null;
       } catch {}
     }
+    // In dev, if a local dev settings file exists, merge it over DB values (helps when DB lacks columns)
+    const devOverlayEnabled = (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true');
+    if (devOverlayEnabled) {
+      try {
+        const devFile = path.join(uploadsDir, 'local-dev-settings.json');
+        if (fs.existsSync(devFile)) {
+          const raw = fs.readFileSync(devFile, 'utf-8');
+          const overlay = JSON.parse(raw || '{}');
+          if (overlay && typeof overlay === 'object') {
+            setting = { ...(setting || {}), ...overlay };
+          }
+        }
+      } catch {}
+    }
     return res.json({ ok: true, setting: setting || null });
   } catch (e) {
     // Degraded fallback: provide sane defaults to keep the UI working in dev
@@ -152,6 +136,18 @@ router.get('/', async (_req, res) => {
         topStripEnabled: true,
         topStripAutoscroll: true,
         topStripBackground: '#fde68a',
+        // shipping & payments fallbacks
+        shippingBase: 10,
+        shippingPerKm: 0.7,
+        shippingMin: 15,
+        shippingMax: 60,
+        shippingFallback: 25,
+        originLat: 24.7136,
+        originLng: 46.6753,
+        payPaypalEnabled: false,
+        payStcEnabled: true,
+        payCodEnabled: true,
+        payBankEnabled: true,
         taxNumber: null,
         supportPhone: null,
         supportMobile: null,
@@ -182,12 +178,32 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
   const { siteNameAr, siteNameEn, colorPrimary, colorSecondary, colorAccent,
     taxNumber, supportPhone, supportMobile, supportWhatsapp, supportEmail, supportHours,
     footerAboutAr, footerAboutEn,
+    companyNameAr, companyNameEn, commercialRegNo, addressAr, addressEn,
     linkBlog, linkSocial, linkReturns, linkPrivacy, appStoreUrl, playStoreUrl,
     // new visual fields
     logo, heroBackgroundImage, heroBackgroundGradient, heroCenterImage, heroAutoplayInterval,
-    topStripEnabled, topStripAutoscroll, topStripBackground } = req.body || {};
-  try {
-    const data = {};
+    topStripEnabled, topStripAutoscroll, topStripBackground,
+    // shipping config
+    shippingBase, shippingPerKm, shippingMin, shippingMax, shippingFallback, originLat, originLng,
+    // payments toggles
+    payPaypalEnabled, payStcEnabled, payCodEnabled, payBankEnabled,
+    // messaging toggle
+    whatsappEnabled,
+    // shipping providers
+    aramexEnabled, aramexApiUrl, aramexApiKey, aramexApiUser, aramexApiPass, aramexWebhookSecret,
+    smsaEnabled, smsaApiUrl, smsaApiKey, smsaWebhookSecret
+  } = req.body || {};
+
+  // Helpers
+  const toBool = (v) => {
+    if (v === null) return null;
+    if (v === undefined) return undefined;
+    const s = String(v).toLowerCase();
+    if (v === true || s === 'true' || s === '1' || s === 'on' || s === 'yes') return true;
+    if (v === false || s === 'false' || s === '0' || s === 'off' || s === 'no') return false;
+    return !!v;
+  };
+  const data = {};
     if (siteNameAr !== undefined) data.siteNameAr = siteNameAr || null;
     if (siteNameEn !== undefined) data.siteNameEn = siteNameEn || null;
     if (colorPrimary !== undefined) data.colorPrimary = colorPrimary || null;
@@ -201,40 +217,86 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
     if (supportHours !== undefined) data.supportHours = supportHours || null;
     if (footerAboutAr !== undefined) data.footerAboutAr = footerAboutAr || null;
     if (footerAboutEn !== undefined) data.footerAboutEn = footerAboutEn || null;
+  if (companyNameAr !== undefined) data.companyNameAr = companyNameAr || null;
+  if (companyNameEn !== undefined) data.companyNameEn = companyNameEn || null;
+  if (commercialRegNo !== undefined) data.commercialRegNo = commercialRegNo || null;
+  if (addressAr !== undefined) data.addressAr = addressAr || null;
+  if (addressEn !== undefined) data.addressEn = addressEn || null;
   // visual fields
   if (logo !== undefined) data.logo = logo || null;
   if (heroBackgroundImage !== undefined) data.heroBackgroundImage = heroBackgroundImage || null;
   if (heroBackgroundGradient !== undefined) data.heroBackgroundGradient = heroBackgroundGradient || null;
   if (heroCenterImage !== undefined) data.heroCenterImage = heroCenterImage || null;
   if (heroAutoplayInterval !== undefined) data.heroAutoplayInterval = heroAutoplayInterval || null;
-  if (topStripEnabled !== undefined) data.topStripEnabled = topStripEnabled ? 1 : 0;
-  if (topStripAutoscroll !== undefined) data.topStripAutoscroll = topStripAutoscroll ? 1 : 0;
+  if (topStripEnabled !== undefined) data.topStripEnabled = toBool(topStripEnabled);
+  if (topStripAutoscroll !== undefined) data.topStripAutoscroll = toBool(topStripAutoscroll);
   if (topStripBackground !== undefined) data.topStripBackground = topStripBackground || null;
+  // messaging toggle
+  if (whatsappEnabled !== undefined) data.whatsappEnabled = toBool(whatsappEnabled);
+  // shipping config
+  if (shippingBase !== undefined) data.shippingBase = shippingBase === '' ? null : Number(shippingBase);
+  if (shippingPerKm !== undefined) data.shippingPerKm = shippingPerKm === '' ? null : Number(shippingPerKm);
+  if (shippingMin !== undefined) data.shippingMin = shippingMin === '' ? null : Number(shippingMin);
+  if (shippingMax !== undefined) data.shippingMax = shippingMax === '' ? null : Number(shippingMax);
+  if (shippingFallback !== undefined) data.shippingFallback = shippingFallback === '' ? null : Number(shippingFallback);
+  if (originLat !== undefined) data.originLat = originLat === '' ? null : Number(originLat);
+  if (originLng !== undefined) data.originLng = originLng === '' ? null : Number(originLng);
+  // payments toggles
+  if (payPaypalEnabled !== undefined) data.payPaypalEnabled = toBool(payPaypalEnabled);
+  if (payStcEnabled !== undefined) data.payStcEnabled = toBool(payStcEnabled);
+  if (payCodEnabled !== undefined) data.payCodEnabled = toBool(payCodEnabled);
+  if (payBankEnabled !== undefined) data.payBankEnabled = toBool(payBankEnabled);
+  // shipping providers
+  if (aramexEnabled !== undefined) data.aramexEnabled = toBool(aramexEnabled);
+  if (aramexApiUrl !== undefined) data.aramexApiUrl = aramexApiUrl || null;
+  if (aramexApiKey !== undefined) data.aramexApiKey = aramexApiKey || null;
+  if (aramexApiUser !== undefined) data.aramexApiUser = aramexApiUser || null;
+  if (aramexApiPass !== undefined) data.aramexApiPass = aramexApiPass || null;
+  if (aramexWebhookSecret !== undefined) data.aramexWebhookSecret = aramexWebhookSecret || null;
+  if (smsaEnabled !== undefined) data.smsaEnabled = toBool(smsaEnabled);
+  if (smsaApiUrl !== undefined) data.smsaApiUrl = smsaApiUrl || null;
+  if (smsaApiKey !== undefined) data.smsaApiKey = smsaApiKey || null;
+  if (smsaWebhookSecret !== undefined) data.smsaWebhookSecret = smsaWebhookSecret || null;
   if (linkBlog !== undefined) data.linkBlog = linkBlog || null;
   if (linkSocial !== undefined) data.linkSocial = linkSocial || null;
   if (linkReturns !== undefined) data.linkReturns = linkReturns || null;
   if (linkPrivacy !== undefined) data.linkPrivacy = linkPrivacy || null;
   if (appStoreUrl !== undefined) data.appStoreUrl = appStoreUrl || null;
   if (playStoreUrl !== undefined) data.playStoreUrl = playStoreUrl || null;
+  try {
     const now = new Date();
     const M = getSettingsDelegate();
     if (M && typeof M.upsert === 'function') {
-      const updated = await M.upsert({
-        where: { id: 'singleton' },
-        create: { id: 'singleton', ...data, updatedAt: now },
-        update: { ...data, updatedAt: now }
-      });
-      return res.json({ ok: true, setting: updated });
+      try {
+        const updated = await M.upsert({
+          where: { id: 'singleton' },
+          create: { id: 'singleton', ...data, updatedAt: now },
+          update: { ...data, updatedAt: now }
+        });
+        return res.json({ ok: true, setting: updated });
+      } catch (e) {
+        // Prisma may throw if schema lacks some columns (e.g., new toggles). Fallback to raw SQL path.
+      }
     }
     // Fallback: raw SQL
-    const fields = Object.keys(data);
+    // Discover available columns to avoid "Unknown column" errors on drifted DBs
+    let availableCols = [];
+    try {
+      const rows = await prisma.$queryRawUnsafe(
+        "SELECT COLUMN_NAME as name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'StoreSetting'"
+      );
+      availableCols = Array.isArray(rows) ? rows.map(r => r.name || r.COLUMN_NAME).filter(Boolean) : [];
+    } catch {}
+    const allFields = Object.keys(data);
+    const fields = availableCols.length ? allFields.filter(k => availableCols.includes(k)) : allFields;
     if (!fields.length) {
       const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
       const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
       return res.json({ ok: true, setting });
     }
-    const sets = fields.map(k => `${k} = ?`).join(', ');
-    const values = fields.map(k => data[k]);
+  const sets = fields.map(k => `${k} = ?`).join(', ');
+  // For raw SQL path, convert booleans to 0/1 to match TINYINT(1) columns
+  const values = fields.map(k => typeof data[k] === 'boolean' ? (data[k] ? 1 : 0) : data[k]);
     // Ensure row exists
     await prisma.$executeRawUnsafe('INSERT IGNORE INTO StoreSetting (id) VALUES ("singleton")');
     // Apply update
@@ -243,7 +305,29 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
     const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
     return res.json({ ok: true, setting });
   } catch (e) {
-    res.status(400).json({ ok: false, error: 'UPDATE_FAILED', message: e.message });
+    // Dev-friendly fallback when DB is unavailable or schema is incompatible
+    const fallbackEnabled = (
+      process.env.NODE_ENV !== 'production' ||
+      process.env.ALLOW_INVALID_DB === 'true'
+    );
+    if (fallbackEnabled) {
+      try {
+        const devFile = path.join(uploadsDir, 'local-dev-settings.json');
+        let current = {};
+        try {
+          if (fs.existsSync(devFile)) {
+            const raw = fs.readFileSync(devFile, 'utf-8');
+            current = JSON.parse(raw || '{}');
+          }
+        } catch {}
+        const merged = { ...(current || {}), ...data, id: 'singleton', updatedAt: new Date().toISOString() };
+        fs.writeFileSync(devFile, JSON.stringify(merged, null, 2));
+        return res.json({ ok: true, setting: merged, warning: 'DEV_FALLBACK', message: 'Saved to local-dev-settings.json' });
+      } catch (e2) {
+        return res.status(400).json({ ok: false, error: 'UPDATE_FAILED', message: e.message + ' | fallback:' + (e2?.message || String(e2)) });
+      }
+    }
+    return res.status(400).json({ ok: false, error: 'UPDATE_FAILED', message: e.message });
   }
 });
 

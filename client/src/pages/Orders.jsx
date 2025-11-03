@@ -6,6 +6,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
 import AdminTableSkeleton from '../components/admin/AdminTableSkeleton.jsx';
+import { openInvoicePdfByOrder } from '../services/invoiceService';
 
 const Orders = () => {
   const { orders: allOrders = [], loading, error, useRemote, refresh } = useOrders() || {};
@@ -104,6 +105,15 @@ const Orders = () => {
               <div className="flex gap-2 justify-end flex-wrap">
                 <Link to={`/order/${o.id}`} className="btn-secondary px-4 py-2">عرض</Link>
                 <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" className="btn-secondary px-4 py-2">فاتورة</a>
+                {o.status === 'paid' && (
+                  <button
+                    className="btn-secondary px-4 py-2"
+                    onClick={async ()=>{
+                      try { await openInvoicePdfByOrder(o.id, { format: 'a4' }); }
+                      catch(e){ alert('تعذر فتح الفاتورة: ' + (e?.message || 'خطأ')); }
+                    }}
+                  >فاتورة (جديدة)</button>
+                )}
               </div>
             </div>
           </div>

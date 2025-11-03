@@ -91,4 +91,28 @@ router.post('/release', async (req, res) => {
   }
 });
 
+// Batch inventory update: [{ productId, deltaQty?, quantity?, lowStockThreshold? }]
+router.post('/batch/update', requireAdmin, async (req, res) => {
+  try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (!items.length) return res.status(400).json({ error:'INVALID_BODY', message:'items[] required' });
+    const ops = [];
+    for (const it of items) {
+      const productId = String(it.productId || '').trim();
+      if (!productId) continue;
+      if (Number.isFinite(Number(it.quantity))) {
+        ops.push(InventoryService.updateStock(productId, Number(it.quantity), it.lowStockThreshold != null ? Number(it.lowStockThreshold) : undefined));
+      } else if (Number.isFinite(Number(it.deltaQty))) {
+        ops.push(InventoryService.adjustStock(productId, Number(it.deltaQty)));
+      }
+    }
+    const results = await Promise.allSettled(ops);
+    const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+    const errors = results.filter(r => r.status === 'rejected').map(r => r.reason?.message || String(r.reason));
+    res.json({ ok: true, updated: ok.length, errors });
+  } catch (e) {
+    res.status(500).json({ error:'BATCH_UPDATE_FAILED', message: e.message });
+  }
+});
+
 export default router;

@@ -18,13 +18,24 @@ const HAS_PRISMA_AUTHTOKEN = !!prisma.authToken && typeof prisma.authToken.creat
 
 // Helper to set/clear refresh cookie
 const REFRESH_COOKIE = 'rt';
-const cookieOpts = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.COOKIE_SAMESITE || 'lax',
-  path: '/api/auth',
-  // maxAge will be set per write; here just defaults ignored
-});
+// Compute cookie options per request to handle cross-site scenarios correctly
+function cookieOpts(req) {
+  const env = process.env.NODE_ENV || 'development';
+  const wantNone = (process.env.CROSS_SITE_COOKIES === 'true') || (process.env.COOKIE_SAMESITE || '').toLowerCase() === 'none';
+  // Detect HTTPS behind proxy
+  const xfProto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase();
+  const isHttps = req.secure || xfProto === 'https';
+  const secure = env === 'production' ? true : isHttps;
+  const sameSite = process.env.COOKIE_SAMESITE || (wantNone ? 'none' : 'lax');
+  // When SameSite=None, browsers require Secure
+  const finalSecure = sameSite.toLowerCase() === 'none' ? true : secure;
+  return {
+    httpOnly: true,
+    secure: finalSecure,
+    sameSite,
+    path: '/api/auth',
+  };
+}
 
 // Dev-mode login fallback (no DB) — enabled when DEBUG_LOGIN=1 or ALLOW_INVALID_DB=true
 const DEV_AUTH_ENABLED = process.env.DEBUG_LOGIN === '1' || process.env.ALLOW_INVALID_DB === 'true';
@@ -102,7 +113,7 @@ router.post('/login', async (req, res) => {
       if (process.env.DEBUG_ERRORS === 'true') console.warn('[AUTH] authToken model missing; skipping authToken.create');
     }
     // Set HTTP-only cookie
-    res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(), maxAge: ttlMs });
+  res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(req), maxAge: ttlMs });
     return res.json({ ok:true, accessToken, user: { id: user.id, role: user.role, email: user.email, name: user.name } });
   } catch (e) {
     const msg = e?.message || '';
@@ -303,7 +314,7 @@ router.post('/refresh', async (req, res) => {
         if (HAS_PRISMA_AUTHTOKEN) await prisma.authToken.create({ data: { userId, type: 'refresh', tokenHash: newHash, expiresAt: newExp } }).catch(()=>{});
       }
     }
-    res.cookie(REFRESH_COOKIE, newRaw, { ...cookieOpts(), maxAge: ttlMs });
+  res.cookie(REFRESH_COOKIE, newRaw, { ...cookieOpts(req), maxAge: ttlMs });
     res.json({ ok: true, accessToken });
   } catch (e) {
     res.status(500).json({ ok:false, error:'REFRESH_FAILED', message: e.message });
@@ -322,7 +333,7 @@ router.post('/logout', async (req, res) => {
       await prisma.authToken.updateMany({ where: { type: 'refresh', tokenHash, consumedAt: null }, data: { consumedAt: new Date() } });
     }
     // Clear cookie
-    res.clearCookie(REFRESH_COOKIE, { ...cookieOpts(), maxAge: 0 });
+  res.clearCookie(REFRESH_COOKIE, { ...cookieOpts(req), maxAge: 0 });
     res.json({ ok: true });
   } catch (e) {
     res.status(200).json({ ok: true }); // don't leak errors on logout

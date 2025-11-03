@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useOrders } from '../context/OrdersContext';
 import { useAuth } from '../context/AuthContext';
+import { openInvoicePdfByOrder } from '../services/invoiceService';
 
 // Simple status progression map for visual tracking
 const STATUS_FLOW = [
@@ -48,6 +49,7 @@ const MyOrders = () => {
       <div className="space-y-5">
         {myOrders.map(o => {
           const total = o.grandTotal ?? o.total ?? (o.items||[]).reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0);
+          const firstShipment = (o.shipments && o.shipments.length) ? o.shipments[0] : null;
           return (
             <div key={o.id} className="border rounded p-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -55,11 +57,31 @@ const MyOrders = () => {
                   <div className="font-semibold">#{o.id}</div>
                   <div className="text-sm text-gray-600">{new Date(o.createdAt).toLocaleString()}</div>
                   <div className="text-sm mt-1">الإجمالي: <strong>{total} {o.currency || 'ر.س'}</strong></div>
+                  {firstShipment && (
+                    <div className="text-xs text-gray-700 mt-1 flex items-center gap-2">
+                      <span>رقم التتبع:</span>
+                      <code className="px-1.5 py-0.5 bg-gray-100 rounded">{firstShipment.trackingNumber}</code>
+                      {firstShipment.trackingUrl && (
+                        <a className="text-primary-red hover:underline" href={firstShipment.trackingUrl} target="_blank" rel="noopener noreferrer">تتبّع خارجي</a>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="text-sm flex flex-col items-start gap-1 min-w-[180px]">
                   <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">{o.status}</span>
                   <Link to={`/order/${o.id}`} className="btn-secondary px-3 py-1 text-xs">تفاصيل</Link>
+                  <Link to={`/order/${o.id}/track`} className="btn-secondary px-3 py-1 text-xs">تتبع</Link>
                   <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">فاتورة</a>
+                  {o.status === 'paid' && (
+                    <button
+                      type="button"
+                      className="btn-secondary px-3 py-1 text-xs"
+                      onClick={async ()=>{
+                        try { await openInvoicePdfByOrder(o.id, { format: 'a4' }); }
+                        catch(e){ alert('تعذر فتح الفاتورة: ' + (e?.message || 'خطأ')); }
+                      }}
+                    >فاتورة (جديدة)</button>
+                  )}
                 </div>
               </div>
               <StatusTracker status={o.status} />

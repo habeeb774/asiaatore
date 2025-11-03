@@ -20,45 +20,23 @@ export const SettingsProvider = ({ children }) => {
           // If someone stored '/api/uploads/..' convert to '/uploads/..' so the client uses the backend static path
           if (s.logo.startsWith('/api/uploads')) s.logo = s.logo.replace(/^\/api/, '');
         }
-        // إذا كان logo مساراً نسبياً، أنشئ logoUrl مطلق
+        // إذا كان logo مساراً نسبياً، ابنِ logoUrl بشكل صحيح
         if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
-          // Prefer explicit VITE_API_URL when set (developer override)
+          const isUpload = s.logo.startsWith('/uploads');
           const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
           let base = window.location.origin;
-          if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
-            // Build absolute URL using the backend origin. If viteApi is absolute, use its origin; if relative, fall back to window.origin
-            try {
-              const abs = new URL(viteApi, window.location.origin);
-              const origin = abs.origin; // drop any '/api' path
-              s.logoUrl = new URL(s.logo, origin).href;
-            } catch {
-              const normalized = String(viteApi).replace(/\/$/, '');
-              // If viteApi inadvertently includes '/api', make sure uploads don't inherit it
-              s.logoUrl = normalized.replace(/\/(api)(?:$|\/)/, '/') + s.logo;
+          if (isUpload) {
+            // Uploaded assets are served by backend under /uploads; prefer backend origin
+            if (viteApi && typeof viteApi === 'string' && viteApi.trim() && !viteApi.startsWith('/')) {
+              // If viteApi is absolute URL, use its origin
+              try { base = new URL(viteApi).origin; } catch {}
+            } else if (base.includes(':517')) {
+              base = base.replace(/:\d+$/, ':4000');
             }
-          } else {
-            // Fast initial fallback: use current origin so UI shows something immediately
             s.logoUrl = base + s.logo;
-            // If we're running under Vite dev server, attempt async non-blocking discovery of backend
-            if (base.includes(':517')) {
-              (async () => {
-                const ports = [4000, 4001, 3000, 3001];
-                for (let port of ports) {
-                  const candidate = base.replace(/:\d+$/, ':' + port) + s.logo;
-                  try {
-                    // Use fetch HEAD to check availability (async, won't block rendering)
-                    const resp = await fetch(candidate, { method: 'HEAD' });
-                    if (resp && resp.ok) {
-                      if (!mounted) return;
-                      // update setting object copy so React notices change
-                      setSetting(prev => prev ? { ...prev, logoUrl: candidate } : { ...s, logoUrl: candidate });
-                      return;
-                    }
-                  } catch (_) { /* ignore and try next port */ }
-                }
-                // nothing found — keep origin-based logoUrl
-              })();
-            }
+          } else {
+            // Public assets like /images are served by the frontend; use current origin directly
+            s.logoUrl = s.logo;
           }
         }
         setSetting(s);
@@ -73,8 +51,10 @@ export const SettingsProvider = ({ children }) => {
 
   useEffect(() => {
     if (!setting) return;
-    // طباعة قيمة الشعار والرابط النهائي
-    console.log('[SettingsContext] logo:', setting.logo, 'logoUrl:', setting.logoUrl);
+    // طباعة قيمة الشعار والرابط النهائي (dev only)
+    if (import.meta?.env?.DEV) {
+      console.log('[SettingsContext] logo:', setting.logo, 'logoUrl:', setting.logoUrl);
+    }
     const root = document.documentElement;
     const setLink = (rel, href) => {
       try {
@@ -113,8 +93,10 @@ export const SettingsProvider = ({ children }) => {
     if (setting.colorPrimary && setting.colorSecondary) {
       root.style.setProperty('--grad-primary', `linear-gradient(90deg, ${setting.colorPrimary}, ${setting.colorSecondary})`);
     }
-    // Debug: تحقق من القيمة الفعلية للون الأساسي
-    console.log('[SettingsContext] colorPrimary:', setting.colorPrimary);
+    // Debug: تحقق من القيمة الفعلية للون الأساسي (dev only)
+    if (import.meta?.env?.DEV) {
+      console.log('[SettingsContext] colorPrimary:', setting.colorPrimary);
+    }
     // Set site name in og:site_name meta for consistency
     try {
       const siteName = setting.siteNameAr || setting.siteNameEn;
@@ -133,21 +115,18 @@ export const SettingsProvider = ({ children }) => {
       s.logo = s.logo.replace(/^\/api/, '');
     }
     if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
+      const isUpload = s.logo.startsWith('/uploads');
       const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
-      if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
-        try {
-          const abs = new URL(viteApi, window.location.origin);
-          const origin = abs.origin;
-          s.logoUrl = new URL(s.logo, origin).href;
-        } catch {
-          s.logoUrl = viteApi.replace(/\/$/, '').replace(/\/(api)(?:$|\/)/, '/') + s.logo;
-        }
-      } else {
+      if (isUpload) {
         let base = window.location.origin;
-        if (base.includes(':517')) {
+        if (viteApi && typeof viteApi === 'string' && viteApi.trim() && !viteApi.startsWith('/')) {
+          try { base = new URL(viteApi).origin; } catch {}
+        } else if (base.includes(':517')) {
           base = base.replace(/:\d+$/, ':4000');
         }
         s.logoUrl = base + s.logo;
+      } else {
+        s.logoUrl = s.logo;
       }
     }
     setSetting(s);
@@ -161,21 +140,18 @@ export const SettingsProvider = ({ children }) => {
       s.logo = s.logo.replace(/^\/api/, '');
     }
     if (s && s.logo && typeof s.logo === 'string' && s.logo.startsWith('/')) {
+      const isUpload = s.logo.startsWith('/uploads');
       const viteApi = import.meta.env && import.meta.env.VITE_API_URL;
-      if (viteApi && typeof viteApi === 'string' && viteApi.trim()) {
-        try {
-          const abs = new URL(viteApi, window.location.origin);
-          const origin = abs.origin;
-          s.logoUrl = new URL(s.logo, origin).href;
-        } catch {
-          s.logoUrl = viteApi.replace(/\/$/, '').replace(/\/(api)(?:$|\/)/, '/') + s.logo;
-        }
-      } else {
+      if (isUpload) {
         let base = window.location.origin;
-        if (base.includes(':517')) {
+        if (viteApi && typeof viteApi === 'string' && viteApi.trim() && !viteApi.startsWith('/')) {
+          try { base = new URL(viteApi).origin; } catch {}
+        } else if (base.includes(':517')) {
           base = base.replace(/:\d+$/, ':4000');
         }
         s.logoUrl = base + s.logo;
+      } else {
+        s.logoUrl = s.logo;
       }
     }
     if (s) setSetting(s);

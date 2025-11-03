@@ -26,7 +26,9 @@ export const WishlistProvider = ({ children }) => {
 	// Fetch from server when user logs in
 	useEffect(() => {
 		const fetchServer = async () => {
-			if (!user || hasFetchedRef.current) return;
+				let hasToken = false
+				try { hasToken = !!localStorage.getItem('my_store_token') } catch {}
+				if (!user || !hasToken || hasFetchedRef.current) return;
 			setLoading(true); setError(null);
 			try {
 				const data = await api.wishlistList();

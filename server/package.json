@@ -7,10 +7,10 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "prisma generate",
+    "build": "prisma generate --schema=../prisma/schema.prisma",
     "start": "node index.js",
     "dev": "node index.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema=../prisma/schema.prisma"
   },
   "dependencies": {
     "@apollo/server": "^4.11.1",

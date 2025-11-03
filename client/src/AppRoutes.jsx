@@ -27,6 +27,12 @@ const MyOrders = React.lazy(() => import('./pages/MyOrders'));
 const OrderDetails = React.lazy(() => import('./pages/OrderDetails'));
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
 const ProductInventory = React.lazy(() => import('./pages/admin/ProductInventory.jsx'));
+const AdminOrders = React.lazy(() => import('./pages/admin/Orders.jsx'));
+const AdminProductsAdmin = React.lazy(() => import('./pages/admin/Products.jsx'));
+const AdminInvoices = React.lazy(() => import('./pages/admin/Invoices.jsx'));
+const AdminMarketing = React.lazy(() => import('./pages/admin/Marketing.jsx'));
+const AdminApps = React.lazy(() => import('./pages/admin/Apps.jsx'));
+const AdminIntegrations = React.lazy(() => import('./pages/admin/Integrations.jsx'));
 const SellerDashboard = React.lazy(() => import('./pages/seller/SellerDashboard.jsx'));
 const DeliveryDashboard = React.lazy(() => import('./pages/delivery/DeliveryDashboard.jsx'));
 import Canonical from './components/Canonical';
@@ -38,6 +44,7 @@ const StoresPage = React.lazy(() => import('./pages/StoresPage'));
 const OffersPage = React.lazy(() => import('./pages/OffersPage'));
 const InvoiceViewer = React.lazy(() => import('./pages/InvoiceViewer'));
 const CatalogPage = React.lazy(() => import('./pages/CatalogPage'));
+const LegalPage = React.lazy(() => import('./pages/Legal.jsx'));
 const ProductsPage = React.lazy(() => import('./pages/Products'));
 const ChatPage = React.lazy(() => import('./pages/Chat.jsx'));
 const StyleGuide = React.lazy(() => import('./pages/StyleGuide'));
@@ -161,6 +168,7 @@ const AppRoutes = () => {
   <Route path="/cart" element={<Cart />} />
   <Route path="/checkout" element={<CheckoutPage />} />
   <Route path="/orders" element={<Orders />} />
+  <Route path="/legal/:slug" element={<LegalPage />} />
   <Route path="/my-orders" element={<MyOrders />} />
   <Route path="/order/:id" element={<OrderDetails />} />
   <Route path="/order/:id/track" element={<OrderTracker />} />
@@ -269,6 +277,12 @@ const AppRoutes = () => {
   <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
   <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
   <Route path="/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/login" />} />
+  <Route path="/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/login" />} />
+  <Route path="/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/login" />} />
+  <Route path="/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/login" />} />
+  <Route path="/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/login" />} />
+  <Route path="/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/login" />} />
+  <Route path="/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/login" />} />
   <Route path="/login" element={<LoginPage />} />
   <Route path="/register" element={<RegisterPage />} />
   <Route path="/forgot" element={<ForgotPasswordPage />} />
@@ -289,6 +303,7 @@ const AppRoutes = () => {
   <Route path="/en/cart" element={<Cart />} />
   <Route path="/en/checkout" element={<CheckoutPage />} />
   <Route path="/en/orders" element={<Orders />} />
+  <Route path="/en/legal/:slug" element={<LegalPage />} />
   <Route path="/en/my-orders" element={<MyOrders />} />
   <Route path="/en/order/:id" element={<OrderDetails />} />
   <Route path="/en/order/:id/track" element={<OrderTracker />} />
@@ -396,6 +411,12 @@ const AppRoutes = () => {
   <Route path="/en/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/en/login" />} />
   <Route path="/en/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/en/login" />} />
   <Route path="/en/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/en/login" />} />
   <Route path="/en/login" element={<LoginPage />} />
   <Route path="/en/register" element={<RegisterPage />} />
   <Route path="/en/forgot" element={<ForgotPasswordPage />} />
@@ -416,6 +437,7 @@ const AppRoutes = () => {
   <Route path="/fr/cart" element={<Cart />} />
   <Route path="/fr/checkout" element={<CheckoutPage />} />
   <Route path="/fr/orders" element={<Orders />} />
+  <Route path="/fr/legal/:slug" element={<LegalPage />} />
   <Route path="/fr/my-orders" element={<MyOrders />} />
   <Route path="/fr/order/:id" element={<OrderDetails />} />
   <Route path="/fr/order/:id/track" element={<OrderTracker />} />
@@ -522,6 +544,12 @@ const AppRoutes = () => {
   <Route path="/fr/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/fr/login" />} />
   <Route path="/fr/login" element={<LoginPage />} />
   <Route path="/fr/register" element={<RegisterPage />} />
   <Route path="/fr/forgot" element={<ForgotPasswordPage />} />

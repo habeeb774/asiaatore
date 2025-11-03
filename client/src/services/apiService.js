@@ -23,6 +23,9 @@ export const apiPost = (path, body) => request(path, { method: 'POST', body });
 export const apiPut = (path, body) => request(path, { method: 'PUT', body });
 export const apiDelete = (path) => request(path, { method: 'DELETE' });
 
+// POST with custom headers (e.g., idempotency)
+export const apiPostWithHeaders = (path, body, headers = {}) => request(path, { method: 'POST', body, headers });
+
 // Multipart (FormData) request helper (no JSON stringification)
 export async function apiPostMultipart(path, formData) {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;

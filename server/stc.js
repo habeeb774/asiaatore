@@ -2,8 +2,20 @@ import express from 'express';
 import crypto from 'crypto';
 import prisma from './db/client.js';
 import { audit } from './utils/audit.js';
+import { ensureInvoiceForOrder } from './utils/invoice.js';
 
 const router = express.Router();
+// Enforce enablement via settings (best-effort; if DB unavailable, allow in dev)
+router.use(async (req, res, next) => {
+  try {
+    if (req.path === '/_config') return next();
+    const setting = await prisma.storeSetting?.findUnique?.({ where: { id: 'singleton' } }).catch(() => null);
+    if (setting && (setting.payStcEnabled === 0 || setting.payStcEnabled === false)) {
+      return res.status(403).json({ ok: false, error: 'PAYMENT_DISABLED', method: 'stc' });
+    }
+  } catch {/* ignore and allow */}
+  next();
+});
 
 // Helper to random session id
 function makeSession() {
@@ -56,6 +68,23 @@ router.get('/_config', (req, res) => {
   });
 });
 
+// Capture raw body for webhook signature verification
+router.use((req, _res, next) => {
+  if (req.path !== '/webhook') return next();
+  if (req.rawBodyCaptured) return next();
+  if (req.readableEnded || req.body) {
+    try { req.rawBody = JSON.stringify(req.body); } catch { req.rawBody = '{}'; }
+    return next();
+  }
+  const chunks = [];
+  req.on('data', c => chunks.push(c));
+  req.on('end', () => {
+    req.rawBody = Buffer.concat(chunks).toString('utf8');
+    req.rawBodyCaptured = true;
+    next();
+  });
+});
+
 // Create STC Pay session (sandbox integration scaffold)
 router.post('/create', async (req, res) => {
   try {
@@ -66,7 +95,9 @@ router.post('/create', async (req, res) => {
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
 
-    let sessionId = makeSession(); // fallback local id
+  // Basic idempotency: if the same idem key was used before, return the same session
+  const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
+  let sessionId = makeSession(); // fallback local id
     let stcCreateResponse = null;
     let externalReference = null;
     if (credsConfigured()) {
@@ -95,7 +126,11 @@ router.post('/create', async (req, res) => {
       }
     }
     const existingMeta = order.paymentMeta || {};
-    const meta = { ...existingMeta, stage: 'stc:init', stc: { ...(existingMeta.stc||{}), sessionId, externalReference, create: stcCreateResponse } };
+    // Idempotent replay check
+    if (idemKey && existingMeta?.stc?.idemCreate === idemKey && existingMeta?.stc?.sessionId) {
+      return res.json({ ok: true, sessionId: existingMeta.stc.sessionId, externalReference: existingMeta.stc.externalReference ?? null, idempotent: true, simulated: !credsConfigured() });
+    }
+    const meta = { ...existingMeta, stage: 'stc:init', stc: { ...(existingMeta.stc||{}), sessionId, externalReference, create: stcCreateResponse, idemCreate: idemKey || undefined } };
     await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'stc', paymentMeta: meta, status: 'pending' } });
     audit({ action: 'order.stc.create', entity: 'Order', entityId: orderId, userId: order.userId, meta: { sessionId, externalReference } });
     res.json({ ok: true, sessionId, externalReference, simulated: !credsConfigured() });
@@ -117,10 +152,16 @@ router.post('/confirm', async (req, res) => {
     if (storedSession && storedSession !== sessionId) {
       return res.status(400).json({ ok: false, error: 'SESSION_MISMATCH' });
     }
-    const newStatus = success ? 'paid' : 'cancelled';
-    const updatedMeta = { ...existingMeta, stage: success ? 'stc:paid' : 'stc:failed', stc: { ...(existingMeta.stc||{}), sessionId, success } };
-    await prisma.order.update({ where: { id: orderId }, data: { status: newStatus, paymentMeta: updatedMeta } });
+    const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
+    // If already finalized, return current
+    if (order.status === 'paid' || order.status === 'cancelled' || order.status === 'canceled') {
+      return res.json({ ok: true, orderId, status: order.status, sessionId: storedSession || sessionId, idempotent: true });
+    }
+  const newStatus = success ? 'paid' : 'cancelled';
+    const updatedMeta = { ...existingMeta, stage: success ? 'stc:paid' : 'stc:failed', stc: { ...(existingMeta.stc||{}), sessionId, success, idemConfirm: idemKey || undefined } };
+  await prisma.order.update({ where: { id: orderId }, data: { status: newStatus, paymentMeta: updatedMeta } });
     audit({ action: 'order.stc.confirm', entity: 'Order', entityId: orderId, userId: order.userId, meta: { success, sessionId } });
+  if (newStatus === 'paid') { try { await ensureInvoiceForOrder(orderId); } catch {} }
     res.json({ ok: true, orderId, status: newStatus, sessionId, success });
   } catch (e) {
     res.status(500).json({ ok: false, error: 'STC_CONFIRM_FAILED', message: e.message });
@@ -130,7 +171,19 @@ router.post('/confirm', async (req, res) => {
 // Webhook (sandbox) - receives asynchronous payment status updates
 router.post('/webhook', async (req, res) => {
   try {
+    const raw = req.rawBody || JSON.stringify(req.body || {});
     const event = req.body || {};
+    // Optional signature verification using HMAC-SHA256 with STC_API_SECRET
+    const providedSig = String(req.headers['x-stc-signature'] || '').trim();
+    let verified = false;
+    if (providedSig && STC_API_SECRET) {
+      try {
+        const hmac = crypto.createHmac('sha256', STC_API_SECRET);
+        hmac.update(raw, 'utf8');
+        const digest = hmac.digest('hex');
+        verified = crypto.timingSafeEqual(Buffer.from(providedSig, 'hex'), Buffer.from(digest, 'hex'));
+      } catch {/* ignore */}
+    }
     const sessionId = event.sessionId || event.referenceSession || null;
     const status = event.status || event.paymentStatus || null;
     if (!sessionId) return res.status(400).json({ ok: false, error: 'MISSING_SESSION_ID' });
@@ -138,13 +191,14 @@ router.post('/webhook', async (req, res) => {
     const order = await prisma.order.findFirst({ where: { paymentMeta: { contains: sessionId } } });
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
     const existingMeta = order.paymentMeta || {};
-    const stcMeta = { ...(existingMeta.stc||{}), webhook: event };
+    const stcMeta = { ...(existingMeta.stc||{}), webhook: event, webhookVerified: verified };
     let newStatus = order.status;
     if (/paid|success|completed/i.test(status || '')) newStatus = 'paid';
     else if (/fail|cancel/i.test(status || '')) newStatus = 'cancelled';
-    await prisma.order.update({ where: { id: order.id }, data: { status: newStatus, paymentMeta: { ...existingMeta, stc: stcMeta } } });
-    audit({ action: 'order.stc.webhook', entity: 'Order', entityId: order.id, userId: order.userId, meta: { status, sessionId } });
-    res.json({ ok: true, status: newStatus });
+  await prisma.order.update({ where: { id: order.id }, data: { status: newStatus, paymentMeta: { ...existingMeta, stc: stcMeta } } });
+    audit({ action: 'order.stc.webhook', entity: 'Order', entityId: order.id, userId: order.userId, meta: { status, sessionId, verified } });
+  if (newStatus === 'paid') { try { await ensureInvoiceForOrder(order.id); } catch {} }
+    res.json({ ok: true, status: newStatus, verified });
   } catch (e) {
     console.error('[STC webhook] error', e);
     res.status(500).json({ ok: false, error: 'WEBHOOK_ERROR', message: e.message });

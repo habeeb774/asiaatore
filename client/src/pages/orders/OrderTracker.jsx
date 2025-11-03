@@ -6,7 +6,9 @@ export default function OrderTracker() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [events, setEvents] = useState([]);
+  const [shipments, setShipments] = useState(null);
   const esRef = useRef(null);
+  const [sseError, setSseError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -20,6 +22,7 @@ export default function OrderTracker() {
   }, [id]);
 
   useEffect(() => {
+    // Open SSE for live updates if backend is up; suppress noisy errors
     const es = new EventSource('/api/events');
     esRef.current = es;
     const onMsg = (type) => (e) => {
@@ -37,6 +40,7 @@ export default function OrderTracker() {
     es.addEventListener('delivery.updated', onMsg('delivery.updated'));
     es.addEventListener('delivery.location', onMsg('delivery.location'));
     es.addEventListener('order.updated', onMsg('order.updated'));
+    es.onerror = () => { setSseError('stream'); };
     return () => { es.close(); };
   }, [id]);
 
@@ -48,6 +52,121 @@ export default function OrderTracker() {
       <div className="mb-3 text-sm text-gray-700">رقم الطلب: {order.id}</div>
       <div className="mb-2">حالة الطلب: <span className="font-semibold">{order.status}</span></div>
       <div className="mb-2">حالة التوصيل: <span className="font-semibold">{order.deliveryStatus || '—'}</span></div>
+      {sseError && (
+        <div className="text-[11px] text-gray-500 mb-2">التحديثات الحية غير متاحة حالياً.</div>
+      )}
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
+        <a
+          href={`/api/orders/${order.id}/invoice`}
+          target="_blank"
+          rel="noopener"
+          className="btn-primary text-xs"
+        >عرض الفاتورة</a>
+        <button
+          className="btn-secondary text-xs"
+          onClick={async ()=>{
+            try {
+              const res = await api.orderShipments(order.id, { refresh: true });
+              const list = res.shipments || res.items || res || [];
+              setShipments(Array.isArray(list) ? list : []);
+            } catch {
+              setShipments([]);
+            }
+          }}
+        >تحميل الشحنات</button>
+      </div>
+      {/* Order summary */}
+      <div className="bg-white border rounded p-3 mb-4">
+        <div className="font-semibold mb-2 text-sm">تفاصيل الطلب</div>
+        <div className="grid gap-2 text-xs sm:grid-cols-2">
+          <div className="space-y-1">
+            <div><span className="opacity-70">طريقة الدفع:</span> <span className="font-medium">{order.paymentMethod || '—'}</span></div>
+            <div><span className="opacity-70">العملة:</span> <span className="font-medium">{order.currency || 'SAR'}</span></div>
+            {order.paymentMeta?.bank?.reference && (
+              <div><span className="opacity-70">مرجع التحويل:</span> <span className="font-medium">{order.paymentMeta.bank.reference}</span></div>
+            )}
+          </div>
+          <div className="space-y-1">
+            <div><span className="opacity-70">أنشئ في:</span> <span className="font-medium">{new Date(order.createdAt).toLocaleString('ar')}</span></div>
+            {order.updatedAt && <div><span className="opacity-70">آخر تحديث:</span> <span className="font-medium">{new Date(order.updatedAt).toLocaleString('ar')}</span></div>}
+          </div>
+        </div>
+        {/* Address */}
+        {(() => {
+          const addr = order?.paymentMeta?.address || order?.shippingAddress;
+          if (!addr) return null;
+          const parts = [addr.country, addr.city, addr.area].filter(Boolean).join(' - ');
+          return (
+            <div className="mt-3 border-t pt-3">
+              <div className="font-medium text-sm mb-1">عنوان الشحن</div>
+              <div className="text-xs whitespace-pre-line leading-6">
+                {addr.name && <div>{addr.name}</div>}
+                {addr.email && <div className="opacity-70">{addr.email}</div>}
+                <div>{parts || '—'}</div>
+                {addr.line1 && <div>{addr.line1}</div>}
+                {addr.phone && <div>📞 {addr.phone}</div>}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Items */}
+      {Array.isArray(order.items) && order.items.length > 0 && (
+        <div className="bg-white border rounded p-3 mb-4">
+          <div className="font-semibold mb-2 text-sm">العناصر</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border rounded overflow-hidden">
+              <thead>
+                <tr className="bg-gray-50 text-gray-600">
+                  <th className="text-right p-2 border-b">الصنف</th>
+                  <th className="text-right p-2 border-b">الكمية</th>
+                  <th className="text-right p-2 border-b">السعر</th>
+                  <th className="text-right p-2 border-b">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((it, idx) => (
+                  <tr key={idx} className={idx % 2 ? 'bg-white' : 'bg-gray-50/40'}>
+                    <td className="p-2 border-b">{it.nameAr || it.nameEn || it.name || it.productId}</td>
+                    <td className="p-2 border-b" dir="ltr">{it.quantity}</td>
+                    <td className="p-2 border-b" dir="ltr">{Number(it.price || 0).toFixed(2)} {order.currency || 'SAR'}</td>
+                    <td className="p-2 border-b" dir="ltr">{Number((it.price || 0) * (it.quantity || 1)).toFixed(2)} {order.currency || 'SAR'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 grid gap-2 text-xs sm:max-w-xs sm:ml-auto">
+            <div className="flex justify-between opacity-80"><span>الإجمالي الفرعي</span><span dir="ltr">{Number(order.subtotal ?? 0).toFixed(2)} {order.currency || 'SAR'}</span></div>
+            {order.discount != null && <div className="flex justify-between opacity-80"><span>الخصم</span><span dir="ltr">{Number(order.discount || 0).toFixed(2)} {order.currency || 'SAR'}</span></div>}
+            {order.tax != null && <div className="flex justify-between opacity-80"><span>الضريبة</span><span dir="ltr">{Number(order.tax || 0).toFixed(2)} {order.currency || 'SAR'}</span></div>}
+            {order.shippingTotal != null && <div className="flex justify-between opacity-80"><span>الشحن</span><span dir="ltr">{Number(order.shippingTotal || 0).toFixed(2)} {order.currency || 'SAR'}</span></div>}
+            <div className="flex justify-between font-semibold text-sm"><span>الإجمالي النهائي</span><span dir="ltr">{Number(order.grandTotal ?? order.total ?? 0).toFixed(2)} {order.currency || 'SAR'}</span></div>
+          </div>
+        </div>
+      )}
+      {shipments && (
+        <div className="mb-4 bg-white border rounded p-3">
+          <div className="font-semibold mb-2 text-sm">الشحنات</div>
+          {shipments.length === 0 ? (
+            <div className="text-xs text-gray-500">لا توجد شحنات بعد</div>
+          ) : (
+            <ul className="text-xs space-y-1">
+              {shipments.map((s, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="px-1.5 py-0.5 rounded bg-gray-100 border text-gray-700">{s.provider || 'provider'}</span>
+                  </span>
+                  <span>رقم التتبع: <strong>{s.trackingNumber || s.trackingId || '—'}</strong></span>
+                  {s.trackingUrl && <a href={s.trackingUrl} target="_blank" rel="noopener" className="text-sky-700 underline">رابط التتبع</a>}
+                  <span className="ml-auto opacity-70">{s.status || '—'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {order.deliveryLocation && (
         <div className="mb-2 text-sm">
           الموقع الحالي: lat {order.deliveryLocation.lat}, lng {order.deliveryLocation.lng}

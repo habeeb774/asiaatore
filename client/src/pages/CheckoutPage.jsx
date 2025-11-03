@@ -7,10 +7,12 @@ import { useAuth } from '../context/AuthContext';
 import { localizeName } from '../utils/locale';
 import { useLanguage } from '../context/LanguageContext';
 import api from '../api/client';
+import { useSettings } from '../context/SettingsContext';
 
 const CheckoutPage = () => {
   const { cartItems, clearCart } = useCart() || {};
   const { user } = useAuth() || {};
+  const { setting } = useSettings() || {};
   const lang = useLanguage();
   const locale = lang?.locale ?? 'ar';
 
@@ -38,6 +40,26 @@ const CheckoutPage = () => {
   const [orderId, setOrderId] = useState(null);
   const [orderError, setOrderError] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  // Compute enabled payment methods from settings
+  const enabledPayments = useMemo(() => {
+    const s = setting || {};
+    // Defaults: enable COD/bank/STC when not explicitly disabled; PayPal off by default
+    return {
+      cod: s.payCodEnabled !== false,
+      bank: s.payBankEnabled !== false,
+      stc: !!s.payStcEnabled,
+      paypal: !!s.payPaypalEnabled,
+    };
+  }, [setting]);
+  const paymentOptions = useMemo(() => (
+    ['cod','paypal','stc','bank'].filter(k => enabledPayments[k])
+  ), [enabledPayments]);
+  // Ensure selected method remains valid if settings change
+  useEffect(() => {
+    if (!paymentOptions.includes(paymentMethod) && paymentOptions.length) {
+      setPaymentMethod(paymentOptions[0]);
+    }
+  }, [paymentOptions, paymentMethod]);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [bankInfo, setBankInfo] = useState(null);
@@ -52,10 +74,18 @@ const CheckoutPage = () => {
       const city = (addr.city||'').trim();
       if (!city) { setShippingCost(0); setShippingInfo(null); return; }
       try {
-        const q = await api.shippingQuote({ city, country: addr.country });
+        const q = await api.shippingQuote({ city, country: addr.country, geo: addr?.geo || null });
         if (q?.ok) {
           setShippingCost(Number(q.shipping)||0);
-          setShippingInfo({ method: q.method, distanceKm: q.distanceKm, cityMatched: q.cityMatched });
+          setShippingInfo({
+            method: q.method,
+            distanceKm: q.distanceKm,
+            cityMatched: q.cityMatched,
+            etaHoursMin: q.etaHoursMin,
+            etaHoursMax: q.etaHoursMax,
+            etaDaysMin: q.etaDaysMin,
+            etaDaysMax: q.etaDaysMax,
+          });
         } else {
           setShippingCost(25);
           setShippingInfo(null);
@@ -66,7 +96,7 @@ const CheckoutPage = () => {
       }
     };
     run();
-  }, [addr.city, addr.country]);
+  }, [addr.city, addr.country, addr?.geo?.lat, addr?.geo?.lng]);
 
   useEffect(()=> { try { localStorage.setItem(ADDRESS_KEY, JSON.stringify(addr)); } catch {} }, [addr]);
   useEffect(()=>{
@@ -411,7 +441,7 @@ const CheckoutPage = () => {
               <div>
                 <h3 className="font-bold mb-2 text-sm">طريقة الدفع</h3>
                 <div className="grid gap-2 text-sm">
-                  {['cod','paypal','stc','bank'].map(m => (
+                  {paymentOptions.map(m => (
                     <label key={m} className={`border rounded p-2 flex items-center gap-2 cursor-pointer ${paymentMethod===m?'ring-2 ring-primary-red':''}`}>
                       <input type="radio" name="pm2" value={m} checked={paymentMethod===m} onChange={()=>setPaymentMethod(m)} />
                       <span>{m==='cod'?'الدفع عند الاستلام': m==='paypal'?'PayPal': m==='stc'?'STC Pay':'تحويل بنكي'}</span>
@@ -434,7 +464,14 @@ const CheckoutPage = () => {
               <div className="flex justify-between"><span>الخصم</span><span>{discountFromCoupon.toFixed(2)}-</span></div>
               <div className="flex justify-between"><span>الشحن</span><span>{shippingCost.toFixed(2)} ر.س</span></div>
               {shippingInfo && (
-                <div className="text-xs text-gray-500">طريقة التسعير: {shippingInfo.method === 'distance' ? `حسب المسافة (~${shippingInfo.distanceKm} كم)` : 'افتراضي'}</div>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div>طريقة التسعير: {shippingInfo.method === 'distance' ? `حسب المسافة (~${shippingInfo.distanceKm} كم)` : 'افتراضي'}</div>
+                  {(shippingInfo.etaDaysMin!=null || shippingInfo.etaHoursMin!=null) && (
+                    <div>
+                      تقدير الوصول: {shippingInfo.etaDaysMin!=null ? `${shippingInfo.etaDaysMin}–${shippingInfo.etaDaysMax} يوم` : `${shippingInfo.etaHoursMin}–${shippingInfo.etaHoursMax} ساعة`}
+                    </div>
+                  )}
+                </div>
               )}
               <div className="flex justify-between"><span>الضريبة</span><span>{tax.toFixed(2)} ر.س</span></div>
               <div className="border-t pt-2 flex justify-between font-bold"><span>الإجمالي</span><span>{grandTotal.toFixed(2)} ر.س</span></div>
@@ -482,7 +519,14 @@ const CheckoutPage = () => {
               <div className="flex justify-between"><span>الخصم</span><strong>{discountFromCoupon.toFixed(2)}-</strong></div>
               <div className="flex justify-between"><span>الشحن</span><strong>{shippingCost.toFixed(2)} ر.س</strong></div>
               {shippingInfo && (
-                <div className="text-xs text-gray-500">{shippingInfo.method === 'distance' ? `المسافة التقديرية: ~${shippingInfo.distanceKm} كم` : 'تسعير افتراضي للشحن'}</div>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div>{shippingInfo.method === 'distance' ? `المسافة التقديرية: ~${shippingInfo.distanceKm} كم` : 'تسعير افتراضي للشحن'}</div>
+                  {(shippingInfo.etaDaysMin!=null || shippingInfo.etaHoursMin!=null) && (
+                    <div>
+                      تقدير الوصول: {shippingInfo.etaDaysMin!=null ? `${shippingInfo.etaDaysMin}–${shippingInfo.etaDaysMax} يوم` : `${shippingInfo.etaHoursMin}–${shippingInfo.etaHoursMax} ساعة`}
+                    </div>
+                  )}
+                </div>
               )}
               <div className="flex justify-between"><span>الضريبة</span><strong>{tax.toFixed(2)} ر.س</strong></div>
               <div className="border-t pt-2 flex justify-between font-bold"><span>الإجمالي</span><span>{grandTotal.toFixed(2)} ر.س</span></div>
@@ -503,7 +547,7 @@ const CheckoutPage = () => {
           </div>
           <div className="p-4 space-y-6 max-w-xl">
             <div className="grid gap-3">
-              {['paypal','stc','bank','cod'].map(m => (
+              {(['paypal','stc','bank','cod'].filter(m => enabledPayments[m])).map(m => (
                 <label key={m} className={`border rounded p-3 cursor-pointer flex items-center justify-between ${paymentMethod===m?'ring-2 ring-primary-red':''}`}>
                   <span>
                     <input type="radio" name="pm4" value={m} checked={paymentMethod===m} onChange={()=>setPaymentMethod(m)} className="mr-2" />

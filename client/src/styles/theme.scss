@@ -12,10 +12,10 @@
 
   /* Surface colors derived from base tokens in index.css */
   --surface-1: #ffffff;
-  --surface-2: #f8fafc; /* slate-50 */
-  --surface-3: #f1f5f9; /* slate-100 */
+  --surface-2: #FAFAF8; /* soft off-white */
+  --surface-3: #F5F5F2; /* subtle alt */
 
-  --border: rgba(2,6,23,0.08);
+  --border: rgba(12,18,28,0.08);
   --text-muted: var(--color-muted);
 
   /* Brand colors (derived from provided logo) */
@@ -32,9 +32,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface-1: #0b1220;
-    --surface-2: #0e1626;
-    --surface-3: #111a2c;
+    --surface-1: #0E1626;
+    --surface-2: #101A2C;
+    --surface-3: #121E33;
 
     --border: rgba(255,255,255,0.08);
     --text-muted: #9aa4b2;
@@ -43,9 +43,9 @@
 
 /* Explicit theme override via data-theme (takes priority over system) */
 [data-theme='dark'] {
-  --surface-1: #0b1220;
-  --surface-2: #0e1626;
-  --surface-3: #111a2c;
+  --surface-1: #0E1626;
+  --surface-2: #101A2C;
+  --surface-3: #121E33;
 
   --border: rgba(255,255,255,0.08);
   --text-muted: #9aa4b2;

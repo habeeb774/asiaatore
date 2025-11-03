@@ -22,6 +22,19 @@ export const AuthProvider = ({ children }) => {
     } catch {}
   }, [user])
 
+  // Ensure user state matches token presence on boot (avoid server 401 spam when a stale user remains)
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('my_store_token')
+      if (!token && user) {
+        // If no access token, treat as guest (clear stale user)
+        setUser(null)
+      }
+    } catch {}
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const login = async (email, password) => {
     try {
       const resp = await api.authLogin(email, password)

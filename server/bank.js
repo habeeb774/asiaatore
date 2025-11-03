@@ -7,12 +7,24 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { sendEmail } from './utils/email.js';
+import { ensureInvoiceForOrder } from './utils/invoice.js';
 
 // Ensure user context (JWT) is parsed before admin checks
 // (index.js already applies attachUser globally before /api/pay, but this is defensive)
 // router.use(attachUser); // optional if needed
 
 const router = express.Router();
+
+// Enforce enablement via settings (best-effort; if DB unavailable, allow in dev)
+router.use(async (req, res, next) => {
+  try {
+    const setting = await prisma.storeSetting?.findUnique?.({ where: { id: 'singleton' } }).catch(() => null);
+    if (setting && (setting.payBankEnabled === 0 || setting.payBankEnabled === false)) {
+      return res.status(403).json({ ok: false, error: 'PAYMENT_DISABLED', method: 'bank' });
+    }
+  } catch {/* ignore and allow */}
+  next();
+});
 
 const BANK_ACCOUNT = {
   accountName: process.env.BANK_ACCOUNT_NAME || 'Demo Trading Co.',
@@ -36,9 +48,14 @@ router.post('/init', async (req, res) => {
     if (!order) {
       return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND', message: 'Order not found for bank init' });
     }
-    const reference = makeReference(orderId);
+    const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
     const existingMeta = order.paymentMeta || {};
-    const newMeta = { ...existingMeta, bank: { ...existingMeta.bank, reference } };
+    // If idempotent repeat with same idemKey or reference already exists and status pending, return same reference
+    if ((idemKey && existingMeta?.bank?.idemInit === idemKey) || (existingMeta?.bank?.reference && order.status === 'pending_bank_review')) {
+      return res.json({ ok: true, bank: { ...BANK_ACCOUNT, reference: existingMeta.bank.reference }, idempotent: true });
+    }
+    const reference = makeReference(orderId);
+    const newMeta = { ...existingMeta, bank: { ...existingMeta.bank, reference, idemInit: idemKey || undefined } };
     // Move order into pending_bank_review state awaiting receipt upload
     order = await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'bank', paymentMeta: newMeta, status: 'pending_bank_review' } });
     audit({ action: 'order.bank.init', entity: 'Order', entityId: orderId, userId: order.userId, meta: { reference } });
@@ -131,14 +148,16 @@ router.post('/confirm', attachUser, async (req, res) => {
     if (storedRef && reference && storedRef !== reference) {
       return res.status(400).json({ ok: false, error: 'REFERENCE_MISMATCH', message: 'Reference does not match stored one.' });
     }
+    const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
     if (order.status === 'paid') {
-      return res.json({ ok: true, message: 'Already paid', orderId });
+      return res.json({ ok: true, message: 'Already paid', orderId, idempotent: true });
     }
-    const updatedMeta = { ...existingMeta, bank: { ...(existingMeta.bank||{}), reference: storedRef || reference, confirmedAt: new Date().toISOString() } };
-    const updated = await prisma.order.update({ where: { id: order.id }, data: { status: 'paid', paymentMeta: updatedMeta } });
+    const updatedMeta = { ...existingMeta, bank: { ...(existingMeta.bank||{}), reference: storedRef || reference, confirmedAt: new Date().toISOString(), idemConfirm: idemKey || undefined } };
+  const updated = await prisma.order.update({ where: { id: order.id }, data: { status: 'paid', paymentMeta: updatedMeta } });
     audit({ action: 'order.bank.confirm', entity: 'Order', entityId: order.id, userId: req.user.id, meta: { reference: updatedMeta.bank.reference } });
     // Email placeholder
     try { await sendEmail({ to: updated.userId, subject: 'Bank Transfer Confirmed', text: `Order ${updated.id} marked as paid.` }); } catch {/* ignore */}
+  try { await ensureInvoiceForOrder(updated.id); } catch {/* ignore */}
     res.json({ ok: true, orderId: order.id, status: 'paid' });
   } catch (e) {
      

@@ -3,7 +3,7 @@ import api from '../api/client';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import Chip from './ui/Chip.jsx';
+import { Chip } from './ui/Chip';
 
 const scrollShadows = 'after:content-[" "] after:absolute after:top-0 after:right-0 after:w-8 after:h-full after:pointer-events-none after:bg-gradient-to-l after:from-white after:to-transparent';
 

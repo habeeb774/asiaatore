@@ -108,6 +108,15 @@ const AdminDashboard = () => {
     });
     return list;
   }, [effectiveProducts, f, categoryFilter, sort]);
+
+  // Client-side pagination for products table
+  const [productPage, setProductPage] = useState(1);
+  const [productPageSize, setProductPageSize] = useState(20);
+  const productTotalPages = Math.max(1, Math.ceil((filteredProducts.length || 0) / productPageSize));
+  const paginatedProducts = useMemo(() => {
+    const start = (productPage - 1) * productPageSize;
+    return filteredProducts.slice(start, start + productPageSize);
+  }, [filteredProducts, productPage, productPageSize]);
   // ------- Tier Pricing (per product) -------
   const [openTierProductId, setOpenTierProductId] = useState(null); // which product row expanded
   const [tiersByProduct, setTiersByProduct] = useState({}); // productId -> list
@@ -288,6 +297,15 @@ const AdminDashboard = () => {
       return true;
     });
   }, [orders, f, orderStatusFilter, orderMethodFilter, orderDateFrom, orderDateTo]);
+
+  // Client-side pagination for orders table
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderPageSize, setOrderPageSize] = useState(50);
+  const orderTotalPages = Math.max(1, Math.ceil((filteredOrders.length || 0) / orderPageSize));
+  const paginatedOrders = useMemo(() => {
+    const start = (orderPage - 1) * orderPageSize;
+    return filteredOrders.slice(start, start + orderPageSize);
+  }, [filteredOrders, orderPage, orderPageSize]);
 
   // ------- Brands Handlers -------
   const loadBrands = async () => {
@@ -527,6 +545,15 @@ const AdminDashboard = () => {
     return list;
   }, [brands, brandFilter, brandSort]);
 
+  // Client-side pagination for brands table
+  const [brandPage, setBrandPage] = useState(1);
+  const [brandPageSize, setBrandPageSize] = useState(30);
+  const brandTotalPages = Math.max(1, Math.ceil((visibleBrands.length || 0) / brandPageSize));
+  const paginatedBrands = useMemo(() => {
+    const start = (brandPage - 1) * brandPageSize;
+    return visibleBrands.slice(start, start + brandPageSize);
+  }, [visibleBrands, brandPage, brandPageSize]);
+
   const visibleFeatures = useMemo(()=> {
     let list = [...marketingFeatures];
     if (featureFilter) {
@@ -672,6 +699,26 @@ const AdminDashboard = () => {
     }
     try {
       setLoadingProducts(true);
+      // Pre-check duplicates on client for better UX when creating (API-backed mode)
+      if (!productForm.id && apiBacked) {
+        const norm = (s) => (s||'').toString().trim().toLowerCase();
+        const nameAr = norm(productForm.nameAr || '');
+        const nameEn = norm(productForm.nameEn || '');
+        const slug = norm(productForm.slug || '');
+        const hit = apiProducts.find(p => {
+          const pAr = norm(p.name?.ar || p.nameAr || '');
+          const pEn = norm(p.name?.en || p.nameEn || '');
+          const pSlug = norm(p.slug || '');
+          return (nameAr && pAr === nameAr) || (nameEn && pEn === nameEn) || (slug && pSlug === slug);
+        });
+        if (hit) {
+          const msg = 'المنتج موجود مسبقاً (اسم أو معرف مكرر)';
+          setProdError(msg);
+          try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'warn', title: 'تكرار المنتج', description: msg } })); } catch {}
+          setLoadingProducts(false);
+          return;
+        }
+      }
       if (productForm.id && apiBacked) {
         const updated = useFormData
           ? await api.updateProductForm(productForm.id, payload)
@@ -698,6 +745,10 @@ const AdminDashboard = () => {
     } catch (err) {
       const msg = err?.message || '';
       let friendly = msg;
+      if (err?.code === 'DUPLICATE_PRODUCT' || msg.includes('SLUG_EXISTS') || msg.includes('DUPLICATE_PRODUCT')) {
+        friendly = 'المنتج موجود مسبقاً (Slug/SKU/الاسم)';
+        try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'warn', title: 'تكرار المنتج', description: friendly } })); } catch {}
+      }
       if (msg.includes('UNSUPPORTED_FILE_TYPE')) friendly = 'صيغة صورة غير مدعومة. المسموح: JPG/PNG/WEBP';
       else if (msg.includes('FILE_TOO_LARGE')) friendly = 'حجم الملف أكبر من الحد (4MB)';
       else if (msg.includes('UPLOAD_ERROR')) friendly = 'فشل رفع الصورة. جرّب ملفاً آخر';
@@ -733,12 +784,32 @@ const AdminDashboard = () => {
     resetForms();
   };
 
-  const Stat = ({ label, value }) => (
-    <div style={statBox}>
-      <div style={statValue}>{value}</div>
-      <div style={statLabel}>{label}</div>
-    </div>
-  );
+  const Stat = ({ label, value, deltaPct }) => {
+    const d = typeof deltaPct === 'number' ? deltaPct : null;
+    const positive = d != null ? d >= 0 : null;
+    return (
+      <div style={statBox}>
+        <div style={{display:'flex', alignItems:'baseline', gap:8}}>
+          <div style={statValue}>{value}</div>
+          {d != null && (
+            <span style={{
+              fontSize: '.7rem',
+              fontWeight: 800,
+              padding: '.15rem .4rem',
+              borderRadius: 999,
+              lineHeight: 1,
+              background: positive ? 'rgba(var(--color-primary-rgb),0.12)' : 'rgba(220,38,38,0.08)',
+              color: positive ? 'var(--color-primary)' : '#991b1b',
+              border: positive ? '1px solid rgba(var(--color-primary-rgb),0.28)' : '1px solid rgba(220,38,38,0.25)'
+            }} aria-label={positive ? 'زيادة' : 'انخفاض'}>
+              {positive ? '↑' : '↓'} {Math.abs(d).toFixed(0)}%
+            </span>
+          )}
+        </div>
+        <div style={statLabel}>{label}</div>
+      </div>
+    );
+  };
 
   // Fetch products from API on mount (non-blocking). If it fails, fallback stays (context products)
   useEffect(() => {
@@ -851,6 +922,42 @@ const AdminDashboard = () => {
     })();
     return () => { active = false; };
   }, [view, finDays]);
+
+  // Delta percentage for today's revenue vs أمس (من السلسلة اليومية)
+  const revenueDeltaPct = useMemo(() => {
+    try {
+      const d = financials?.daily || [];
+      if (!Array.isArray(d) || d.length < 2) return null;
+      const last = d[d.length - 1]?.revenue ?? null;
+      const prev = d[d.length - 2]?.revenue ?? null;
+      if (typeof last !== 'number' || typeof prev !== 'number' || prev === 0) return null;
+      return ((last - prev) / Math.abs(prev)) * 100;
+    } catch { return null; }
+  }, [financials]);
+
+  // Delta percentage for today's orders vs yesterday
+  const ordersDeltaPct = useMemo(() => {
+    try {
+      const d = financials?.daily || [];
+      if (!Array.isArray(d) || d.length < 2) return null;
+      const last = d[d.length - 1]?.orders ?? null;
+      const prev = d[d.length - 2]?.orders ?? null;
+      if (typeof last !== 'number' || typeof prev !== 'number' || prev === 0) return null;
+      return ((last - prev) / Math.abs(prev)) * 100;
+    } catch { return null; }
+  }, [financials]);
+
+  // Delta percentage for today's AOV vs yesterday (using daily aov series)
+  const aovDeltaPct = useMemo(() => {
+    try {
+      const d = financials?.daily || [];
+      if (!Array.isArray(d) || d.length < 2) return null;
+      const last = d[d.length - 1]?.aov ?? null;
+      const prev = d[d.length - 2]?.aov ?? null;
+      if (typeof last !== 'number' || typeof prev !== 'number' || prev === 0) return null;
+      return ((last - prev) / Math.abs(prev)) * 100;
+    } catch { return null; }
+  }, [financials]);
 
   // ------- Offers: loaders & handlers -------
   const loadOffers = async () => {
@@ -1047,29 +1154,31 @@ const AdminDashboard = () => {
   return (
     <div className="admin-root" style={pageWrap} dir={locale==='ar'?'rtl':'ltr'}>
       <Seo title={pageTitle} description={locale==='ar' ? 'لوحة تحكم الإدارة' : 'Admin control panel'} />
-      <h1 style={title}>لوحة التحكم</h1>
+      
 
       {/* Two-column layout with sticky admin sidebar */}
       <div className="admin-two-col">
         <AdminSideNav />
         <div>
 
-      <div style={tabsBar}>
-        {{
-          overview: 'نظرة عامة',
-          offers: 'العروض',
-          products: 'المنتجات',
-          users: 'المستخدمون',
-          orders: 'الطلبات',
-          audit: 'السجلات',
-          brands: 'العلامات',
-          marketing: 'التسويق',
-          settings: 'الإعدادات',
-          reviews: 'المراجعات',
-          cats: 'التصنيفات'
-        }[view] || 'لوحة التحكم'}
-        
-        
+      <div className="admin-subbar">
+        <div className="admin-subbar-title">
+          {{
+            overview: 'نظرة عامة',
+            offers: 'العروض',
+            products: 'المنتجات',
+            users: 'المستخدمون',
+            orders: 'الطلبات',
+            audit: 'السجلات',
+            brands: 'العلامات',
+            marketing: 'التسويق',
+            settings: 'الإعدادات',
+            reviews: 'المراجعات',
+            cats: 'التصنيفات'
+          }[view] || 'لوحة التحكم'}
+        </div>
+        {/* Optional meta slot: counts or quick tips */}
+        {/* <div className="admin-subbar-meta">نصيحة سريعة: استخدم البحث لتصفية العناصر</div> */}
       </div>
 
       {/* Navigation moved to AdminSideNav; in-page tab buttons removed */}
@@ -1084,19 +1193,29 @@ const AdminDashboard = () => {
       {/* Overview */}
       {view === 'overview' && (
         <div className="admin-stat-grid">
-          <Stat label="طلبات اليوم" value={stats.todayOrders} />
-          <Stat label="إيراد اليوم" value={stats.todayRevenue.toFixed(2)} />
-          <Stat label="متوسط السلة (اليوم)" value={stats.avgOrderValueToday.toFixed(2)} />
-          <div style={statBox}>
-            <div style={statValue}>{stats.pendingBankCount}</div>
-            <div style={statLabel}>تحويلات بنكية معلقة</div>
-            <div style={{marginTop:6}}>
-              <a href="/admin/bank-transfers" style={{fontSize:'.7rem',textDecoration:'none',color:'#69be3c'}}>مراجعة الآن →</a>
-            </div>
-          </div>
-          <Stat label="إجمالي المنتجات" value={effectiveProducts.length} />
-          <Stat label="المستخدمون" value={remoteUsers.length || users.length} />
-          <Stat label="كل الطلبات (محلي)" value={orders.length} />
+          {loadingRemote ? (
+            <>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{height: 96}} />
+              ))}
+            </>
+          ) : (
+            <>
+              <Stat label="طلبات اليوم" value={stats.todayOrders} deltaPct={ordersDeltaPct} />
+              <Stat label="إيراد اليوم" value={stats.todayRevenue.toFixed(2)} deltaPct={revenueDeltaPct} />
+              <Stat label="متوسط السلة (اليوم)" value={stats.avgOrderValueToday.toFixed(2)} deltaPct={aovDeltaPct} />
+              <div style={statBox}>
+                <div style={statValue}>{stats.pendingBankCount}</div>
+                <div style={statLabel}>تحويلات بنكية معلقة</div>
+                <div style={{marginTop:6}}>
+                  <a href="/admin/bank-transfers" style={{fontSize:'.7rem',textDecoration:'none',color:'var(--color-primary)'}}>مراجعة الآن →</a>
+                </div>
+              </div>
+              <Stat label="إجمالي المنتجات" value={effectiveProducts.length} />
+              <Stat label="المستخدمون" value={remoteUsers.length || users.length} />
+              <Stat label="كل الطلبات (محلي)" value={orders.length} />
+            </>
+          )}
           {/* Financials mini-chart */}
           <div style={{...statBox, gridColumn:'1/-1'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -1107,7 +1226,12 @@ const AdminDashboard = () => {
                 </select>
               </div>
             </div>
-            {finLoading && <div style={{fontSize:'.7rem',color:'#64748b'}}>...تحميل</div>}
+            {finLoading && (
+              <div>
+                <div className="skeleton" style={{height: 18, width: '45%', marginBottom: 10}} />
+                <div className="skeleton" style={{height: 120, width: '100%'}} />
+              </div>
+            )}
             {finError && <div style={{fontSize:'.7rem',color:'#b91c1c'}}>خطأ: {finError}</div>}
             {financials && (
               <div style={{display:'grid', gap:'10px'}}>
@@ -1118,12 +1242,12 @@ const AdminDashboard = () => {
                   <div style={miniStat}><div style={miniStatVal}>{financials.totals?.activeCustomersWindow||0}</div><div style={miniStatLbl}>عملاء نشطون</div></div>
                 </div>
                 {/* Simple inline chart using CSS bars */}
-                <div style={{display:'grid', gridTemplateColumns:`repeat(${financials.daily.length}, minmax(2px,1fr))`, gap:2, alignItems:'end', height:120, background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:6}} aria-label="مخطط الإيرادات">
+                <div style={{display:'grid', gridTemplateColumns:`repeat(${financials.daily.length}, minmax(2px,1fr))`, gap:2, alignItems:'end', height:120, background:'var(--color-bg-alt)', border:'1px solid var(--color-border-soft)', borderRadius:10, padding:6}} aria-label="مخطط الإيرادات">
                   {(() => {
                     const max = Math.max(1, ...financials.daily.map(d => d.revenue||0));
                     return financials.daily.map(d => {
                       const h = Math.round((d.revenue||0) / max * 100);
-                      return <div key={d.date} title={`${d.date} • ${Number(d.revenue||0).toFixed(2)}`} style={{height:`${h}%`, background:'linear-gradient(180deg,#69be3c,#f6ad55)', borderRadius:3}} />
+                      return <div key={d.date} title={`${d.date} • ${Number(d.revenue||0).toFixed(2)}`} style={{height:`${h}%`, background:'linear-gradient(180deg, var(--color-primary), var(--color-gold))', borderRadius:3}} />
                     });
                   })()}
                 </div>
@@ -1135,7 +1259,7 @@ const AdminDashboard = () => {
           <div style={{...statBox, gridColumn:'1/-1'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div style={{fontWeight:700}}>أحدث 10 طلبات</div>
-              <a href="/admin/reports" style={{fontSize:'.7rem',textDecoration:'none',color:'#69be3c'}}>عرض التقارير →</a>
+              <a href="/admin/reports" style={{fontSize:'.7rem',textDecoration:'none',color:'var(--color-primary)'}}>عرض التقارير →</a>
             </div>
             <div style={{overflowX:'auto'}}>
               <table style={{...table, marginTop:8}}>
@@ -1151,7 +1275,7 @@ const AdminDashboard = () => {
                       <td>{o.paymentMethod||'-'}</td>
                       <td>{new Date(o.createdAt).toLocaleString()}</td>
                       <td style={tdActions}>
-                        <a href={`/order/${o.id}`} style={{fontSize:'.65rem',textDecoration:'none',color:'#69be3c'}}>عرض</a>
+                        <a href={`/order/${o.id}`} style={{fontSize:'.65rem',textDecoration:'none',color:'var(--color-primary)'}}>عرض</a>
                         <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" style={{fontSize:'.65rem',textDecoration:'none',color:'#075985'}}>فاتورة</a>
                       </td>
                     </tr>
@@ -1303,7 +1427,7 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map(p => {
+              {paginatedProducts.map(p => {
                 const open = openTierProductId === p.id;
                 const tiers = tiersByProduct[p.id] || [];
                 const lowestTier = tiers.length ? tiers[0] : null;
@@ -1425,6 +1549,19 @@ const AdminDashboard = () => {
               )}
             </tbody>
           </table>
+          {/* Products pagination controls */}
+          {filteredProducts.length > 0 && (
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:8}}>
+              <button style={productPage===1?ghostBtn:primaryBtn} disabled={productPage===1} onClick={()=>setProductPage(p=>Math.max(1,p-1))}>السابق</button>
+              <span style={{fontSize:'.65rem'}}>صفحة {productPage} / {productTotalPages}</span>
+              <button style={productPage===productTotalPages?ghostBtn:primaryBtn} disabled={productPage===productTotalPages} onClick={()=>setProductPage(p=>Math.min(productTotalPages,p+1))}>التالي</button>
+              <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
+              <select value={productPageSize} onChange={e=>{ setProductPageSize(+e.target.value); setProductPage(1); }} style={searchInput}>
+                {[10,20,30,50,100].map(n=> <option key={n} value={n}>{n}</option>)}
+              </select>
+              <span style={{fontSize:'.65rem',opacity:.7}}>{filteredProducts.length} عنصر</span>
+            </div>
+          )}
           {loadingProducts && <div style={{fontSize:'.7rem',opacity:.7}}>جاري الحفظ...</div>}
           {prodError && <div style={{fontSize:'.7rem',color:'#b91c1c'}}>خطأ: {prodError}</div>}
         </div>
@@ -1476,7 +1613,7 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.slice(0,200).map(o => {
+              {paginatedOrders.map(o => {
                 const bankMeta = o.paymentMeta?.bank || {};
                 const addr = o.paymentMeta?.address || {};
                 const addrText = [addr.country, addr.city, addr.area].filter(Boolean).join(' - ') + (addr.line1? `\n${addr.line1}`:'') + (addr.phone? `\n📞 ${addr.phone}`:'');
@@ -1567,6 +1704,19 @@ const AdminDashboard = () => {
               {!orders.length && <tr><td colSpan={8} style={emptyCell}>لا توجد طلبات</td></tr>}
             </tbody>
           </table>
+          {/* Orders pagination controls */}
+          {filteredOrders.length > 0 && (
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:8}}>
+              <button style={orderPage===1?ghostBtn:primaryBtn} disabled={orderPage===1} onClick={()=>setOrderPage(p=>Math.max(1,p-1))}>السابق</button>
+              <span style={{fontSize:'.65rem'}}>صفحة {orderPage} / {orderTotalPages}</span>
+              <button style={orderPage===orderTotalPages?ghostBtn:primaryBtn} disabled={orderPage===orderTotalPages} onClick={()=>setOrderPage(p=>Math.min(orderTotalPages,p+1))}>التالي</button>
+              <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
+              <select value={orderPageSize} onChange={e=>{ setOrderPageSize(+e.target.value); setOrderPage(1); }} style={searchInput}>
+                {[20,50,100,200,500].map(n=> <option key={n} value={n}>{n}</option>)}
+              </select>
+              <span style={{fontSize:'.65rem',opacity:.7}}>{filteredOrders.length} عنصر</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -1589,6 +1739,15 @@ const AdminDashboard = () => {
             <table style={table}>
               <thead>
                 <tr>
+                  {finLoading && (
+                    <tr>
+                      <td colSpan={6}>
+                        <div className="skeleton" style={{height: 36, marginBottom: 8}} />
+                        <div className="skeleton" style={{height: 36, marginBottom: 8}} />
+                        <div className="skeleton" style={{height: 36}} />
+                      </td>
+                    </tr>
+                  )}
                   <th>الوقت</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th><th>المستخدم</th>
                 </tr>
               </thead>
@@ -1830,9 +1989,9 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {visibleBrands.map(b => (
+              {paginatedBrands.map(b => (
                 <tr key={b.id}>
-                  <td>{b.logo? <img src={b.logo} alt="logo" style={{width:38,height:38,objectFit:'contain'}} /> : '—'}</td>
+                  <td>{b.logo? <img src={b.logo} alt="logo" loading="lazy" style={{width:38,height:38,objectFit:'contain'}} /> : '—'}</td>
                   <td>{resolveLocalized(b.name, locale) || b.name?.ar || b.name?.en}</td>
                   <td style={{fontSize:'.6rem'}}>{b.slug}</td>
                   <td>{b.productCount || 0}</td>
@@ -1847,6 +2006,19 @@ const AdminDashboard = () => {
               {!visibleBrands.length && !brandLoading && <tr><td colSpan={6} style={emptyCell}>لا توجد علامات</td></tr>}
             </tbody>
           </table>
+          {/* Brands pagination controls */}
+          {visibleBrands.length > 0 && (
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:8}}>
+              <button style={brandPage===1?ghostBtn:primaryBtn} disabled={brandPage===1} onClick={()=>setBrandPage(p=>Math.max(1,p-1))}>السابق</button>
+              <span style={{fontSize:'.65rem'}}>صفحة {brandPage} / {brandTotalPages}</span>
+              <button style={brandPage===brandTotalPages?ghostBtn:primaryBtn} disabled={brandPage===brandTotalPages} onClick={()=>setBrandPage(p=>Math.min(brandTotalPages,p+1))}>التالي</button>
+              <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
+              <select value={brandPageSize} onChange={e=>{ setBrandPageSize(+e.target.value); setBrandPage(1); }} style={searchInput}>
+                {[10,20,30,50,100].map(n=> <option key={n} value={n}>{n}</option>)}
+              </select>
+              <span style={{fontSize:'.65rem',opacity:.7}}>{visibleBrands.length} عنصر</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -1998,48 +2170,75 @@ const searchInput = { padding: '.55rem .75rem', border: '1px solid #e2e8f0', bor
 const input = { ...searchInput, minWidth: 180 };
 const inputSmall = { ...searchInput, minWidth: 110 };
 const grid3 = { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' };
-const statBox = { background: '#fff', padding: '1rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.35rem' };
-const statValue = { fontSize: '1.6rem', fontWeight: 700, color: '#0f172a' };
-const statLabel = { fontSize: '.7rem', letterSpacing: '.5px', color: '#64748b', fontWeight: 600 };
-const miniStat = { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, padding:'.5rem .7rem' };
-const miniStatVal = { fontSize:'.95rem', fontWeight:800 };
-const miniStatLbl = { fontSize:'.65rem', color:'#64748b', fontWeight:700 };
+const statBox = { background: 'var(--color-surface)', padding: '1rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.35rem', border: '1px solid var(--color-border-soft)' };
+const statValue = { fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text)' };
+const statLabel = { fontSize: '.7rem', letterSpacing: '.5px', color: 'var(--color-text-faint)', fontWeight: 600 };
+const miniStat = { background:'var(--color-bg-alt)', border:'1px solid var(--color-border)', borderRadius:10, padding:'.5rem .7rem' };
+const miniStatVal = { fontSize:'.95rem', fontWeight:800, color: 'var(--color-text)' };
+const miniStatLbl = { fontSize:'.65rem', color:'var(--color-text-faint)', fontWeight:700 };
 const sectionWrap = { background: 'transparent', display: 'flex', flexDirection: 'column', gap: '1.25rem' };
-const formRow = { background: '#fff', padding: '1rem 1.1rem 1.25rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.8rem' };
+const formRow = { background: 'var(--color-surface)', padding: '1rem 1.1rem 1.25rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.8rem', border: '1px solid var(--color-border-soft)' };
 const formGrid = { display: 'grid', gap: '.65rem', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))' };
 const actionsRow = { display: 'flex', gap: '.6rem', flexWrap: 'wrap' };
-const subTitle = { margin: 0, fontSize: '1rem', fontWeight: 600 };
-const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: '.4rem', border: 0, background: 'linear-gradient(90deg,#69be3c,#f6ad55)', color: '#fff', padding: '.6rem .95rem', borderRadius: 10, cursor: 'pointer', fontSize: '.75rem', fontWeight: 600 };
-const ghostBtn = { ...primaryBtn, background: '#f1f5f9', color: '#334155' };
+const subTitle = { margin: 0, fontSize: '1rem', fontWeight: 700 };
+const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: '.4rem', border: 0, background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-alt))', color: '#fff', padding: '.6rem .95rem', borderRadius: 10, cursor: 'pointer', fontSize: '.75rem', fontWeight: 600, boxShadow: '0 10px 20px -12px rgba(var(--color-primary-rgb),0.35)' };
+const ghostBtn = { ...primaryBtn, background: 'var(--color-bg-alt)', color: 'var(--color-text)', boxShadow: 'none' };
 // Secondary button (neutral variant)
-const secondaryBtn = { ...primaryBtn, background: '#e2e8f0', color: '#0f172a' };
+const secondaryBtn = { ...primaryBtn, background: 'var(--color-bg-alt)', color: 'var(--color-text)', boxShadow: 'none' };
 // Link-like button used for small cancel actions
-const linkBtnStyle = { background: 'transparent', border: 0, color: '#334155', cursor: 'pointer', padding: '.4rem .6rem', borderRadius: 8, fontSize: '.75rem', fontWeight: 600 };
-const table = { width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 14px -6px rgba(0,0,0,.06)' };
+const linkBtnStyle = { background: 'transparent', border: 0, color: 'var(--color-text)', opacity: .9, cursor: 'pointer', padding: '.4rem .6rem', borderRadius: 8, fontSize: '.75rem', fontWeight: 600 };
+const table = { width: '100%', borderCollapse: 'collapse', background: 'var(--color-surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 14px -6px rgba(0,0,0,.06)', border: '1px solid var(--color-border-soft)' };
 const tdActions = { display: 'flex', gap: '.35rem', alignItems: 'center' };
-const iconBtn = { background: '#f1f5f9', border: 0, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', color: '#0f172a' };
+const iconBtn = { background: 'var(--color-bg-alt)', border: 0, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', color: 'var(--color-text)' };
 const iconBtnDanger = { ...iconBtn, background: '#fee2e2', color: '#b91c1c' };
-const emptyCell = { textAlign: 'center', padding: '1rem', fontSize: '.75rem', color: '#64748b' };
-const mutedP = { fontSize: '.75rem', color: '#475569', margin: '.25rem 0 1rem' };
+const emptyCell = { textAlign: 'center', padding: '1rem', fontSize: '.75rem', color: 'var(--color-text-faint)' };
+const mutedP = { fontSize: '.75rem', color: 'var(--color-text-soft)', margin: '.25rem 0 1rem' };
 const ulClean = { margin: 0, padding: '0 1rem', listStyle: 'disc', lineHeight: 1.9 };
 const errorText = { fontSize: '.75rem', color: '#b91c1c' };
 // Tier pricing sub-table styles
-const tierLabel = { fontSize: '.55rem', fontWeight: 600, color: '#475569' };
+const tierLabel = { fontSize: '.55rem', fontWeight: 600, color: 'var(--color-text-soft)' };
 const tierInput = { ...searchInput, minWidth: 90, fontSize: '.65rem', padding: '.4rem .5rem' };
 
 // Status chip style helper
 function chip(status) {
   const base = { display:'inline-block', padding:'.15rem .45rem', borderRadius:999, fontSize:'.65rem', fontWeight:700 };
-  const map = {
-    pending: { background:'#fff7ed', color:'#9a3412', border:'1px solid #fed7aa' },
-    processing: { background:'#eff6ff', color:'#1e3a8a', border:'1px solid #bfdbfe' },
-    paid: { background:'#ecfccb', color:'#365314', border:'1px solid #d9f99d' },
-    shipped: { background:'#f0f9ff', color:'#075985', border:'1px solid #bae6fd' },
-    completed: { background:'#ecfeff', color:'#115e59', border:'1px solid #a5f3fc' },
-    cancelled: { background:'#fee2e2', color:'#7f1d1d', border:'1px solid #fecaca' },
-    pending_bank_review: { background:'#fef9c3', color:'#854d0e', border:'1px solid #fde68a' }
+  const themed = {
+    success: {
+      background: 'rgba(var(--color-primary-rgb),0.12)',
+      color: 'var(--color-primary)',
+      border: '1px solid rgba(var(--color-primary-rgb),0.28)'
+    },
+    info: {
+      background: 'rgba(var(--color-accent-rgb,58,90,121),0.10)',
+      color: 'var(--color-accent)',
+      border: '1px solid rgba(var(--color-accent-rgb,58,90,121),0.25)'
+    },
+    warning: {
+      background: 'rgba(217,119,6,0.10)',
+      color: 'var(--color-warning)',
+      border: '1px solid rgba(217,119,6,0.28)'
+    },
+    danger: {
+      background: 'rgba(220,38,38,0.10)',
+      color: 'var(--color-danger)',
+      border: '1px solid rgba(220,38,38,0.25)'
+    },
+    neutral: {
+      background: 'var(--color-bg-alt)',
+      color: 'var(--color-text)',
+      border: '1px solid var(--color-border)'
+    }
   };
-  return { ...base, ...(map[status] || { background:'#f1f5f9', color:'#334155', border:'1px solid #e2e8f0' }) };
+  const map = {
+    pending: themed.warning,
+    processing: themed.info,
+    paid: themed.success,
+    shipped: themed.info,
+    completed: themed.success,
+    cancelled: themed.danger,
+    pending_bank_review: themed.warning
+  };
+  return { ...base, ...(map[status] || themed.neutral) };
 }
 
 export default AdminDashboard;

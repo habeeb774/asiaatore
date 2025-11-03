@@ -39,6 +39,7 @@ body.dark-mode {
 /* Typography & rendering */
 :root {
   --font-sans: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans Arabic', sans-serif;
+  --font-serif: 'Amiri', 'Noto Naskh Arabic', serif;
   font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
@@ -129,10 +130,9 @@ body { padding-bottom: max(0px, var(--safe-bottom)); }
 }
 html { scroll-padding-top: calc(var(--header-height) + var(--safe-top)); }
 
-/* Enforce Cairo on common text elements where component-specific CSS might override base */
-h1,h2,h3,h4,h5,h6,p,span,label,button,input,textarea,select,small,li,dt,dd,th,td {
-  font-family: var(--font-sans);
-}
+/* Enforce fonts: Serif for headings, Sans for body */
+h1,h2,h3 { font-family: var(--font-serif); }
+h4,h5,h6,p,span,label,button,input,textarea,select,small,li,dt,dd,th,td { font-family: var(--font-sans); }
 
 /* Global direction helpers (useful in components where dir may be overridden) */
 .dir-rtl { direction: rtl; }
@@ -175,8 +175,8 @@ button:focus-visible {
   }
 }
 
-/* Utility: focus ring consistent */
-.focus-ring:focus { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+/* Utility: focus ring consistent (muted gold by default) */
+.focus-ring:focus { outline: 2px solid var(--color-ring, #C8A96A); outline-offset: 2px; }
 
 /* Toasts UI */
 .toaster {

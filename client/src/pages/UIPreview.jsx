@@ -1,9 +1,9 @@
 import React from 'react';
-import { Button } from '../components/ui/Button.jsx';
-import { Badge } from '../components/ui/badge.jsx';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.jsx';
-import { Chip } from '../components/ui/Chip.jsx';
-import { Skeleton } from '../components/ui/skeleton.jsx';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Chip } from '../components/ui/Chip';
+import { Skeleton } from '../components/ui/Skeleton';
 
 // Tiny UI preview playground to exercise variants and sizes
 export default function UIPreview() {

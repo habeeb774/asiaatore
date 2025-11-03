@@ -7,6 +7,7 @@ module.exports = {
 		extend: {
 			fontFamily: {
 				sans: ['Cairo', 'Tajawal', 'var(--font-sans)', ...defaultTheme.fontFamily.sans],
+				serif: ['Amiri', 'Noto Naskh Arabic', ...defaultTheme.fontFamily.serif],
 			},
 			colors: {
 				primary: "var(--color-primary)",

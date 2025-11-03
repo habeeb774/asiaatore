@@ -3,7 +3,7 @@
   "framework": "vite",
   "installCommand": "PUPPETEER_SKIP_DOWNLOAD=1 npm install --include=dev",
   "buildCommand": "npm run build",
-  "outputDirectory": "client/dist",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/:path*",

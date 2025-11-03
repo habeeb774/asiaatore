@@ -266,8 +266,20 @@ router.post('/:id/ship', async (req, res) => {
     const adapters = { aramex, smsa };
     const adapter = adapters[provider];
     if (!adapter) return res.status(400).json({ ok: false, error: 'UNKNOWN_PROVIDER' });
+    // Load provider configuration from settings (best effort)
+    let cfg = {};
+    try {
+      if (process.env.ALLOW_INVALID_DB !== 'true') {
+        const row = await prisma.$queryRaw`SELECT * FROM StoreSetting WHERE id = 'singleton' LIMIT 1`;
+        const setting = Array.isArray(row) && row.length ? row[0] : null;
+        if (setting) {
+          if (provider === 'aramex') cfg = { aramexApiUrl: setting.aramexApiUrl, aramexApiKey: setting.aramexApiKey, aramexApiUser: setting.aramexApiUser, aramexApiPass: setting.aramexApiPass };
+          if (provider === 'smsa') cfg = { smsaApiUrl: setting.smsaApiUrl, smsaApiKey: setting.smsaApiKey };
+        }
+      }
+    } catch {}
     // Call adapter; adapters are responsible for persisting Shipment record if model exists
-    const result = await adapter.createShipment(order);
+    const result = await adapter.createShipment(order, cfg);
     // If adapter didn't persist, attempt to save minimal shipment record
     try {
       if (result && result.trackingId && prisma?.shipment) {
@@ -301,6 +313,14 @@ router.get('/:id/ship', async (req, res) => {
     const refresh = String(req.query?.refresh || '') === '1' || String(req.query?.refresh || '').toLowerCase() === 'true';
     if (refresh) {
       const adapters = { aramex, smsa };
+      // Load settings once for refresh
+      let setting = null;
+      try {
+        if (process.env.ALLOW_INVALID_DB !== 'true') {
+          const row = await prisma.$queryRaw`SELECT * FROM StoreSetting WHERE id = 'singleton' LIMIT 1`;
+          setting = Array.isArray(row) && row.length ? row[0] : null;
+        }
+      } catch {}
       const updated = [];
       for (const s of list) {
         const adapter = adapters[(s.provider || '').toLowerCase()];
@@ -308,8 +328,11 @@ router.get('/:id/ship', async (req, res) => {
           updated.push({ ...s, probe: 'no-adapter' });
           continue;
         }
+        const cfg = (s.provider || '').toLowerCase() === 'aramex'
+          ? { aramexApiUrl: setting?.aramexApiUrl, aramexApiKey: setting?.aramexApiKey, aramexApiUser: setting?.aramexApiUser, aramexApiPass: setting?.aramexApiPass }
+          : { smsaApiUrl: setting?.smsaApiUrl, smsaApiKey: setting?.smsaApiKey };
         try {
-          const t = await adapter.track(s.trackingNumber);
+          const t = await adapter.track(s.trackingNumber, cfg);
           // persist status
           if (prisma?.shipment && t && t.status) {
             await prisma.shipment.updateMany({ where: { trackingNumber: s.trackingNumber }, data: { status: t.status, meta: t.raw ? (typeof t.raw === 'object' ? t.raw : String(t.raw)) : undefined } }).catch(() => null);
@@ -346,12 +369,13 @@ function renderInvoiceHtml(order, opts = {}) {
         </tr>
   `).join('');
 
+  const invNum = opts.invoiceNumber || null;
   return `<!doctype html>
   <html lang="ar">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>فاتورة #${order.id} | ${storeName}</title>
+  <title>فاتورة #${invNum || order.id} | ${storeName}</title>
     <style>
       :root{
         --bg:#ffffff; --text:#0f172a; --muted:#64748b; --line:${line}; --soft:${soft}; --accent:${accent};
@@ -416,14 +440,14 @@ function renderInvoiceHtml(order, opts = {}) {
           <div class="name">${storeName}</div>
         </div>
         <div class="meta">
-          <div><strong>فاتورة #</strong>${order.id}</div>
+          <div><strong>فاتورة #</strong>${invNum || order.id}</div>
           <div><strong>التاريخ:</strong> ${new Date(order.createdAt).toLocaleString('ar')}</div>
           <div><span class="badge">${order.status}</span></div>
         </div>
       </header>
       <div class="title">
-        <div class="big">فاتورة</div>
-        <div class="id">#${order.id}</div>
+  <div class="big">فاتورة</div>
+  <div class="id">#${invNum || order.id}</div>
       </div>
 
       <div class="summary">
@@ -538,16 +562,28 @@ router.get('/:id/invoice', async (req, res) => {
     // Thermal 80mm link
     pdfParamsThermal.set('paper', 'thermal80');
     const pdfUrlThermal = `${req.protocol}://${req.headers.host}/api/orders/${order.id}/invoice.pdf?${pdfParamsThermal}`;
-    // Generate QR (prefer official invoice entity if exists)
+    // Try to load an invoice row to get the official invoice number
+    let invoiceRow = null;
+    try { invoiceRow = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }); } catch {}
+    // Generate QR (ZATCA TLV if taxNumber available; otherwise URL QR)
     let qrDataUrl = null;
     try {
       const baseUrl = `${req.protocol}://${req.headers.host}`;
-      const inv = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }).catch(() => null);
+      const inv = invoiceRow; // reuse if available
       const verifyUrl = inv ? `${baseUrl}/api/invoices/${inv.id}` : `${baseUrl}/api/orders/${order.id}/invoice`;
-      const qrPng = await generateInvoiceQrPng(verifyUrl);
-      qrDataUrl = `data:image/png;base64,${qrPng.toString('base64')}`;
+      const sellerName = siteName;
+      const vatNumber = setting?.taxNumber || process.env.SELLER_VAT_NUMBER || null;
+      if (vatNumber && order.tax != null) {
+        const { generateZatcaQrPng } = await import('../utils/qr.js');
+        const png = await generateZatcaQrPng({ sellerName, vatNumber, timestamp: new Date(order.createdAt).toISOString(), total: order.grandTotal, vatTotal: order.tax }, { width: 200 });
+        qrDataUrl = `data:image/png;base64,${png.toString('base64')}`;
+      } else {
+        const { generateInvoiceQrPng } = await import('../utils/qr.js');
+        const png = await generateInvoiceQrPng(verifyUrl);
+        qrDataUrl = `data:image/png;base64,${png.toString('base64')}`;
+      }
     } catch {}
-    res.type('html').send(renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, pdfUrlA4, pdfUrlThermal, theme, paper, autoPrint, qrDataUrl }));
+  res.type('html').send(renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, pdfUrlA4, pdfUrlThermal, theme, paper, autoPrint, qrDataUrl, invoiceNumber: invoiceRow?.invoiceNumber || null }));
   } catch (e) {
     res.status(500).send('<h1>Error generating invoice</h1>');
   }
@@ -600,14 +636,23 @@ router.get('/:id/invoice.pdf', async (req, res) => {
     } catch {}
   }
   const paper = String(req.query?.paper || '').toLowerCase();
-  // QR for PDF
+  // QR for PDF (ZATCA if possible)
   let qrDataUrl = null;
   try {
     const baseUrl = `${req.protocol}://${req.headers.host}`;
     const inv = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }).catch(() => null);
     const verifyUrl = inv ? `${baseUrl}/api/invoices/${inv.id}` : `${baseUrl}/api/orders/${order.id}/invoice`;
-    const qrPng = await generateInvoiceQrPng(verifyUrl);
-    qrDataUrl = `data:image/png;base64,${qrPng.toString('base64')}`;
+    const sellerName = siteName;
+    const vatNumber = setting?.taxNumber || process.env.SELLER_VAT_NUMBER || null;
+    if (vatNumber && order.tax != null) {
+      const { generateZatcaQrPng } = await import('../utils/qr.js');
+      const png = await generateZatcaQrPng({ sellerName, vatNumber, timestamp: new Date(order.createdAt).toISOString(), total: order.grandTotal, vatTotal: order.tax }, { width: 200 });
+      qrDataUrl = `data:image/png;base64,${png.toString('base64')}`;
+    } else {
+      const { generateInvoiceQrPng } = await import('../utils/qr.js');
+      const png = await generateInvoiceQrPng(verifyUrl);
+      qrDataUrl = `data:image/png;base64,${png.toString('base64')}`;
+    }
   } catch {}
   const html = renderInvoiceHtml(order, { storeName: siteName, logoUrl: logoSrc, theme, paper, qrDataUrl });
     // Lazy import puppeteer; in serverless (e.g., Vercel) we may skip the Chromium download at build time

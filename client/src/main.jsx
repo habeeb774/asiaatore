@@ -35,6 +35,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 // AOS (Animate On Scroll) initialization — optional: will initialize if library is available
 // We try to initialize AOS if it's loaded via CDN (window.AOS) or installed as a module.
 if (typeof window !== 'undefined') {
@@ -97,6 +98,7 @@ const Providers = ({ children }) => (
                       <ToastProvider>
                         <HtmlLanguageSync />
                         <GlobalToastEvents />
+                        <PwaUpdatePrompt />
                         {/* Global haptics: vibrate briefly on add-to-cart if supported and not reduced-motion */}
                         <HapticsEvents />
                         <ScrollTopButton />
@@ -156,5 +158,46 @@ function HapticsEvents() {
     window.addEventListener('cart:add', onAdd);
     return () => window.removeEventListener('cart:add', onAdd);
   }, []);
+  return null;
+}
+
+function PwaUpdatePrompt() {
+  const toast = useToast();
+  const updateToastRef = React.useRef(null);
+  const { updateServiceWorker } = useRegisterSW({
+    onNeedRefresh() {
+      if (!toast?.show) return;
+      if (updateToastRef.current) return;
+      const id = toast.show({
+        type: 'info',
+        title: 'تحديث جديد جاهز',
+        description: 'أعد تحميل التطبيق لتطبيق آخر التحسينات.',
+        duration: 0,
+        action: {
+          label: 'تحديث الآن',
+          onClick: () => {
+            updateToastRef.current = null;
+            if (typeof updateServiceWorker === 'function') {
+              try { updateServiceWorker(true); } catch {}
+            } else {
+              window.location.reload();
+            }
+          }
+        }
+      });
+      updateToastRef.current = id;
+    },
+    onOfflineReady() {
+      toast?.success?.('جاهز للعمل دون اتصال', 'يمكنك متابعة التصفح حتى بدون إنترنت', 4000);
+    },
+    onRegisterError(err) {
+      console.warn('[PWA] register error', err);
+    }
+  });
+
+  React.useEffect(() => {
+    return () => { updateToastRef.current = null; };
+  }, []);
+
   return null;
 }

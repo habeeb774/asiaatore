@@ -18,6 +18,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Global sequence/counter storage (for invoice numbering, etc.)
+model Counter {
+  name  String  @id
+  value BigInt  @default(0)
+  // Optional timestamps for debugging/ops
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model User {
   id        String         @id @default(uuid())
   email     String         @unique
@@ -43,6 +52,9 @@ model User {
   deliveryProfile      DeliveryProfile?
   deliveryConfirmations DeliveryConfirmation[]
   deliveryOtps          DeliveryOtp[]
+  // Invoicing back-relations
+  invoices     Invoice[]
+  invoiceLogs  InvoiceLog[]
 }
 
 model Brand {
@@ -129,6 +141,8 @@ model Order {
   items         OrderItem[]
 
   shipments     Shipment[]
+  // Invoicing back-relations
+  invoices      Invoice[]
   // Delivery back-relations
   deliveryConfirmations DeliveryConfirmation[]
   deliveryOtps          DeliveryOtp[]
@@ -322,6 +336,50 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// Invoicing (persistent invoice numbers and logs)
+model Invoice {
+  id            String   @id @default(uuid())
+  orderId       String
+  userId        String
+  invoiceNumber String   @unique
+  status        String   @default("pending")
+  currency      String   @default("SAR")
+  subtotal      Float    @default(0)
+  tax           Float    @default(0)
+  total         Float    @default(0)
+  paymentMethod String?
+  meta          Json?
+  issueDate     DateTime @default(now())
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  logs  InvoiceLog[]
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model InvoiceLog {
+  id        String   @id @default(uuid())
+  invoiceId String
+  userId    String?
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([invoiceId])
+  @@index([createdAt])
+}
+
 // Delivery driver profile
 model DeliveryProfile {
   id               String   @id @default(uuid())
@@ -425,6 +483,12 @@ model StoreSetting {
   colorPrimary    String?
   colorSecondary  String?
   colorAccent     String?
+  // Company & legal
+  companyNameAr   String?
+  companyNameEn   String?
+  commercialRegNo String?
+  addressAr       String?
+  addressEn       String?
   taxNumber       String?
   supportPhone    String?
   supportMobile   String?
@@ -439,8 +503,32 @@ model StoreSetting {
   linkPrivacy     String?
   appStoreUrl     String?
   playStoreUrl    String?
+  // Shipping config
+  shippingBase     Float?
+  shippingPerKm    Float?
+  shippingMin      Float?
+  shippingMax      Float?
+  shippingFallback Float?
+  originLat        Float?
+  originLng        Float?
+  // Payment toggles
+  payPaypalEnabled Boolean?
+  payStcEnabled    Boolean?
+  payCodEnabled    Boolean?
+  payBankEnabled   Boolean?
+  // Shipping providers config
+  aramexEnabled       Boolean?
+  aramexApiUrl        String?
+  aramexApiKey        String?
+  aramexApiUser       String?
+  aramexApiPass       String?
+  aramexWebhookSecret String?
+  smsaEnabled         Boolean?
+  smsaApiUrl          String?
+  smsaApiKey          String?
+  smsaWebhookSecret   String?
   createdAt       DateTime @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime @updatedAt
 }
 
 enum Role {

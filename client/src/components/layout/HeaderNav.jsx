@@ -176,7 +176,7 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
                 aria-label={user ? (t('profile') || 'Profile') : (t('login') || 'Login')}
                 className="flex items-center justify-center p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <UserIcon size={18} className="text-slate-600 dark:text-slate-200" />
+                <UserIcon size={18} className="text-sky-600 dark:text-sky-300" />
               </Link>
 
               {/* Note: overlay is centralized; keep no inline input here for visual simplicity */}

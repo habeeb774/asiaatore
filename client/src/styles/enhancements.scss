@@ -91,6 +91,23 @@
 
 /* 7) Toasts unify */
 .toast { border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.toast .toast-action {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--color-primary, #69be3c);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.toast .toast-action:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.toast .toast-action:hover {
+  filter: brightness(0.95);
+}
 
 /* 8) Footer light polish */
 .site-footer, footer {

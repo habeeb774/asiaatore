@@ -4,9 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import Seo from '../../components/Seo';
 import api from '../../api/client';
+import { Button, ButtonLink, Input } from '../../components/ui';
+import Panel from '../../components/ui/Panel';
 
-const fieldCls = 'border border-gray-300 rounded-lg px-3 py-2 w-full text-sm';
-const labelCls = 'block text-sm font-semibold mb-1';
+// Elegant, unified form styles
+const fieldCls = 'w-full rounded-xl border border-gray-200 bg-white/70 px-4 py-3 text-sm shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200/70 focus:border-emerald-400 dark:bg-gray-800/70 dark:border-gray-700 dark:text-gray-100';
+const labelCls = 'block text-[13px] font-semibold mb-2 text-gray-700 dark:text-gray-200';
 
 const Profile = () => {
   const { user, logout } = useAuth() || {};
@@ -59,56 +62,94 @@ const Profile = () => {
   const siteTitle = locale==='ar' ? 'ملفي الشخصي' : 'My Profile';
 
   return (
-    <div className="container-custom px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
       <Seo title={siteTitle} description={siteTitle} />
-      <h1 className="text-2xl font-bold mb-4">{siteTitle}</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
-        <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      {/* Luxe hero header */}
+      <div className="container-custom px-4 pt-8">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 text-white shadow-lg">
+          <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-black/10 blur-2xl" />
+          <div className="relative z-10 p-6 md:p-8">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-sky-500/30 text-white backdrop-blur flex items-center justify-center font-bold">
+                {(form.name || user?.name || 'U').slice(0,1)}
+              </div>
+              <div>
+                <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">{siteTitle}</h1>
+                <p className="text-black/85 text-sm">
+                  {locale==='ar' ? 'مرحبًا' : 'Welcome'},
+                  {' '}
+                  <span className="text-sky-200 font-semibold">{form.name || user?.name || (locale==='ar'?'ضيف':'Guest')}</span>
+                </p>
+              </div>
+              <div className="ms-auto flex items-center gap-2 text-sm">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1">
+                  <span className="h-2 w-2 rounded-full bg-lime-300 animate-pulse" />
+                  {locale==='ar' ? 'متصل' : 'Online'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container-custom px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr),360px] gap-6">
+          <Panel as="section">
           {loading ? (
-            <p className="text-sm text-gray-600">{locale==='ar' ? 'جاري التحميل...' : 'Loading...'}</p>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-4 bg-gray-200/80 dark:bg-gray-700 rounded w-1/4 mb-3" />
+                  <div className="h-11 bg-gray-200/60 dark:bg-gray-700/80 rounded-xl" />
+                </div>
+              ))}
+            </div>
           ) : (
             <form onSubmit={onSubmit} className="space-y-4">
-              {error && <div className="text-sm text-red-600">{error}</div>}
-              {ok && <div className="text-sm text-green-700">{ok}</div>}
+              {error && (
+                <div className="text-sm rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3">
+                  {error}
+                </div>
+              )}
+              {ok && (
+                <div className="text-sm rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3">
+                  {ok}
+                </div>
+              )}
 
-              <div>
-                <label className={labelCls}>{locale==='ar' ? 'الاسم' : 'Name'}</label>
-                <input name="name" value={form.name} onChange={onChange} className={fieldCls} required />
-              </div>
-              <div>
-                <label className={labelCls}>{locale==='ar' ? 'البريد الإلكتروني' : 'Email'}</label>
-                <input name="email" value={form.email} readOnly className={`${fieldCls} bg-gray-50`} />
-                <p className="text-xs text-gray-500 mt-1">{locale==='ar' ? 'البريد غير قابل للتعديل' : 'Email is not editable'}</p>
-              </div>
-              <div>
-                <label className={labelCls}>{locale==='ar' ? 'رقم الجوال' : 'Phone'}</label>
-                <input name="phone" value={form.phone} onChange={onChange} className={fieldCls} placeholder={locale==='ar'?'05xxxxxxxx':'05xxxxxxxx'} />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={saving} className="btn-primary px-5 py-2 text-sm disabled:opacity-60">
+              <Input name="name" label={locale==='ar' ? 'الاسم' : 'Name'} value={form.name} onChange={onChange} required />
+              <Input name="email" label={locale==='ar' ? 'البريد الإلكتروني' : 'Email'} value={form.email} readOnly className="bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" />
+              <p className="text-xs text-gray-500 mt-1">{locale==='ar' ? 'البريد غير قابل للتعديل' : 'Email is not editable'}</p>
+              <Input name="phone" label={locale==='ar' ? 'رقم الجوال' : 'Phone'} value={form.phone} onChange={onChange} placeholder={locale==='ar'?'05xxxxxxxx':'05xxxxxxxx'} />
+              <div className="flex gap-3 pt-3">
+                <Button type="submit" disabled={saving}>
                   {saving ? (locale==='ar' ? 'جارِ الحفظ...' : 'Saving...') : (locale==='ar' ? 'حفظ' : 'Save')}
-                </button>
-                <Link to="/account/security" className="btn-outline px-5 py-2 text-sm">{locale==='ar' ? 'الأمان وكلمة المرور' : 'Security & Password'}</Link>
+                </Button>
+                <ButtonLink to="/account/security" variant="outline">
+                  {locale==='ar' ? 'الأمان وكلمة المرور' : 'Security & Password'}
+                </ButtonLink>
               </div>
             </form>
           )}
-        </section>
+          </Panel>
 
-        <aside className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 h-fit">
-          <h3 className="font-bold mb-3">{locale==='ar' ? 'روابط سريعة' : 'Quick links'}</h3>
-          <div className="flex flex-col gap-2">
-            <Link to="/my-orders" className="btn-outline text-sm">{locale==='ar' ? 'طلباتي' : 'My Orders'}</Link>
-            <Link to="/offers" className="btn-outline text-sm">{locale==='ar' ? 'العروض' : 'Offers'}</Link>
-            <button onClick={logout} className="btn-outline text-sm">{locale==='ar' ? 'تسجيل الخروج' : 'Logout'}</button>
-          </div>
-          {user?.role && (
-            <div className="mt-4 text-xs text-gray-600">
-              <div>{locale==='ar' ? 'الدور:' : 'Role:'} <strong>{user.role}</strong></div>
+          <Panel as="aside" className="h-fit lg:sticky lg:top-6">
+            <h3 className="font-bold mb-4 text-gray-900 dark:text-gray-100">{locale==='ar' ? 'روابط سريعة' : 'Quick links'}</h3>
+            <div className="flex flex-col gap-3">
+              <ButtonLink to="/my-orders" variant="outline">{locale==='ar' ? 'طلباتي' : 'My Orders'}</ButtonLink>
+              <ButtonLink to="/offers" variant="outline">{locale==='ar' ? 'العروض' : 'Offers'}</ButtonLink>
+              <Button onClick={logout} variant="destructive">{locale==='ar' ? 'تسجيل الخروج' : 'Logout'}</Button>
             </div>
-          )}
-        </aside>
+            {user?.role && (
+              <div className="mt-5 text-xs text-gray-600 dark:text-gray-300">
+                <div>{locale==='ar' ? 'الدور:' : 'Role:'} <strong className="text-gray-900 dark:text-gray-100">{user.role}</strong></div>
+              </div>
+            )}
+          </Panel>
       </div>
+    </div>
     </div>
   );
 };

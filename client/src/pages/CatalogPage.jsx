@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Skeleton } from '../components/ui/skeleton.jsx';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useLanguage } from '../context/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import Seo from '../components/Seo';

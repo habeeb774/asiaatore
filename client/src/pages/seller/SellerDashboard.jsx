@@ -6,6 +6,8 @@ import { useStore } from '../../context/StoreContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { localizeName } from '../../utils/locale';
 const ProductManager = React.lazy(() => import('./ProductManager'));
+// Shared admin styles (includes .skeleton and layout helpers)
+import '../../styles/AdminPage.scss';
 
 const SellerDashboard = () => {
   const auth = useAuth() || {};
@@ -72,10 +74,10 @@ const SellerDashboard = () => {
       ) : (
         <>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">لوحة البائع</h2>
+        <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>لوحة البائع</h2>
         <div className="flex items-center gap-2">
-          <Link to="/seller/products" className="btn-primary">إدارة المنتجات</Link>
-          <Link to={`/vendor/${user.id}`} className="btn-secondary">متجرى العام</Link>
+          <Link to="/seller/products" className="btn-primary" style={{ background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-alt))' }}>إدارة المنتجات</Link>
+          <Link to={`/vendor/${user.id}`} className="btn-secondary" style={{ background: 'var(--color-bg-alt)', color: 'var(--color-text)' }}>متجرى العام</Link>
         </div>
       </div>
       <p className="mb-6">مرحباً، {user.name}</p>
@@ -89,24 +91,24 @@ const SellerDashboard = () => {
       {tab==='overview' && (
         <>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="p-4 border rounded bg-white"><div className="text-sm text-gray-500">منتجاتي</div><div className="text-2xl font-bold">{kpi.products}</div></div>
-            <div className="p-4 border rounded bg-white"><div className="text-sm text-gray-500">طلبات</div><div className="text-2xl font-bold">{kpi.orders}</div></div>
-            <div className="p-4 border rounded bg-white"><div className="text-sm text-gray-500">قطع مباعة (تقريباً)</div><div className="text-2xl font-bold">{kpi.itemsSold}</div></div>
-            <div className="p-4 border rounded bg-white"><div className="text-sm text-gray-500">إيراد تقديري</div><div className="text-2xl font-bold">{kpi.revenue.toFixed(2)} ر.س</div></div>
+            <div className="p-4 border rounded" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border-soft)' }}><div className="text-sm" style={{ color:'var(--color-text-faint)' }}>منتجاتي</div><div className="text-2xl font-bold" style={{ color:'var(--color-text)' }}>{kpi.products}</div></div>
+            <div className="p-4 border rounded" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border-soft)' }}><div className="text-sm" style={{ color:'var(--color-text-faint)' }}>طلبات</div><div className="text-2xl font-bold" style={{ color:'var(--color-text)' }}>{kpi.orders}</div></div>
+            <div className="p-4 border rounded" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border-soft)' }}><div className="text-sm" style={{ color:'var(--color-text-faint)' }}>قطع مباعة (تقريباً)</div><div className="text-2xl font-bold" style={{ color:'var(--color-text)' }}>{kpi.itemsSold}</div></div>
+            <div className="p-4 border rounded" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border-soft)' }}><div className="text-sm" style={{ color:'var(--color-text-faint)' }}>إيراد تقديري</div><div className="text-2xl font-bold" style={{ color:'var(--color-text)' }}>{kpi.revenue.toFixed(2)} ر.س</div></div>
           </div>
 
           <div className="mb-6">
             <h3 className="font-semibold mb-3">أحدث الطلبات</h3>
             <div className="space-y-3">
               {myOrders.slice(0, 10).map(o => (
-                <div key={o.id} className="p-4 border rounded bg-white flex items-center justify-between gap-4">
+                <div key={o.id} className="p-4 border rounded flex items-center justify-between gap-4" style={{ background:'var(--color-surface)', borderColor:'var(--color-border-soft)' }}>
                   <div>
-                    <div className="font-semibold">#{o.id} — {o.status || 'pending'}</div>
-                    <div className="text-xs text-gray-500">بتاريخ: {o.createdAt ? new Date(o.createdAt).toLocaleString() : '—'}</div>
+                    <div className="font-semibold" style={{ color:'var(--color-text)' }}>#{o.id} — {o.status || 'pending'}</div>
+                    <div className="text-xs" style={{ color:'var(--color-text-faint)' }}>بتاريخ: {o.createdAt ? new Date(o.createdAt).toLocaleString() : '—'}</div>
                   </div>
                   <div className="text-sm text-gray-700">
-                    <div>عناصر لي: <strong>{o._mineQty || 0}</strong></div>
-                    <div>إجمالي تقديري: <strong>{(o._mineAmount || 0).toFixed(2)} ر.س</strong></div>
+                    <div style={{ color:'var(--color-text)' }}>عناصر لي: <strong>{o._mineQty || 0}</strong></div>
+                    <div style={{ color:'var(--color-text)' }}>إجمالي تقديري: <strong>{(o._mineAmount || 0).toFixed(2)} ر.س</strong></div>
                   </div>
                 </div>
               ))}

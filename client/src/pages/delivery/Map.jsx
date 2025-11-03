@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
 import ReactLeafletCompat from '../../utils/reactLeafletCompat.jsx';
-import Button from '../../components/ui/Button.jsx';
-import { Badge } from '../../components/ui/badge.jsx';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { Navigation, Upload, AlertCircle } from 'lucide-react';
 import DriverSupport from '../../components/DriverSupport.jsx';
 

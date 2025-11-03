@@ -20,7 +20,7 @@ export function attachUser(req, _res, next) {
   if (req.method === 'GET' && req.query && req.query.token) {
     const allowQueryToken = process.env.ALLOW_QUERY_TOKEN === 'true' || process.env.NODE_ENV !== 'production';
     const p = req.originalUrl || req.url || '';
-    const isInvoiceEndpoint = /^\/api\/orders\/[^/]+\/(invoice(?:\.pdf)?)\b/.test(p);
+    const isInvoiceEndpoint = /^\/api\/(orders\/[^/]+\/(invoice(?:\.pdf)?)|invoices\/(?:[^/]+)(?:\/(?:pdf))?)\b/.test(p);
     const isSseEvents = /^\/api\/events\b/.test(p);
     if (allowQueryToken && (isInvoiceEndpoint || isSseEvents)) {
       const payload = verifyToken(String(req.query.token));

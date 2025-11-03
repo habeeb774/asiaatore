@@ -25,3 +25,123 @@
 @media (max-width: 900px) {
   .admin-stat-grid { grid-template-columns: 1fr; }
 }
+
+/* Lightweight skeleton shimmer for loading states */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.06) 25%,
+    rgba(0,0,0,0.12) 37%,
+    rgba(0,0,0,0.06) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,0.06) 25%,
+      rgba(255,255,255,0.12) 37%,
+      rgba(255,255,255,0.06) 63%
+    );
+  }
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* Subtle golden focus for tables inside admin */
+.admin-root table {
+  transition: box-shadow .18s ease, border-color .18s ease;
+}
+.admin-root table:focus-within {
+  /* Gold accent ring + elevate slightly */
+  border-color: rgba(200,169,106,0.55) !important;
+  box-shadow: 0 0 0 2px rgba(200,169,106,0.35), 0 6px 18px -8px rgba(0,0,0,0.08);
+}
+.admin-root table tr:focus-within {
+  outline: 1px solid rgba(200,169,106,0.35);
+  outline-offset: -1px;
+  background: rgba(200,169,106,0.03);
+}
+
+/* Subtle gold underline on table headers for affordance */
+.admin-root table thead th {
+  position: relative;
+}
+.admin-root table thead th::after {
+  content: '';
+  position: absolute;
+  inset-inline: 10px;
+  bottom: 4px;
+  height: 2px;
+  background: transparent;
+  border-radius: 2px;
+  transition: background-color .15s ease, opacity .15s ease;
+  opacity: 0;
+}
+.admin-root table thead th:hover::after {
+  background: rgba(200,169,106,0.65);
+  opacity: 1;
+}
+
+/* Active sort state for headers (supports ARIA + class hook) */
+.admin-root table thead th[aria-sort],
+.admin-root table thead th.sort-active {
+  color: var(--color-text);
+}
+.admin-root table thead th[aria-sort]::after,
+.admin-root table thead th.sort-active::after {
+  background: rgba(200,169,106,0.85);
+  opacity: 1;
+}
+.admin-root table thead th[aria-sort="asc"]::before,
+.admin-root table thead th[aria-sort="desc"]::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  width: 0; height: 0;
+}
+.admin-root table thead th[aria-sort="asc"]::before {
+  /* up caret */
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 6px solid rgba(200,169,106,0.9);
+}
+.admin-root table thead th[aria-sort="desc"]::before {
+  /* down caret */
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid rgba(200,169,106,0.9);
+}
+
+/* Admin inner strip (sub bar) styling */
+.admin-subbar {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: 12px;
+  padding: .6rem .9rem;
+  box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text);
+}
+.admin-subbar::after {
+  content: '';
+  position: absolute;
+  inset-inline: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(200,169,106,0.0), rgba(200,169,106,0.85), rgba(200,169,106,0.0));
+}
+.admin-subbar-title { font-weight: 700; letter-spacing: .3px; }
+.admin-subbar-meta { font-size: .7rem; color: var(--color-text-faint); }

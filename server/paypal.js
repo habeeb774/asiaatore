@@ -4,10 +4,26 @@ import prisma from './db/client.js';
 import { computeTotals } from './utils/totals.js';
 import { audit } from './utils/audit.js';
 import crypto from 'crypto';
+import { ensureInvoiceForOrder } from './utils/invoice.js';
+import { sendInvoiceWhatsApp } from './services/whatsapp.js';
 
 dotenv.config();
 
 const router = express.Router();
+// Enforce enablement via settings (best-effort; if DB unavailable, allow in dev)
+router.use(async (req, res, next) => {
+  try {
+    if (req.path === '/_config') return next();
+    const setting = await prisma.storeSetting?.findUnique?.({ where: { id: 'singleton' } }).catch(() => null);
+    if (setting && setting.payPaypalEnabled === 0) {
+      return res.status(403).json({ ok: false, error: 'PAYMENT_DISABLED', method: 'paypal' });
+    }
+    if (setting && setting.payPaypalEnabled === false) {
+      return res.status(403).json({ ok: false, error: 'PAYMENT_DISABLED', method: 'paypal' });
+    }
+  } catch {/* ignore and allow */}
+  next();
+});
 const PAYPAL_API = process.env.PAYPAL_API || 'https://api-m.sandbox.paypal.com';
 const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || null; // Provided by PayPal developer dashboard
 
@@ -211,9 +227,10 @@ router.post('/create-order', async (req, res) => {
     const lineItems = order.items.map(i => ({ nameEn: i.nameEn, nameAr: i.nameAr, price: i.price, quantity: i.quantity }));
     let orderBody = buildOrderBody(workingCurrency, orderTotals, lineItems);
 
+    const idempotencyKey = String(req.headers['x-idempotency-key'] || `create-${order.id}`).slice(0,64);
     let createRes = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': idempotencyKey },
       body: JSON.stringify(orderBody)
     });
     let createData = await createRes.json();
@@ -234,7 +251,7 @@ router.post('/create-order', async (req, res) => {
         orderBody = buildOrderBody(workingCurrency, usdTotals, usdLineItems);
         createRes = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': idempotencyKey },
           body: JSON.stringify(orderBody)
         });
         createData = await createRes.json();
@@ -281,13 +298,14 @@ router.post('/capture', async (req, res) => {
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
 
     const accessToken = await getAccessToken();
-    const captureRes = await fetch(`${PAYPAL_API}/v2/checkout/orders/${paypalOrderId}/capture`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } });
+  const idem = String(req.headers['x-idempotency-key'] || `capture-${localOrderId}`).slice(0,64);
+  const captureRes = await fetch(`${PAYPAL_API}/v2/checkout/orders/${paypalOrderId}/capture`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': idem } });
     const captureData = await captureRes.json();
     if (!captureRes.ok) {
       return res.status(502).json({ ok: false, error: 'PAYPAL_CAPTURE_FAILED', detail: captureData });
     }
 
-    const paid = captureData.status === 'COMPLETED' || captureData.status === 'APPROVED';
+  const paid = captureData.status === 'COMPLETED' || captureData.status === 'APPROVED';
     const newStatus = paid ? 'paid' : 'processing';
   let existingMeta = order.paymentMeta || {};
   const updatedMeta = { ...existingMeta, paypal: { ...(existingMeta.paypal||{}), capture: captureData, paypalOrderId } };
@@ -298,12 +316,48 @@ router.post('/capture', async (req, res) => {
         paymentMeta: updatedMeta
       }
     });
-    audit({ action: 'order.paypal.capture', entity: 'Order', entityId: order.id, userId: order.userId, meta: { status: newStatus, paypalOrderId } });
+  audit({ action: 'order.paypal.capture', entity: 'Order', entityId: order.id, userId: order.userId, meta: { status: newStatus, paypalOrderId } });
+  if (paid) { try { await ensureInvoiceForOrder(order.id); } catch {} try { await sendInvoiceWhatsApp(order.id).catch(() => null); } catch {} }
 
     return res.json({ ok: true, status: newStatus, capture: captureData, orderId: order.id });
   } catch (err) {
     console.error('capture error', err);  
     return res.status(500).json({ ok: false, error: 'INTERNAL', message: err.message });
+  }
+});
+
+// Refund captured payment for a local order
+// Body: { localOrderId, amount?: number, currency?: string }
+router.post('/refund', async (req, res) => {
+  try {
+    const { localOrderId, amount, currency } = req.body || {};
+    if (!localOrderId) return res.status(400).json({ ok: false, error: 'MISSING_LOCAL_ORDER_ID' });
+    const order = await prisma.order.findUnique({ where: { id: localOrderId } });
+    if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
+    const cap = order?.paymentMeta?.paypal?.capture;
+    const captures = cap?.purchase_units?.[0]?.payments?.captures || cap?.captures || [];
+    const captureId = Array.isArray(captures) && captures.length ? captures[0].id : null;
+    if (!captureId) return res.status(400).json({ ok: false, error: 'NO_CAPTURE_ID' });
+    const accessToken = await getAccessToken();
+    const idem = String(req.headers['x-idempotency-key'] || `refund-${localOrderId}`).slice(0,64);
+    const body = amount ? { amount: { value: Number(amount).toFixed(2), currency_code: (currency || order.currency || 'SAR') } } : {};
+    const r = await fetch(`${PAYPAL_API}/v2/payments/captures/${captureId}/refund`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': idem },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) return res.status(502).json({ ok: false, error: 'PAYPAL_REFUND_FAILED', detail: data });
+    // Update order status
+    const newStatus = amount && Number(amount) < Number(order.grandTotal) ? 'partially_refunded' : 'refunded';
+    const existingMeta = order.paymentMeta || {};
+    const updatedMeta = { ...existingMeta, paypal: { ...(existingMeta.paypal||{}), refund: data } };
+    await prisma.order.update({ where: { id: order.id }, data: { status: newStatus, paymentMeta: updatedMeta } });
+    audit({ action: 'order.paypal.refund', entity: 'Order', entityId: order.id, userId: order.userId, meta: { newStatus, captureId } });
+    return res.json({ ok: true, status: newStatus, refund: data });
+  } catch (e) {
+    console.error('refund error', e);
+    return res.status(500).json({ ok: false, error: 'INTERNAL', message: e.message });
   }
 });
 
@@ -332,9 +386,12 @@ router.post('/webhook', async (req, res) => {
       let newStatus = linkedOrder.status;
       if (eventType === 'PAYMENT.CAPTURE.COMPLETED' || eventType === 'CHECKOUT.ORDER.APPROVED') {
         newStatus = 'paid';
+      } else if (eventType === 'PAYMENT.CAPTURE.REFUNDED' || eventType === 'PAYMENT.CAPTURE.REVERSED') {
+        newStatus = 'refunded';
       }
-      updates = await prisma.order.update({ where: { id: linkedOrder.id }, data: { status: newStatus, paymentMeta: { ...existingMeta, paypal: paypalMeta } } });
+  updates = await prisma.order.update({ where: { id: linkedOrder.id }, data: { status: newStatus, paymentMeta: { ...existingMeta, paypal: paypalMeta } } });
       audit({ action: 'order.paypal.webhook', entity: 'Order', entityId: linkedOrder.id, userId: linkedOrder.userId, meta: { eventType, paypalOrderId, verified: verifyResult.verified } });
+  if (newStatus === 'paid') { try { await ensureInvoiceForOrder(linkedOrder.id); } catch {} try { await sendInvoiceWhatsApp(linkedOrder.id).catch(() => null); } catch {} }
     }
     res.json({ ok: true, received: true, eventType, verified: verifyResult.verified, orderUpdated: !!updates });
   } catch (e) {

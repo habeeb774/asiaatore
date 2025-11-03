@@ -49,33 +49,45 @@ export function findCityCoords(cityRaw) {
   return null;
 }
 
-export function getOrigin() {
-  const lat = Number(process.env.STORE_ORIGIN_LAT || 24.7136); // default Riyadh
-  const lng = Number(process.env.STORE_ORIGIN_LNG || 46.6753);
+export function getOrigin(cfg) {
+  const lat = Number((cfg && cfg.originLat != null ? cfg.originLat : process.env.STORE_ORIGIN_LAT) || 24.7136); // default Riyadh
+  const lng = Number((cfg && cfg.originLng != null ? cfg.originLng : process.env.STORE_ORIGIN_LNG) || 46.6753);
   return { lat, lng };
 }
 
-export function computeShippingFee(distanceKm) {
+export function computeShippingFee(distanceKm, cfg) {
   // Configurable via env
-  const base = Number(process.env.SHIPPING_BASE || 10); // SAR
-  const perKm = Number(process.env.SHIPPING_PER_KM || 0.7); // SAR per km
-  const minFee = Number(process.env.SHIPPING_MIN || 15);
-  const maxFee = Number(process.env.SHIPPING_MAX || 60);
+  const base = Number((cfg && cfg.shippingBase != null ? cfg.shippingBase : process.env.SHIPPING_BASE) || 10); // SAR
+  const perKm = Number((cfg && cfg.shippingPerKm != null ? cfg.shippingPerKm : process.env.SHIPPING_PER_KM) || 0.7); // SAR per km
+  const minFee = Number((cfg && cfg.shippingMin != null ? cfg.shippingMin : process.env.SHIPPING_MIN) || 15);
+  const maxFee = Number((cfg && cfg.shippingMax != null ? cfg.shippingMax : process.env.SHIPPING_MAX) || 60);
   const fee = Math.max(minFee, Math.min(maxFee, +(base + distanceKm * perKm).toFixed(2)));
   return fee;
 }
 
-export function quoteShipping(address) {
-  const origin = getOrigin();
+export function quoteShipping(address, cfg) {
+  const origin = getOrigin(cfg);
   const cityCoords = findCityCoords(address?.city || '');
   if (!cityCoords) {
     // Unknown city: fall back to default flat rate
-    const fallback = Number(process.env.SHIPPING_FALLBACK || 25);
+    const fallback = Number((cfg && cfg.shippingFallback != null ? cfg.shippingFallback : process.env.SHIPPING_FALLBACK) || 25);
     return { method: 'fallback', shipping: fallback, distanceKm: null, cityMatched: null };
   }
   const distanceKm = haversineKm(origin, cityCoords);
-  const shipping = computeShippingFee(distanceKm);
-  return { method: 'distance', shipping, distanceKm: +distanceKm.toFixed(1), cityMatched: cityCoords.key };
+  const shipping = computeShippingFee(distanceKm, cfg);
+  // Simple ETA heuristic based on distance bands
+  let etaHoursMin = null, etaHoursMax = null, etaDaysMin = null, etaDaysMax = null;
+  if (distanceKm <= 10) { etaHoursMin = 3; etaHoursMax = 6; }
+  else if (distanceKm <= 50) { etaHoursMin = 6; etaHoursMax = 12; }
+  else if (distanceKm <= 400) { etaDaysMin = 1; etaDaysMax = 2; }
+  else { etaDaysMin = 2; etaDaysMax = 5; }
+  return {
+    method: 'distance',
+    shipping,
+    distanceKm: +distanceKm.toFixed(1),
+    cityMatched: cityCoords.key,
+    etaHoursMin, etaHoursMax, etaDaysMin, etaDaysMax
+  };
 }
 
 export default { haversineKm, findCityCoords, getOrigin, computeShippingFee, quoteShipping };

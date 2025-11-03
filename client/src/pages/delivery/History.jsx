@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { Badge } from '../../components/ui/badge.jsx';
+import { Badge } from '../../components/ui/Badge';
 import { Calendar, Package, Clock } from 'lucide-react';
 
 export default function DeliveryHistoryPage() {

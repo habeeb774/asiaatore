@@ -13,7 +13,18 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
     try {
       const raw = localStorage.getItem('my_store_cart');
-      return raw ? JSON.parse(raw) : [];
+      const list = raw ? JSON.parse(raw) : [];
+      // Deduplicate by id on hydrate (sum quantities, cap to sane max)
+      const MAX = 10;
+      const map = new Map();
+      for (const it of Array.isArray(list) ? list : []) {
+        const id = it?.id || it?.productId;
+        if (!id) continue;
+        const prev = map.get(id) || { ...it, id, quantity: 0 };
+        const qty = Math.min(MAX, (prev.quantity || 0) + (parseInt(it.quantity || 1, 10) || 1));
+        map.set(id, { ...prev, quantity: qty });
+      }
+      return Array.from(map.values());
     } catch {
       return [];
     }
@@ -91,7 +102,8 @@ export const CartProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('cart:add', { detail }));
       // Trigger a subtle cart icon bump animation for visual feedback
       window.dispatchEvent(new Event('cart:icon-bump'));
-      window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', title: 'تمت الإضافة إلى السلة', description: detail.name } }));
+      const wasIncrement = updated?.type === 'increment';
+      window.dispatchEvent(new CustomEvent('toast:show', { detail: { type: 'success', title: wasIncrement ? 'تم تحديث الكمية' : 'تمت الإضافة إلى السلة', description: detail.name } }));
     } catch {}
     // Server sync — ensure we send the intended qty (not product.quantity field)
     (async () => {
@@ -174,7 +186,10 @@ export const CartProvider = ({ children }) => {
   // On user login: fetch server cart & merge local items (first time per session)
   useEffect(() => {
     const syncCart = async () => {
-      if (!user) return; // not logged in
+      // Only call server if we have an access token present
+      let hasToken = false
+      try { hasToken = !!localStorage.getItem('my_store_token') } catch {}
+      if (!user || !hasToken) return; // not logged in or no token
       if (hasMergedRef.current) return;
       setLoading(true); setError(null);
       try {
@@ -235,7 +250,7 @@ export const CartProvider = ({ children }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const cartTotal = cartItems.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
+  const cartTotal = cartItems.reduce((sum, i) => sum + (Number(i.price || i.salePrice || 0) * Number(i.quantity || 1)), 0);
   const value = { cartItems, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, maxPerItem: MAX_PER_ITEM, loading, error };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

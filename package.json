@@ -12,7 +12,8 @@
     "start:simple": "node server/simple.js",
     "dev:simple": "node server/simple.js",
     "start:server": "node server/index.js",
-    "dev:server": "node server/index.js",
+  "dev:server": "node server/index.js",
+  "dev:server:admin": "cross-env ALLOW_DEV_HEADERS=true PORT=8842 node server/index.js",
     "build": "npm run build -w client",
     "server": "node server/index.js",
     "start": "node server/index.js",
@@ -57,6 +58,9 @@
     "test:api": "node scripts/tests/api-smoke.mjs",
     "test:sse": "node scripts/tests/order-delivery-sse.mjs",
     "test:all": "npm run -s test:api && npm run -s test:sse",
+    "test:payments:e2e": "node scripts/tests/payments-invoices-e2e.mjs",
+    "test:bank:e2e": "node scripts/tests/bank-invoices-e2e.mjs",
+    "test:paypal:e2e": "node scripts/tests/paypal-invoices-e2e.mjs",
     "dev:server:test": "cross-env PORT=4010 node server/index.js",
     "test:api:8829": "cross-env API_BASE=http://localhost:8829 node scripts/tests/api-smoke.mjs",
     "test:sse:8829": "cross-env API_BASE=http://localhost:8829 node scripts/tests/order-delivery-sse.mjs",
@@ -68,7 +72,10 @@
     "test:unit:run": "vitest run -w client",
     "test:ui": "playwright test -c client/playwright.config.ts",
     "test:ui:headed": "playwright test -c client/playwright.config.ts --headed",
-    "test:integration": "npm run -s dev:server:test & timeout 3 > NUL & cross-env PLAYWRIGHT_BASE_URL=http://localhost:4010 npm run -s test:ui"
+    "test:integration": "npm run -s dev:server:test & timeout 3 > NUL & cross-env PLAYWRIGHT_BASE_URL=http://localhost:4010 npm run -s test:ui",
+    "diag": "node server/scripts/diagnostics.mjs",
+    "diag:8842": "cross-env PORT=8842 node server/scripts/diagnostics.mjs",
+    "diag:8843": "cross-env PORT=8843 node server/scripts/diagnostics.mjs"
   },
   "prisma": {
     "seed": "node ./server/db/seed.js"
@@ -84,6 +91,8 @@
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
     "bcryptjs": "^2.4.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -115,8 +124,10 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^6.30.1",
     "sharp": "^0.33.5",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss-rtl": "^0.9.0",
     "twilio": "^4.22.0",
+    "use-debounce": "^10.0.6",
     "ws": "^8.18.3",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
@@ -151,6 +162,7 @@
   },
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "packages/*"
   ]
 }

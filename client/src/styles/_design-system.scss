@@ -45,23 +45,26 @@
   --shadow-lg: 0 18px 42px -14px rgba(0,0,0,.22);
 
   /* Palette (neutral + brand) */
-  --color-bg: #ffffff;
-  --color-bg-alt: #f6f7f9;
-  --color-surface: #ffffff;
-  --color-border: #e4e7eb;
-  --color-border-soft: #edf0f3;
-  --color-text: #1f2933;
-  --color-text-soft: #4d5761;
-  --color-text-faint: #7b8794;
-  --color-primary: #69be3c;
-  --color-primary-alt: #d00c05;
+  --color-bg: #FAFAF8;          /* off-white luxurious base */
+  --color-bg-alt: #F5F5F2;      /* soft alt surface */
+  --color-surface: #FFFFFF;     /* cards & panels */
+  --color-border: rgba(12,18,28,0.08); /* hairline border */
+  --color-border-soft: rgba(12,18,28,0.06);
+  --color-text: #1B2430;        /* charcoal text */
+  --color-text-soft: #4D5A69;   /* muted text */
+  --color-text-faint: #7B8794;
+  --color-primary: #2F855A;     /* deep elegant green */
+  --color-primary-alt: #276749; /* hover shade */
   /* Secondary green for UI gradients (used by modern sidebar, etc.) */
   --color-primary-2: #86efac;
   /* primary-rgb is set at runtime from SettingsContext for accurate shadows */
-  --color-primary-rgb: 105,190,60; /* fallback derived from #69be3c */
+  --color-primary-rgb: 47,133,90; /* derived from #2F855A */
   --color-primary-2-rgb: 134,239,172; /* fallback derived from #86efac */
-  --color-accent: #2563eb;
-  --color-accent-rgb: 37,99,235;
+  --color-accent: #3A5A79;      /* subdued blue accent */
+  --color-accent-rgb: 58,90,121;
+  /* Luxury accent */
+  --color-gold: #C8A96A;        /* muted gold for accents/focus ring */
+  --color-ring: var(--color-gold);
   /* Provide secondary alias used by components */
   --color-secondary: var(--color-primary-alt);
   --color-danger: #dc2626;
@@ -72,7 +75,7 @@
   --color-warning-2: #f6ad55;
 
   /* Gradients */
-  --grad-primary: linear-gradient(90deg,var(--color-primary),var(--color-primary-alt));
+  --grad-primary: linear-gradient(180deg, var(--color-primary), var(--color-primary-alt));
   /* Accessible hero gradient (red ↔ gold) with sufficient contrast on white text */
   --color-hero-red: #b91c1c;   /* red-700 ~6.4:1 vs #fff */
   --color-hero-gold: #92400e;  /* amber-800 ~5.8:1 vs #fff */
@@ -113,14 +116,14 @@
 
 /* Dark mode overrides */
 .dark-mode {
-  --color-bg: #0f172a;
-  --color-bg-alt: #152132;
-  --color-surface: #1e2937;
-  --color-border: #2c3a47;
-  --color-border-soft: #233140;
-  --color-text: #f0f5fa;
-  --color-text-soft: #c6d0da;
-  --color-text-faint: #8a98a6;
+  --color-bg: #0E1626;
+  --color-bg-alt: #101A2C;
+  --color-surface: #121E33;
+  --color-border: rgba(255,255,255,0.08);
+  --color-border-soft: rgba(255,255,255,0.06);
+  --color-text: #E8EDF3;
+  --color-text-soft: #BAC7D4;
+  --color-text-faint: #8FA0B3;
   --grad-soft: linear-gradient(135deg,#182430,#1f2e3c 60%,#16222c);
 }
 

@@ -46,11 +46,28 @@ const HomeHero = () => {
   const { setting } = useSettings();
 
   const baseProductsPath = '/products';
-  const slidesData = useMemo(() => [
-    { id: 1, src: 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'عروض خاصة':'Special Offers', subtitle: locale==='ar'?'خصومات تصل إلى 50%':'Up to 50% Discount', link: baseProductsPath, overlay: 'linear-gradient(135deg, rgba(102,126,234,0.8) 0%, rgba(118,75,162,0.8) 100%)' },
-    { id: 2, src: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'أحدث المنتجات':'New Arrivals', subtitle: locale==='ar'?'اكتشف مجموعتنا الجديدة':'Discover Our New Collection', link: baseProductsPath+'?sort=newest', overlay: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(249,115,22,0.8) 100%)' },
-    { id: 3, src: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'شحن مجاني':'Free Shipping', subtitle: locale==='ar'?'لطلبات فوق 200 ريال':'For Orders Over 200 SAR', link: '/shipping-info', overlay: 'linear-gradient(135deg, rgba(16,185,129,0.8) 0%, rgba(5,150,105,0.8) 100%)' }
-  ], [locale]);
+  const slidesData = useMemo(() => {
+    // إذا وُفّرت إعدادات الهيرو في الإعدادات العامة، استخدمها لتكوين شريحة واحدة مخصصة
+    if (setting?.heroBackgroundImage || setting?.heroBackgroundGradient || setting?.heroCenterImage) {
+      const title = locale==='ar' ? 'تسوّق الآن' : 'Shop Now';
+      const subtitle = locale==='ar' ? 'أفضل العروض والمنتجات' : 'Great offers and products';
+      return [{
+        id: 'setting-hero',
+        src: setting.heroBackgroundImage || 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?auto=format&fit=crop&w=1200&q=70',
+        title,
+        subtitle,
+        link: baseProductsPath,
+        overlay: setting.heroBackgroundGradient || 'linear-gradient(135deg, rgba(16,185,129,0.8) 0%, rgba(5,150,105,0.8) 100%)',
+        centerImage: setting.heroCenterImage || null
+      }];
+    }
+    // خلاف ذلك: استخدم الشرائح الافتراضية
+    return [
+      { id: 1, src: 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'عروض خاصة':'Special Offers', subtitle: locale==='ar'?'خصومات تصل إلى 50%':'Up to 50% Discount', link: baseProductsPath, overlay: 'linear-gradient(135deg, rgba(102,126,234,0.8) 0%, rgba(118,75,162,0.8) 100%)' },
+      { id: 2, src: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'أحدث المنتجات':'New Arrivals', subtitle: locale==='ar'?'اكتشف مجموعتنا الجديدة':'Discover Our New Collection', link: baseProductsPath+'?sort=newest', overlay: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(249,115,22,0.8) 100%)' },
+      { id: 3, src: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=70', title: locale==='ar'?'شحن مجاني':'Free Shipping', subtitle: locale==='ar'?'لطلبات فوق 200 ريال':'For Orders Over 200 SAR', link: '/shipping-info', overlay: 'linear-gradient(135deg, rgba(16,185,129,0.8) 0%, rgba(5,150,105,0.8) 100%)' }
+    ];
+  }, [setting, locale]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
@@ -89,6 +106,12 @@ const HomeHero = () => {
               <AnimatePresence mode="wait">
                 <SlideContent slide={slidesData[currentIndex]} locale={locale} t={t} />
               </AnimatePresence>
+              {/* صورة مركزية اختيارية من الإعدادات */}
+              {slidesData[currentIndex]?.centerImage && (
+                <div className="mt-8 flex justify-center">
+                  <img src={slidesData[currentIndex].centerImage} alt="" className="max-h-48 sm:max-h-64 md:max-h-72 object-contain drop-shadow-xl" loading="lazy" />
+                </div>
+              )}
             </div>
           </div>
         </div>

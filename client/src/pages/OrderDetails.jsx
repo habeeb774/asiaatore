@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getInvoiceUrl } from '../services/orderService';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useOrders } from '../context/OrdersContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadBankReceipt, initBankTransfer } from '../services/paymentService';
+import { openInvoicePdfByOrder } from '../services/invoiceService';
 
 const OrderDetails = () => {
   const { id } = useParams();
@@ -17,6 +18,7 @@ const OrderDetails = () => {
   const [uploadError, setUploadError] = useState(null);
   const [bankInfo, setBankInfo] = useState(null);
   const [allowReplace, setAllowReplace] = useState(false);
+  const [waSending, setWaSending] = useState(false);
 
   const isBank = order?.paymentMethod === 'bank' || order?.status === 'pending_bank_review';
 
@@ -84,6 +86,7 @@ const OrderDetails = () => {
   const total = order.grandTotal != null ? order.grandTotal : (order.total || (order.items || []).reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0));
   const addr = order?.paymentMeta?.address || null;
   const addrText = addr ? [addr.name, addr.email, `${addr.country||''}${addr.country&&addr.city?' - ':''}${addr.city||''}`, addr.line1, addr.phone].filter(Boolean).join('\n') : '';
+  const shipments = Array.isArray(order?.shipments) ? order.shipments : [];
 
   return (
     <div className="container-custom px-4 py-8">
@@ -113,6 +116,28 @@ const OrderDetails = () => {
               {addr.line1 && <div>{addr.line1}</div>}
               {addr.phone && <div className="text-gray-700">{addr.phone}</div>}
             </div>
+          </div>
+        )}
+        {shipments.length > 0 && (
+          <div className="mt-3 p-3 border rounded bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold">الشحنات</div>
+              <Link to={`/order/${order.id}/track`} className="text-xs text-blue-700 hover:underline">فتح شاشة التتبع</Link>
+            </div>
+            <ul className="text-xs space-y-1">
+              {shipments.map((s, i) => (
+                <li key={s.id || i} className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="px-1.5 py-0.5 rounded bg-gray-100 border text-gray-700">{s.provider || 'provider'}</span>
+                  </span>
+                  <span>رقم التتبع: <strong>{s.trackingNumber || s.trackingId || '—'}</strong></span>
+                  {s.trackingUrl && (
+                    <a href={s.trackingUrl} target="_blank" rel="noopener" className="text-primary-red underline">تتبّع خارجي</a>
+                  )}
+                  <span className="ml-auto opacity-70">{s.status || '—'}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         <div className="mt-4 p-3 border rounded bg-gray-50 space-y-3">
@@ -195,6 +220,41 @@ const OrderDetails = () => {
           )}
         </div>
         <div className="ml-auto flex items-center gap-4">
+          {user?.role === 'admin' && (
+            <button
+              className="btn-secondary"
+              disabled={waSending}
+              onClick={async () => {
+                setWaSending(true);
+                try {
+                  const api = (await import('../api/client')).default;
+                  const res = await api.whatsappSendInvoiceByOrder(order.id);
+                  if (res?.ok) {
+                    alert('تم إرسال رابط الفاتورة عبر واتساب');
+                  } else {
+                    const reason = res?.reason || res?.error || 'غير معروف';
+                    alert('تعذر الإرسال عبر واتساب: ' + reason);
+                  }
+                } catch (e) {
+                  alert('فشل الإرسال عبر واتساب: ' + (e?.message || 'خطأ'));
+                } finally {
+                  setWaSending(false);
+                }
+              }}
+            >{waSending ? 'يرسل...' : 'إرسال الفاتورة عبر واتساب'}</button>
+          )}
+          {order.status === 'paid' && (
+            <button
+              className="btn-secondary"
+              onClick={async () => {
+                try {
+                  await openInvoicePdfByOrder(order.id, { format: 'a4' });
+                } catch (e) {
+                  alert('تعذر فتح الفاتورة: ' + (e?.message || 'خطأ'));
+                }
+              }}
+            >تحميل الفاتورة (الجديدة)</button>
+          )}
           <button className="btn-secondary" onClick={() => window.open(getInvoiceUrl(order.id) + `?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>عرض الفاتورة</button>
           <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF A4</a>
           <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF حراري 80mm</a>

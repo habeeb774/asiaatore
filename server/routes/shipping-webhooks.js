@@ -1,4 +1,5 @@
 import express from 'express';
+import prisma from '../db/client.js';
 import aramex from '../services/shipping/adapters/aramex.js';
 import smsa from '../services/shipping/adapters/smsa.js';
 import { broadcast } from '../utils/realtimeHub.js';
@@ -32,6 +33,27 @@ const rawBodyParser = (req, res, next) => {
   req.on('error', next);
 };
 
+function buildProviderCfg(setting, provider) {
+  if (!setting) return {};
+  if (provider === 'aramex') {
+    return {
+      aramexApiUrl: setting.aramexApiUrl,
+      aramexApiKey: setting.aramexApiKey,
+      aramexApiUser: setting.aramexApiUser,
+      aramexApiPass: setting.aramexApiPass,
+      aramexWebhookSecret: setting.aramexWebhookSecret,
+    };
+  }
+  if (provider === 'smsa') {
+    return {
+      smsaApiUrl: setting.smsaApiUrl,
+      smsaApiKey: setting.smsaApiKey,
+      smsaWebhookSecret: setting.smsaWebhookSecret,
+    };
+  }
+  return {};
+}
+
 // Generic webhook endpoint for shipping provider callbacks
 // POST /api/shipping/webhook/:provider
 router.post('/webhook/:provider', rawBodyParser, async (req, res) => {
@@ -39,8 +61,17 @@ router.post('/webhook/:provider', rawBodyParser, async (req, res) => {
     const provider = String(req.params.provider || '').toLowerCase();
     const adapter = ADAPTERS[provider];
     if (!adapter) return res.status(404).json({ ok: false, error: 'UNKNOWN_PROVIDER' });
+    // Load settings (best-effort) and pass cfg into adapter verification
+    let setting = null;
+    try {
+      if (process.env.ALLOW_INVALID_DB !== 'true') {
+        const rows = await prisma.$queryRaw`SELECT * FROM StoreSetting WHERE id = 'singleton' LIMIT 1`;
+        setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+      }
+    } catch {}
+    const cfg = buildProviderCfg(setting, provider);
     // Pass rawBody (Buffer) to adapter for signature verification
-    const result = await adapter.handleWebhook(req.body || {}, req.headers || {}, req.rawBody);
+    const result = await adapter.handleWebhook(req.body || {}, req.headers || {}, req.rawBody, cfg);
     try { broadcast('shipping.update', { provider, ...result }); } catch (e) {}
     return res.json({ ok: true, result });
   } catch (e) {

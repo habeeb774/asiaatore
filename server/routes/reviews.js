@@ -49,4 +49,20 @@ router.post('/:id/moderate', async (req, res) => {
   }
 });
 
+// Batch moderate: { ids: string[], action: 'approve'|'reject' }
+router.post('/moderate-batch', async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') return res.status(403).json({ ok:false, error:'FORBIDDEN' });
+  try {
+    const { ids, action } = req.body || {};
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ ok:false, error:'INVALID_IDS' });
+    if (!['approve','reject'].includes(action)) return res.status(400).json({ ok:false, error:'INVALID_ACTION' });
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    await prisma.review.updateMany({ where: { id: { in: ids.map(String) } }, data: { status } });
+    const updated = await prisma.review.findMany({ where: { id: { in: ids.map(String) } } });
+    res.json({ ok:true, updated });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'MODERATE_BATCH_FAILED', message: e.message });
+  }
+});
+
 export default router;

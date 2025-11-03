@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import api from '../../api/client';
 import { Link } from 'react-router-dom';
-import { Button } from '../../components/ui/Button.jsx';
-import { Input } from '../../components/ui/input.jsx';
-import { Label } from '../../components/ui/label.jsx';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card.jsx';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -31,17 +30,21 @@ const ForgotPasswordPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>استرجاع كلمة المرور</CardTitle>
+          <CardDescription>أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطًا لإعادة تعيين كلمة المرور.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="grid gap-3">
-            <p className="text-xs text-gray-500">أدخل بريدك لإرسال رابط/رمز إعادة التعيين (محاكاة).</p>
-            <div className="grid gap-1">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
-              <Input id="email" type="email" placeholder="example@mail.com" value={email} onChange={e=>setEmail(e.target.value)} />
-            </div>
-            {error ? (<div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>) : null}
-            {sent ? (<div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">تم إرسال رابط (وهمي) إن كان البريد مسجلاً.</div>) : null}
-            <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#69be3c] to-amber-400">{loading? '...إرسال' : 'إرسال رابط'}</Button>
+            <Input
+              id="email"
+              type="email"
+              label="البريد الإلكتروني"
+              placeholder="example@mail.com"
+              value={email}
+              onChange={e=>setEmail(e.target.value)}
+              error={error && !sent ? error : undefined}
+            />
+            {sent && (<div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">تم إرسال رابط (وهمي) إن كان البريد مسجلاً.</div>)}
+            <Button type="submit" disabled={loading} className="w-full">{loading? '...إرسال' : 'إرسال رابط'}</Button>
             <p className="mt-1 text-[0.72rem]">تذكرت؟ <Link to="/login" className="underline">عودة لتسجيل الدخول</Link></p>
           </form>
         </CardContent>

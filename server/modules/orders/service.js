@@ -6,6 +6,21 @@ import aramex from '../../services/shipping/adapters/aramex.js';
 import smsa from '../../services/shipping/adapters/smsa.js';
 import { emitOrderEvent } from '../../utils/realtimeHub.js';
 import InventoryService from '../../services/inventoryService.js';
+import { ensureInvoiceForOrder } from '../../utils/invoice.js';
+import { sendInvoiceWhatsApp } from '../../services/whatsapp.js';
+
+function providerTrackingUrl(provider, trackingNumber) {
+  try {
+    const p = String(provider || '').toLowerCase();
+    const t = encodeURIComponent(String(trackingNumber || ''));
+    if (!t) return null;
+    if (p === 'smsa') return `https://track.smsaexpress.com/Shipment/Tracking?tracknumbers=${t}`;
+    if (p === 'aramex') return `https://www.aramex.com/track/shipments?ShipmentNumber=${t}`;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export function mapOrder(o) {
   return {
@@ -30,6 +45,16 @@ export function mapOrder(o) {
       oldPrice: i.oldPrice,
       quantity: i.quantity,
     })),
+    shipments: (o.shipments || []).map(s => ({
+      id: s.id,
+      provider: s.provider,
+      trackingNumber: s.trackingNumber,
+      status: s.status,
+      trackingUrl: providerTrackingUrl(s.provider, s.trackingNumber),
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    })),
+    trackingUrl: (o.shipments && o.shipments.length) ? providerTrackingUrl(o.shipments[0].provider, o.shipments[0].trackingNumber) : null,
   };
 }
 
@@ -118,7 +143,7 @@ export const OrdersService = {
       try {
         const [total, list] = await Promise.all([
           prisma.order.count({ where: whereNdCandidate }),
-          prisma.order.findMany({ where: whereNdCandidate, orderBy, skip, take: ps, include: { items: true } }),
+          prisma.order.findMany({ where: whereNdCandidate, orderBy, skip, take: ps, include: { items: true, shipments: true } }),
         ]);
         return { items: list, total, page: pg, pageSize: ps, totalPages: Math.ceil(total / ps) };
       } catch (e) {
@@ -129,7 +154,7 @@ export const OrdersService = {
           try {
             const [total, list] = await Promise.all([
               prisma.order.count({ where: whereRaw }),
-              prisma.order.findMany({ where: whereRaw, orderBy, skip, take: ps, include: { items: true } }),
+              prisma.order.findMany({ where: whereRaw, orderBy, skip, take: ps, include: { items: true, shipments: true } }),
             ]);
             return { items: list, total, page: pg, pageSize: ps, totalPages: Math.ceil(total / ps) };
           } catch (e2) {
@@ -145,7 +170,7 @@ export const OrdersService = {
       }
     }
     try {
-      const list = await prisma.order.findMany({ where: whereNdCandidate, orderBy, include: { items: true } });
+      const list = await prisma.order.findMany({ where: whereNdCandidate, orderBy, include: { items: true, shipments: true } });
       return { items: list };
     } catch (e) {
       // Retry without deletedAt if unknown arg error
@@ -153,7 +178,7 @@ export const OrdersService = {
       const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
       if (isUnknownDeletedAt) {
         try {
-          const list = await prisma.order.findMany({ where: whereRaw, orderBy, include: { items: true } });
+          const list = await prisma.order.findMany({ where: whereRaw, orderBy, include: { items: true, shipments: true } });
           return { items: list };
         } catch (e2) {
           if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] list retry (no deletedAt) failed', e2);
@@ -175,13 +200,13 @@ export const OrdersService = {
   async getById(id) {
     // Some schemas don't have deletedAt; try with it first and fall back if unknown arg
         try {
-          return await prisma.order.findFirst({ where: whereWithDeletedAt({ id }), include: { items: true } });
+          return await prisma.order.findFirst({ where: whereWithDeletedAt({ id }), include: { items: true, shipments: true } });
         } catch (e) {
           const msg = e?.message || '';
           const isUnknownDeletedAt = /Unknown arg `deletedAt`|Unknown field `deletedAt`|Argument deletedAt/i.test(msg);
           if (isUnknownDeletedAt) {
             try {
-              return await prisma.order.findFirst({ where: { id }, include: { items: true } });
+              return await prisma.order.findFirst({ where: { id }, include: { items: true, shipments: true } });
             } catch (e2) {
               if (process.env.DEBUG_ERRORS === 'true') console.error('[ORDERS] getById retry (no deletedAt) failed', e2);
               throw e2;
@@ -354,6 +379,11 @@ export const OrdersService = {
           await InventoryService.releaseReserved(updated.id, { userId: requesterId });
         } else if (s === 'shipped' || s === 'completed' || s === 'paid') {
           await InventoryService.confirmReduction(updated.id, { userId: requesterId });
+        }
+        // Auto-generate invoice and notify when transitioning to paid
+        if (s === 'paid') {
+          try { await ensureInvoiceForOrder(updated.id); } catch {}
+          try { await sendInvoiceWhatsApp(updated.id).catch(() => null); } catch {}
         }
       }
     } catch (e) {

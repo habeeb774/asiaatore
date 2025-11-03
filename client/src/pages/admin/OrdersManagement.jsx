@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOrders } from '../../context/OrdersContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
-import { Skeleton } from '../../components/ui/skeleton.jsx';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 const statusOptions = ['pending','paid','shipped','completed','cancelled'];
 

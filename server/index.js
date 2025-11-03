@@ -30,11 +30,14 @@ if (!process.env.DATABASE_URL) {
 let prisma; // will be set via dynamic import
 let attachUser;
 let authRoutes, productsRoutes, brandsRoutes, ordersRoutes, marketingRoutes, tierPricesRoutes, sellersRoutes, deliveryRoutes;
-let inventoryRoutes, reportsRoutes;
+let inventoryRoutes, reportsRoutes, invoicesRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
+let envRoutes;
 let adminUsersRoutes, adminStatsRoutes, adminAuditRoutes, adminSellersRoutes;
 let paypalRouter, bankRouter, stcRouter;
 let wishlistRoutes, cartRoutes, searchRoutes, supportRoutes;
+let setupRoutes;
+let shippingRoutes, shippingWebhooksRoutes, smsaRoutes;
 
 const app = express();
 let PORT = Number(process.env.PORT) || 4000;
@@ -82,27 +85,47 @@ app.use(helmet({
             "style-src": ["'self'", "'unsafe-inline'", 'https:'],
             "connect-src": ["'self'", 'https:', 'http:', 'ws:', 'wss:']
         }
-    } : false
+    } : false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    frameguard: { action: 'sameorigin' },
 }));
 
-// CORS
-// CORS: allow all in dev, restrict in prod
+// Add explicit HSTS in production (ensure HTTPS in front of the app)
+if (isProd) {
+    try {
+        app.use(helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true }));
+    } catch {}
+}
 
+// CORS: allow all in dev, STRICT allowlist in prod
 let corsOptions;
 if (!isProd) {
-    corsOptions = {
-        origin: '*', // السماح للجميع في التطوير
-        credentials: false
-    };
+    corsOptions = { origin: '*', credentials: false };
 } else {
-    const parsedCorsOrigins = (process.env.CORS_ORIGIN || '')
+    const allowlist = (process.env.CORS_ORIGIN || '')
         .split(',')
-        .map((origin) => origin.trim())
+        .map((o) => o.trim().replace(/\/$/, ''))
         .filter(Boolean);
-    corsOptions = {
-        origin: parsedCorsOrigins.length > 0 ? parsedCorsOrigins : true,
-        credentials: true
-    };
+
+    // In production, do NOT reflect arbitrary origins. If no allowlist provided, block cross-origin.
+    if (allowlist.length === 0) {
+        appLogger.warn('[CORS] No CORS_ORIGIN configured in production. Cross-origin requests will be blocked.');
+        corsOptions = { origin: false, credentials: true };
+    } else {
+        corsOptions = {
+            origin: (origin, cb) => {
+                if (!origin) return cb(null, false); // same-origin/no Origin header
+                try {
+                    const o = String(origin).replace(/\/$/, '');
+                    const ok = allowlist.includes(o);
+                    return cb(null, ok ? true : false);
+                } catch (e) {
+                    return cb(null, false);
+                }
+            },
+            credentials: true
+        };
+    }
 }
 app.use(cors(corsOptions));
 
@@ -134,7 +157,8 @@ app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Trust proxy when behind a proxy (Railway/Render/etc.)
-if (process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
+// Enable automatically in production unless explicitly disabled
+if (isProd || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 
 // Rate limits (focused)
 const authLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_AUTH_WINDOW_MS || 60_000), max: Number(process.env.RATE_LIMIT_AUTH_MAX || 10) });
@@ -175,33 +199,80 @@ async function pingDb() {
 app.get('/_db_ping', async (_req, res) => { await pingDb(); res.json(DB_STATUS); });
 app.get('/_health', async (_req, res) => { await pingDb(); res.json({ ok: true, db: DB_STATUS, pid: process.pid, time: new Date().toISOString() }); });
 app.get('/api/health', async (_req, res) => { await pingDb(); res.json({ status: DB_STATUS.connected ? 'ok' : 'degraded', db: DB_STATUS }); });
+// Compatibility alias mentioned in repo guide
+app.get('/_db_status', async (_req, res) => { await pingDb(); res.json(DB_STATUS); });
 
-// Simple SSE endpoint for app notifications (keep-alive)
-app.get('/api/events', (req, res) => {
-    try {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        if (typeof res.flushHeaders === 'function') res.flushHeaders();
-        // register client in unified realtime hub which manages heartbeats
-        const sseClient = registerSse(res, req.user);
-        if (!sseClient) {
-            // If registration failed for any reason, return a clear error for easier debugging
-            if (!res.headersSent) return res.status(500).json({ error: 'SSE_REGISTER_FAILED', message: 'Failed to register event listener' });
-            try { res.end(); } catch (e) { /* ignore */ }
-            return;
-        }
-        // initial hello
-        try { res.write(`event: hello\n`); res.write(`data: ${JSON.stringify({ ok: true, t: Date.now() })}\n\n`); } catch(e) { /* ignore write errors */ }
-    } catch (err) {
-        // Log error and return a JSON error body for easier debugging
-        apiLogger.error({ err, path: req.path, method: req.method }, 'SSE /api/events failed');
-        if (!res.headersSent) {
-            return res.status(500).json({ error: 'SSE_SETUP_FAILED', message: 'Failed to open event stream' });
-        }
-        try { res.end(); } catch (e) { /* ignore */ }
-    }
+// SEO endpoints: robots.txt and sitemap.xml
+app.get('/robots.txt', (_req, res) => {
+    const origins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+    const host = origins[0] || process.env.PUBLIC_BASE_URL || '';
+    const lines = [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin',
+        `Sitemap: ${host ? host.replace(/\/$/, '') : ''}/sitemap.xml`
+    ].filter(Boolean);
+    res.type('text/plain').send(lines.join('\n'));
 });
+
+app.get('/sitemap.xml', async (_req, res) => {
+    const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const urls = new Set();
+    // Core static pages
+    ['/','/products','/offers','/brands','/cart','/checkout','/login','/register'].forEach(p => urls.add(p));
+    // Try to include categories and recent products from DB (best-effort)
+    try {
+        if (prisma) {
+            const [cats, prods] = await Promise.all([
+                prisma.category?.findMany?.({ select: { slug: true, updatedAt: true }, take: 500 }).catch(() => []),
+                prisma.product?.findMany?.({ select: { slug: true, updatedAt: true }, where: { status: 'ACTIVE' }, orderBy: { updatedAt: 'desc' }, take: 1000 }).catch(() => [])
+            ]);
+            (cats||[]).forEach(c => c?.slug && urls.add(`/category/${encodeURIComponent(c.slug)}`));
+            (prods||[]).forEach(p => p?.slug && urls.add(`/products/${encodeURIComponent(p.slug)}`));
+        }
+    } catch {}
+
+    const xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        ...Array.from(urls).map(u => {
+            const loc = base ? `${base}${u}` : u;
+            return `  <url><loc>${loc}</loc></url>`;
+        }),
+        '</urlset>'
+    ].join('\n');
+    res.type('application/xml').send(xml);
+});
+
+// Holder to register SSE after auth middleware is mounted so req.user is available
+function mountSseRoute() {
+    // Simple SSE endpoint for app notifications (keep-alive)
+    app.get('/api/events', (req, res) => {
+        try {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            if (typeof res.flushHeaders === 'function') res.flushHeaders();
+            // register client in unified realtime hub which manages heartbeats
+            const sseClient = registerSse(res, req.user);
+            if (!sseClient) {
+                // If registration failed for any reason, return a clear error for easier debugging
+                if (!res.headersSent) return res.status(500).json({ error: 'SSE_REGISTER_FAILED', message: 'Failed to register event listener' });
+                try { res.end(); } catch (e) { /* ignore */ }
+                return;
+            }
+            // initial hello
+            try { res.write(`event: hello\n`); res.write(`data: ${JSON.stringify({ ok: true, t: Date.now() })}\n\n`); } catch(e) { /* ignore write errors */ }
+        } catch (err) {
+            // Log error and return a JSON error body for easier debugging
+            apiLogger.error({ err, path: req.path, method: req.method }, 'SSE /api/events failed');
+            if (!res.headersSent) {
+                return res.status(500).json({ error: 'SSE_SETUP_FAILED', message: 'Failed to open event stream' });
+            }
+            try { res.end(); } catch (e) { /* ignore */ }
+        }
+    });
+}
 
 // Dynamically import prisma and routes, then mount them
 async function loadModulesAndMount() {
@@ -209,7 +280,7 @@ async function loadModulesAndMount() {
     prisma = prismaMod.default;
     const authMod = await import('./middleware/auth.js');
     attachUser = authMod.attachUser;
-    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR] = await Promise.all([
+    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR, invoicesR, legalR, shippingR, shippingWebhooksR, setupR, smsaR, envR] = await Promise.all([
         import('./routes/auth.js'),
         import('./routes/products.js'),
         import('./routes/brands.js'),
@@ -230,46 +301,68 @@ async function loadModulesAndMount() {
         import('./routes/cart.js'),
         import('./routes/search.js'),
         import('./routes/addresses.js'),
-    import('./routes/support.js'),
+        import('./routes/support.js'),
         import('./routes/adminUsers.js'),
         import('./routes/adminStats.js'),
         import('./routes/adminAudit.js'),
-        import('./routes/ads.js')
+        import('./routes/ads.js'),
+        import('./routes/invoices.js'),
+        import('./routes/legal.js'),
+        import('./routes/shipping.js'),
+        import('./routes/shipping-webhooks.js'),
+        import('./routes/setup.js'),
+        import('./routes/smsa.js'),
+        import('./routes/env.js'),
     ]);
     authRoutes = authR.default; productsRoutes = prodR.default; brandsRoutes = brandR.default; ordersRoutes = orderR.default;
     marketingRoutes = mktR.default; tierPricesRoutes = tierR.default; sellersRoutes = sellR.default; deliveryRoutes = delivR.default;
-    inventoryRoutes = invR.default; reportsRoutes = repR.default;
+    inventoryRoutes = invR.default; reportsRoutes = repR.default; invoicesRoutes = invoicesR.default;
     paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default;
     settingsRoutes = settingsR.default; categoriesRoutes = categoriesR.default; reviewsRoutes = reviewsR.default; addressesRoutes = addressesR.default;
+    envRoutes = envR.default;
     supportRoutes = supportR.default;
+    shippingRoutes = shippingR.default; shippingWebhooksRoutes = shippingWebhooksR.default;
     adminUsersRoutes = adminUsersR.default; adminStatsRoutes = adminStatsR.default; adminAuditRoutes = adminAuditR.default;
     // sellers module also exports an admin router for KYC
     adminSellersRoutes = sellR.adminSellersRouter;
     wishlistRoutes = wishlistR.default; cartRoutes = cartR.default; searchRoutes = searchR.default;
+    setupRoutes = setupR.default;
+    smsaRoutes = smsaR.default;
     // Now replace placeholder attachUser with real one by reordering middleware: remove last no-op? Not trivial; just use real middleware for subsequent routers.
     app.use(attachUser);
+    // Mount SSE route AFTER auth so query/cookie/Bearer tokens populate req.user
+    mountSseRoute();
     app.use('/api/auth', authRoutes);
     app.use('/api/products', productsRoutes);
     app.use('/api/brands', brandsRoutes);
     app.use('/api/orders', ordersRoutes);
     app.use('/api/inventory', inventoryRoutes);
     app.use('/api/reports', reportsRoutes);
+    app.use('/api/invoices', invoicesRoutes);
     app.use('/api/marketing', marketingRoutes);
+    app.use('/api/legal', legalR.default);
     app.use('/api/tier-prices', tierPricesRoutes);
     app.use('/api/sellers', sellersRoutes);
     app.use('/api/delivery', deliveryRoutes);
     app.use('/api/settings', settingsRoutes);
+    app.use('/api/env', envRoutes);
     app.use('/api/categories', categoriesRoutes);
     app.use('/api/reviews', reviewsRoutes);
     app.use('/api/addresses', addressesRoutes);
+    // Shipping: quote + webhook receivers
+    if (shippingRoutes) app.use('/api/shipping', shippingRoutes);
+    if (shippingWebhooksRoutes) app.use('/api/shipping', shippingWebhooksRoutes);
     app.use('/api/wishlist', wishlistRoutes);
     app.use('/api/cart', cartRoutes);
     app.use('/api/search', searchRoutes);
     app.use('/api/support', supportRoutes);
+    // Setup (first admin creation): intentionally unauthenticated, guarded server-side to only allow when no users exist
+    if (setupRoutes) app.use('/api/setup', setupRoutes);
     app.use('/api/pay/paypal', paypalRouter);
     app.use('/api/pay/bank', bankRouter);
     app.use('/api/pay/stc', stcRouter);
     app.use('/api/ads', adsR.default);
+    app.use('/api/shipping/smsa', smsaRoutes);
     // Admin routes
     if (adminUsersRoutes) app.use('/api/admin/users', adminUsersRoutes);
     if (adminStatsRoutes) app.use('/api/admin/stats', adminStatsRoutes);

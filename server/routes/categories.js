@@ -141,8 +141,7 @@ router.post('/', requireAdmin, (req, res, next) => {
       nameEn: body.nameEn,
       descriptionAr: body.descriptionAr || null,
       descriptionEn: body.descriptionEn || null,
-      image: imagePath,
-      icon: body.icon || null
+      image: imagePath
     }});
     res.status(201).json({ ok: true, category: mapCategory(created) });
   } catch (e) {
@@ -183,7 +182,6 @@ router.put('/:id', requireAdmin, (req, res, next) => {
       nameEn: body.nameEn ?? undefined,
       descriptionAr: body.descriptionAr ?? undefined,
       descriptionEn: body.descriptionEn ?? undefined,
-      icon: (body.icon === undefined ? undefined : (body.icon || null)),
       ...imageData
     }});
     res.json({ ok: true, category: mapCategory(updated) });

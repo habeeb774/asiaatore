@@ -8,13 +8,14 @@ import { useLocation } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
 import { useTheme } from '../../context/ThemeContext';
 import SiteFooter from './SiteFooter';
-import FloatingCart from '../ui/FloatingCart';
+import { FloatingCart } from '../ui';
 import { SidebarProvider } from '../../context/SidebarContext';
 import BottomNav from './BottomNav';
 import SearchOverlay from '../search/SearchOverlay';
 import CartSidebar from '../cart/CartSidebar';
 import { useCart } from '../../context/CartContext';
 import PageLoader from '../common/PageLoader';
+import AdminSetupModal from '../setup/AdminSetupModal.jsx';
 
 const AppLayout = ({ children }) => {
   // Listen for cart:open event to open cart panel from anywhere
@@ -30,12 +31,15 @@ const AppLayout = ({ children }) => {
   const [panel, setPanel] = React.useState(null);
   // Use ESM imports for cart context
   const { cartItems = [], updateQuantity } = useCart();
-  const cartTotal = Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + ((i.price || i.salePrice || 0) * (i.quantity || 1)), 0) : 0;
+  const cartTotal = Array.isArray(cartItems)
+    ? cartItems.reduce((s, i) => s + (Number(i.price || i.salePrice || 0) * Number(i.quantity || 1)), 0)
+    : 0;
   return (
     <ToastProvider>
       <SidebarProvider>
         <div className="app-layout professional-layout theme-minimal">
           <PageLoader />
+          <AdminSetupModal />
           <SidebarNav />
           <div className="content-with-sidebar">
             <AnnouncementBar />

@@ -116,6 +116,7 @@ export default function BottomNav() {
       } catch (e) { return '' + val; }
     };
     const displayLabel = getLabel(label);
+    const activeColor = key === 'account' ? 'text-sky-600' : 'text-amber-600';
     return (
       <motion.button
         type="button"
@@ -123,7 +124,7 @@ export default function BottomNav() {
   aria-label={displayLabel || key}
         aria-current={isActive ? 'page' : undefined}
         onClick={onClick}
-        className={`flex-1 h-14 flex flex-col items-center justify-center gap-1 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isActive ? 'text-amber-600' : 'text-slate-700 dark:text-slate-300'}`}
+        className={`flex-1 h-14 flex flex-col items-center justify-center gap-1 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isActive ? activeColor : 'text-slate-700 dark:text-slate-300'}`}
       >
         <Icon size={18} />
         <span className="leading-none">{displayLabel}</span>

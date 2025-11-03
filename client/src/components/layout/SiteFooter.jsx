@@ -143,6 +143,8 @@ const SiteFooter = () => {
   const isAr = locale === 'ar';
   const storeName = resolveLocalized(setting?.siteName, locale) || (isAr ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store'));
   const taxNumber = setting?.taxNumber || '311307460300003';
+  const address = (isAr ? setting?.addressAr : setting?.addressEn) || '';
+  const reg = setting?.commercialRegNo || '';
   const supportPhone = setting?.supportPhone || '920000000';
   const supportMobile = setting?.supportMobile || '+966500000000';
   const supportWhatsapp = setting?.supportWhatsapp || '966500000000';
@@ -217,6 +219,11 @@ const SiteFooter = () => {
             <div className="text-sm text-slate-700">
               <span className="block md:inline">© {new Date().getFullYear()} {storeName}.</span>
               <span className="hidden md:inline">&nbsp;{isAr ? 'جميع الحقوق محفوظة' : 'All rights reserved'}.</span>
+              {(address || reg) && (
+                <span className="block md:inline ms-2">
+                  {isAr ? 'العنوان' : 'Address'}: {address || '-'}{reg ? ` · ${isAr ? 'السجل التجاري' : 'CR'}: ${reg}` : ''}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-3">

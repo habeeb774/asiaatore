@@ -13,8 +13,8 @@ export const ToastProvider = ({ children }) => {
 
   const show = useCallback((opts) => {
     const id = idSeq++
-    const { type = 'info', title, description, duration = 3500 } = opts || {}
-    const t = { id, type, title, description, createdAt: Date.now() }
+    const { type = 'info', title, description, duration = 3500, action } = opts || {}
+    const t = { id, type, title, description, action, createdAt: Date.now() }
     setToasts(prev => [...prev, t])
     if (duration > 0) setTimeout(() => remove(id), duration)
     return id
@@ -22,10 +22,10 @@ export const ToastProvider = ({ children }) => {
 
   const api = useMemo(() => ({
     show,
-    success: (title, description, duration) => show({ type:'success', title, description, duration }),
-    error: (title, description, duration) => show({ type:'error', title, description, duration }),
-    info: (title, description, duration) => show({ type:'info', title, description, duration }),
-    warn: (title, description, duration) => show({ type:'warn', title, description, duration })
+    success: (title, description, duration, extras = {}) => show({ type:'success', title, description, duration, ...extras }),
+    error: (title, description, duration, extras = {}) => show({ type:'error', title, description, duration, ...extras }),
+    info: (title, description, duration, extras = {}) => show({ type:'info', title, description, duration, ...extras }),
+    warn: (title, description, duration, extras = {}) => show({ type:'warn', title, description, duration, ...extras })
   }), [show])
 
   return (
@@ -36,6 +36,17 @@ export const ToastProvider = ({ children }) => {
           <div key={t.id} className={`toast toast-${t.type}`} role="status" onClick={() => remove(t.id)}>
             {t.title && <div className="toast-title">{t.title}</div>}
             {t.description && <div className="toast-desc">{t.description}</div>}
+            {t.action && t.action.label ? (
+              <button
+                type="button"
+                className="toast-action"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  try { t.action.onClick?.() } catch {}
+                  if (t.action.autoClose !== false) remove(t.id)
+                }}
+              >{t.action.label}</button>
+            ) : null}
           </div>
         ))}
       </div>
