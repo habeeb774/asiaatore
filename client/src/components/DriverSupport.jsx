@@ -51,10 +51,10 @@ export default function DriverSupport({ orderId, user }) {
         try {
           const msg = JSON.parse(ev.data || '{}');
           setMessages((prev) => prev.concat([msg]));
-        } catch (e) {}
+        } catch {}
       });
       esRef.current = es;
-    } catch (e) { /* ignore */ }
+  } catch { /* ignore */ }
 
     return () => {
       mounted = false;

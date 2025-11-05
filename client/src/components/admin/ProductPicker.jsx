@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
+import { Button } from '../ui';
 
 // Lightweight modal product picker for admin discount selection
 // Props:
@@ -47,7 +48,7 @@ const ProductPicker = ({ open, onClose, onSelect, title = 'اختر منتج', o
       <div style={modal}>
         <div style={header}>
           <div style={{fontWeight:700}}>{title}</div>
-          <button onClick={onClose} style={closeBtn} aria-label="إغلاق">✕</button>
+          <Button onClick={onClose} variant="ghost" size="sm" aria-label="إغلاق">✕</Button>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8,flexWrap:'wrap'}}>
           <input
@@ -88,7 +89,7 @@ const ProductPicker = ({ open, onClose, onSelect, title = 'اختر منتج', o
                   {p.category && <span>التصنيف: {p.category}</span>}
                 </div>
               </div>
-              <button onClick={()=>{ onSelect?.(p); onClose?.(); }} style={pickBtn}>اختيار</button>
+              <Button onClick={()=>{ onSelect?.(p); onClose?.(); }} size="sm" variant="primary">اختيار</Button>
             </div>
           ))}
           {!loading && !error && !filtered.length && (
@@ -103,12 +104,12 @@ const ProductPicker = ({ open, onClose, onSelect, title = 'اختر منتج', o
 const overlay = { position:'fixed', inset:0, background:'rgba(15,23,42,.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 50 };
 const modal = { background:'#fff', width:'min(780px, 96vw)', maxHeight:'86vh', borderRadius:14, boxShadow:'0 10px 40px rgba(0,0,0,.2)', padding:'12px', display:'flex', flexDirection:'column' };
 const header = { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8, paddingBottom:8, borderBottom:'1px solid #e2e8f0' };
-const closeBtn = { background:'#f1f5f9', border:0, width:32, height:32, borderRadius:8, cursor:'pointer' };
+// closeBtn replaced by shared Button
 const searchInput = { padding:'.55rem .75rem', border:'1px solid #e2e8f0', borderRadius:10, minWidth: 220, fontSize:'.8rem', background:'#fff', flex:1 };
 const listWrap = { display:'grid', gap:8, overflowY:'auto', padding:'4px', border:'1px solid #e2e8f0', borderRadius:10, maxHeight:'60vh' };
 const row = { display:'flex', alignItems:'center', gap:10, padding:8, border:'1px solid #e2e8f0', borderRadius:10 };
 const thumb = { width:48, height:48, objectFit:'cover', borderRadius:8, border:'1px solid #e2e8f0' };
-const pickBtn = { background:'linear-gradient(90deg,#69be3c,#f6ad55)', color:'#fff', border:0, padding:'.45rem .75rem', borderRadius:10, fontSize:'.75rem', cursor:'pointer' };
+// pickBtn replaced by shared Button
 const hint = { fontSize:'.75rem', color:'#64748b', padding:'6px 2px' };
 const errorText = { fontSize:'.75rem', color:'#b91c1c', padding:'6px 2px' };
 

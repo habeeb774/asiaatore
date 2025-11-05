@@ -35,6 +35,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const proxyTarget = resolveProxyTarget(env)
+  const devMode = mode !== 'production'
+  const devHeadersEnabled = devMode || env.VITE_DEV_HEADERS === '1' || env.VITE_DEV_HEADERS === 'true' || env.ALLOW_DEV_HEADERS === 'true'
+  const devUserId = env.VITE_DEV_USER_ID || 'dev-user'
+  const devUserRole = env.VITE_DEV_USER_ROLE || 'user'
 
   // Dynamically load the visualizer plugin only when requested.
   let visualizerPlugin = null
@@ -57,6 +61,11 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     envDir: __dirname,
+    // Dedupe React to avoid "Invalid hook call" in monorepos / linked deps
+    // This ensures all packages resolve the same singleton instance
+    resolve: {
+      dedupe: ['react', 'react-dom']
+    },
     plugins: [
       react(),
       VitePWA({
@@ -244,6 +253,15 @@ export default defineConfig(async ({ mode }) => {
               const accepts = req.headers['accept'] || '';
               if (accepts && !/text\/event-stream/.test(accepts)) {
                 try { proxyReq.setHeader('Accept', accepts + ', text/event-stream'); } catch {}
+              }
+              // DEV auth headers: simulate a user for local development (server allows in non-production)
+              if (devHeadersEnabled) {
+                try {
+                  if (!req.headers['authorization']) {
+                    proxyReq.setHeader('x-user-id', req.headers['x-user-id'] || devUserId);
+                    proxyReq.setHeader('x-user-role', req.headers['x-user-role'] || devUserRole);
+                  }
+                } catch {}
               }
             });
             // Optional: surface proxy errors to vite console for visibility

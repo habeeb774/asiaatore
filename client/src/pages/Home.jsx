@@ -33,8 +33,7 @@ import { resolveLocalized } from '../utils/locale';
 // لا حاجة لاستدعاء API مباشر هنا؛ المكونات الداخلية تتكفل بجلب البيانات
 
 // 🎨 الأنماط
-import '../styles/HomePage.scss';
-import '../styles/Hero.scss';
+// Styles consolidated into `styles/index.scss`
 
 const Home = () => {
   const { t, locale } = useLanguage();

@@ -136,6 +136,20 @@ const api = {
   getOrder: id => request(`/orders/${id}`),
   createOrder: data => request('/orders', { method:'POST', body: JSON.stringify(data) }),
   updateOrder: (id,patch) => request(`/orders/${id}`, { method:'PATCH', body: JSON.stringify(patch||{}) }),
+  // Admin-focused order listing with advanced filters/pagination
+  // Accepts params: { userId, status, paymentMethod, from, to, page, pageSize }
+  listOrdersAdmin: (params = {}) => {
+    const qs = new URLSearchParams();
+    const p = params || {};
+    if (p.userId) qs.append('userId', String(p.userId));
+    if (p.status) qs.append('status', String(p.status));
+    if (p.paymentMethod) qs.append('paymentMethod', String(p.paymentMethod));
+    if (p.from) qs.append('from', String(p.from));
+    if (p.to) qs.append('to', String(p.to));
+    if (p.page) qs.append('page', String(p.page));
+    if (p.pageSize) qs.append('pageSize', String(p.pageSize));
+    return request('/orders' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
   // Auth
   authLogin: (email,password) => request('/auth/login', { method:'POST', body: JSON.stringify({email,password}), credentials:'include' }),
   authRegister: (email,password,name) => request('/auth/register', { method:'POST', body: JSON.stringify({email,password,name}), credentials:'include' }),
@@ -150,7 +164,8 @@ const api = {
   reviewsModerationList: () => request('/reviews/moderation'),
   reviewModerate: (id, action) => request(`/reviews/${encodeURIComponent(id)}/moderate`, { method:'POST', body: JSON.stringify({ action }) }),
   // جلب مراجعات منتج معين
-  reviewsListForProduct: (productId) => request(`/reviews?productId=${encodeURIComponent(productId)}`),
+  // Server exposes: GET /api/reviews/product/:productId
+  reviewsListForProduct: (productId) => request(`/reviews/product/${encodeURIComponent(productId)}`),
   // Cart
   cartList: () => request('/cart'),
   cartSet: (productId,quantity) => request('/cart/set', { method:'POST', body: JSON.stringify({ productId, quantity }) }),
@@ -292,6 +307,16 @@ const api = {
     return request('/reports/top-selling' + (qs.toString() ? `?${qs.toString()}` : ''));
   },
   reportStockValuation: () => request('/reports/stock-valuation'),
+  // Admin stats
+  adminStatsOverview: () => request('/admin/stats/overview'),
+  adminStatsFinancials: (params = {}) => {
+    const qs = new URLSearchParams();
+    const p = params || {};
+    if (p.from) qs.append('from', String(p.from));
+    if (p.to) qs.append('to', String(p.to));
+    if (p.days) qs.append('days', String(p.days));
+    return request('/admin/stats/financials' + (qs.toString() ? `?${qs.toString()}` : ''));
+  },
   // Add more methods as needed, all ready for audit/logging
 };
 

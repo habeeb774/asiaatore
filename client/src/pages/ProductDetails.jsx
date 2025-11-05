@@ -11,6 +11,7 @@ import api from '../api/client';
 import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.jsx';
 import ZoomableImage from '../components/products/ZoomableImage.jsx';
 import LazyImage from '../components/common/LazyImage.jsx';
+import Button, { buttonVariants } from '../components/ui/Button';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -255,9 +256,9 @@ const ProductDetails = () => {
               <p className="text-gray-600 mb-8 leading-relaxed">{descText}</p>
                 {product.type === 'digital' && product.downloadUrl && (
                   <div className="mb-6">
-                    <a href={product.downloadUrl} className="btn-primary inline-block" download>
+                    <Button as="a" href={product.downloadUrl} variant="primary" className="inline-block" download>
                       تحميل المنتج الرقمي
-                    </a>
+                    </Button>
                   </div>
                 )}
 
@@ -292,9 +293,9 @@ const ProductDetails = () => {
                   </button>
                 </div>
                 <div className="flex flex-col flex-1 gap-2">
-                  <button onClick={handleAddToCart} className="btn-primary flex-1 py-3 text-lg" disabled={outOfStock} aria-disabled={outOfStock}>
+                  <Button onClick={handleAddToCart} className="flex-1 py-3 text-lg" variant="primary" disabled={outOfStock} aria-disabled={outOfStock}>
                     أضف إلى السلة (الإجمالي: {totalPrice} ر.س)
-                  </button>
+                  </Button>
                   {effectiveUnitPrice !== product.price && (
                     <span className="text-xs text-amber-700">تم تطبيق سعر الجملة</span>
                   )}
@@ -372,7 +373,7 @@ const ProductDetails = () => {
                         <span className="text-sm text-gray-500 line-through">{(relatedProduct.originalPrice ?? relatedProduct.oldPrice)} ر.س</span>
                       )}
                     </div>
-                    <Link to={`/product/${relatedProduct.id}`} className="btn-primary text-sm px-4 py-2">عرض المنتج</Link>
+                    <Link to={`/product/${relatedProduct.id}`} className={buttonVariants({ variant: 'primary', size: 'sm', className: 'text-sm px-4 py-2' })}>عرض المنتج</Link>
                   </div>
                 </motion.div>
               ))}
@@ -384,7 +385,7 @@ const ProductDetails = () => {
       <div className="sticky-buybar lg:hidden">
         <div className="inner">
           <div className="price">{effectiveUnitPrice.toFixed(2)} ر.س</div>
-          <button onClick={handleAddToCart} className="btn-primary flex-1 py-3 text-base" disabled={outOfStock} aria-disabled={outOfStock}>أضف إلى السلة</button>
+          <Button onClick={handleAddToCart} className="flex-1 py-3 text-base" variant="primary" disabled={outOfStock} aria-disabled={outOfStock}>أضف إلى السلة</Button>
         </div>
       </div>
     </div>

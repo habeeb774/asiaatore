@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from '../../api/client';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Input } from '../../components/ui';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 
 const ForgotPasswordPage = () => {

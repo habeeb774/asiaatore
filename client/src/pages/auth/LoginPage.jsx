@@ -1,9 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/Card';
+import { Button, Input, Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';

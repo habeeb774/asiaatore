@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../api/client';
 import { useToast } from '../../context/ToastContext';
-import { Button } from '../common/Button';
+import { Button } from '../ui';
 import { Truck, PackageCheck, XCircle } from 'lucide-react';
 
 const ShipmentManager = ({ order, onShipmentUpdate }) => {
@@ -82,7 +82,7 @@ const ShipmentManager = ({ order, onShipmentUpdate }) => {
               <PackageCheck size={14} className="mr-2" />
               تتبع الشحنة
             </Button>
-            <Button variant="destructive" size="sm" onClick={cancelShipment} disabled={loading}>
+            <Button variant="danger" size="sm" onClick={cancelShipment} disabled={loading}>
               <XCircle size={14} className="mr-2" />
               إلغاء الشحنة
             </Button>

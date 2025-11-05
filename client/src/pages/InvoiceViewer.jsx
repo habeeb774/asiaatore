@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
+import { Button, ButtonLink, buttonVariants } from '../components/ui';
 import { useLanguage } from '../context/LanguageContext';
 
 const InvoiceViewer = () => {
@@ -80,9 +81,9 @@ const InvoiceViewer = () => {
 
   return (
     <div className="min-h-screen flex flex-col" style={{direction: locale === 'ar' ? 'rtl' : 'ltr'}}>
-      <div className="px-4 py-3 border-b bg-white flex items-center gap-2 flex-wrap">
-        <Link to={locale === 'en' ? '/en/orders' : '/orders'} className="btn-secondary px-3 py-1 text-sm">{locale==='ar'?'رجوع للطلبات':'Back to orders'}</Link>
-  <a href={url} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-sm">{locale==='ar'?'فتح في تبويب جديد':'Open in new tab'}</a>
+  <div className="px-4 py-3 border-b bg-white flex items-center gap-2 flex-wrap">
+    <Link to={locale === 'en' ? '/en/orders' : '/orders'} className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'text-sm' })}>{locale==='ar'?'رجوع للطلبات':'Back to orders'}</Link>
+  <ButtonLink href={url} target="_blank" rel="noopener" variant="secondary" size="sm">{locale==='ar'?'فتح في تبويب جديد':'Open in new tab'}</ButtonLink>
         {/* Paper controls */}
         <div className="flex items-center gap-2 text-sm">
           <label className="flex items-center gap-1">
@@ -106,13 +107,14 @@ const InvoiceViewer = () => {
             <input value={ml} onChange={e=>setMl(e.target.value)} className="w-14 border rounded px-2 py-1" title={locale==='ar'?'أيسر':'Left'} />
           </div>
         </div>
-        <a href={pdfUrl} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-sm">{locale==='ar'?'تحميل PDF':'Download PDF'}</a>
-        <button
+        <ButtonLink href={pdfUrl} target="_blank" rel="noopener" variant="secondary" size="sm">{locale==='ar'?'تحميل PDF':'Download PDF'}</ButtonLink>
+        <Button
           type="button"
           onClick={() => { try { const w = iframeRef.current?.contentWindow; w?.focus(); w?.print(); } catch {} }}
-          className="btn-primary px-3 py-1 text-sm"
+          variant="primary"
+          size="sm"
           disabled={!ready}
-        >{locale==='ar'?'طباعة':'Print'}</button>
+        >{locale==='ar'?'طباعة':'Print'}</Button>
         <div className="ml-auto text-sm text-gray-600">
           {locale==='ar' ? `فاتورة #${id}` : `Invoice #${id}`}
         </div>

@@ -1,13 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { adminApi } from '../../api/admin';
-import AdminSideNav from '../../components/admin/AdminSideNav';
+import AdminLayout from '../../components/admin/AdminLayout';
+import { Button } from '../../components/ui';
 
 const searchInput = { padding: '.55rem .75rem', border: '1px solid #e2e8f0', borderRadius: 10, minWidth: 160, fontSize: '.8rem', background: '#fff' };
-const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: '.4rem', border: 0, background: 'linear-gradient(90deg,#69be3c,#f6ad55)', color: '#fff', padding: '.6rem .95rem', borderRadius: 10, cursor: 'pointer', fontSize: '.75rem', fontWeight: 600 };
-const ghostBtn = { ...primaryBtn, background: '#f1f5f9', color: '#334155' };
-const iconBtn = { background: '#f1f5f9', border: 0, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', color: '#0f172a' };
-const iconBtnDanger = { ...iconBtn, background: '#fee2e2', color: '#b91c1c' };
 const table = { width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 14px -6px rgba(0,0,0,.06)' };
 const tdActions = { display: 'flex', gap: '.35rem', alignItems: 'center' };
 const emptyCell = { textAlign: 'center', padding: '1rem', fontSize: '.75rem', color: '#64748b' };
@@ -111,12 +108,9 @@ export default function AdminUsers() {
   }
 
   return (
-    <div style={{direction:'rtl',padding:'1.25rem 0',fontSize:'.85rem'}}>
-      <h1 style={{ margin: '0 0 1rem', fontSize: '1.4rem', fontWeight: 700 }}>إدارة المستخدمين</h1>
-
-      <div style={{ display:'grid', gridTemplateColumns:'220px 1fr', gap:16 }}>
-        <AdminSideNav />
-        <div>
+    <AdminLayout title="إدارة المستخدمين">
+      <div style={{ padding: '1.25rem 0', fontSize: '.85rem' }}>
+        <h1 style={{ margin: '0 0 1rem', fontSize: '1.4rem', fontWeight: 700 }}>إدارة المستخدمين</h1>
 
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
         <input placeholder="بحث (اسم/إيميل/هاتف)" value={q} onChange={e=>setQ(e.target.value)} style={searchInput} />
@@ -138,7 +132,7 @@ export default function AdminUsers() {
         <select value={pageSize} onChange={e=>{ setPageSize(+e.target.value||20); setPage(1); }} style={searchInput}>
           {[10,20,50,100].map(n=> <option key={n} value={n}>{n} / صفحة</option>)}
         </select>
-        <button type="button" onClick={fetchUsers} style={ghostBtn}>تحديث</button>
+  <Button type="button" variant="ghost" onClick={fetchUsers}>تحديث</Button>
         {loading && <span style={{fontSize:'.7rem',color:'#64748b'}}>...تحميل</span>}
         {error && <span style={{fontSize:'.7rem',color:'#b91c1c'}}>خطأ: {error}</span>}
       </div>
@@ -173,8 +167,8 @@ export default function AdminUsers() {
           )}
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          <button type="submit" disabled={saving} style={primaryBtn}>{form.id? 'حفظ' : 'إضافة'}</button>
-          {form.id && <button type="button" onClick={()=>resetForm()} style={ghostBtn}>إلغاء</button>}
+          <Button type="submit" disabled={saving} variant="primary">{form.id? 'حفظ' : 'إضافة'}</Button>
+          {form.id && <Button type="button" variant="ghost" onClick={()=>resetForm()}>إلغاء</Button>}
         </div>
       </form>
 
@@ -201,15 +195,15 @@ export default function AdminUsers() {
                 <td>{u.active === false ? 'موقوف' : 'مفعل'}</td>
                 <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
                 <td style={tdActions}>
-                  <button title="تعديل" onClick={()=>setForm({ id:u.id, name:u.name||'', email:u.email||'', phone:u.phone||'', role:u.role||'user', active: u.active!==false, sendInvite:false, password:'' })} style={iconBtn}>✎</button>
+                  <Button title="تعديل" size="sm" variant="ghost" onClick={()=>setForm({ id:u.id, name:u.name||'', email:u.email||'', phone:u.phone||'', role:u.role||'user', active: u.active!==false, sendInvite:false, password:'' })}>✎</Button>
                   {/* Quick role actions */}
                   {u.role !== 'delivery' && (
-                    <button title="تعيين كموصل" onClick={async()=>{ try { await adminApi.updateUser(u.id, { role:'delivery' }); fetchUsers(); } catch(e){ alert('فشل التعيين: '+e.message); } }} style={iconBtn}>🚚</button>
+                    <Button title="تعيين كموصل" size="sm" variant="outline" onClick={async()=>{ try { await adminApi.updateUser(u.id, { role:'delivery' }); fetchUsers(); } catch(e){ alert('فشل التعيين: '+e.message); } }}>🚚</Button>
                   )}
                   {u.active === false
-                    ? <button title="تفعيل" onClick={()=>activate(u, true)} style={iconBtn}>✓</button>
-                    : <button title="إيقاف" onClick={()=>activate(u, false)} style={iconBtnDanger}>⏸</button>}
-                  <button title="حذف" onClick={()=>del(u.id)} style={iconBtnDanger}>🗑</button>
+                    ? <Button title="تفعيل" size="sm" variant="primary" onClick={()=>activate(u, true)}>✓</Button>
+                    : <Button title="إيقاف" size="sm" variant="danger" onClick={()=>activate(u, false)}>⏸</Button>}
+                  <Button title="حذف" size="sm" variant="danger" onClick={()=>del(u.id)}>🗑</Button>
                 </td>
               </tr>
             ))}
@@ -221,12 +215,11 @@ export default function AdminUsers() {
       </div>
 
       <div style={{display:'flex',gap:6,alignItems:'center',marginTop:10}}>
-        <button disabled={!canPrev} onClick={()=>setPage(p=>Math.max(1,p-1))} style={!canPrev? ghostBtn : primaryBtn}>السابق</button>
+        <Button disabled={!canPrev} variant={!canPrev? 'ghost' : 'primary'} onClick={()=>setPage(p=>Math.max(1,p-1))}>السابق</Button>
         <span style={{fontSize:'.7rem'}}>صفحة {page} / {Math.max(1, Math.ceil(visible.length / pageSize))}</span>
-        <button disabled={!canNext} onClick={()=>setPage(p=>p+1)} style={!canNext? ghostBtn : primaryBtn}>التالي</button>
-      </div>
-        </div>
+        <Button disabled={!canNext} variant={!canNext? 'ghost' : 'primary'} onClick={()=>setPage(p=>p+1)}>التالي</Button>
       </div>
     </div>
+    </AdminLayout>
   );
 }

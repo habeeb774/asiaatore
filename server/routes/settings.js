@@ -34,6 +34,16 @@ async function ensureSettingsTable() {
         supportHours VARCHAR(128) NULL,
         footerAboutAr TEXT NULL,
         footerAboutEn TEXT NULL,
+        /* UI customization fields (previewable via admin Settings) */
+        ui_button_radius VARCHAR(64) NULL,
+        ui_button_shadow TEXT NULL,
+        ui_input_radius VARCHAR(64) NULL,
+        ui_font_family VARCHAR(191) NULL,
+        ui_base_font_size VARCHAR(32) NULL,
+        ui_sidebar_hover_preview TINYINT(1) NULL,
+        ui_sidebar_collapsed_default TINYINT(1) NULL,
+        ui_spacing_scale VARCHAR(32) NULL,
+        ui_theme_default VARCHAR(32) NULL,
         createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -194,6 +204,12 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
     smsaEnabled, smsaApiUrl, smsaApiKey, smsaWebhookSecret
   } = req.body || {};
 
+  // ui_* visual fields (optional)
+  const {
+    ui_button_radius, ui_button_shadow, ui_input_radius, ui_font_family, ui_base_font_size,
+    ui_sidebar_hover_preview, ui_sidebar_collapsed_default, ui_spacing_scale, ui_theme_default
+  } = req.body || {};
+
   // Helpers
   const toBool = (v) => {
     if (v === null) return null;
@@ -231,6 +247,16 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
   if (topStripEnabled !== undefined) data.topStripEnabled = toBool(topStripEnabled);
   if (topStripAutoscroll !== undefined) data.topStripAutoscroll = toBool(topStripAutoscroll);
   if (topStripBackground !== undefined) data.topStripBackground = topStripBackground || null;
+  // UI customization
+  if (ui_button_radius !== undefined) data.ui_button_radius = ui_button_radius || null;
+  if (ui_button_shadow !== undefined) data.ui_button_shadow = ui_button_shadow || null;
+  if (ui_input_radius !== undefined) data.ui_input_radius = ui_input_radius || null;
+  if (ui_font_family !== undefined) data.ui_font_family = ui_font_family || null;
+  if (ui_base_font_size !== undefined) data.ui_base_font_size = ui_base_font_size || null;
+  if (ui_sidebar_hover_preview !== undefined) data.ui_sidebar_hover_preview = toBool(ui_sidebar_hover_preview);
+  if (ui_sidebar_collapsed_default !== undefined) data.ui_sidebar_collapsed_default = toBool(ui_sidebar_collapsed_default);
+  if (ui_spacing_scale !== undefined) data.ui_spacing_scale = ui_spacing_scale || null;
+  if (ui_theme_default !== undefined) data.ui_theme_default = ui_theme_default || null;
   // messaging toggle
   if (whatsappEnabled !== undefined) data.whatsappEnabled = toBool(whatsappEnabled);
   // shipping config

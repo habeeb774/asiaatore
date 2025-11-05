@@ -1,6 +1,8 @@
 import React from 'react';
 import Seo from '../../components/Seo';
+import AdminLayout from '../../components/admin/AdminLayout';
 import api from '../../api/client';
+import { Button } from '../../components/ui';
 
 function useOverview() {
   const [data, setData] = React.useState(null);
@@ -176,9 +178,8 @@ const Reports = () => {
   };
 
   return (
-    <div className="admin-page-wrapper">
+    <AdminLayout title="التقارير / Reports">
       <Seo title="التقارير | Reports" description="Reports overview" />
-      <h1 className="page-title">التقارير / Reports</h1>
 
       <div className="cards" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:16, marginTop:12 }}>
         <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
@@ -202,7 +203,7 @@ const Reports = () => {
       <div style={{ marginTop:24, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <strong>الفترة:</strong>
         {presetRanges.map(r => (
-          <button key={r.key} onClick={() => onPreset(r.key)} className={range===r.key? 'btn btn-primary':'btn'} style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6, background: range===r.key?'#111827':'#fff', color: range===r.key?'#fff':'#111' }}>{r.label}</button>
+          <Button key={r.key} size="sm" variant={range===r.key ? 'primary' : 'secondary'} onClick={() => onPreset(r.key)}>{r.label}</Button>
         ))}
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <label>من: <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
@@ -226,11 +227,11 @@ const Reports = () => {
               <option value="stc">STC Pay</option>
             </select>
           </label>
-          <button onClick={()=>fetchRangeAnalytics()} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تحديث</button>
+          <Button onClick={()=>fetchRangeAnalytics()} variant="secondary">تحديث</Button>
         </div>
         <div style={{ marginInlineStart:'auto', display:'flex', gap:8, alignItems:'center' }}>
-          <button onClick={() => downloadExport('csv')} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تصدير CSV</button>
-          <button onClick={() => downloadExport('xlsx')} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تصدير Excel</button>
+          <Button onClick={() => downloadExport('csv')} variant="outline">تصدير CSV</Button>
+          <Button onClick={() => downloadExport('xlsx')} variant="outline">تصدير Excel</Button>
         </div>
       </div>
 
@@ -249,7 +250,7 @@ const Reports = () => {
         </div>
       </div>
 
-      <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
+  <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
           <h3 style={{ margin:0 }}>الاتجاه اليومي (من {from} إلى {to})</h3>
           {loadingRange ? <span className="muted">جاري التحميل…</span> : errorRange ? <span className="error">{String(errorRange)}</span> : null}
@@ -315,7 +316,7 @@ const Reports = () => {
           </table>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 export default Reports;

@@ -1,0 +1,184 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - dialog "شركة منفذ اسيا التجارية" [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: شركة منفذ اسيا التجارية
+        - button "تصغير الشريط" [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+      - list "Main navigation" [ref=e10]:
+        - listitem [ref=e11]: التصفح
+        - menuitem "الرئيسية" [ref=e12] [cursor=pointer]:
+          - img [ref=e14]
+          - generic [ref=e17]: الرئيسية
+        - menuitem "المنتجات" [ref=e18] [cursor=pointer]:
+          - img [ref=e20]
+          - generic [ref=e24]: المنتجات
+        - menuitem "الكتالوج" [ref=e25] [cursor=pointer]:
+          - img [ref=e27]
+          - generic [ref=e29]: الكتالوج
+        - menuitem "العروض" [ref=e30] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e35]: العروض
+        - menuitem "Cart" [ref=e36] [cursor=pointer]:
+          - img [ref=e38]
+          - generic [ref=e42]: Cart
+        - menuitem "المتاجر" [ref=e43] [cursor=pointer]:
+          - img [ref=e45]
+          - generic [ref=e49]: المتاجر
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - img [ref=e53]
+          - generic [ref=e55]:
+            - generic [ref=e56]: ضيف
+            - generic [ref=e57]: غير مسجل
+          - generic [ref=e58]:
+            - button "تبديل ثيم" [ref=e59] [cursor=pointer]:
+              - img [ref=e60]
+            - button "تبديل اللغة" [ref=e62] [cursor=pointer]: ع
+        - generic [ref=e63]:
+          - link "Email support" [ref=e65] [cursor=pointer]:
+            - /url: mailto:support@example.com
+            - text: support@example.com
+          - generic [ref=e66]: v2.0
+  - generic [ref=e67]:
+    - note [ref=e68]:
+      - generic [ref=e70]: شحن سريع وخيارات دفع متعددة
+    - banner [ref=e71]:
+      - link "Skip to content" [ref=e72] [cursor=pointer]:
+        - /url: "#main"
+      - generic [ref=e73]:
+        - link "شركة منفذ اسيا التجارية" [ref=e75] [cursor=pointer]:
+          - /url: /
+          - img "شركة منفذ اسيا التجارية" [ref=e77]
+        - button "افتح القائمة" [ref=e79] [cursor=pointer]:
+          - img [ref=e80]
+    - generic [ref=e83]:
+      - region "شريط شرائح رئيسية" [ref=e84]:
+        - generic [ref=e85]:
+          - img "تسوّق الآن" [ref=e88]
+          - generic [ref=e94]:
+            - generic [ref=e95]: saleBadge
+            - heading "تسوّق الآن" [level=1] [ref=e96]:
+              - generic [ref=e97]: تسوّق الآن
+            - paragraph [ref=e98]: أفضل العروض والمنتجات
+            - generic [ref=e99]:
+              - link "تسوق الآن" [ref=e100] [cursor=pointer]:
+                - /url: /products
+              - link "تعرف علينا" [ref=e101] [cursor=pointer]:
+                - /url: /about
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - button "السابق" [ref=e104] [cursor=pointer]:
+                - img [ref=e105]
+              - button "إيقاف" [ref=e107] [cursor=pointer]:
+                - img [ref=e108]
+              - button "التالي" [ref=e111] [cursor=pointer]:
+                - img [ref=e112]
+            - tablist "مؤشرات الشرائح" [ref=e114]:
+              - tab "انتقل إلى الشريحة 1" [ref=e115] [cursor=pointer]
+      - navigation "تصنيفات" [ref=e119]:
+        - generic [ref=e120]:
+          - generic [ref=e122]:
+            - img [ref=e123]
+            - generic [ref=e127]: beverages
+          - generic [ref=e129]:
+            - img [ref=e130]
+            - generic [ref=e133]: grocery
+          - generic [ref=e135]:
+            - img [ref=e136]
+            - generic [ref=e139]: home
+          - generic [ref=e141]:
+            - img [ref=e142]
+            - generic [ref=e145]: personal-care
+      - generic [ref=e148]:
+        - heading "المنتجات المميزة" [level=2] [ref=e149]
+        - link "عرض الكل" [ref=e150] [cursor=pointer]:
+          - /url: /products
+    - contentinfo [ref=e152]:
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - list [ref=e156]:
+            - generic [ref=e157]:
+              - img "شركة منفذ اسيا التجارية" [ref=e158]
+              - generic [ref=e159]: شركة منفذ اسيا التجارية
+            - generic [ref=e160]:
+              - paragraph [ref=e161]: متخصصون في بيع المواد الغذائية بالجملة وبالحبة
+              - paragraph [ref=e162]: وجميع احتياجات المنزل من منظفات و كماليات
+              - paragraph [ref=e163]: أيضًا يوجد لدينا قسم السوبر ماركت وجميع
+              - paragraph [ref=e164]: احتياجات الأسرة السعودية وأسعارنا جملة وجودتنا
+              - paragraph [ref=e165]: أصلية
+          - list [ref=e167]:
+            - heading "روابط تهمك" [level=3] [ref=e168]
+            - list [ref=e169]:
+              - listitem [ref=e170]:
+                - link "المدونة" [ref=e171] [cursor=pointer]:
+                  - /url: "#"
+              - listitem [ref=e172]:
+                - link "مواقع التواصل الاجتماعي" [ref=e173] [cursor=pointer]:
+                  - /url: "#"
+              - listitem [ref=e174]:
+                - link "سياسة الإستبدال والإسترجاع" [ref=e175] [cursor=pointer]:
+                  - /url: "#"
+              - listitem [ref=e176]:
+                - link "سياسة الاستخدام والخصوصية" [ref=e177] [cursor=pointer]:
+                  - /url: "#"
+          - generic [ref=e179]:
+            - heading "خدمة العملاء" [level=3] [ref=e180]
+            - generic [ref=e181]:
+              - link "الدردشة" [ref=e182] [cursor=pointer]:
+                - /url: /chat
+                - img [ref=e184]
+              - link "جوال" [ref=e186] [cursor=pointer]:
+                - /url: tel:+966500000000
+                - img [ref=e188]
+              - link "هاتف" [ref=e190] [cursor=pointer]:
+                - /url: tel:920000000
+                - img [ref=e192]
+              - link "إيميل" [ref=e194] [cursor=pointer]:
+                - /url: mailto:support@example.com
+                - img [ref=e196]
+          - generic [ref=e200]:
+            - heading "تطبيق شركة منفذ اسيا التجارية" [level=3] [ref=e201]
+            - generic [ref=e202]:
+              - link "احصل عليه من Google Play" [ref=e203] [cursor=pointer]:
+                - /url: "#"
+                - img "احصل عليه من Google Play" [ref=e204]
+              - link "حمّل من App Store" [ref=e205] [cursor=pointer]:
+                - /url: "#"
+                - img "حمّل من App Store" [ref=e206]
+            - generic [ref=e207]:
+              - generic [ref=e208]: الرقم الضريبي
+              - generic [ref=e209]: "311307460300003"
+        - generic [ref=e211]:
+          - generic [ref=e213]: © 2025 شركة منفذ اسيا التجارية.
+          - generic [ref=e214]:
+            - link "مواقع التواصل" [ref=e215] [cursor=pointer]:
+              - /url: "#"
+              - img [ref=e216]
+              - generic [ref=e218]: مواقع التواصل
+            - link "الشروط والخصوصية" [ref=e219] [cursor=pointer]:
+              - /url: "#"
+  - navigation "التنقل السفلي":
+    - generic [ref=e220]:
+      - generic [ref=e221]:
+        - button "الرئيسية" [ref=e222] [cursor=pointer]:
+          - img [ref=e223]
+          - generic [ref=e226]: الرئيسية
+        - button "التصنيفات" [ref=e227] [cursor=pointer]:
+          - img [ref=e228]
+          - generic [ref=e230]: التصنيفات
+        - button "المنتجات" [ref=e231] [cursor=pointer]:
+          - img [ref=e232]
+          - generic [ref=e236]: المنتجات
+        - button "العروض" [ref=e237] [cursor=pointer]:
+          - img [ref=e238]
+          - generic [ref=e241]: العروض
+        - button "حسابي" [ref=e242] [cursor=pointer]:
+          - img [ref=e243]
+          - generic [ref=e246]: حسابي
+      - button "السلة" [ref=e247] [cursor=pointer]:
+        - img [ref=e248]
+```

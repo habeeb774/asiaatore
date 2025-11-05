@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import Button from '../components/ui/Button';
 import { useSettings } from '../context/SettingsContext';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
@@ -223,15 +225,22 @@ const Contact = () => {
                     ></textarea>
                   </div>
 
-                  <motion.button
-                    type="submit"
-                    className="btn-primary w-full py-4 text-lg flex items-center justify-center space-x-2 space-x-reverse"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Send size={20} />
-                    <span>إرسال الرسالة</span>
-                  </motion.button>
+                  {/** Motion-enabled Button (uses the shared Button primitive) */}
+                  {(() => {
+                    const MotionButton = motion(Button);
+                    return (
+                      <MotionButton
+                        type="submit"
+                        variant="primary"
+                        className="w-full py-4 text-lg flex items-center justify-center space-x-2 space-x-reverse"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Send size={20} />
+                        <span>إرسال الرسالة</span>
+                      </MotionButton>
+                    );
+                  })()}
                 </form>
               )}
 

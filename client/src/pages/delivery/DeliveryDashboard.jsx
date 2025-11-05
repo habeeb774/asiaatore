@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
+import { Badge } from '../../components/ui';
 import RoutePlanner from '../../components/RoutePlanner';
 // Shared admin styles for skeletons
-import '../../styles/AdminPage.scss';
+// Styles consolidated into `styles/index.scss`
 
 // Inline lightweight SVG icons (to avoid importing the whole icon pack for this page)
 const Truck = ({ className = '', size = 20 }) => (

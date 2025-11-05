@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppRoutes from './AppRoutes';
 import './index.css';
+import './styles/ui.css';
 // Local Cairo font (self-hosted via package)
 import '@fontsource/cairo/300.css';
 import '@fontsource/cairo/400.css';
@@ -11,12 +12,7 @@ import '@fontsource/cairo/600.css';
 import '@fontsource/cairo/700.css';
 // Tajawal is loaded from Google Fonts in index.html to avoid requiring the npm package
 // SCSS bundles
-import './styles/_design-system.scss';
-import './styles/theme.scss';
-import './styles/product-card.scss';
-import './styles/pages.scss';
-import './styles/enhancements.scss';
-import './styles/_ui.scss';
+import './styles/index.scss';
 // Route-specific styles are imported in their pages to allow CSS code-splitting
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ProductsProvider } from './context/ProductsContext';

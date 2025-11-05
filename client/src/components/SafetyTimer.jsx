@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Button from './ui/Button';
 
 // SafetyTimer warns driver after a configurable continuous drive duration
 export default function SafetyTimer({ thresholdMinutes = 120 }) {
@@ -35,13 +36,13 @@ export default function SafetyTimer({ thresholdMinutes = 120 }) {
           <div className="text-sm text-gray-500">مهلة القيادة الحالية</div>
           <div className="text-lg font-semibold">{Math.floor(elapsed)} دقيقة</div>
         </div>
-        <div className="flex gap-2">
+          <div className="flex gap-2">
           {!running ? (
-            <button className="btn btn-primary" onClick={() => setRunning(true)}>ابدأ</button>
+            <Button variant="primary" onClick={() => setRunning(true)}>ابدأ</Button>
           ) : (
-            <button className="btn" onClick={() => setRunning(false)}>أوقف</button>
+            <Button variant="secondary" onClick={() => setRunning(false)}>أوقف</Button>
           )}
-          <button className="btn" onClick={() => setElapsed(0)}>إعادة ضبط</button>
+          <Button variant="secondary" onClick={() => setElapsed(0)}>إعادة ضبط</Button>
         </div>
       </div>
       <div className="mt-2 text-sm text-gray-500">سيتلقى السائق تنبيهًا بعد {thresholdMinutes} دقيقة.</div>

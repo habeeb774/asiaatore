@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
+import { Button, ButtonLink, buttonVariants } from '../components/ui';
 import AdminTableSkeleton from '../components/admin/AdminTableSkeleton.jsx';
 import { openInvoicePdfByOrder } from '../services/invoiceService';
 
@@ -55,7 +56,7 @@ const Orders = () => {
   if (visible.length === 0) return (
     <div className="container-custom px-4 py-12 text-center">
       <div className="mb-4 flex gap-2 justify-center flex-wrap text-sm">
-        <input placeholder="بحث (رقم الطلب / المستخدم / المبلغ)" value={query} onChange={e=>setQuery(e.target.value)} className="px-3 py-2 border rounded" />
+  <input placeholder="بحث (رقم الطلب / المستخدم / المبلغ)" value={query} onChange={e=>setQuery(e.target.value)} className="px-3 py-2 border rounded" />
         <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="px-3 py-2 border rounded">
           <option value="">كل الحالات</option>
           {['pending','processing','pending_bank_review','paid','shipped','completed','cancelled'].map(s=> <option key={s} value={s}>{s}</option>)}
@@ -66,8 +67,8 @@ const Orders = () => {
         </select>
         <input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="px-3 py-2 border rounded" />
         <input type="date" value={to} onChange={e=>setTo(e.target.value)} className="px-3 py-2 border rounded" />
-        <button onClick={()=>{ setQuery(''); setStatusFilter(''); setMethodFilter(''); setFrom(''); setTo(''); }} className="btn-secondary px-3 py-2">مسح الفلاتر</button>
-        <button onClick={()=>refresh?.()} className="btn-secondary px-3 py-2">تحديث</button>
+  <Button variant="secondary" size="sm" onClick={()=>{ setQuery(''); setStatusFilter(''); setMethodFilter(''); setFrom(''); setTo(''); }}>مسح الفلاتر</Button>
+  <Button variant="secondary" size="sm" onClick={()=>refresh?.()}>تحديث</Button>
       </div>
       لا توجد طلبات
     </div>
@@ -89,8 +90,8 @@ const Orders = () => {
         </select>
         <input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="px-3 py-2 border rounded" />
         <input type="date" value={to} onChange={e=>setTo(e.target.value)} className="px-3 py-2 border rounded" />
-        <button onClick={()=>{ setQuery(''); setStatusFilter(''); setMethodFilter(''); setFrom(''); setTo(''); }} className="btn-secondary px-3 py-2">مسح الفلاتر</button>
-        <button onClick={()=>refresh?.()} className="btn-secondary px-3 py-2">تحديث</button>
+  <Button variant="secondary" size="sm" onClick={()=>{ setQuery(''); setStatusFilter(''); setMethodFilter(''); setFrom(''); setTo(''); }}>مسح الفلاتر</Button>
+  <Button variant="secondary" size="sm" onClick={()=>refresh?.()}>تحديث</Button>
       </div>
       <div className="space-y-4">
   {paged.map(o => (
@@ -103,16 +104,13 @@ const Orders = () => {
             <div className="text-right">
               <div className="mb-2">الإجمالي: <strong>{o.total || (o.items||[]).reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0)} ر.س</strong></div>
               <div className="flex gap-2 justify-end flex-wrap">
-                <Link to={`/order/${o.id}`} className="btn-secondary px-4 py-2">عرض</Link>
-                <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" className="btn-secondary px-4 py-2">فاتورة</a>
+                <Link to={`/order/${o.id}`} className={buttonVariants({ variant: 'secondary', size: 'md' })}>عرض</Link>
+                <ButtonLink href={`/api/orders/${o.id}/invoice`} variant="secondary" size="md" target="_blank" rel="noopener">فاتورة</ButtonLink>
                 {o.status === 'paid' && (
-                  <button
-                    className="btn-secondary px-4 py-2"
-                    onClick={async ()=>{
+                  <Button variant="secondary" size="md" onClick={async ()=>{
                       try { await openInvoicePdfByOrder(o.id, { format: 'a4' }); }
                       catch(e){ alert('تعذر فتح الفاتورة: ' + (e?.message || 'خطأ')); }
-                    }}
-                  >فاتورة (جديدة)</button>
+                    }}>فاتورة (جديدة)</Button>
                 )}
               </div>
             </div>
@@ -121,9 +119,9 @@ const Orders = () => {
       </div>
       {totalPages > 1 && (
         <div className="mt-8 flex justify-center gap-2 text-sm">
-          <button disabled={page===1} onClick={()=>setPage(p=>p-1)} className="btn-secondary px-3 py-1 disabled:opacity-40">السابق</button>
+          <Button disabled={page===1} onClick={()=>setPage(p=>p-1)} variant="secondary" size="sm">السابق</Button>
           <span className="px-2">{page} / {totalPages}</span>
-          <button disabled={page===totalPages} onClick={()=>setPage(p=>p+1)} className="btn-secondary px-3 py-1 disabled:opacity-40">التالي</button>
+          <Button disabled={page===totalPages} onClick={()=>setPage(p=>p+1)} variant="secondary" size="sm">التالي</Button>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import api from '../../api/client';
+import { adminApi } from '../../api/admin';
 import { useToast } from '../../context/ToastContext';
-import { Button } from '../common/Button';
+import { Button } from '../ui/Button';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
 
@@ -46,7 +46,7 @@ const AddUserForm = ({ onUserAdded, onCancel }) => {
         }
       }
 
-      const res = await api.adminUserCreate(payload);
+  const res = await adminApi.createUser(payload);
       if (res.user) {
         onUserAdded(res.user);
       }

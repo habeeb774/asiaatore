@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import { Link } from 'react-router-dom';
+import Button, { ButtonLink } from '../components/ui/Button';
 import { motion, AnimatePresence } from '../lib/framerLazy';
 import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -114,9 +115,9 @@ const Cart = () => {
             <ShoppingBag size={64} className="mx-auto text-gray-400 mb-4" />
             <h2 className="text-2xl font-bold mb-4">سلة التسوق فارغة</h2>
             <p className="text-gray-600 mb-8">لم تقم بإضافة أي منتجات إلى سلة التسوق بعد</p>
-            <Link to="/products" className="btn-primary text-lg px-8 py-3">
+            <ButtonLink to="/products" variant="primary" className="text-lg px-8 py-3">
               تصفح المنتجات
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </div>
@@ -147,7 +148,7 @@ const Cart = () => {
                 <div className="p-4 bg-yellow-50 border-b border-yellow-100 flex items-center justify-between">
                   <div className="text-sm text-yellow-800">{locale==='ar'?'تمت إزالة عنصر من السلة':'Item removed from cart'}</div>
                   <div className="flex items-center gap-2">
-                    <button className="text-sm btn-secondary px-3 py-1" onClick={undoRemove}>{locale==='ar'?'تراجع':'Undo'}</button>
+                    <Button className="text-sm px-3 py-1" variant="secondary" onClick={undoRemove}>{locale==='ar'?'تراجع':'Undo'}</Button>
                     <button className="text-sm text-gray-500" onClick={()=>{ if (undo?.timeoutId) { clearTimeout(undo.timeoutId); setUndo(null); } }}>{locale==='ar'?'إغلاق':'Dismiss'}</button>
                   </div>
                 </div>
@@ -324,11 +325,11 @@ const Cart = () => {
               </div>
               <div className="flex gap-2 mb-4">
                 <input value={couponCode} onChange={e=>setCouponCode(e.target.value)} className="border rounded px-3 py-2 text-sm flex-1" placeholder="كود خصم (اختياري)" />
-                <button onClick={applyCoupon} className="btn-secondary text-sm" type="button">تطبيق</button>
+                <Button variant="secondary" className="text-sm" onClick={applyCoupon} type="button">تطبيق</Button>
               </div>
-              <Link to="/checkout" className="btn-primary w-full py-3 text-lg mb-4 text-center block">
+              <ButtonLink to="/checkout" variant="primary" className="w-full py-3 text-lg mb-4 text-center block">
                 إتمام الشراء
-              </Link>
+              </ButtonLink>
               <Link
                 to="/products"
                 className="flex items-center justify-center space-x-2 space-x-reverse text-gray-600 hover:text-primary-red transition-colors"
@@ -342,7 +343,7 @@ const Cart = () => {
       </div>
 
       {/* Sticky mobile checkout bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} role="region" aria-label={locale==='ar'?'شريط الدفع':'Checkout bar'}>
+          <div className="fixed inset-x-0 bottom-0 z-40 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} role="region" aria-label={locale==='ar'?'شريط الدفع':'Checkout bar'}>
         <div className="mx-3 mb-3 rounded-2xl shadow-2xl bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border border-gray-200 p-3 flex items-center gap-3">
           <div className="flex-1">
             <div className="text-xs text-gray-600">الإجمالي</div>
@@ -355,7 +356,7 @@ const Cart = () => {
               <div className="text-[11px] text-emerald-700">✓ شحن مجاني</div>
             )}
           </div>
-          <Link to="/checkout" className="btn-primary px-5 py-3 text-base font-bold" aria-disabled={totalValue<=0} tabIndex={totalValue<=0? -1 : 0}>إتمام الشراء</Link>
+          <ButtonLink to="/checkout" variant="primary" className="px-5 py-3 text-base font-bold" aria-disabled={totalValue<=0} tabIndex={totalValue<=0? -1 : 0}>إتمام الشراء</ButtonLink>
         </div>
       </div>
     </div>

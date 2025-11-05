@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Button, ButtonLink, buttonVariants } from '../components/ui';
 import { useOrders } from '../context/OrdersContext';
 import { useAuth } from '../context/AuthContext';
 import { openInvoicePdfByOrder } from '../services/invoiceService';
@@ -43,8 +44,8 @@ const MyOrders = () => {
   return (
     <div className="container-custom px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">طلباتي ({myOrders.length})</h2>
-        <button onClick={() => refresh()} className="btn-secondary px-3 py-2 text-sm">تحديث</button>
+  <h2 className="text-2xl font-bold">طلباتي ({myOrders.length})</h2>
+  <Button variant="secondary" size="sm" onClick={() => refresh()}>تحديث</Button>
       </div>
       <div className="space-y-5">
         {myOrders.map(o => {
@@ -69,18 +70,19 @@ const MyOrders = () => {
                 </div>
                 <div className="text-sm flex flex-col items-start gap-1 min-w-[180px]">
                   <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">{o.status}</span>
-                  <Link to={`/order/${o.id}`} className="btn-secondary px-3 py-1 text-xs">تفاصيل</Link>
-                  <Link to={`/order/${o.id}/track`} className="btn-secondary px-3 py-1 text-xs">تتبع</Link>
-                  <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">فاتورة</a>
+                  <Link to={`/order/${o.id}`} className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'text-xs' })}>تفاصيل</Link>
+                  <Link to={`/order/${o.id}/track`} className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'text-xs' })}>تتبع</Link>
+                  <ButtonLink href={`/api/orders/${o.id}/invoice`} variant="secondary" size="sm" target="_blank" rel="noopener">فاتورة</ButtonLink>
                   {o.status === 'paid' && (
-                    <button
+                    <Button
                       type="button"
-                      className="btn-secondary px-3 py-1 text-xs"
+                      variant="secondary"
+                      size="sm"
                       onClick={async ()=>{
                         try { await openInvoicePdfByOrder(o.id, { format: 'a4' }); }
                         catch(e){ alert('تعذر فتح الفاتورة: ' + (e?.message || 'خطأ')); }
                       }}
-                    >فاتورة (جديدة)</button>
+                    >فاتورة (جديدة)</Button>
                   )}
                 </div>
               </div>

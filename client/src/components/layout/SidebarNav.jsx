@@ -1,11 +1,153 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import '../../styles/sidebar-modern.scss';
 import { useSettings } from '../../context/SettingsContext';
-import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, BarChart3, Users, Settings, ReceiptText, Menu, X, ChevronsLeft, ChevronsRight, MessageCircle } from 'lucide-react';
-import { motion, AnimatePresence } from '../../lib/framerLazy';
+import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, BarChart3, Users, Settings, ReceiptText, Menu, X, MessageCircle, Sun, Moon, Globe } from 'lucide-react';
+import { Tooltip } from '../../components/ui';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import useEventListener from '../../hooks/useEventListener';
+import { useSidebar } from '../../context/SidebarContext';
 
-/* Modern sidebar nav structure */
+// Centralized reducer for sidebar UI state
+function sidebarReducer(state, action) {
+  switch (action.type) {
+    case 'SET_MOBILE_OPEN':
+      return { ...state, mobileOpen: !!action.value };
+    case 'TOGGLE_MOBILE_OPEN':
+      return { ...state, mobileOpen: !state.mobileOpen };
+    case 'SET_COLLAPSED':
+      return { ...state, collapsed: !!action.value };
+    case 'TOGGLE_COLLAPSED':
+      return { ...state, collapsed: !state.collapsed };
+    case 'SET_BADGES':
+      return { ...state, badges: action.value || {} };
+    case 'UPDATE_BADGE':
+      return { ...state, badges: { ...state.badges, [action.key]: Number(action.value) || 0 } };
+    default:
+      return state;
+  }
+}
+
+// Memoized nav item component
+const NavLinkItem = React.memo(function NavLinkItem({ 
+  item, 
+  pathname, 
+  locale, 
+  collapsed, 
+  mobileMode, 
+  closeMobile, 
+  t,
+  badges = {}
+}) {
+  const candidates = [item.to, `/en${item.to}`, `/fr${item.to}`];
+  const active = candidates.some((c) => pathname === c || pathname.startsWith(`${c}/`));
+
+  let text;
+  try {
+    const key = item.navKey ? `nav.${item.navKey}` : null;
+    if (key) {
+      const val = t(key);
+      if (val && val !== key) text = val;
+    }
+  } catch {}
+  if (!text) text = locale === 'ar' ? item.labelAr : item.labelEn;
+
+  const Icon = item.icon;
+  const badgeCount = badges[item.navKey] || 0;
+
+  // Support for submenus
+  const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+  const [open, setOpen] = React.useState(() => {
+    // open by default if current path is inside children
+    try {
+      return hasChildren && item.children.some(c => pathname && (pathname === c.to || pathname.startsWith(c.to + '/')));
+    } catch { return false; }
+  });
+
+  React.useEffect(() => {
+    if (hasChildren) {
+      const should = item.children.some(c => pathname && (pathname === c.to || pathname.startsWith(c.to + '/')));
+      if (should !== open) setOpen(should);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const toggleOpen = React.useCallback((e) => {
+    e && e.preventDefault();
+    setOpen(v => !v);
+  }, []);
+
+  const NavMain = (
+    <Link
+      to={item.to}
+      className="nav-link"
+      data-active={active}
+      aria-current={active ? 'page' : undefined}
+      title={collapsed ? text : undefined}
+      data-tip={collapsed ? text : undefined}
+      onClick={() => mobileMode && closeMobile()}
+      role="menuitem"
+      tabIndex={0}
+      aria-haspopup={hasChildren ? 'true' : undefined}
+      aria-expanded={hasChildren ? !!open : undefined}
+    >
+      <span className="nav-icon" aria-hidden="true">
+        {typeof Icon === 'string' ? (
+          <span style={{ fontSize: '1.4rem' }}>{Icon}</span>
+        ) : Icon ? (
+          <Icon size={20} />
+        ) : null}
+        {badgeCount > 0 && (
+          <span className="nav-badge" aria-hidden="true">{Math.min(badgeCount, 99)}</span>
+        )}
+      </span>
+      <span className="nav-label">{text}</span>
+      {hasChildren && (
+        <button
+          aria-label={open ? (locale === 'ar' ? 'إغلاق' : 'Collapse') : (locale === 'ar' ? 'فتح' : 'Expand')}
+          className={`nav-submenu-toggle ${open ? 'open' : ''}`}
+          onClick={toggleOpen}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(); } }}
+          tabIndex={-1}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+    </Link>
+  );
+
+  return (
+    <li className="nav-item" role="none">
+      <Tooltip 
+        content={text} 
+        placement={locale === 'ar' ? 'left' : 'right'} 
+        disabled={!collapsed || mobileMode}
+      >
+        {NavMain}
+      </Tooltip>
+
+      {hasChildren && (
+        <ul className={`nav-submenu ${open ? 'open' : ''}`} role="group" aria-label={text}>
+          {item.children.map(ch => (
+            <li key={ch.to} className="nav-item" role="none">
+              <Link to={ch.to} className="nav-link" data-active={pathname === ch.to || pathname?.startsWith(ch.to + '/')} role="menuitem" onClick={() => mobileMode && closeMobile()}>
+                <span className="nav-icon" aria-hidden>
+                  {ch.icon ? (typeof ch.icon === 'string' ? <span style={{fontSize:14}}>{ch.icon}</span> : <ch.icon size={18} />) : null}
+                </span>
+                <span className="nav-label">{locale === 'ar' ? ch.labelAr : ch.labelEn}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+});
+
+// Navigation structure
 const baseCoreNav = [
   { to: '/', labelAr: 'الرئيسية', labelEn: 'Home', navKey: 'home', icon: Home },
   { to: '/products', labelAr: 'المنتجات', labelEn: 'Products', navKey: 'products', icon: Package },
@@ -14,6 +156,7 @@ const baseCoreNav = [
   { to: '/cart', labelAr: 'السلة', labelEn: 'Cart', navKey: 'cart', icon: ShoppingCart },
   { to: '/stores', labelAr: 'المتاجر', labelEn: 'Stores', navKey: 'stores', icon: Store },
 ];
+
 const adminNav = [
   { to: '/admin', labelAr: 'لوحة التحكم', labelEn: 'Dashboard', icon: BarChart3 },
   { to: '/admin/reports', labelAr: 'التقارير', labelEn: 'Reports', icon: ClipboardList },
@@ -22,12 +165,6 @@ const adminNav = [
   { to: '/admin/settings', labelAr: 'الإعدادات', labelEn: 'Settings', icon: Settings },
 ];
 
-import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import useEventListener from '../../hooks/useEventListener';
-import { useSidebar } from '../../context/SidebarContext';
-
 const SidebarNav = () => {
   const { pathname } = useLocation();
   const { locale, t, setLocale } = useLanguage();
@@ -35,282 +172,241 @@ const SidebarNav = () => {
   const { user } = useAuth() || {};
   const { setting } = useSettings() || {};
   const isAdmin = user?.role === 'admin';
-  // Safe sidebar context hook: call at top-level inside a small custom hook so rules-of-hooks are preserved
-  function useSafeSidebar() {
-    try { return useSidebar(); } catch { return {}; }
-  }
-  const { open: ctxOpen, toggle: ctxToggle, setOpen: ctxSetOpen } = useSafeSidebar();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(Boolean(ctxOpen));
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const asideRef = useRef(null);
-  const touchStartX = useRef(null);
-  const touchDeltaX = useRef(0);
-  // Mobile breakpoint helper
-  // Detect reduced motion preference
-  useEffect(() => {
-    try {
-      const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-      setReducedMotion(Boolean(mql.matches));
-      const onChange = (e) => setReducedMotion(Boolean(e.matches));
-      if (mql.addEventListener) mql.addEventListener('change', onChange);
-      else if (mql.addListener) mql.addListener(onChange);
-      return () => {
-        if (mql.removeEventListener) mql.removeEventListener('change', onChange);
-        else if (mql.removeListener) mql.removeListener(onChange);
-      };
-    } catch {}
-  }, []);
+  const { open: ctxOpen, setOpen: ctxSetOpen } = useSidebar() || {};
 
-  // Android back button (popstate) closes the menu when open
-  useEffect(() => {
-    if (!isMobile()) return;
-    let pushed = false;
-    const onPop = () => {
-      // If open, close and prevent further bubbling side-effects
-      if (mobileOpen) {
-        setMobileOpen(false);
-        if (ctxSetOpen) ctxSetOpen(false);
-      }
-    };
-    if (mobileOpen) {
-      try { window.history.pushState({ sidebar: true }, ''); pushed = true; } catch {}
-      window.addEventListener('popstate', onPop);
-    }
-    return () => {
-      if (pushed) {
-        try { window.removeEventListener('popstate', onPop); } catch {}
-        // Do not auto-call history.back() to avoid interfering with navigation
-      }
-    };
-  }, [mobileOpen, ctxSetOpen]);
-  const isMobile = () => typeof window !== 'undefined' && window.innerWidth <= 980;
-  // Load persisted collapsed state (desktop only)
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('sb_collapsed');
-      if (saved != null && !isMobile()) setCollapsed(saved === '1');
-    } catch {}
-    // close mobile on mount
-    setMobileOpen(false);
-  }, []);
-  // Persist collapsed changes (desktop only)
-  useEffect(() => {
-    if (isMobile()) return;
-    try { localStorage.setItem('sb_collapsed', collapsed ? '1' : '0'); } catch {}
-  }, [collapsed]);
-  // Lock body scroll when mobile nav open and close on ESC
-  useEffect(() => {
-    try { document.body.style.overflow = mobileOpen ? 'hidden' : ''; } catch {}
-    // Mark main content as inactive for screen readers when sidebar open
-    try {
-      const main = document.getElementById('main');
-      if (main) {
-        if (mobileOpen) main.setAttribute('aria-hidden', 'true');
-        else main.removeAttribute('aria-hidden');
-      }
-    } catch {}
-    const onKey = (e) => {
-      if (e.key === 'Escape' && mobileOpen) setMobileOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      try { document.body.style.overflow = ''; } catch {}
-      try { const main = document.getElementById('main'); if (main) main.removeAttribute('aria-hidden'); } catch {}
-    };
-  }, [mobileOpen]);
-
-  // Focus trap when mobile sidebar is open
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const root = asideRef.current;
-    if (!root) return;
-    const focusables = root.querySelectorAll(
-      'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
-    );
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    try { first && first.focus(); } catch {}
-    const onKeyDown = (e) => {
-      if (e.key !== 'Tab') return;
-      if (focusables.length === 0) return;
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last && last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first && first.focus();
-        }
-      }
-    };
-    root.addEventListener('keydown', onKeyDown);
-    return () => root.removeEventListener('keydown', onKeyDown);
-  }, [mobileOpen]);
-
-  // Swipe-to-close on mobile: drag left on the sidebar to close
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const el = asideRef.current;
-    if (!el) return;
-    const onStart = (e) => {
-      const t = e.touches?.[0];
-      if (!t) return;
-      touchStartX.current = t.clientX;
-      touchDeltaX.current = 0;
-    };
-    const onMove = (e) => {
-      if (touchStartX.current == null) return;
-      const t = e.touches?.[0];
-      if (!t) return;
-      const dx = t.clientX - touchStartX.current;
-      touchDeltaX.current = dx;
-      // Only consider left drag to dismiss (dx < 0)
-      if (dx < 0) {
-        // apply a small translate for visual feedback
-        const tr = Math.max(dx, -120);
-        el.style.transform = `translate3d(${tr}px,0,0)`;
-        el.style.transition = reducedMotion ? 'none' : 'transform 0s';
-      }
-    };
-    const onEnd = () => {
-      // threshold to close
-      const dx = touchDeltaX.current || 0;
-      el.style.transition = '';
-      el.style.transform = '';
-      touchStartX.current = null;
-      touchDeltaX.current = 0;
-      if (dx < -60) setMobileOpen(false);
-    };
-    el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchmove', onMove, { passive: true });
-    el.addEventListener('touchend', onEnd);
-    el.addEventListener('touchcancel', onEnd);
-    return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove', onMove);
-      el.removeEventListener('touchend', onEnd);
-      el.removeEventListener('touchcancel', onEnd);
-      el.style.transition = '';
-      el.style.transform = '';
-    };
-  }, [mobileOpen]);
-
-  // Close on route change (mobile)
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
-
-  // Sync with SidebarContext and also listen to legacy events
-  useEffect(() => {
-    if (typeof ctxOpen === 'boolean') setMobileOpen(Boolean(ctxOpen));
-  }, [ctxOpen]);
-  // Always register legacy event listener, but make the handler a no-op if modern context is available.
-  useEventListener('sidebar:toggle', (e) => {
-    if (ctxSetOpen || ctxToggle) return; // prefer context-driven behavior
-    const cmd = (e && e.detail != null && typeof e.detail === 'object' && 'cmd' in e.detail) ? e.detail.cmd : e?.detail;
-    if (cmd === 'toggle') setMobileOpen((v) => !v);
-    else if (cmd === 'open') setMobileOpen(true);
-    else if (cmd === 'close') setMobileOpen(false);
+  const [sb, dispatch] = useReducer(sidebarReducer, {
+    mobileOpen: Boolean(ctxOpen),
+    badges: {},
+    collapsed: false,
   });
 
-  // Broadcast sidebar state so Header button can reflect it (aria-expanded/icon)
+  const [hoverExpand, setHoverExpand] = React.useState(false);
+  const hoverTimer = useRef(null);
+
+  // track small screen / mobile state so we can disable the collapsed 'mini' sidebar there
+  const [isMobile, setIsMobile] = React.useState(() => {
+    try { return typeof window !== 'undefined' && window.innerWidth <= 768; } catch { return true; }
+  });
+
   useEffect(() => {
-    // Update context if provided
-    if (ctxSetOpen) ctxSetOpen(mobileOpen);
-    // Legacy state event so Header icon stays in sync
-    try { window.dispatchEvent(new CustomEvent('sidebar:state', { detail: { open: mobileOpen } })); } catch {}
-  }, [mobileOpen, ctxSetOpen]);
+    const onResize = () => {
+      try { setIsMobile(window.innerWidth <= 768); } catch {}
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
-  const renderLink = useCallback((item) => {
-    // Active when pathname matches direct path or nested, accounting for locale prefixes
-    const candidates = [item.to, `/en${item.to}`, `/fr${item.to}`];
-    const active = candidates.some((c) => pathname === c || pathname.startsWith(`${c}/`));
-    // Prefer shared i18n keys when available, fallback to per-item labels
-    let text;
+  const asideRef = useRef(null);
+  const toggleBtnRef = useRef(null);
+  const prevActiveElement = useRef(null);
+  const touchStartX = useRef(null);
+
+  // Start hidden always
+  useEffect(() => {
+    dispatch({ type: 'SET_MOBILE_OPEN', value: false });
+  }, []);
+
+  // Load persisted collapsed state from localStorage
+  useEffect(() => {
     try {
-      const key = item.navKey ? `nav.${item.navKey}` : null;
-      if (key) {
-        const val = t(key);
-        if (val && val !== key) text = val;
-      }
+      const raw = localStorage.getItem('sidebar_collapsed');
+      if (raw !== null) dispatch({ type: 'SET_COLLAPSED', value: raw === '1' || raw === 'true' });
     } catch {}
-    if (!text) text = locale === 'ar' ? item.labelAr : item.labelEn;
-    const Icon = item.icon;
-    const iconEl = typeof Icon === 'string'
-      ? <span style={{fontSize:'1.7rem'}}>{Icon}</span>
-      : (Icon ? <Icon size={28} style={{filter:active?'drop-shadow(0 2px 8px #f6ad55)':'none',marginBottom:'2px'}} /> : null);
-    return (
-      <li key={item.to} className="nav-item" style={{width:'100%'}}>
-        <Link
-          to={item.to}
-          className="nav-link"
-          data-active={active}
-          aria-current={active ? 'page' : undefined}
-          style={{
-            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-            width:'100%', minHeight:'64px', borderRadius:'14px', margin:'0 auto',
-            background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-            border: active ? '2px solid #f6ad55' : '1.5px solid rgba(255,255,255,0.08)',
-            boxShadow: active ? '0 2px 8px -2px #f6ad55' : 'none',
-            color: active ? '#f6ad55' : '#fff',
-            fontSize: '1.08rem',
-            transition: 'all 0.18s',
-            cursor: 'pointer',
-            outline: 'none',
-            padding:'0 8px',
-            gap:'2px',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
-          onMouseLeave={e => e.currentTarget.style.background = active ? 'rgba(255,255,255,0.12)' : 'transparent'}
-          onKeyDown={(e) => {
-            try {
-              if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                const next = e.currentTarget.parentElement.nextElementSibling;
-                if (next) next.querySelector('.nav-link')?.focus();
-              } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                e.preventDefault();
-                const prev = e.currentTarget.parentElement.previousElementSibling;
-                if (prev) prev.querySelector('.nav-link')?.focus();
-              } else if (e.key === 'Home') {
-                e.preventDefault();
-                const first = e.currentTarget.closest('.sidebar-modern__nav')?.firstElementChild;
-                first?.querySelector('.nav-link')?.focus();
-              } else if (e.key === 'End') {
-                e.preventDefault();
-                const list = e.currentTarget.closest('.sidebar-modern__nav');
-                const last = list?.lastElementChild;
-                last?.querySelector('.nav-link')?.focus();
-              }
-            } catch (err) {}
-          }}
-          onClick={() => {
-            // Close drawer immediately on mobile to feel responsive
-            if (isMobile()) {
-              setMobileOpen(false);
-              if (ctxSetOpen) ctxSetOpen(false);
-            }
-          }}
-        >
-          <span className="nav-icon" aria-hidden="true">{iconEl}</span>
-          <span className="nav-label" style={{fontSize:'.5rem',fontWeight:active?700:500,opacity:active?1:.88,whiteSpace:'nowrap',marginTop:'2px',textAlign:'center',lineHeight:'1.15'}}>{text}</span>
-        </Link>
-      </li>
-    );
-  }, [pathname, locale, collapsed]);
+  }, []);
 
-  // Build dynamic nav (add طلباتي للمستخدم العادي)
-  const coreNav = React.useMemo(() => {
+  // Sync with context
+  useEffect(() => {
+    if (typeof ctxOpen === 'boolean') {
+      dispatch({ type: 'SET_MOBILE_OPEN', value: ctxOpen });
+    }
+  }, [ctxOpen]);
+
+  // Ensure collapsed state is disabled on mobile screens
+  useEffect(() => {
+    if (isMobile && sb.collapsed) {
+      dispatch({ type: 'SET_COLLAPSED', value: false });
+    }
+  }, [isMobile]);
+
+  // Persist collapsed state
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar_collapsed', sb.collapsed ? '1' : '0');
+    } catch {}
+  }, [sb.collapsed]);
+
+  // Body scroll lock when open
+  useEffect(() => {
+    document.body.style.overflow = sb.mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [sb.mobileOpen]);
+
+  // Manage focus when opening/closing mobile drawer and implement a simple focus trap
+  useEffect(() => {
+    const aside = asideRef.current;
+    if (!aside) return;
+
+    const focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const handleKeyDownTrap = (e) => {
+      if (!sb.mobileOpen) return;
+      if (e.key !== 'Tab') return;
+      const focusables = Array.from(aside.querySelectorAll(focusableSelector)).filter(el => !el.hasAttribute('disabled'));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    if (sb.mobileOpen) {
+      // save previously focused element and move focus into drawer
+      prevActiveElement.current = document.activeElement;
+      // focus first focusable element inside the aside, or the aside itself
+      setTimeout(() => {
+        const first = aside.querySelector(focusableSelector);
+        (first || aside).focus();
+      }, 50);
+      document.addEventListener('keydown', handleKeyDownTrap, true);
+    } else {
+      document.removeEventListener('keydown', handleKeyDownTrap, true);
+      // restore focus to toggle button or previously active element
+      setTimeout(() => {
+        try {
+          if (toggleBtnRef.current) toggleBtnRef.current.focus();
+          else if (prevActiveElement.current && prevActiveElement.current.focus) prevActiveElement.current.focus();
+        } catch {}
+      }, 50);
+    }
+
+    return () => document.removeEventListener('keydown', handleKeyDownTrap, true);
+  }, [sb.mobileOpen]);
+
+  // Improved drag-to-close with resistance and snap animation
+  useEffect(() => {
+    const aside = asideRef.current;
+    const backdrop = document.querySelector('.sidebar-modern__backdrop');
+    if (!aside) return;
+
+    let startX = null;
+    let currentX = 0;
+    let dragging = false;
+    let raf = null;
+    const isRTL = document.dir === 'rtl' || document.documentElement.getAttribute('dir') === 'rtl';
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    const update = () => {
+      if (!dragging) return;
+      const delta = currentX - startX;
+      // For LTR: delta negative => move left. For RTL: delta positive => move right.
+      const translate = isRTL ? Math.max(0, delta) : Math.min(0, delta);
+      // resistance effect: reduce movement after 60% of width
+      const width = aside.offsetWidth || window.innerWidth * 0.85;
+      const max = isRTL ? width : -width;
+      const eased = translate * (Math.abs(translate) > Math.abs(max) ? 0.35 : 1);
+      aside.style.transition = 'none';
+      aside.style.transform = `translateX(${eased}px)`;
+
+      if (backdrop) {
+        const progress = clamp(Math.abs(eased) / width, 0, 1);
+        backdrop.style.transition = 'none';
+        backdrop.style.opacity = `${1 - progress}`;
+        backdrop.style.pointerEvents = progress < 0.98 ? 'auto' : 'none';
+      }
+      raf = null;
+    };
+
+    const onTouchStart = (e) => {
+      if (!sb.mobileOpen) return;
+      startX = e.touches?.[0]?.clientX || null;
+      currentX = startX;
+      dragging = true;
+      aside.style.willChange = 'transform';
+    };
+
+    const onTouchMove = (e) => {
+      if (!dragging) return;
+      currentX = e.touches?.[0]?.clientX || currentX;
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+
+    const onTouchEnd = () => {
+      if (!dragging) return;
+      dragging = false;
+      const delta = currentX - startX;
+      const width = aside.offsetWidth || window.innerWidth * 0.85;
+      const threshold = Math.max(44, width * 0.32); // px to close
+      const shouldClose = isRTL ? delta > threshold : delta < -threshold;
+
+      aside.style.transition = 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1)';
+      if (shouldClose) {
+        // animate off-screen then close
+        const endTranslate = isRTL ? width : -width;
+        aside.style.transform = `translateX(${endTranslate}px)`;
+        if (backdrop) { backdrop.style.transition = 'opacity 220ms ease'; backdrop.style.opacity = '0'; }
+        setTimeout(() => {
+          dispatch({ type: 'SET_MOBILE_OPEN', value: false });
+          ctxSetOpen?.(false);
+          // reset inline transforms
+          aside.style.transform = '';
+          if (backdrop) { backdrop.style.opacity = ''; backdrop.style.pointerEvents = ''; backdrop.style.transition = ''; }
+        }, 260);
+      } else {
+        // snap back
+        aside.style.transform = '';
+        if (backdrop) { backdrop.style.transition = 'opacity 220ms ease'; backdrop.style.opacity = ''; backdrop.style.pointerEvents = 'auto'; }
+      }
+      startX = null;
+      currentX = 0;
+    };
+
+    aside.addEventListener('touchstart', onTouchStart, { passive: true });
+    aside.addEventListener('touchmove', onTouchMove, { passive: true });
+    aside.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      aside.removeEventListener('touchstart', onTouchStart);
+      aside.removeEventListener('touchmove', onTouchMove);
+      aside.removeEventListener('touchend', onTouchEnd);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [sb.mobileOpen]);
+
+  // Keyboard shortcuts
+  const onKey = useCallback((e) => {
+    if (e.key === 'Escape') {
+      if (sb.mobileOpen) dispatch({ type: 'SET_MOBILE_OPEN', value: false });
+      return;
+    }
+
+    if (e.altKey && e.shiftKey && (e.key === 'S' || e.key === 's' || e.key === 'M' || e.key === 'm')) {
+      e.preventDefault();
+      // Toggle mobile open on small screens, collapse on desktop
+      try {
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 769;
+        if (isDesktop) dispatch({ type: 'TOGGLE_COLLAPSED' });
+        else dispatch({ type: 'TOGGLE_MOBILE_OPEN' });
+      } catch { dispatch({ type: 'TOGGLE_MOBILE_OPEN' }); }
+    }
+  }, [sb.mobileOpen]);
+  useEventListener('keydown', onKey);
+
+  // Build core nav dynamically
+  const coreNav = useMemo(() => {
     const list = [...baseCoreNav];
     if (user) {
-      // Add My Orders entry if not admin or even if admin (still useful)
-  list.push({ to: '/my-orders', labelAr: 'طلباتي', labelEn: 'My Orders', navKey: 'myOrders', icon: ClipboardList });
+      list.push({ to: '/my-orders', labelAr: 'طلباتي', labelEn: 'My Orders', navKey: 'myOrders', icon: ClipboardList });
       if (user.role === 'seller' || user.role === 'admin') {
         list.push({ to: '/seller/kyc', labelAr: 'توثيق البائع', labelEn: 'Seller KYC', navKey: 'sellerKyc', icon: Settings });
       }
-      if (user.role === 'delivery' || user.role === 'admin') {
+      if (user.role === 'delivery') {
         list.push({ to: '/delivery', labelAr: 'التوصيل', labelEn: 'Delivery', icon: ClipboardList });
         list.push({ to: '/delivery/map', labelAr: 'خريطة التتبع', labelEn: 'Delivery Map', icon: '🗺️' });
         list.push({ to: '/delivery/history', labelAr: 'سجل التوصيل', labelEn: 'History', icon: '🕘' });
@@ -320,262 +416,257 @@ const SidebarNav = () => {
     return list;
   }, [user]);
 
-  // moved isMobile above
+  // WhatsApp contact configuration
+  const whatsappNumber = setting?.supportWhatsapp?.toString().replace(/\D+/g, '');
+  const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
+
+  // Unified toggle
   const handleToggle = () => {
-    if (isMobile()) {
-      // Manage local state; sync context open state instead of calling toggle to avoid double flips
-      setMobileOpen((v) => {
-        const next = !v;
-        if (ctxSetOpen) ctxSetOpen(next);
-        return next;
-      });
-    } else {
-      setCollapsed((c) => !c);
+    try {
+      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 769;
+      if (isDesktop) {
+        dispatch({ type: 'TOGGLE_COLLAPSED' });
+      } else {
+        const next = !sb.mobileOpen;
+        dispatch({ type: 'SET_MOBILE_OPEN', value: next });
+        ctxSetOpen?.(next);
+      }
+    } catch {
+      const next = !sb.mobileOpen;
+      dispatch({ type: 'SET_MOBILE_OPEN', value: next });
+      ctxSetOpen?.(next);
     }
   };
-  const expanded = isMobile() ? mobileOpen : !collapsed;
-  const listRef = useRef(null);
+
+  // Hover-expand handlers (desktop only)
+  const onMouseEnterAside = () => {
+    if (!sb.collapsed) return;
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    // small delay to avoid accidental triggers
+    hoverTimer.current = setTimeout(() => setHoverExpand(true), 120);
+  };
+  const onMouseLeaveAside = () => {
+    if (!sb.collapsed) return;
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    // small delay to avoid jitter
+    hoverTimer.current = setTimeout(() => setHoverExpand(false), 180);
+  };
 
   return (
     <>
-      {/** small i18n helper for admin labels */}
-      {null}
-      {/* Edge-swipe opener for mobile: a slim invisible area to start opening from screen edge */}
-      {isMobile() && !mobileOpen && (
-        <div
-          aria-hidden="true"
-          style={{
-            position:'fixed',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            width: 14,
-            zIndex: 1020,
-            touchAction: 'pan-y',
-            pointerEvents: 'auto',
-            userSelect: 'none',
-            background: 'transparent'
-          }}
-          onTouchStart={(e)=>{
-            const t = e.touches?.[0];
-            if (!t) return;
-            if (t.clientX <= 14) {
-              setMobileOpen(true);
-              if (ctxSetOpen) ctxSetOpen(true);
-            }
-          }}
-        />
-      )}
-      <AnimatePresence>
-        {(!isMobile() || mobileOpen) && (
-          <motion.aside
-            initial={isMobile() ? { x: '-100%' } : false}
-            animate={isMobile() ? { x: 0 } : false}
-            exit={isMobile() ? { x: '-100%' } : false}
-            transition={{ type: 'spring', stiffness: 400, damping: 38 }}
-            className={`sidebar-modern ${isAdmin ? 'has-admin' : ''}`}
-            id="app-sidebar"
-            data-collapsed={collapsed}
-            data-open={mobileOpen}
-            role={isMobile() ? 'dialog' : undefined}
-            aria-modal={isMobile() ? 'true' : undefined}
-            tabIndex={isMobile() ? -1 : undefined}
-            ref={asideRef}
-            aria-label="Main sidebar navigation"
-            style={{
-              background: 'linear-gradient(180deg,#178a3d 0%,#0f3c1e 100%)',
-              minHeight: '100vh',
-              boxShadow: '2px 0 16px -8px rgba(0,0,0,0.10)',
-              borderRadius: '0 18px 18px 0',
-              width: collapsed ? '68px' : '88px',
-              transition: reducedMotion ? 'none' : 'width 0.18s',
-              zIndex: 1301,
-              position: isMobile() ? 'fixed' : undefined,
-              top: 0,
-              left: 0,
-            }}
-          >
-  <div className="sidebar-modern__inner" ref={listRef} style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}>
-          <div className="sidebar-modern__head">
-            <span className="sidebar-modern__brand" style={{fontWeight:700,fontSize:'.95rem',color:'#fff',letterSpacing:'.5px'}}>{locale==='ar' ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store')}</span>
-            <button
-              type="button"
-              className="sidebar-modern__toggle"
-              onClick={handleToggle}
-              aria-expanded={expanded}
-              aria-controls="app-sidebar"
-              aria-label={
-                isMobile()
-                  ? mobileOpen ? (locale==='ar'?'إغلاق القائمة':'Close menu') : (locale==='ar'?'فتح القائمة':'Open menu')
-                  : collapsed ? (locale==='ar'?'توسيع الشريط الجانبي':'Expand sidebar') : (locale==='ar'?'طيّ الشريط الجانبي':'Collapse sidebar')
-              }
-              title={
-                isMobile()
-                  ? mobileOpen ? (locale==='ar'?'إغلاق القائمة':'Close menu') : (locale==='ar'?'فتح القائمة':'Open menu')
-                  : collapsed ? (locale==='ar'?'توسيع الشريط الجانبي':'Expand sidebar') : (locale==='ar'?'طيّ الشريط الجانبي':'Collapse sidebar')
-              }
-              style={{background:'rgba(255,255,255,0.08)',border:'none',borderRadius:'8px',padding:'6px',color:'#fff',marginTop:'6px',cursor:'pointer'}}
-            >
-              {isMobile() ? (
-                mobileOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />
-              ) : (
-                collapsed ? <ChevronsRight size={18} aria-hidden="true" /> : <ChevronsLeft size={18} aria-hidden="true" />
-              )}
-              <span className="sr-only">
-                {isMobile()
-                  ? mobileOpen ? (locale==='ar'?'إغلاق القائمة':'Close menu') : (locale==='ar'?'فتح القائمة':'Open menu')
-                  : collapsed ? (locale==='ar'?'توسيع الشريط الجانبي':'Expand sidebar') : (locale==='ar'?'طيّ الشريط الجانبي':'Collapse sidebar')}
-              </span>
-            </button>
-          </div>
-          <ul className="sidebar-modern__nav" role="list" aria-label="Main navigation" style={{display:'flex',flexDirection:'column',gap:'10px',marginTop:'18px'}}>
-            <li className="nav-section-label" style={{color:'#f6ad55',fontWeight:700,fontSize:'.75rem',marginBottom:'2px'}}>{locale==='ar'?'التصفح':'Browse'}</li>
-            {coreNav.map(renderLink)}
-            {isAdmin && (
-              <>
-                <li className="nav-section-label" style={{color:'#f6ad55',fontWeight:700,fontSize:'.75rem',marginTop:'12px'}}>{(t('nav.admin') !== 'nav.admin' ? t('nav.admin') : (locale==='ar'?'الإدارة':'Admin'))}</li>
-                <li className="nav-item" style={{width:'100%'}}>
-                  <Link
-                    to={'/orders'}
-                    className="nav-link"
-                    data-active={['/orders','/en/orders','/fr/orders'].some(c => pathname === c || pathname.startsWith(`${c}/`))}
-                    aria-current={['/orders','/en/orders','/fr/orders'].some(c => pathname === c) ? 'page' : undefined}
-                    data-tip={collapsed ? (locale==='ar'?'كل الطلبات':'All Orders') : undefined}
-                    style={{
-                      display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-                      width:'48px',height:'48px',borderRadius:'14px',margin:'0 auto',
-                      background:['/orders','/en/orders','/fr/orders'].some(c => pathname === c || pathname.startsWith(`${c}/`)) ? 'rgba(255,255,255,0.12)' : 'transparent',
-                      border:['/orders','/en/orders','/fr/orders'].some(c => pathname === c || pathname.startsWith(`${c}/`)) ? '2px solid #f6ad55' : '1.5px solid rgba(255,255,255,0.08)',
-                      boxShadow:['/orders','/en/orders','/fr/orders'].some(c => pathname === c || pathname.startsWith(`${c}/`)) ? '0 2px 8px -2px #f6ad55' : 'none',
-                      color:['/orders','/en/orders','/fr/orders'].some(c => pathname === c || pathname.startsWith(`${c}/`)) ? '#f6ad55' : '#fff',
-                      fontSize:'1.7rem',transition:'all 0.18s',cursor:'pointer',outline:'none',
-                    }}
-                  >
-                    <span className="nav-icon" aria-hidden="true"><ReceiptText size={28} /></span>
-                    <span className="nav-label" style={{fontSize:'.72rem',marginTop:'2px',fontWeight:700,opacity:1}}>{(t('nav.orders') !== 'nav.orders' ? t('nav.orders') : (locale==='ar'?'الطلبات':'Orders'))}</span>
-                  </Link>
-                </li>
-                <li className="nav-item" style={{width:'100%'}}>
-                  <Link
-                    to={'/admin/sellers/kyc'}
-                    className="nav-link"
-                    data-active={['/admin/sellers/kyc','/en/admin/sellers/kyc','/fr/admin/sellers/kyc'].some(c => pathname === c)}
-                    aria-current={['/admin/sellers/kyc','/en/admin/sellers/kyc','/fr/admin/sellers/kyc'].some(c => pathname === c) ? 'page' : undefined}
-                    data-tip={collapsed ? (locale==='ar'?'مراجعة KYC':'KYC Review') : undefined}
-                    style={{
-                      display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-                      width:'48px',height:'48px',borderRadius:'14px',margin:'0 auto',
-                      background:['/admin/sellers/kyc','/en/admin/sellers/kyc','/fr/admin/sellers/kyc'].some(c => pathname === c) ? 'rgba(255,255,255,0.12)' : 'transparent',
-                      border:['/admin/sellers/kyc','/en/admin/sellers/kyc','/fr/admin/sellers/kyc'].some(c => pathname === c) ? '2px solid #f6ad55' : '1.5px solid rgba(255,255,255,0.08)',
-                      boxShadow:['/admin/sellers/kyc','/en/admin/sellers/kyc','/fr/admin/sellers/kyc'].some(c => pathname === c) ? '0 2px 8px -2px #f6ad55' : 'none',
-                      color:['/admin/sellers/kyc','/en/admin/sellers/kyc','/fr/admin/sellers/kyc'].some(c => pathname === c) ? '#f6ad55' : '#fff',
-                      fontSize:'1.7rem',transition:'all 0.18s',cursor:'pointer',outline:'none',
-                    }}
-                  >
-                    <span className="nav-icon" aria-hidden="true"><Settings size={28} /></span>
-                    <span className="nav-label" style={{fontSize:'.72rem',marginTop:'2px',fontWeight:700,opacity:1}}>{(t('nav.sellerKyc') !== 'nav.sellerKyc' ? t('nav.sellerKyc') : (locale==='ar'?'توثيق البائع':'Seller KYC'))}</span>
-                  </Link>
-                </li>
-                {adminNav.map(renderLink)}
-              </>
-            )}
-          </ul>
-          <div className="sidebar-modern__footer" style={{marginTop:'auto',padding:'10px 0',textAlign:'center'}}>
-            {/* Theme & Language toggles */}
-            <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:'18px',marginBottom:'10px',marginTop:'2px'}}>
-              {/* زر لغة واحد دائري فقط */}
-              <button
-                onClick={() => {
-                  const langs = ['ar','en','fr'];
-                  const idx = langs.indexOf(locale);
-                  setLocale(langs[(idx+1)%langs.length]);
-                }}
-                aria-label={locale==='ar'?'تغيير اللغة':'Change language'}
-                title={locale==='ar'?'تغيير اللغة':'Change language'}
-                style={{
-                  background:'#f6ad55',
-                  border:'none',
-                  borderRadius:'50%',
-                  padding:'9px',
-                  color:'#fff',
-                  fontWeight:700,
-                  cursor:'pointer',
-                  transition:'background 0.2s',
-                  width:'38px',
-                  height:'38px',
-                  fontSize:'1.1rem',
-                  boxShadow:'0 1px 8px 0 #f6ad55',
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                }}
-              >
-                {locale==='ar' ? 'ع' : locale==='en' ? 'E' : 'F'}
-              </button>
-            </div>
-            {/* Theme toggle - دائري */}
-            <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'center',marginBottom:'10px',marginTop:'0',gap:'0'}}>
-              {/* زر الثيم فقط */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : (theme === 'light' ? 'system' : 'dark'))}
-                aria-label={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
-                title={theme === 'dark' ? (locale==='ar'?'الوضع الفاتح':'Light mode') : theme === 'light' ? (locale==='ar'?'النظام':'System') : (locale==='ar'?'الوضع الداكن':'Dark mode')}
-                style={{
-                  background:'#fff',
-                  border:'2px solid #f6ad55',
-                  borderRadius:'50%',
-                  padding:'7px',
-                  color:'#222',
-                  cursor:'pointer',
-                  transition:'background 0.2s',
-                  display:'flex',
-                  alignItems:'center',
-                  justifyContent:'center',
-                  boxShadow:'0 2px 12px 0 rgba(0,0,0,0.18)',
-                  width:'34px',
-                  height:'34px',
-                  zIndex:99,
-                  position:'relative',
-                  marginInlineEnd:'2px',
-                  marginTop:'2px',
-                  marginBottom:'2px',
-                }}
-              >
-                {theme === 'dark' ? (
-                  <svg width="13" height="13" fill="none" stroke="#222" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sun"><circle cx="6.5" cy="6.5" r="3"/><path d="M6.5 0v1.5m5 5H13m-1.5 5V13m-5-1.5H0m1.5-5H0m1.36-4.57l1.1 1.1m6.68 0l-1.1 1.1m1.1 6.68l-1.1-1.1m-6.68 0l1.1-1.1"/></svg>
-                ) : theme === 'light' ? (
-                  <svg width="13" height="13" fill="none" stroke="#222" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-monitor"><rect x="1" y="2" width="11" height="8" rx="2"/><line x1="4" y1="12" x2="9" y2="12"/><line x1="6.5" y1="10" x2="6.5" y2="12"/></svg>
-                ) : (
-                  <svg width="13" height="13" fill="none" stroke="#222" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-moon"><path d="M12 8.5A5.5 5.5 0 1 1 6.5 1a4.2 4.2 0 0 0 5.5 7.5Z"/></svg>
-                )}
-              </button>
-            </div>
-            {/* Quick access to chat */}
-
-            <span className="sidebar-mini-badge" style={{background:'#f6ad55',color:'#fff',borderRadius:'8px',padding:'2px 10px',fontWeight:700,fontSize:'.7rem'}}>v1.0</span>
-            {user && <span style={{fontSize:'.55rem', fontWeight:600, opacity:.75,display:'block',marginTop:'4px',color:'#fff'}}>{locale==='ar'?'دور:':'Role:'} {user.role}</span>}
-            <small style={{fontSize:'.55rem', opacity:.55,display:'block',marginTop:'2px',color:'#fff'}}>{locale==='ar'?'وضع تجريبي':'Preview mode'}</small>
-          </div>
-        </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      {/* Mobile backdrop */}
       <div
         className="sidebar-modern__backdrop"
-        data-open={mobileOpen}
+        data-open={sb.mobileOpen}
         role="button"
-        tabIndex={mobileOpen ? 0 : -1}
+        tabIndex={sb.mobileOpen ? 0 : -1}
+        aria-hidden={!sb.mobileOpen}
         aria-label="Close menu"
-        onClick={() => {
-          setMobileOpen(false);
-          if (ctxSetOpen) ctxSetOpen(false);
-        }}
-        onKeyDown={(e)=>{
+        onClick={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
+        onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            setMobileOpen(false);
-            if (ctxSetOpen) ctxSetOpen(false);
+            dispatch({ type: 'SET_MOBILE_OPEN', value: false });
           }
         }}
       />
+
+      {/* Sidebar */}
+      <aside
+        ref={asideRef}
+        className="sidebar-modern"
+        data-open={sb.mobileOpen}
+        data-collapsed={sb.collapsed && !isMobile}
+        data-hover={hoverExpand}
+        onMouseEnter={onMouseEnterAside}
+        onMouseLeave={onMouseLeaveAside}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sidebar-brand"
+        id="app-sidebar"
+        tabIndex={-1}
+      >
+        <div className="sidebar-modern__inner">
+          {/* Header */}
+          <div className="sidebar-modern__head">
+            <span id="sidebar-brand" className="sidebar-modern__brand">
+              {locale === 'ar' 
+                ? (setting?.siteNameAr || 'متجر الأغذية الفاخر')
+                : (setting?.siteNameEn || 'Premium Foods Store')
+              }
+            </span>
+            <button
+              type="button"
+              className="sidebar-modern__toggle"
+              ref={toggleBtnRef}
+              onClick={handleToggle}
+              aria-expanded={sb.mobileOpen}
+              aria-controls="app-sidebar"
+              aria-pressed={sb.collapsed}
+              aria-label={sb.mobileOpen ? (locale==='ar'?'إغلاق القائمة':'Close menu') : (sb.collapsed ? (locale==='ar'?'تكبير الشريط':'Expand sidebar') : (locale==='ar'?'تصغير الشريط':'Collapse sidebar'))}
+              data-testid={sb.mobileOpen ? 'sidebar-close' : undefined}
+            >
+              {sb.mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <ul className="sidebar-modern__nav" role="list" aria-label="Main navigation">
+            <li className="nav-section-label">
+              {locale === 'ar' ? 'التصفح' : 'Browse'}
+            </li>
+            
+            {coreNav.map((item) => (
+              <NavLinkItem
+                key={item.to}
+                item={item}
+                pathname={pathname}
+                locale={locale}
+                // don't show collapsed/mini nav on mobile-sized screens
+                collapsed={Boolean(sb.collapsed && !sb.mobileOpen && !hoverExpand && !isMobile)}
+                mobileMode={true}
+                closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
+                t={t}
+                badges={sb.badges}
+              />
+            ))}
+
+            {/* Admin Section */}
+            {isAdmin && (
+              <>
+                <li className="nav-section-label">
+                  {t('nav.admin') !== 'nav.admin' ? t('nav.admin') : (locale === 'ar' ? 'الإدارة' : 'Admin')}
+                </li>
+                
+                <NavLinkItem
+                  item={{
+                    to: '/orders',
+                    labelAr: 'الطلبات',
+                    labelEn: 'Orders',
+                    navKey: 'orders',
+                    icon: ReceiptText
+                  }}
+                  pathname={pathname}
+                  locale={locale}
+                  collapsed={false}
+                  mobileMode={true}
+                  closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
+                  t={t}
+                  badges={sb.badges}
+                />
+
+                <NavLinkItem
+                  item={{
+                    to: '/admin/sellers/kyc',
+                    labelAr: 'توثيق البائع',
+                    labelEn: 'Seller KYC',
+                    navKey: 'sellerKyc',
+                    icon: Settings
+                  }}
+                  pathname={pathname}
+                  locale={locale}
+                  collapsed={false}
+                  mobileMode={true}
+                  closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
+                  t={t}
+                />
+
+                {adminNav.map((item) => (
+                  <NavLinkItem
+                    key={item.to}
+                    item={item}
+                    pathname={pathname}
+                    locale={locale}
+                    collapsed={false}
+                    mobileMode={true}
+                    closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
+                    t={t}
+                  />
+                ))}
+              </>
+            )}
+          </ul>
+
+          {/* Footer */}
+          <div className="sidebar-modern__footer">
+            {/* Mobile-only quick actions container: theme + language remain here; search/profile moved to header */}
+            <div className="mobile-footer-controls" style={{ padding: '0 0.5rem 0.5rem' }}>
+              <div className="flex md:hidden" style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  aria-label={locale === 'ar' ? 'تبديل ثيم' : 'Toggle theme'}
+                  className="footer-icon-btn theme-toggle"
+                >
+                  {theme === 'dark' ? <Moon size={18} className="lucide" /> : <Sun size={18} className="lucide" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { const langs = ['ar','en','fr']; const idx = Math.max(0, langs.indexOf(locale)); setLocale(langs[(idx+1)%langs.length]); }}
+                  aria-label={locale === 'ar' ? 'تبديل اللغة' : 'Change language'}
+                  className="footer-icon-btn language-toggle"
+                >
+                  <Globe size={18} className="lucide" />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {user?.avatar ? <img src={user.avatar} alt={user.name || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.95rem', fontWeight: 700 }}>{user?.name || (locale === 'ar' ? 'ضيف' : 'Guest')}</div>
+                <div style={{ fontSize: '.75rem', color: 'var(--sb-text-muted)' }}>{user ? (locale === 'ar' ? `دور: ${user.role}` : `Role: ${user.role}`) : (locale === 'ar' ? 'غير مسجل' : 'Not signed in')}</div>
+              </div>
+              <div className="footer-actions">
+                <button
+                  type="button"
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="footer-icon-btn theme-toggle"
+                  aria-label={locale === 'ar' ? 'تبديل ثيم' : 'Toggle theme'}
+                  title={locale === 'ar' ? 'تبديل الثيم' : 'Toggle theme'}
+                >
+                  {theme === 'dark' ? <Moon size={18} className="lucide" /> : <Sun size={18} className="lucide" />}
+                  <span className="btn-label" aria-hidden>
+                    {locale === 'ar' ? (theme === 'dark' ? 'داكن' : 'فاتح') : (theme === 'dark' ? 'Dark' : 'Light')}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const langs = ['ar','en','fr']; const idx = Math.max(0, langs.indexOf(locale)); setLocale(langs[(idx+1)%langs.length]);
+                  }}
+                  className="footer-icon-btn language-toggle"
+                  aria-label={locale === 'ar' ? 'تبديل اللغة' : 'Change language'}
+                  title={locale === 'ar' ? 'تغيير اللغة' : 'Change language'}
+                >
+                  <Globe size={18} className="lucide" />
+                  <span className="btn-label" aria-hidden>
+                    {locale === 'ar' ? 'ع' : locale === 'en' ? 'EN' : 'FR'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '.5rem', marginTop: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+                {whatsappHref && (
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="whatsapp-contact" aria-label="WhatsApp" title="WhatsApp">
+                    <MessageCircle size={18} />
+                  </a>
+                )}
+                <a href="mailto:support@example.com" style={{ color: 'var(--sb-text-muted)', fontSize: '.85rem' }} aria-label="Email support">support@example.com</a>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="sidebar-mini-badge">v2.0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </>
   );
 };

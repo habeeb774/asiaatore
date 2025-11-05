@@ -1,6 +1,7 @@
 import React from 'react';
 import Seo from '../../components/Seo';
 import api from '../../api/client';
+import AdminLayout from '../../components/admin/AdminLayout';
 
 function usePendingBank(from, to, page) {
   const [data, setData] = React.useState({ orders: [], total: 0, page: 1, totalPages: 1 });
@@ -84,9 +85,8 @@ const BankTransfers = () => {
   };
 
   return (
-    <div className="admin-page-wrapper">
+    <AdminLayout title="مراجعة التحويلات البنكية">
       <Seo title="مراجعة التحويلات البنكية" description="Bank transfers review" />
-      <h1 className="page-title">مراجعة التحويلات البنكية</h1>
 
       <div style={{ display:'flex', gap:8, alignItems:'center', margin:'8px 0', flexWrap:'wrap' }}>
         <label>من: <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
@@ -128,7 +128,7 @@ const BankTransfers = () => {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -16,8 +16,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useMarketing } from '../context/MarketingContext';
 import { resolveLocalized } from '../utils/locale';
 import api from '../api/client';
-import '../styles/HomePage.scss';
-import '../styles/Hero.scss';
+// Styles consolidated into `styles/index.scss`
 import Offers from './Offers';
 
 const Home = () => {

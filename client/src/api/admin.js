@@ -102,6 +102,17 @@ export const adminApi = {
     const headers = {}; if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(API_BASE + '/admin/stats/orders/export/xlsx' + (qs.toString() ? `?${qs.toString()}` : ''), { headers }).then(r => r.blob());
   },
+  // Bulk order actions
+  bulkUpdateOrdersStatus: (ids = [], status) => {
+    return req('/orders/bulk/status', { method: 'POST', body: JSON.stringify({ ids, status }) });
+  },
+  // Delivery assign endpoints
+  deliveryAssignBulk: (ids = [], driverId, status = 'assigned') => {
+    return req('/delivery/assign/bulk', { method: 'POST', body: JSON.stringify({ ids, driverId, status }) });
+  },
+  deliveryAssignAuto: (opts = {}) => {
+    return req('/delivery/assign/auto', { method: 'POST', body: JSON.stringify(opts || {}) });
+  },
   // Stats panel - we reuse existing /api/admin/panel (light) and infer counts client-side when needed
   panel: () => req('/admin/panel')
 };

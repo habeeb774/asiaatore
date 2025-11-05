@@ -1,0 +1,36 @@
+/* Consolidated global styles entry to avoid duplicates and control load order */
+/* Core tokens and utilities first */
+@use './_variables' as vars;
+@use './core/_variables' as cvars;
+@use './_mixins' as mixins;
+@use './core/_mixins' as cmixins;
+
+/* Design system and base */
+@use './_design-system';
+@use './core/_base';
+@use './core/_components';
+
+/* Theme and utilities */
+@use './theme';
+@use './_utilities-modern';
+@use './_ui';
+@use './top-strips';
+
+/* Feature modules */
+@use './product-card';
+@use './pages';
+@use './enhancements';
+@use './sidebar-modern';
+
+/* Include page-specific styles to centralize imports and avoid duplicates */
+@use './HomePage';
+@use './Hero';
+@use './product-details';
+@use './AdminPage';
+@use './ProductList';
+@import './Cart.css';
+
+/* Notes:
+ - Route-specific styles like HomePage.scss, Hero.scss, product-details.scss remain imported by their pages for code-splitting.
+ - Header rules originate from _design-system.scss which includes _header.scss; Header.scss (legacy) is not included to avoid duplication.
+*/

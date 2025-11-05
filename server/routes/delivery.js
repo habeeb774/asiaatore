@@ -571,4 +571,67 @@ router.get('/drivers/online', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: 'DRIVERS_LIST_FAILED', message: e.message }); }
 });
 
+// Admin: bulk assign or unassign delivery driver for a set of orders
+// POST /api/delivery/assign/bulk { ids: string[], driverId: string, status?: 'assigned'|'accepted' }
+router.post('/assign/bulk', async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'FORBIDDEN' });
+    const { ids, driverId, status } = req.body || {};
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'INVALID_IDS' });
+    if (!driverId || typeof driverId !== 'string') return res.status(400).json({ error: 'INVALID_DRIVER' });
+    const nextStatus = typeof status === 'string' && status.trim() ? status.trim() : 'assigned';
+    // Update many
+    await prisma.order.updateMany({ where: { id: { in: ids.map(String) } }, data: { deliveryDriverId: driverId, deliveryStatus: nextStatus, acceptedAt: nextStatus === 'accepted' ? new Date() : undefined } });
+    const list = await prisma.order.findMany({ where: { id: { in: ids.map(String) } }, select: orderSummarySelect });
+    // Audit and notify
+    try {
+      for (const o of list) {
+        await audit({ action: 'DELIVERY_BULK_ASSIGN', entity: 'Order', entityId: o.id, userId: user.id, meta: { driverId, status: nextStatus } });
+        broadcast('delivery.updated', buildDeliveryEventPayload(o), (c) => c.role === 'admin' || c.userId === o.userId || c.userId === driverId);
+      }
+    } catch {}
+    res.json({ ok: true, count: list.length, orders: list.map(asJson) });
+  } catch (e) {
+    res.status(500).json({ error: 'DELIVERY_BULK_ASSIGN_FAILED', message: e.message });
+  }
+});
+
+// Admin: auto-assign from unassigned pool to least-busy online drivers
+// POST /api/delivery/assign/auto { limit?: number }
+router.post('/assign/auto', async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'FORBIDDEN' });
+    const limit = Math.min(200, Math.max(1, parseInt(req.body?.limit || '20', 10)));
+    // Get online drivers
+    const drivers = await prisma.deliveryProfile.findMany({ where: { online: true }, select: { userId: true } });
+    if (!drivers.length) return res.status(400).json({ error: 'NO_ONLINE_DRIVERS' });
+    // Get active counts
+    const countsRaw = await prisma.order.groupBy({ by: ['deliveryDriverId'], _count: { _all: true }, where: { deliveryDriverId: { not: null }, deliveryStatus: { in: ['accepted','out_for_delivery'] } } }).catch(() => []);
+    const counts = new Map(countsRaw.map(r => [r.deliveryDriverId, r._count?._all || 0]));
+    // Sort least busy first
+    const pool = drivers.map(d => ({ userId: d.userId, load: counts.get(d.userId) || 0 })).sort((a,b) => a.load - b.load);
+    if (!pool.length) return res.status(400).json({ error: 'NO_DRIVERS' });
+    // Fetch unassigned orders
+    const unassigned = await prisma.order.findMany({ where: { deliveryStatus: 'unassigned' }, orderBy: { createdAt: 'asc' }, take: limit, select: { id: true, userId: true } });
+    if (!unassigned.length) return res.json({ ok: true, assigned: [] });
+    const assigned = [];
+    let idx = 0;
+    for (const o of unassigned) {
+      const d = pool[idx % pool.length];
+      try {
+        const updated = await prisma.order.update({ where: { id: o.id }, data: { deliveryDriverId: d.userId, deliveryStatus: 'assigned' }, select: orderSummarySelect });
+        assigned.push(updated);
+        await audit({ action: 'DELIVERY_AUTO_ASSIGN', entity: 'Order', entityId: o.id, userId: user.id, meta: { driverId: d.userId } });
+        broadcast('delivery.updated', buildDeliveryEventPayload(updated), (c) => c.role === 'admin' || c.userId === updated.userId || c.userId === d.userId);
+      } catch {}
+      idx++;
+    }
+    res.json({ ok: true, count: assigned.length, orders: assigned.map(asJson) });
+  } catch (e) {
+    res.status(500).json({ error: 'DELIVERY_AUTO_ASSIGN_FAILED', message: e.message });
+  }
+});
+
 export default router;

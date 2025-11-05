@@ -1,5 +1,5 @@
 import Product from '../Product'
-import '../../styles/ProductList.scss';
+// Styles consolidated into `styles/index.scss`
 
 const ProductList = ({ addToCart }) => {
   // بيانات المنتجات الافتراضية

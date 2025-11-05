@@ -1,0 +1,10 @@
+{
+  "name": { "ar": "ثيم العميل", "en": "Client Theme" },
+  "repository": "https://github.com/habeeb774/asiaatore",
+  "author_email": "",
+  "features": [],
+  "settings": [],
+  "components": [],
+  "support_url": null,
+  "description": { "ar": "قالب مُولد من تطبيق الواجهة (client)", "en": "Theme generated from the client app build" }
+}

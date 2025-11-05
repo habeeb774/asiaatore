@@ -14,7 +14,7 @@ $cart-bg: var(--color-primary);
   position: fixed;
   inset: 0 0 auto 0;
   top: 0;
-  z-index: 1100; // raised above sidebar (sidebar-modern uses z-index:1030)
+  z-index: 1250; // Above backdrop (1200) but below sidebar panel (1300)
   background: rgba(255,255,255,0.92);
   -webkit-backdrop-filter: saturate(140%) blur(8px);
   backdrop-filter: saturate(140%) blur(8px);
@@ -22,6 +22,10 @@ $cart-bg: var(--color-primary);
   /* subtle base shadow always-on; scrolled adds a stronger layer */
   box-shadow: 0 2px 10px rgba(15,23,42,0.04);
   transition: box-shadow .2s ease, transform .2s ease;
+  /* Use the design-system header height token so other layout pieces (site-main, sticky panels)
+    keep in sync. This allows changing header size from a single place. */
+  height: var(--header-height);
+  min-height: var(--header-height);
   /* Full-width without using 100vw (avoids horizontal shift when scrollbar appears) */
   inset-inline-start: 0;
   inset-inline-end: 0;
@@ -35,7 +39,8 @@ $cart-bg: var(--color-primary);
   .header-inner {
     display: flex;
     justify-content: space-between;
-    padding: 12px 0;
+    align-items: center; /* vertically center content inside the fixed header */
+    height: 100%;
     gap: 12px;
     width: 100%;
     max-width: 1080px; /* centered content width */
@@ -223,6 +228,35 @@ $cart-bg: var(--color-primary);
     border: 1px solid #e5e7eb;
     border-radius: 6px;
     padding: 2px 4px;
+  }
+
+  /* Luxe/elegant header menu button */
+  .header-menu-button {
+    min-width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(15,23,42,0.08);
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+    box-shadow: 0 6px 16px rgba(15,23,42,0.06);
+    color: #0f172a;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+  }
+  .header-menu-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+    border-color: color-mix(in srgb, var(--color-primary) 30%, rgba(15,23,42,0.12));
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
+  }
+  .dark-mode & .header-menu-button,
+  .dark & .header-menu-button {
+    background: linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.82));
+    border-color: rgba(255,255,255,0.06);
+    color: #e5e7eb;
+  }
+  .dark-mode & .header-menu-button:hover,
+  .dark & .header-menu-button:hover {
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, rgba(255,255,255,0.12));
   }
 }
 

@@ -133,7 +133,7 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
     <>
       {/* Top strip with promotions (if enabled) */}
       <TopStrip />
-      <header className={`w-full sticky top-0 z-[1200] ${headerHeight} bg-gradient-to-b from-white/95 via-white/90 to-slate-100/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900/90 backdrop-blur border-b dark:border-slate-800 transition-shadow transition-colors duration-300 ${scrolled ? 'shadow-2xl' : 'shadow'} ${className}`} dir="rtl">
+  <header style={{ height: 'var(--header-height)', minHeight: 'var(--header-height)' }} className={`w-full sticky top-0 z-[1200] ${headerHeight} bg-gradient-to-b from-white/95 via-white/90 to-slate-100/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900/90 backdrop-blur border-b dark:border-slate-800 transition-shadow transition-colors duration-300 ${scrolled ? 'shadow-2xl' : 'shadow'} ${className}`} dir="rtl">
       {/* شريط تحميل أعلى الهيدر عند البحث */}
       {isLoading && (
         <div className="absolute top-0 left-0 w-full h-1 z-[1300]">
@@ -141,74 +141,35 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
         </div>
       )}
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 px-3 py-1 rounded bg-amber-500 text-white">{t('Skip to content')}</a>
-  <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-2 sm:px-6 md:px-10 grid grid-cols-3 items-center gap-3 sm:gap-6 transition-colors duration-300">
-        {/* يسار الهيدر: شريط البحث وروابط التصفح + الحساب */}
-        <div className="col-start-1 col-end-2 flex items-center gap-2">
-          <div
-            className="w-full max-w-[420px] flex items-center group relative"
-            style={{
-              background: 'rgba(255,255,255,0.65)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              borderRadius: '2rem',
-              boxShadow: '0 4px 24px 0 rgba(16,38,57,0.08)',
-              border: 'none',
-              padding: '0.25rem 0.5rem',
-              minHeight: '48px',
-              transition: 'box-shadow .25s cubic-bezier(.4,1.3,.5,1), background .25s',
-            }}
-          >
-            {/* removed duplicate mobile search button to avoid double icons */}
-            <div className="relative flex-1 flex items-center items-stretch gap-2">
-              {/* compact icon-only search in the top bar; opens overlay on click */}
-              <button
-                type="button"
-                onClick={() => { try { window.dispatchEvent(new CustomEvent('search:focus')); } catch { window.dispatchEvent(new Event('search:focus')); } }}
-                className="flex items-center justify-center p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label={t('فتح البحث') || 'فتح البحث'}
-              >
-                <SearchIcon size={20} className="text-slate-500" />
-              </button>
+    <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-2 sm:px-6 md:px-10 grid grid-cols-3 items-center gap-3 sm:gap-6 transition-colors duration-300">
+    {/* يسار الهيدر: شريط البحث/الحساب - ننقل عناصر البحث والحساب إلى العمود الأيسر */}
+    <div className="col-start-1 col-end-2 flex items-center justify-start gap-2 sm:gap-4">
+      <HeaderControls t={t} locale={locale} setLocale={setLocale} panel={panel} setPanel={setPanel} cartItems={cartItems} cartTotal={cartTotal} updateQuantity={updateQuantity} user={user} />
+    </div>
 
-              {/* profile / login icon next to search */}
-              <Link
-                to={user ? '/account/profile' : '/login'}
-                aria-label={user ? (t('profile') || 'Profile') : (t('login') || 'Login')}
-                className="flex items-center justify-center p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <UserIcon size={18} className="text-sky-600 dark:text-sky-300" />
-              </Link>
-
-              {/* Note: overlay is centralized; keep no inline input here for visual simplicity */}
-            </div>
-          </div>
-          <div className="ml-3 hidden sm:flex">
-            <HeaderControls t={t} locale={locale} setLocale={setLocale} panel={panel} setPanel={setPanel} cartItems={cartItems} cartTotal={cartTotal} updateQuantity={updateQuantity} user={user} />
-          </div>
-        </div>
         {/* وسط الهيدر: شعار الموقع */}
         <div className="col-start-2 col-end-3 flex justify-center">
           <Link to="/" className="block" aria-label={setting?.siteNameAr || setting?.siteNameEn || 'Home'}>
-            <div className="w-[150px] h-[48px] flex items-center justify-center overflow-hidden" style={{minWidth:150}}>
-              <SafeImage src={logoSrc} alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'} className="h-[40px] w-auto object-contain drop-shadow cursor-pointer" />
+            {/* Increased logo container to better fit the 88px header height */}
+            <div className="w-[180px] h-[64px] flex items-center justify-center overflow-hidden" style={{minWidth:180}}>
+              <SafeImage src={logoSrc} alt={setting?.siteNameAr || setting?.siteNameEn || 'Logo'} className="h-[56px] w-auto object-contain drop-shadow cursor-pointer" />
             </div>
           </Link>
         </div>
         <div className="col-start-2 col-end-3 hidden sm:flex justify-center mt-12">
           <nav className="w-full flex items-center justify-center"><TopNav t={t} isActive={isActive} /></nav>
         </div>
-        {/* يسار الهيدر: سلة وتسجيل الدخول/الحساب */}
+        {/* يمين الهيدر: زر الهامبرغر للهواتف */}
         <div className="col-start-3 col-end-4 flex items-center justify-end gap-2 sm:gap-4">
           <button
             onClick={onToggleSidebar}
             aria-expanded={isMenuOpen}
             aria-label={isMenuOpen ? t('إغلاق القائمة') : t('افتح القائمة')}
-            aria-controls="site-sidebar"
+            aria-controls="app-sidebar"
             className="p-3 rounded-xl md:hidden bg-slate-50 dark:bg-slate-800 border shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900 focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-[44px] min-h-[44px] transition-all duration-300"
           >
             {isMenuOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
           </button>
-          {/* mobile-only header controls removed to avoid duplicate profile icon next to sidebar */}
         </div>
       </div>
       {/* SearchOverlay component is mounted separately and listens for 'search:focus' events */}

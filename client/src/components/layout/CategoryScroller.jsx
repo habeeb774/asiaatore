@@ -13,6 +13,8 @@ const CategoryScroller = () => {
   const [error, setError] = useState(null);
   const trackRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const dragState = useRef({ down:false, startX:0, scrollLeft:0, moved:false });
   const MAX_DEFAULT = 12;
 
   useEffect(() => {
@@ -65,16 +67,84 @@ const CategoryScroller = () => {
     el.scrollBy({ left: delta, behavior: 'smooth' });
   };
 
+  // Drag-to-scroll (mouse & touch)
+  const onDragStart = (clientX) => {
+    const el = trackRef.current; if (!el) return;
+    dragState.current = { down:true, startX: clientX, scrollLeft: el.scrollLeft, moved:false };
+    setDragging(true);
+    el.dataset.dragging = '1';
+  };
+  const onDragMove = (clientX) => {
+    const el = trackRef.current; if (!el) return;
+    if (!dragState.current.down) return;
+    const dx = clientX - dragState.current.startX;
+    if (Math.abs(dx) > 4) dragState.current.moved = true;
+    el.scrollLeft = dragState.current.scrollLeft - dx;
+  };
+  const onDragEnd = () => {
+    const el = trackRef.current; if (el) { delete el.dataset.dragging; }
+    dragState.current.down = false; setDragging(false);
+  };
+  const handleMouseDown = (e) => { if (e.button !== 0) return; onDragStart(e.clientX); };
+  const handleMouseMove = (e) => { if (!dragState.current.down) return; e.preventDefault(); onDragMove(e.clientX); };
+  const handleMouseUp = () => onDragEnd();
+  const handleMouseLeave = () => onDragEnd();
+  const handleTouchStart = (e) => { const t = e.touches?.[0]; if (!t) return; onDragStart(t.clientX); };
+  const handleTouchMove = (e) => { const t = e.touches?.[0]; if (!t) return; onDragMove(t.clientX); };
+  const handleTouchEnd = () => onDragEnd();
+  const handleWheel = (e) => {
+    const el = trackRef.current; if (!el) return;
+    // Convert vertical wheel to horizontal scroll for better UX
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollBy({ left: e.deltaY, behavior: 'auto' });
+      e.preventDefault();
+    }
+  };
+
+  // Keyboard navigation between pills for accessibility
+  const handlePillKeyDown = (e) => {
+    const { key } = e;
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+    const container = trackRef.current;
+    if (!container) return;
+    const pills = Array.from(container.querySelectorAll('button.cat-pill'));
+    const idx = pills.indexOf(e.currentTarget);
+    if (idx < 0) return;
+    e.preventDefault();
+    let nextIdx = idx;
+    if (key === 'ArrowLeft') nextIdx = Math.max(0, idx - 1);
+    if (key === 'ArrowRight') nextIdx = Math.min(pills.length - 1, idx + 1);
+    if (key === 'Home') nextIdx = 0;
+    if (key === 'End') nextIdx = pills.length - 1;
+    const nextEl = pills[nextIdx];
+    if (nextEl) {
+      nextEl.focus();
+      // ensure visible
+      nextEl.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    }
+  };
+
   return (
     <div className="category-scroller" role="navigation" aria-label={locale==='ar'?'الأقسام':'Categories'}>
       {/* Arrows */}
-      <button type="button" aria-label="Scroll right" onClick={()=>scrollBy('right')} className="absolute left-2 top-[calc(var(--header-height,72px)+10px)] z-10 rounded-full bg-white/85 shadow hover:bg-white p-1 hidden md:inline-flex">
+      <button type="button" aria-label="Scroll right" onClick={()=>scrollBy('right')} className="cat-arrow absolute left-2 top-[calc(var(--header-height,72px)+10px)] z-10 hidden md:inline-flex" data-dir="right">
         <ChevronRight size={18} />
       </button>
-      <button type="button" aria-label="Scroll left" onClick={()=>scrollBy('left')} className="absolute right-2 top-[calc(var(--header-height,72px)+10px)] z-10 rounded-full bg-white/85 shadow hover:bg-white p-1 hidden md:inline-flex">
+      <button type="button" aria-label="Scroll left" onClick={()=>scrollBy('left')} className="cat-arrow absolute right-2 top-[calc(var(--header-height,72px)+10px)] z-10 hidden md:inline-flex" data-dir="left">
         <ChevronLeft size={18} />
       </button>
-      <div ref={trackRef} className="category-track">
+      <div
+        ref={trackRef}
+        className={`category-track${dragging ? ' is-dragging' : ''}`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
+      >
         {loading && <span className="text-xs opacity-70 px-2">…</span>}
         {error && <span className="text-xs text-red-600 px-2">خطأ</span>}
         {!loading && (showAll ? uniqueCats : uniqueCats.slice(0, MAX_DEFAULT)).map(c => {
@@ -102,6 +172,8 @@ const CategoryScroller = () => {
           };
           const Icon = pickIcon();
           const onPick = (slug) => {
+            // Avoid triggering click after a drag interaction
+            if (trackRef.current?.dataset?.dragging === '1' || dragState.current.moved) return;
             // Update current page query params in-place (no route change to catalog)
             const params = new URLSearchParams(search || '');
             params.set('category', slug);
@@ -117,6 +189,7 @@ const CategoryScroller = () => {
               onClick={() => onPick(c.slug)}
               className={`cat-pill ${active ? 'active' : ''}`}
               aria-current={active ? 'page' : undefined}
+              onKeyDown={handlePillKeyDown}
             >
               {Icon && <Icon size={14} className="opacity-70" />}
               <span>{locale==='ar' ? (c.name?.ar || c.slug) : (c.name?.en || c.slug)}</span>

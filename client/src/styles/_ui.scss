@@ -1,9 +1,14 @@
-/* UI primitives using design tokens in :root (see _design-system.scss) */
+/* UI primitives using design tokens in :root (see _design-system.scss)
+   Extended to respect admin-controlled CSS variables (previewable via Settings):
+   --ui-button-radius, --ui-button-shadow, --ui-input-radius, --ui-font-family, --ui-base-font-size
+*/
 /* Button */
 .ui-btn {
   --btn-h: 40px;
   --btn-px: var(--space-4, 1rem);
-  --btn-radius: var(--radius-md, 10px);
+  --btn-radius: var(--ui-button-radius, var(--radius-md, 10px));
+  /* allow admin to override default button shadow */
+  --btn-shadow: var(--ui-button-shadow, 0 8px 20px rgba(var(--color-primary-rgb, 105,190,60), 0.12));
   --btn-gap: var(--space-2, .5rem);
   --btn-fg: #fff;
   --btn-bg: var(--color-primary, #69be3c);
@@ -20,10 +25,12 @@
   background: var(--btn-bg);
   color: var(--btn-fg);
   font-weight: 600;
+  /* allow admin to set a global font family for UI primitives */
+  font-family: var(--ui-font-family, inherit);
   line-height: 1;
   cursor: pointer;
   transition: transform var(--transition-fast, .18s ease), box-shadow var(--transition-fast, .18s ease), opacity var(--transition-fast, .18s ease);
-  box-shadow: 0 8px 20px rgba(var(--color-primary-rgb, 105,190,60), 0.12);
+  box-shadow: var(--btn-shadow);
 }
 .ui-btn:hover { filter: brightness(0.98); }
 .ui-btn:active { transform: translateY(0.5px); }
@@ -100,6 +107,31 @@
 .ui-skeleton--circle { border-radius: var(--radius-full, 9999px); aspect-ratio: 1 / 1; }
 .ui-skeleton--static::after { animation: none; opacity: 0; }
 @keyframes ui-shimmer { 100% { transform: translateX(100%); } }
+
+/* Form inputs */
+.ui-input {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .75rem;
+  border-radius: var(--ui-input-radius, var(--radius-md, 10px));
+  border: 1px solid var(--color-border, #e4e7eb);
+  background: var(--color-surface, #fff);
+  color: var(--color-text);
+  /* base font-size can be controlled by admin preview */
+  font-size: var(--ui-base-font-size, var(--text-base, .85rem));
+  line-height: 1;
+  transition: box-shadow var(--transition-fast,.18s) , border-color var(--transition-fast,.18s), background var(--transition-fast,.18s);
+}
+.ui-input:focus-within { box-shadow: 0 6px 18px -6px rgba(0,0,0,.06); border-color: color-mix(in srgb, var(--color-primary) 40%, transparent); }
+.ui-input input, .ui-input textarea, .ui-input select {
+  border: 0; background: transparent; color: inherit; font: inherit; outline: none; width: 100%; padding: 0; margin: 0;
+}
+.ui-input--sm { padding: .25rem .5rem; font-size: var(--text-sm, .75rem); }
+.ui-input--lg { padding: .65rem 1rem; font-size: var(--text-md, .95rem); }
+
+/* Utility mapping classes for JS primitives (keeps old names working) */
+/* .ui-btn--primary is defined above; this comment is a placeholder. */
 
 /* Responsive helpers for admin Settings form */
 .settings-form {

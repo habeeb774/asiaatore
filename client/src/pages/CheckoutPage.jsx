@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { localizeName } from '../utils/locale';
 import { useLanguage } from '../context/LanguageContext';
 import api from '../api/client';
+import Button, { ButtonLink } from '../components/ui/Button';
 import { useSettings } from '../context/SettingsContext';
 
 const CheckoutPage = () => {
@@ -389,9 +390,9 @@ const CheckoutPage = () => {
           <input id="shipping-phone" name="tel" type="tel" autoComplete="tel" className={`border px-3 py-2 ${touched.phone && errors.phone ? 'is-invalid' : ''}`} placeholder="الهاتف" value={addr.phone} onChange={onFieldChange('phone')} onBlur={()=>setTouched(t=>({...t,phone:true}))} aria-invalid={!!(touched.phone && errors.phone)} aria-describedby={touched.phone && errors.phone ? 'err-phone' : undefined} />
           {touched.phone && errors.phone && <div id="err-phone" className="field-hint">{errors.phone}</div>}
           <div className="flex items-center gap-3">
-            <button type="button" className="btn-secondary" onClick={useMyLocation} disabled={geolocating}>
+            <Button type="button" variant="secondary" onClick={useMyLocation} disabled={geolocating}>
               {geolocating ? '...جارِ التحديد' : 'تحديد العنوان عبر GPS'}
-            </button>
+            </Button>
             {addr?.geo && <span className="text-xs text-gray-500">({addr.geo.lat?.toFixed(5)}, {addr.geo.lng?.toFixed(5)})</span>}
           </div>
           {geoMsg && <div className="text-xs text-gray-600">{geoMsg}</div>}
@@ -423,8 +424,8 @@ const CheckoutPage = () => {
             </div>
           )}
           <div className="flex gap-3">
-            <button className="btn-primary flex-1" type="button" onClick={proceedAddress}>حفظ و التالي</button>
-            <button className="btn-secondary" type="button" onClick={()=>{ setAddr(loadAddress()); setErrors({}); }}>إعادة ضبط</button>
+            <Button className="flex-1" variant="primary" type="button" onClick={proceedAddress}>حفظ و التالي</Button>
+            <Button variant="secondary" type="button" onClick={()=>{ setAddr(loadAddress()); setErrors({}); }}>إعادة ضبط</Button>
           </div>
         </div>
         )}
@@ -453,7 +454,7 @@ const CheckoutPage = () => {
                 <h3 className="font-bold mb-2 text-sm">قسيمة الخصم</h3>
                 <div className="flex gap-2">
                   <input id="coupon" name="coupon" className="border px-3 py-2 flex-1 text-sm" placeholder="رمز القسيمة" value={coupon} onChange={e=>setCoupon(e.target.value)} />
-                  <button className="btn-secondary" type="button" onClick={applyCoupon}>تطبيق</button>
+                  <Button variant="secondary" type="button" onClick={applyCoupon}>تطبيق</Button>
                 </div>
                 {couponApplied && <div className="text-xs text-green-600 mt-1">تم تطبيق {couponApplied.code} خصم: {couponApplied.amount.toFixed(2)} ر.س</div>}
                 {!couponApplied && coupon && <div className="text-xs text-gray-500 mt-1">لا يوجد خصم فعلي (رمز غير معروف)</div>}
@@ -475,7 +476,7 @@ const CheckoutPage = () => {
               )}
               <div className="flex justify-between"><span>الضريبة</span><span>{tax.toFixed(2)} ر.س</span></div>
               <div className="border-t pt-2 flex justify-between font-bold"><span>الإجمالي</span><span>{grandTotal.toFixed(2)} ر.س</span></div>
-              <button disabled={creating} className="btn-primary w-full" type="button" onClick={goReview}>{creating?'...جاري الإنشاء':'مراجعة الطلب'}</button>
+              <Button disabled={creating} className="w-full" variant="primary" type="button" onClick={goReview}>{creating?'...جاري الإنشاء':'مراجعة الطلب'}</Button>
               {orderError && <div className="field-hint">خطأ: {orderError}</div>}
             </div>
           </div>
@@ -494,7 +495,7 @@ const CheckoutPage = () => {
                 <div>{addr.line1}</div>
                 <div>{addr.phone}</div>
               </div>
-              <button className="text-xs text-primary-red mt-2" onClick={()=>setOpen(o=>({...o,address:true,review:false}))}>تعديل</button>
+              <Button variant="ghost" className="text-xs text-primary-red mt-2" onClick={()=>setOpen(o=>({...o,address:true,review:false}))}>تعديل</Button>
             </div>
             <div className="bg-white border rounded p-4">
               <h3 className="font-bold mb-3">العناصر</h3>
@@ -503,9 +504,9 @@ const CheckoutPage = () => {
                   <li key={i.id} className="py-2 flex items-center gap-3">
                     <span className="truncate flex-1 max-w-[160px]">{localizeName(i, locale)}</span>
                     <div className="flex items-center gap-1">
-                      <button type="button" className="px-2 border" onClick={()=>api /* placeholder */}>{/* minus */}-</button>
+                      <Button variant="ghost" className="px-2 border" type="button" onClick={()=>api /* placeholder */}>{/* minus */}-</Button>
                       <input value={i.quantity} readOnly className="w-10 border text-center text-xs" />
-                      <button type="button" className="px-2 border" onClick={()=>api /* placeholder */}>+</button>
+                      <Button variant="ghost" className="px-2 border" type="button" onClick={()=>api /* placeholder */}>+</Button>
                     </div>
                     <span className="text-xs whitespace-nowrap">{(i.price||0).toFixed(2)} × {i.quantity} = {((i.price||0)*(i.quantity||1)).toFixed(2)}</span>
                   </li>
@@ -532,8 +533,8 @@ const CheckoutPage = () => {
               <div className="border-t pt-2 flex justify-between font-bold"><span>الإجمالي</span><span>{grandTotal.toFixed(2)} ر.س</span></div>
               <div className="text-xs text-gray-500">رقم الطلب: {orderId || '—'} / طريقة: {paymentMethod}</div>
               <div className="grid gap-2">
-                <button className="btn-primary w-full" onClick={finalize}>تأكيد وإكمال (دفع عند الاستلام)</button>
-                <button type="button" className="btn-secondary w-full" onClick={openRealPayment}>طرق دفع حقيقية</button>
+                <Button className="w-full" variant="primary" onClick={finalize}>تأكيد وإكمال (دفع عند الاستلام)</Button>
+                <Button type="button" className="w-full" variant="secondary" onClick={openRealPayment}>طرق دفع حقيقية</Button>
               </div>
             </div>
           </div>
@@ -541,9 +542,9 @@ const CheckoutPage = () => {
       )}
       {open.realpay && !open.complete && (
         <div className="mt-10 border rounded overflow-hidden">
-          <div className="bg-gray-50 px-4 py-3 flex justify-between items-center text-sm font-semibold">
+            <div className="bg-gray-50 px-4 py-3 flex justify-between items-center text-sm font-semibold">
             <span>طرق الدفع الحقيقية</span>
-            <button onClick={()=>setOpen(o=>({...o,realpay:false}))}>إغلاق</button>
+            <Button variant="ghost" onClick={()=>setOpen(o=>({...o,realpay:false}))}>إغلاق</Button>
           </div>
           <div className="p-4 space-y-6 max-w-xl">
             <div className="grid gap-3">
@@ -557,7 +558,7 @@ const CheckoutPage = () => {
                 </label>
               ))}
             </div>
-            <button className="btn-primary w-full" disabled={processing} onClick={async ()=>{
+            <Button className="w-full" variant="primary" disabled={processing} onClick={async ()=>{
               if (!cartItems?.length) { setMessage('السلة فارغة'); return; }
               try {
                 setProcessing(true); setMessage('');
@@ -585,7 +586,7 @@ const CheckoutPage = () => {
                   default: break;
                 }
               } catch(e){ setMessage(e?.message || 'حدث خطأ أثناء بدء الدفع. الرجاء المحاولة مرة أخرى.'); } finally { setProcessing(false); }
-            }}>{processing?'...جاري المعالجة':'بدء عملية الدفع'}</button>
+            }}>{processing?'...جاري المعالجة':'بدء عملية الدفع'}</Button>
             {paymentMethod==='bank' && bankInfo && (
               <div className="bg-gray-50 border p-4 rounded text-sm space-y-1">
                 <div>اسم الحساب: {bankInfo.accountName}</div>
@@ -599,8 +600,8 @@ const CheckoutPage = () => {
               <div className="bg-purple-50 border p-4 rounded text-sm space-y-2">
                 <div>Session ID: {stcSession}</div>
                 <div className="flex gap-2">
-                  <button className="btn-primary flex-1" disabled={processing} onClick={async ()=>{ try { setProcessing(true); const oid = await ensureOrder(); await paymentService.confirmStcPay({ orderId: oid, sessionId: stcSession, success:true }); finalize(); } catch(e){ setMessage(e.message); } finally { setProcessing(false); } }}>تأكيد (محاكاة)</button>
-                  <button className="btn-secondary flex-1" disabled={processing} onClick={()=>{ setStcSession(null); setMessage('تم إلغاء جلسة STC'); }}>إلغاء</button>
+                  <Button className="flex-1" variant="primary" disabled={processing} onClick={async ()=>{ try { setProcessing(true); const oid = await ensureOrder(); await paymentService.confirmStcPay({ orderId: oid, sessionId: stcSession, success:true }); finalize(); } catch(e){ setMessage(e.message); } finally { setProcessing(false); } }}>تأكيد (محاكاة)</Button>
+                  <Button className="flex-1" variant="secondary" disabled={processing} onClick={()=>{ setStcSession(null); setMessage('تم إلغاء جلسة STC'); }}>إلغاء</Button>
                 </div>
               </div>
             )}
@@ -612,7 +613,7 @@ const CheckoutPage = () => {
         <div className="text-center py-24">
           <h2 className="text-2xl font-bold mb-4">تم إرسال الطلب</h2>
           <p className="text-sm text-gray-600 mb-4">سيتم توجيهك لصفحة الطلبات قريباً.</p>
-          <a href="/orders" className="btn-primary">عرض الطلبات</a>
+          <ButtonLink to="/orders" variant="primary">عرض الطلبات</ButtonLink>
         </div>
       )}
       {/* CTA مثبت للأجهزة الصغيرة */}
@@ -620,7 +621,7 @@ const CheckoutPage = () => {
         <div className="inner">
           <div className="sum">المجموع: <strong>{(subtotal + (shippingCost||0) - (couponApplied?.amount||0) + (+(Math.max(0, subtotal - (couponApplied?.amount||0)) * 0.15).toFixed(2))).toFixed(2)} ر.س</strong></div>
           <div className="flex gap-2 w-full">
-          <button className="btn-secondary" onClick={()=>{
+          <Button variant="secondary" onClick={()=>{
             // Step backward
             if (open.realpay) {
               setOpen(o=>({...o, realpay:false, review:true}));
@@ -637,8 +638,8 @@ const CheckoutPage = () => {
               try { document.querySelector('button[onClick*="toggle(\'address\')"]').scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
               return;
             }
-          }}>رجوع</button>
-          <button className="btn-primary flex-1" onClick={async ()=>{
+          }}>رجوع</Button>
+          <Button className="flex-1" variant="primary" onClick={async ()=>{
             // Advance flow step-by-step on mobile
             if (open.address) {
               if (validate()) {
@@ -680,7 +681,7 @@ const CheckoutPage = () => {
               else { /* prompt user to press primary within real payment panel */ }
               return;
             }
-          }}>متابعة</button>
+          }}>متابعة</Button>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 // Page-scoped styles (moved from global main.jsx)
-import '../styles/product-details.scss';
+// Styles consolidated into `styles/index.scss`
 import { useParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';

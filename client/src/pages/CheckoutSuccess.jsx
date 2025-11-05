@@ -7,6 +7,7 @@ import * as paymentService from '../services/paymentService';
 import { useSettings } from '../context/SettingsContext';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
+import { Button } from '../components/ui';
 
 const CheckoutSuccess = () => {
   const location = useLocation();
@@ -84,8 +85,8 @@ const CheckoutSuccess = () => {
           <h2 className="text-2xl font-bold mb-4">تمت عملية الشراء بنجاح</h2>
           <p>{message}</p>
           <div className="mt-6">
-            <button className="btn-primary" onClick={() => navigate('/orders')}>عرض الطلبات</button>
-            <button className="btn-secondary ml-2" onClick={() => navigate('/')}>العودة للمتجر</button>
+            <Button variant="primary" onClick={() => navigate('/orders')}>عرض الطلبات</Button>
+            <Button variant="secondary" size="md" className="ml-2" onClick={() => navigate('/')}>العودة للمتجر</Button>
           </div>
         </>
       )}
@@ -95,7 +96,7 @@ const CheckoutSuccess = () => {
           <h2 className="text-2xl font-bold mb-4">فشل إتمام الدفع</h2>
           <p className="text-red-600">{message}</p>
           <div className="mt-6">
-            <button className="btn-secondary" onClick={() => navigate('/cart')}>الرجوع للسلة</button>
+            <Button variant="secondary" onClick={() => navigate('/cart')}>الرجوع للسلة</Button>
           </div>
         </>
       )}

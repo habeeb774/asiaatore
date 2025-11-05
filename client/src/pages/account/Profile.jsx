@@ -61,9 +61,8 @@ const Profile = () => {
 
   const siteTitle = locale==='ar' ? 'ملفي الشخصي' : 'My Profile';
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/60 via-white to-white dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
-      <Seo title={siteTitle} description={siteTitle} />
+  return (<div className="min-h-screen bg-gradient-to-b from-teal-50 via-gray-100 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+  <Seo title={siteTitle} description={siteTitle} />
 
       {/* Luxe hero header */}
       <div className="container-custom px-4 pt-8">
@@ -77,7 +76,7 @@ const Profile = () => {
               </div>
               <div>
                 <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">{siteTitle}</h1>
-                <p className="text-black/85 text-sm">
+                <p className="text-white/90 text-sm">
                   {locale==='ar' ? 'مرحبًا' : 'Welcome'},
                   {' '}
                   <span className="text-sky-200 font-semibold">{form.name || user?.name || (locale==='ar'?'ضيف':'Guest')}</span>

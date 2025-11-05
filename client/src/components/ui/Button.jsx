@@ -1,55 +1,56 @@
 import React from 'react';
 import clsx from 'clsx';
 
-// Accessible button primitive used across the app. Use this instead of raw <button>
-// Props: variant: 'primary' | 'secondary' | 'ghost', size: 'sm'|'md'|'lg', as: 'button'|'a'
-const base = 'inline-flex items-center justify-center rounded-md font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
-const variants = {
-  primary: 'bg-primary text-white hover:brightness-95',
-  secondary: 'bg-secondary text-white hover:brightness-95',
-  ghost: 'bg-transparent text-foreground hover:bg-gray-100'
+// Button primitive that maps to the centralized UI styles in _ui.scss
+// Props: variant: 'primary'|'secondary'|'accent'|'outline'|'ghost'|'danger'|'success'
+// size: 'sm'|'md'|'lg'
+const variantMap = {
+  primary: 'ui-btn--primary',
+  secondary: 'ui-btn--secondary',
+  accent: 'ui-btn--accent',
+  outline: 'ui-btn--outline',
+  ghost: 'ui-btn--ghost',
+  danger: 'ui-btn--danger',
+  destructive: 'ui-btn--danger',
+  success: 'ui-btn--success'
 };
-const sizes = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-5 py-3 text-lg'
-};
+
+const sizeMap = { sm: 'ui-btn--sm', md: 'ui-btn--md', lg: 'ui-btn--lg', icon: 'ui-btn--icon' };
+
+export function buttonVariants({ variant = 'primary', size = 'md', className } = {}) {
+  return clsx('ui-btn', variantMap[variant] || variantMap.primary, sizeMap[size] || sizeMap.md, className);
+}
 
 const Button = React.forwardRef(function Button(
   { as = 'button', variant = 'primary', size = 'md', className, children, disabled = false, 'aria-label': ariaLabel, ...rest },
   ref
 ) {
-  const compClass = clsx(base, variants[variant], sizes[size], className, {
-    'opacity-50 cursor-not-allowed pointer-events-none': disabled
+  const compClass = clsx(buttonVariants({ variant, size, className }), {
+    'is-disabled': disabled
   });
 
-  // Use <a> when as='a' (pass href in rest)
   if (as === 'a') {
     return (
-      <a
-        ref={ref}
-        className={compClass}
-        aria-label={ariaLabel}
-        {...rest}
-      >
+      <a ref={ref} className={compClass} aria-label={ariaLabel} {...rest}>
         {children}
       </a>
     );
   }
 
   return (
-    <button
-      ref={ref}
-      type={rest.type || 'button'}
-      className={compClass}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      {...rest}
-    >
+    <button ref={ref} type={rest.type || 'button'} className={compClass} disabled={disabled} aria-label={ariaLabel} {...rest}>
       {children}
     </button>
   );
 });
-export { Button };
 
+export const ButtonLink = React.forwardRef(function ButtonLink({ href, variant = 'primary', size = 'md', className, children, ...rest }, ref) {
+  return (
+    <a ref={ref} href={href} className={buttonVariants({ variant, size, className })} {...rest}>
+      {children}
+    </a>
+  );
+});
+
+export { Button };
 export default Button;

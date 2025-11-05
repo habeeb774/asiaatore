@@ -5,6 +5,7 @@ import { useOrders } from '../context/OrdersContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadBankReceipt, initBankTransfer } from '../services/paymentService';
 import { openInvoicePdfByOrder } from '../services/invoiceService';
+import Button from '../components/ui/Button';
 
 const OrderDetails = () => {
   const { id } = useParams();
@@ -98,10 +99,10 @@ const OrderDetails = () => {
         <div className="text-sm flex items-center gap-2">الحالة: <strong className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">{order.status}</strong> {updating && <span className="text-xs opacity-60">...جاري الحفظ</span>}</div>
   <div className="text-sm">طريقة الدفع: {order.paymentMethod || 'غير محدد'}</div>
         <div className="pt-1 flex items-center gap-2 flex-wrap">
-          <a href={`/api/orders/${order.id}/invoice?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">عرض الفاتورة (HTML)</a>
-          <a href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">PDF A4</a>
-          <a href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-secondary px-3 py-1 text-xs">PDF حراري 80mm</a>
-          <a href={`/api/orders/${order.id}/invoice?paper=thermal80&auto=1&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" className="btn-primary px-3 py-1 text-xs">طباعة حرارية الآن</a>
+          <Button as="a" href={`/api/orders/${order.id}/invoice?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" variant="secondary" size="sm">عرض الفاتورة (HTML)</Button>
+          <Button as="a" href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" variant="secondary" size="sm">PDF A4</Button>
+          <Button as="a" href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" variant="secondary" size="sm">PDF حراري 80mm</Button>
+          <Button as="a" href={`/api/orders/${order.id}/invoice?paper=thermal80&auto=1&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" variant="primary" size="sm">طباعة حرارية الآن</Button>
         </div>
         {addr && (
           <div className="mt-3 p-3 border rounded bg-white">
@@ -144,7 +145,7 @@ const OrderDetails = () => {
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">التحويل البنكي</div>
             { (order.paymentMethod !== 'bank' && order.status === 'pending') && (
-              <button type="button" onClick={ensureBankInit} className="btn-secondary px-3 py-1 text-xs">بدء التحويل</button>
+              <Button type="button" onClick={ensureBankInit} variant="secondary" size="sm">بدء التحويل</Button>
             )}
           </div>
           {/* Diagnostic helper if غير ظاهر سبب عدم ظهور الرفع */}
@@ -166,11 +167,12 @@ const OrderDetails = () => {
                   <>
                     <a href={order.paymentMeta.bank.receiptUrl} target="_blank" rel="noopener" className="text-blue-600 underline">عرض الإيصال</a>
                     {!allowReplace && (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => setAllowReplace(true)}
-                        className="btn-secondary px-2 py-1"
-                      >استبدال الإيصال</button>
+                        variant="secondary"
+                        size="sm"
+                      >استبدال الإيصال</Button>
                     )}
                     {allowReplace && (
                       <div className="flex items-center gap-2 flex-wrap">
@@ -221,8 +223,8 @@ const OrderDetails = () => {
         </div>
         <div className="ml-auto flex items-center gap-4">
           {user?.role === 'admin' && (
-            <button
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               disabled={waSending}
               onClick={async () => {
                 setWaSending(true);
@@ -241,11 +243,11 @@ const OrderDetails = () => {
                   setWaSending(false);
                 }
               }}
-            >{waSending ? 'يرسل...' : 'إرسال الفاتورة عبر واتساب'}</button>
+            >{waSending ? 'يرسل...' : 'إرسال الفاتورة عبر واتساب'}</Button>
           )}
           {order.status === 'paid' && (
-            <button
-              className="btn-secondary"
+            <Button
+              variant="secondary"
               onClick={async () => {
                 try {
                   await openInvoicePdfByOrder(order.id, { format: 'a4' });
@@ -253,12 +255,12 @@ const OrderDetails = () => {
                   alert('تعذر فتح الفاتورة: ' + (e?.message || 'خطأ'));
                 }
               }}
-            >تحميل الفاتورة (الجديدة)</button>
+            >تحميل الفاتورة (الجديدة)</Button>
           )}
-          <button className="btn-secondary" onClick={() => window.open(getInvoiceUrl(order.id) + `?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>عرض الفاتورة</button>
-          <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF A4</a>
-          <a className="btn-secondary" href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener">PDF حراري 80mm</a>
-          <button className="btn-primary" onClick={() => window.open(`/api/orders/${order.id}/invoice?paper=thermal80&auto=1&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>طباعة حرارية</button>
+          <Button variant="secondary" onClick={() => window.open(getInvoiceUrl(order.id) + `?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>عرض الفاتورة</Button>
+          <Button as="a" href={`/api/orders/${order.id}/invoice.pdf?token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" variant="secondary" size="sm">PDF A4</Button>
+          <Button as="a" href={`/api/orders/${order.id}/invoice.pdf?paper=thermal80&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`} target="_blank" rel="noopener" variant="secondary" size="sm">PDF حراري 80mm</Button>
+          <Button variant="primary" onClick={() => window.open(`/api/orders/${order.id}/invoice?paper=thermal80&auto=1&token=${encodeURIComponent(localStorage.getItem('my_store_token')||'')}`, '_blank')}>طباعة حرارية</Button>
           <div className="text-lg font-bold">الإجمالي: {total} ر.س</div>
         </div>
       </div>

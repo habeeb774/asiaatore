@@ -19,14 +19,18 @@ const mapOrder = mapOrderDto;
 // List orders (admin: all / user: own) with optional pagination
 // List orders with advanced filters (admin only for cross-user queries)
 // Query params: userId, status, paymentMethod, from, to, page, pageSize
+// Accept both full datetime and date-only (YYYY-MM-DD) strings for from/to
 const listSchema = z.object({
   userId: z.string().trim().optional(),
   status: z.string().trim().optional(),
   paymentMethod: z.string().trim().optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  // Use permissive string validation for dates because clients often send
+  // plain dates (YYYY-MM-DD). We'll parse them later with new Date(...).
+  from: z.string().trim().optional(),
+  to: z.string().trim().optional(),
   page: z.coerce.number().int().positive().optional(),
-  pageSize: z.coerce.number().int().positive().max(200).optional()
+  // Allow larger page sizes for admin analytics callers (they may request up to 500)
+  pageSize: z.coerce.number().int().positive().max(1000).optional()
 });
 router.get('/', async (req, res) => {
   try {
@@ -705,6 +709,31 @@ router.get('/:id/invoice.thermal.pdf', async (req, res) => {
   const q = new URLSearchParams(req.query || {});
   q.set('paper', 'thermal80');
   return res.redirect(302, `/api/orders/${req.params.id}/invoice.pdf?${q.toString()}`);
+});
+
+// Admin: bulk update order status
+// POST /api/orders/bulk/status { ids: string[], status: string }
+router.post('/bulk/status', requireAdmin, async (req, res) => {
+  try {
+    const bodySchema = z.object({ ids: z.array(z.string().min(1)).min(1), status: z.string().trim().min(1) });
+    const parsed = bodySchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'INVALID_INPUT', fields: parsed.error.flatten() });
+    }
+    const { ids, status } = parsed.data;
+    // Update in bulk, then fetch affected records for response mapping
+    await prisma.order.updateMany({ where: { id: { in: ids } }, data: { status } });
+    const list = await prisma.order.findMany({ where: { id: { in: ids } }, include: { items: true, shipments: true } });
+    try {
+      for (const o of list) {
+        audit({ action: 'order.bulk_status', entity: 'Order', entityId: o.id, userId: req.user?.id, meta: { status } });
+        emitOrderEvent('order.updated', o);
+      }
+    } catch {}
+    res.json({ ok: true, count: list.length, orders: list.map(mapOrder) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'BULK_STATUS_FAILED', message: e.message });
+  }
 });
 
 export default router;

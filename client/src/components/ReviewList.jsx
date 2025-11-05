@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Button from './ui/Button';
 import { useReviews } from '../context/ReviewsContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,7 +37,7 @@ const ReviewList = ({ productId }) => {
           <select value={rating} onChange={(e) => setRating(Number(e.target.value))} className="border px-2 py-1 rounded">
             {[5,4,3,2,1].map(r => <option key={r} value={r}>{r} نجوم</option>)}
           </select>
-          <button className="btn-primary px-4 py-2" onClick={handleAdd}>أضف مراجعة</button>
+          <Button variant="primary" className="px-4 py-2" onClick={handleAdd}>أضف مراجعة</Button>
         </div>
       </div>
     </div>

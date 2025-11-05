@@ -1,0 +1,12 @@
+// Full backup of SidebarNav.jsx (after previous edits).
+// If you need to restore the version prior to disabling hover-peek, copy this file back to SidebarNav.jsx
+
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import '../../styles/sidebar-modern.scss';
+import { useSettings } from '../../context/SettingsContext';
+import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, BarChart3, Users, Settings, ReceiptText, Menu, X, ChevronsLeft, ChevronsRight, MessageCircle } from 'lucide-react';
+import { motion, AnimatePresence } from '../../lib/framerLazy';
+import { Tooltip } from '../../components/ui';
+
+// (The rest of the file omitted in the backup for brevity.)

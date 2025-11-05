@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import cn from '../../utils/cn'
+import { cn } from '../../utils/cn'
 import Button from './Button'
 
 export default function Modal({ open, onClose, title, children, footer, size = 'md', closeOnOutside = true, className }) {

@@ -1,4 +1,4 @@
-import AdminSideNav from '../../components/admin/AdminSideNav';
+import AdminLayout from '../../components/admin/AdminLayout';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
@@ -16,6 +16,7 @@ import { useSettings } from '../../context/SettingsContext';
 
 import { useLanguage } from '../../context/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
+import { Button } from '../../components/ui';
 
 const AdminDashboard = () => {
   const { locale } = useLanguage();
@@ -1152,14 +1153,10 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="admin-root" style={pageWrap} dir={locale==='ar'?'rtl':'ltr'}>
+    <AdminLayout title={pageTitle}>
       <Seo title={pageTitle} description={locale==='ar' ? 'لوحة تحكم الإدارة' : 'Admin control panel'} />
       
-
-      {/* Two-column layout with sticky admin sidebar */}
-      <div className="admin-two-col">
-        <AdminSideNav />
-        <div>
+      <div>
 
       <div className="admin-subbar">
         <div className="admin-subbar-title">
@@ -1341,8 +1338,24 @@ const AdminDashboard = () => {
               <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
                 <div style={{fontSize:'.7rem',fontWeight:600}}>صورة المنتج:</div>
                 <div style={{display:'inline-flex',background:'#f1f5f9',borderRadius:8,overflow:'hidden'}}>
-                  <button type="button" onClick={()=>{ setImageMode('file'); setProductForm(f=>({...f,image:''})); }} style={{...iconBtn, width:'auto', padding:'.3rem .6rem', background: imageMode==='file' ? '#69be3c' : '#e2e8f0', color: imageMode==='file' ? '#fff' : '#0f172a'}}>رفع ملف</button>
-                  <button type="button" onClick={()=>{ setImageMode('url'); setProductImageFile(null); }} style={{...iconBtn, width:'auto', padding:'.3rem .6rem', background: imageMode==='url' ? '#69be3c' : '#e2e8f0', color: imageMode==='url' ? '#fff' : '#0f172a'}}>رابط صورة</button>
+                  <Button
+                    size="sm"
+                    variant={imageMode==='file' ? 'primary' : 'outline'}
+                    type="button"
+                    onClick={()=>{ setImageMode('file'); setProductForm(f=>({...f,image:''})); }}
+                    style={{borderTopRightRadius:8,borderBottomRightRadius:8}}
+                  >
+                    رفع ملف
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={imageMode==='url' ? 'primary' : 'outline'}
+                    type="button"
+                    onClick={()=>{ setImageMode('url'); setProductImageFile(null); }}
+                    style={{borderTopLeftRadius:8,borderBottomLeftRadius:8}}
+                  >
+                    رابط صورة
+                  </Button>
                 </div>
               </div>
               {imageMode === 'file' && (
@@ -1357,7 +1370,9 @@ const AdminDashboard = () => {
                     }}
                     style={{display:'none'}}
                   />
-                  <button type="button" onClick={()=>fileInputRef.current?.click()} style={primaryBtn}>اختر صورة من جهازك</button>
+                  <Button type="button" variant="primary" onClick={()=>fileInputRef.current?.click()}>
+                    اختر صورة من جهازك
+                  </Button>
                   {productImageFile && <span style={{fontSize:'.65rem',color:'#475569'}}>{productImageFile.name}</span>}
                 </div>
               )}
@@ -1379,7 +1394,11 @@ const AdminDashboard = () => {
                             || '/vite.svg')
                     }
                     style={{width:90,height:90,objectFit:'cover',borderRadius:8,border:'1px solid #e2e8f0'}} />
-                  {productImageFile && <button type="button" onClick={()=>setProductImageFile(null)} style={{...ghostBtn,fontSize:'.55rem',padding:'.3rem .5rem'}}>إزالة</button>}
+                  {productImageFile && (
+                    <Button type="button" size="sm" variant="ghost" onClick={()=>setProductImageFile(null)}>
+                      إزالة
+                    </Button>
+                  )}
                 </div>
               ) }
               <select
@@ -1392,13 +1411,13 @@ const AdminDashboard = () => {
               </select>
             </div>
             <div style={actionsRow}>
-              <button type="submit" style={primaryBtn}>
+              <Button type="submit" variant="primary">
                 <Save size={16} /> {productForm.id ? 'حفظ' : 'إضافة'}
-              </button>
+              </Button>
               {productForm.id && (
-                <button type="button" style={ghostBtn} onClick={resetForms}>
+                <Button type="button" variant="ghost" onClick={resetForms}>
                   <X size={16} /> إلغاء
-                </button>
+                </Button>
               )}
             </div>
           </form>
@@ -1440,13 +1459,13 @@ const AdminDashboard = () => {
                       <td style={p.stock < 5 ? {color:'#b91c1c',fontWeight:600}:{}}>{p.stock}</td>
                       <td>{p.status}</td>
                       <td>
-                        <button onClick={()=>toggleTiers(p.id)} style={{...iconBtn, width:'auto', padding:'0 .5rem', background: open ? '#69be3c' : iconBtn.background, color: open? '#fff': iconBtn.color, fontSize:'.6rem'}}>
+                        <Button size="sm" variant={open ? 'primary' : 'outline'} onClick={()=>toggleTiers(p.id)}>
                           {open ? 'إخفاء' : 'إدارة'}
-                        </button>
+                        </Button>
                         {tiers.length>0 && <div style={{fontSize:'.55rem',marginTop:4,opacity:.7}}>{tiers.length} شريحة{lowestTier? ` (من ${lowestTier.price})`:''}</div>}
                       </td>
                       <td style={tdActions}>
-                        <button
+                        <Button
                           onClick={() => setProductForm({
                             id: p.id,
                             nameAr: p.name?.ar || '',
@@ -1459,9 +1478,12 @@ const AdminDashboard = () => {
                             image: p.image || ''
                           })}
                           title="تعديل"
-                          style={iconBtn}
-                        ><Edit3 size={16} /></button>
-                        <button
+                          variant="ghost"
+                          size="sm"
+                        >
+                          <Edit3 size={16} />
+                        </Button>
+                        <Button
                           onClick={async () => {
                             if (apiBacked) {
                               try {
@@ -1475,8 +1497,11 @@ const AdminDashboard = () => {
                             }
                           }}
                           title="حذف"
-                          style={iconBtnDanger}
-                        ><Trash2 size={16} /></button>
+                          variant="danger"
+                          size="sm"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
                       </td>
                     </tr>
                     {open && (
@@ -1507,8 +1532,10 @@ const AdminDashboard = () => {
                                 <input value={tierForm.noteEn} onChange={e=>setTierForm(f=>({...f,noteEn:e.target.value}))} style={tierInput} />
                               </div>
                               <div style={{display:'flex',gap:6}}>
-                                <button type="submit" style={{...primaryBtn, fontSize:'.6rem'}}>{tierForm.id? 'تحديث':'إضافة'}</button>
-                                {tierForm.id && <button type="button" style={{...ghostBtn,fontSize:'.6rem'}} onClick={()=>setTierForm(emptyTierForm)}>إلغاء</button>}
+                                <Button type="submit" size="sm" variant="primary">{tierForm.id? 'تحديث':'إضافة'}</Button>
+                                {tierForm.id && (
+                                  <Button type="button" size="sm" variant="ghost" onClick={()=>setTierForm(emptyTierForm)}>إلغاء</Button>
+                                )}
                               </div>
                             </form>
                             <div style={{overflowX:'auto'}}>
@@ -1524,8 +1551,8 @@ const AdminDashboard = () => {
                                       <td>{t.packagingType}</td>
                                       <td style={{fontSize:'.6rem'}}>{resolveLocalized(t.note, locale) || t.note?.ar || t.note?.en || '—'}</td>
                                       <td style={tdActions}>
-                                        <button style={iconBtn} title="تعديل" onClick={()=>editTier(t)}><Edit3 size={14} /></button>
-                                        <button style={iconBtnDanger} title="حذف" onClick={()=>deleteTier(t)}>✕</button>
+                                        <Button variant="ghost" size="sm" title="تعديل" onClick={()=>editTier(t)}><Edit3 size={14} /></Button>
+                                        <Button variant="danger" size="sm" title="حذف" onClick={()=>deleteTier(t)}>✕</Button>
                                       </td>
                                     </tr>
                                   ))}
@@ -1552,9 +1579,9 @@ const AdminDashboard = () => {
           {/* Products pagination controls */}
           {filteredProducts.length > 0 && (
             <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:8}}>
-              <button style={productPage===1?ghostBtn:primaryBtn} disabled={productPage===1} onClick={()=>setProductPage(p=>Math.max(1,p-1))}>السابق</button>
+              <Button variant={productPage===1? 'ghost' : 'primary'} disabled={productPage===1} onClick={()=>setProductPage(p=>Math.max(1,p-1))}>السابق</Button>
               <span style={{fontSize:'.65rem'}}>صفحة {productPage} / {productTotalPages}</span>
-              <button style={productPage===productTotalPages?ghostBtn:primaryBtn} disabled={productPage===productTotalPages} onClick={()=>setProductPage(p=>Math.min(productTotalPages,p+1))}>التالي</button>
+              <Button variant={productPage===productTotalPages? 'ghost' : 'primary'} disabled={productPage===productTotalPages} onClick={()=>setProductPage(p=>Math.min(productTotalPages,p+1))}>التالي</Button>
               <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
               <select value={productPageSize} onChange={e=>{ setProductPageSize(+e.target.value); setProductPage(1); }} style={searchInput}>
                 {[10,20,30,50,100].map(n=> <option key={n} value={n}>{n}</option>)}
@@ -1583,20 +1610,20 @@ const AdminDashboard = () => {
             </select>
             <input type="date" value={orderDateFrom} onChange={e=>setOrderDateFrom(e.target.value)} style={searchInput} />
             <input type="date" value={orderDateTo} onChange={e=>setOrderDateTo(e.target.value)} style={searchInput} />
-            <button style={primaryBtn} type="button" onClick={()=>{setOrderStatusFilter('');setOrderMethodFilter('');setOrderDateFrom('');setOrderDateTo('');}}>مسح الفلاتر</button>
-            <button style={primaryBtn} type="button" onClick={async ()=> {
+            <Button variant="primary" type="button" onClick={()=>{setOrderStatusFilter('');setOrderMethodFilter('');setOrderDateFrom('');setOrderDateTo('');}}>مسح الفلاتر</Button>
+            <Button variant="primary" type="button" onClick={async ()=> {
               try {
                 const csv = await adminApi.exportOrdersCsv({ status: orderStatusFilter, paymentMethod: orderMethodFilter, from: orderDateFrom, to: orderDateTo });
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
                 const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'orders.csv'; a.click(); URL.revokeObjectURL(url);
               } catch (e) { alert('فشل تصدير CSV: ' + e.message); }
-            }}>تصدير CSV</button>
-            <button style={primaryBtn} type="button" onClick={async ()=> {
+            }}>تصدير CSV</Button>
+            <Button variant="primary" type="button" onClick={async ()=> {
               try {
                 const blob = await adminApi.exportOrdersXlsx({ status: orderStatusFilter, paymentMethod: orderMethodFilter, from: orderDateFrom, to: orderDateTo });
                 const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'orders.xlsx'; a.click(); URL.revokeObjectURL(url);
               } catch (e) { alert('فشل تصدير Excel: ' + e.message); }
-            }}>تصدير Excel</button>
+            }}>تصدير Excel</Button>
           </div>
           <table style={table}>
             <thead>
@@ -1634,12 +1661,14 @@ const AdminDashboard = () => {
                         </span>
                       ) : '—'}
                       {(addr.city||addr.area||addr.line1) && (
-                        <button
+                        <Button
                           type="button"
+                          size="sm"
+                          variant="ghost"
                           title="نسخ العنوان"
                           onClick={() => { try { navigator.clipboard.writeText(addrText); } catch {} }}
-                          style={{...iconBtn, width:22, height:22, marginInlineStart:6}}
-                        >📋</button>
+                          style={{width:22, height:22, marginInlineStart:6, padding:0}}
+                        >📋</Button>
                       )}
                     </td>
                     <td>{bankMeta.reference || '-'}</td>
@@ -1650,8 +1679,9 @@ const AdminDashboard = () => {
                     </td>
                     <td style={tdActions}>
                       {o.paymentMethod === 'bank' && o.status === 'pending_bank_review' && (
-                        <button
-                          style={iconBtn}
+                        <Button
+                          size="sm"
+                          variant="primary"
                           onClick={async ()=> {
                             try {
                               const ref = bankMeta.reference;
@@ -1660,14 +1690,15 @@ const AdminDashboard = () => {
                               await refresh();
                             } catch (e) { alert(e.message); }
                           }}
-                        >تأكيد دفع</button>
+                        >تأكيد دفع</Button>
                       )}
                       {(addr.city||addr.area||addr.line1) && (
-                        <button
-                          style={{...iconBtn, width:'auto', padding:'0 .5rem', fontSize:'.6rem'}}
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={()=> setOpenAddrOrder(prev => prev===o.id ? null : o.id)}
                           title={openAddrOrder===o.id? 'إخفاء العنوان' : 'عرض العنوان'}
-                        >{openAddrOrder===o.id? 'إخفاء' : 'عرض'}</button>
+                        >{openAddrOrder===o.id? 'إخفاء' : 'عرض'}</Button>
                       )}
                       <a href={`/order/${o.id}`} style={{fontSize:'.6rem',textDecoration:'none',color:'#69be3c'}}>عرض</a>
                     </td>
@@ -1685,13 +1716,9 @@ const AdminDashboard = () => {
                             {addr.phone && <div>📞 {addr.phone}</div>}
                           </div>
                           <div style={{display:'flex',gap:6}}>
-                            <button type="button" onClick={()=>{ try { navigator.clipboard.writeText(addrText); } catch {} }} style={{...iconBtn, width:'auto', padding:'0 .6rem', fontSize:'.65rem'}}>نسخ</button>
+                            <Button type="button" size="sm" variant="ghost" onClick={()=>{ try { navigator.clipboard.writeText(addrText); } catch {} }}>نسخ</Button>
                             {(addr.line1 || addr.city || addr.country) && (
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${addr.line1||''} ${addr.city||''} ${addr.country||''}`.trim())}`}
-                                target="_blank" rel="noopener"
-                                style={{...iconBtn, width:'auto', padding:'0 .6rem', fontSize:'.65rem', textDecoration:'none'}}
-                              >خرائط</a>
+                              <Button as="a" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${addr.line1||''} ${addr.city||''} ${addr.country||''}`.trim())}`} target="_blank" rel="noopener" size="sm" variant="outline">خرائط</Button>
                             )}
                           </div>
                         </div>
@@ -1707,9 +1734,9 @@ const AdminDashboard = () => {
           {/* Orders pagination controls */}
           {filteredOrders.length > 0 && (
             <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:8}}>
-              <button style={orderPage===1?ghostBtn:primaryBtn} disabled={orderPage===1} onClick={()=>setOrderPage(p=>Math.max(1,p-1))}>السابق</button>
+              <Button variant={orderPage===1? 'ghost' : 'primary'} disabled={orderPage===1} onClick={()=>setOrderPage(p=>Math.max(1,p-1))}>السابق</Button>
               <span style={{fontSize:'.65rem'}}>صفحة {orderPage} / {orderTotalPages}</span>
-              <button style={orderPage===orderTotalPages?ghostBtn:primaryBtn} disabled={orderPage===orderTotalPages} onClick={()=>setOrderPage(p=>Math.min(orderTotalPages,p+1))}>التالي</button>
+              <Button variant={orderPage===orderTotalPages? 'ghost' : 'primary'} disabled={orderPage===orderTotalPages} onClick={()=>setOrderPage(p=>Math.min(orderTotalPages,p+1))}>التالي</Button>
               <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
               <select value={orderPageSize} onChange={e=>{ setOrderPageSize(+e.target.value); setOrderPage(1); }} style={searchInput}>
                 {[20,50,100,200,500].map(n=> <option key={n} value={n}>{n}</option>)}
@@ -1732,7 +1759,7 @@ const AdminDashboard = () => {
         <div style={sectionWrap}>
           <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
             <h3 style={subTitle}>سجلات التدقيق</h3>
-            <button type="button" onClick={()=>refreshAudit()} style={primaryBtn}>تحديث</button>
+            <Button type="button" variant="primary" onClick={()=>refreshAudit()}>تحديث</Button>
             <span style={{fontSize:'.6rem',color:'#475569'}}>{loadingRemote? '...تحميل' : ''}</span>
           </div>
           <div style={{overflowX:'auto'}}>
@@ -1769,9 +1796,9 @@ const AdminDashboard = () => {
           </div>
           {auditTotalPages > 1 && (
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-              <button disabled={auditPage===1} onClick={()=>setAuditPage(p=>Math.max(1,p-1))} style={auditPage===1?ghostBtn:primaryBtn}>السابق</button>
+              <Button disabled={auditPage===1} variant={auditPage===1? 'ghost':'primary'} onClick={()=>setAuditPage(p=>Math.max(1,p-1))}>السابق</Button>
               <span style={{alignSelf:'center',fontSize:'.65rem'}}>صفحة {auditPage} / {auditTotalPages}</span>
-              <button disabled={auditPage===auditTotalPages} onClick={()=>setAuditPage(p=>Math.min(auditTotalPages,p+1))} style={auditPage===auditTotalPages?ghostBtn:primaryBtn}>التالي</button>
+              <Button disabled={auditPage===auditTotalPages} variant={auditPage===auditTotalPages? 'ghost':'primary'} onClick={()=>setAuditPage(p=>Math.min(auditTotalPages,p+1))}>التالي</Button>
             </div>
           )}
           {errorRemote && <div style={{fontSize:'.65rem',color:'#b91c1c'}}>خطأ: {errorRemote}</div>}
@@ -1806,13 +1833,13 @@ const AdminDashboard = () => {
                   style={{display:'none'}}
                   onChange={e=> setSettingsLogoFile(e.target.files?.[0]||null)}
                 />
-                <button type="button" onClick={()=> logoInputRef.current?.click()} style={{background:'#e2e8f0', color:'#0f172a', border:0, padding:'6px 10px', borderRadius:8, fontWeight:700}}>
+                <Button type="button" as="button" variant="outline" onClick={()=> logoInputRef.current?.click()}>
                   اختر صورة من جهازك
-                </button>
+                </Button>
                 {settingsLogoFile && <span style={{fontSize:'.65rem'}}>{settingsLogoFile.name}</span>}
-                <button
+                <Button
                   type="button"
-                  style={primaryBtn}
+                  variant="primary"
                   disabled={!settingsLogoFile || settingsLoading}
                   onClick={async () => {
                     setSettingsLoading(true); setSettingsError(null);
@@ -1829,8 +1856,8 @@ const AdminDashboard = () => {
                       setSettingsLoading(false);
                     }
                   }}
-                >رفع الشعار</button>
-                <button type="button" style={ghostBtn} onClick={loadSettings} disabled={settingsLoading}>تحديث</button>
+                >رفع الشعار</Button>
+                <Button type="button" variant="ghost" onClick={loadSettings} disabled={settingsLoading}>تحديث</Button>
               </div>
               <p style={mutedP}>الملفات المسموحة: صور حتى 2MB. يتم إنشاء نسخة WebP محسنة تلقائياً.</p>
             </div>
@@ -1857,8 +1884,8 @@ const AdminDashboard = () => {
                 <input placeholder="Play Store URL" value={settingsForm.playStoreUrl} onChange={e=>setSettingsForm(f=>({...f,playStoreUrl:e.target.value}))} />
               </div>
               <div style={{display:'flex', gap:8}}>
-                <button type="submit" style={primaryBtn} disabled={settingsLoading}>حفظ</button>
-                <button type="button" style={ghostBtn} onClick={()=> loadSettings()}>إلغاء</button>
+                <Button type="submit" variant="primary" disabled={settingsLoading}>حفظ</Button>
+                <Button type="button" variant="ghost" onClick={()=> loadSettings()}>إلغاء</Button>
               </div>
             </form>
             <div style={{background:'#fff',padding:'1rem',borderRadius:12,boxShadow:'0 4px 14px -6px rgba(0,0,0,.08)'}}>
@@ -1877,9 +1904,9 @@ const AdminDashboard = () => {
         <div style={sectionWrap}>
           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
             <h3 style={subTitle}>إدارة العلامات التجارية</h3>
-            <button style={primaryBtn} type="button" onClick={()=>loadBrands()}>تحديث</button>
-            <button style={ghostBtn} type="button" onClick={()=>scanBrandIssues()}>فحص الصيانة</button>
-            <button style={ghostBtn} type="button" onClick={()=>regenBrandLogos()}>إعادة توليد صور جميع الشعارات</button>
+            <Button variant="primary" type="button" onClick={()=>loadBrands()}>تحديث</Button>
+            <Button variant="ghost" type="button" onClick={()=>scanBrandIssues()}>فحص الصيانة</Button>
+            <Button variant="ghost" type="button" onClick={()=>regenBrandLogos()}>إعادة توليد صور جميع الشعارات</Button>
             {brandLoading && <span style={{fontSize:'.6rem',color:'#64748b'}}>...تحميل</span>}
             {brandError && <span style={{fontSize:'.6rem',color:'#b91c1c'}}>خطأ: {brandError}</span>}
             <input placeholder="بحث علامة" value={brandFilter} onChange={e=>setBrandFilter(e.target.value)} style={searchInput} />
@@ -1898,16 +1925,16 @@ const AdminDashboard = () => {
               <option value="zeroProducts">بدون منتجات</option>
               <option value="missingVariants">نقص نسخ الشعار</option>
             </select>
-            <button type="button" style={ghostBtn} onClick={()=>setMergeOpen(m=>!m)}>{mergeOpen? 'إخفاء الدمج' : 'لوحة الدمج'}</button>
+            <Button type="button" variant="ghost" onClick={()=>setMergeOpen(m=>!m)}>{mergeOpen? 'إخفاء الدمج' : 'لوحة الدمج'}</Button>
           </div>
           {brandIssues && (
             <div style={{marginTop:8,background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,padding:'.5rem .75rem',display:'flex',flexWrap:'wrap',gap:10,alignItems:'center'}}>
               <div style={{fontSize:'.7rem',color:'#334155',fontWeight:700}}>نتائج الفحص:</div>
-              <button type="button" style={ghostBtn} onClick={()=>setBrandIssueView('duplicates')}>مكررات: {(brandIssues.duplicateNames||[]).length} مجموعة</button>
-              <button type="button" style={ghostBtn} onClick={()=>setBrandIssueView('noLogo')}>بدون شعار: {(brandIssues.noLogo||[]).length}</button>
-              <button type="button" style={ghostBtn} onClick={()=>setBrandIssueView('zeroProducts')}>بدون منتجات: {(brandIssues.zeroProducts||[]).length}</button>
-              <button type="button" style={ghostBtn} onClick={()=>setBrandIssueView('missingVariants')}>نقص نسخ: {(brandIssues.missingLogoVariants||[]).length}</button>
-              <button type="button" style={ghostBtn} onClick={()=>setBrandIssueView('')}>إظهار الكل</button>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>setBrandIssueView('duplicates')}>مكررات: {(brandIssues.duplicateNames||[]).length} مجموعة</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>setBrandIssueView('noLogo')}>بدون شعار: {(brandIssues.noLogo||[]).length}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>setBrandIssueView('zeroProducts')}>بدون منتجات: {(brandIssues.zeroProducts||[]).length}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>setBrandIssueView('missingVariants')}>نقص نسخ: {(brandIssues.missingLogoVariants||[]).length}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={()=>setBrandIssueView('')}>إظهار الكل</Button>
             </div>
           )}
           {!brandIssues && (
@@ -1921,12 +1948,12 @@ const AdminDashboard = () => {
                   <option value="">— اختر الهدف —</option>
                   {brands.map(b=> <option key={b.id} value={b.id}>{(resolveLocalized(b.name, locale) || b.name?.ar||b.name?.en||b.slug)} ({b.productCount||0})</option>)}
                 </select>
-                <button type="button" style={primaryBtn} disabled={!mergeTargetId || !mergeSourceIds.filter(id=>id && id!==mergeTargetId).length} onClick={()=>{
+                <Button type="button" variant="primary" disabled={!mergeTargetId || !mergeSourceIds.filter(id=>id && id!==mergeTargetId).length} onClick={()=>{
                   const sources = mergeSourceIds.filter(id=>id && id!==mergeTargetId);
                   if (!sources.length) return;
                   if (!window.confirm(`دمج ${sources.length} علامة إلى الهدف المختار؟`)) return;
                   mergeBrands(mergeTargetId, sources).then(()=>{ setMergeSourceIds([]); setMergeTargetId(''); });
-                }}>ابدأ الدمج</button>
+                }}>ابدأ الدمج</Button>
               </div>
               {brandIssues?.duplicateNames?.length>0 && (
                 <div style={{fontSize:'.65rem',color:'#334155'}}>
@@ -1936,7 +1963,7 @@ const AdminDashboard = () => {
                       <li key={idx} style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                         <span style={{fontWeight:600}}>مجموعة {idx+1}:</span>
                         <span style={{opacity:.8}}>{(g.slugs||[]).join(', ')}</span>
-                        <button type="button" style={ghostBtn} onClick={()=>{ setMergeSourceIds(g.ids||[]); setBrandIssueView('duplicates'); setMergeOpen(true); }}>تهيئة من هذه المجموعة</button>
+                        <Button type="button" size="sm" variant="ghost" onClick={()=>{ setMergeSourceIds(g.ids||[]); setBrandIssueView('duplicates'); setMergeOpen(true); }}>تهيئة من هذه المجموعة</Button>
                       </li>
                     ))}
                   </ul>
@@ -1945,7 +1972,7 @@ const AdminDashboard = () => {
               <div style={{display:'grid',gap:6}}>
                 <div style={{display:'flex',gap:6,alignItems:'center'}}>
                   <input placeholder="بحث في المصادر" value={mergeFilter} onChange={e=>setMergeFilter(e.target.value)} style={searchInput} />
-                  <button type="button" style={ghostBtn} onClick={()=>setMergeSourceIds([])}>مسح التحديد</button>
+                  <Button type="button" size="sm" variant="ghost" onClick={()=>setMergeSourceIds([])}>مسح التحديد</Button>
                 </div>
                 <div style={{maxHeight:220,overflow:'auto',border:'1px solid #e2e8f0',borderRadius:8,padding:6,display:'grid',gap:4}}>
                   {brands.filter(b=>{
@@ -1978,8 +2005,8 @@ const AdminDashboard = () => {
               {brandLogoFile && <span style={{fontSize:'.55rem'}}>{brandLogoFile.name}</span>}
             </div>
             <div style={actionsRow}>
-              <button type="submit" style={primaryBtn}><Save size={16} /> {brandForm.id? 'حفظ' : 'إضافة'}</button>
-              {brandForm.id && <button type="button" style={ghostBtn} onClick={()=>setBrandForm({ id:null, slug:'', nameAr:'', nameEn:'', descriptionAr:'', descriptionEn:'', logo:'' })}><X size={16}/> إلغاء</button>}
+              <Button type="submit" variant="primary"><Save size={16} /> {brandForm.id? 'حفظ' : 'إضافة'}</Button>
+              {brandForm.id && <Button type="button" variant="ghost" onClick={()=>setBrandForm({ id:null, slug:'', nameAr:'', nameEn:'', descriptionAr:'', descriptionEn:'', logo:'' })}><X size={16}/> إلغاء</Button>}
             </div>
           </form>
           <table style={table}>
@@ -1997,9 +2024,9 @@ const AdminDashboard = () => {
                   <td>{b.productCount || 0}</td>
                   <td style={{fontSize:'.6rem',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis'}}>{resolveLocalized(b.description, locale) || b.description?.ar || b.description?.en || '—'}</td>
                   <td style={tdActions}>
-                    <button style={iconBtn} title="تعديل" onClick={()=> setBrandForm({ id:b.id, slug:b.slug, nameAr:b.name?.ar||'', nameEn:b.name?.en||'', descriptionAr:b.description?.ar||'', descriptionEn:b.description?.en||'', logo:b.logo||'' })}><Edit3 size={16} /></button>
-                    <button style={iconBtn} title="إعادة توليد نسخ الشعار" onClick={()=>regenBrandLogos(b.id)}>↻</button>
-                    <button style={iconBtnDanger} title="حذف" onClick={()=> deleteBrand(b.id)}><Trash2 size={16} /></button>
+                    <Button variant="ghost" size="sm" title="تعديل" onClick={()=> setBrandForm({ id:b.id, slug:b.slug, nameAr:b.name?.ar||'', nameEn:b.name?.en||'', descriptionAr:b.description?.ar||'', descriptionEn:b.description?.en||'', logo:b.logo||'' })}><Edit3 size={16} /></Button>
+                    <Button variant="ghost" size="sm" title="إعادة توليد نسخ الشعار" onClick={()=>regenBrandLogos(b.id)}>↻</Button>
+                    <Button variant="danger" size="sm" title="حذف" onClick={()=> deleteBrand(b.id)}><Trash2 size={16} /></Button>
                   </td>
                 </tr>
               ))}
@@ -2009,9 +2036,9 @@ const AdminDashboard = () => {
           {/* Brands pagination controls */}
           {visibleBrands.length > 0 && (
             <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:8}}>
-              <button style={brandPage===1?ghostBtn:primaryBtn} disabled={brandPage===1} onClick={()=>setBrandPage(p=>Math.max(1,p-1))}>السابق</button>
+              <Button variant={brandPage===1? 'ghost' : 'primary'} disabled={brandPage===1} onClick={()=>setBrandPage(p=>Math.max(1,p-1))}>السابق</Button>
               <span style={{fontSize:'.65rem'}}>صفحة {brandPage} / {brandTotalPages}</span>
-              <button style={brandPage===brandTotalPages?ghostBtn:primaryBtn} disabled={brandPage===brandTotalPages} onClick={()=>setBrandPage(p=>Math.min(brandTotalPages,p+1))}>التالي</button>
+              <Button variant={brandPage===brandTotalPages? 'ghost' : 'primary'} disabled={brandPage===brandTotalPages} onClick={()=>setBrandPage(p=>Math.min(brandTotalPages,p+1))}>التالي</Button>
               <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
               <select value={brandPageSize} onChange={e=>{ setBrandPageSize(+e.target.value); setBrandPage(1); }} style={searchInput}>
                 {[10,20,30,50,100].map(n=> <option key={n} value={n}>{n}</option>)}
@@ -2031,7 +2058,7 @@ const AdminDashboard = () => {
               <select value={marketingMetricsDays} onChange={e=>{ const v=+e.target.value; setMarketingMetricsDays(v); loadMarketingMetrics(v); }} style={searchInput}>
                 {[7,14,30,60,90,180].map(d=> <option key={d} value={d}>{d} يوم</option>)}
               </select>
-              <button type="button" onClick={()=>loadMarketingMetrics()} style={primaryBtn}>تحديث</button>
+              <Button type="button" variant="primary" onClick={()=>loadMarketingMetrics()}>تحديث</Button>
             </div>
             {!marketingMetrics && <div style={{fontSize:'.65rem',color:'#64748b'}}>...تحميل</div>}
             {marketingMetrics && (
@@ -2078,8 +2105,8 @@ const AdminDashboard = () => {
                 </select>
               </div>
               <div style={actionsRow}>
-                <button type="submit" style={primaryBtn}><Save size={16} /> {featureForm.id? 'حفظ' : 'إضافة'}</button>
-                {featureForm.id && <button type="button" style={ghostBtn} onClick={()=>setFeatureForm({ id:null, titleAr:'', titleEn:'', bodyAr:'', bodyEn:'', icon:'', sort:0, active:true })}><X size={16}/> إلغاء</button>}
+                <Button type="submit" variant="primary"><Save size={16} /> {featureForm.id? 'حفظ' : 'إضافة'}</Button>
+                {featureForm.id && <Button type="button" variant="ghost" onClick={()=>setFeatureForm({ id:null, titleAr:'', titleEn:'', bodyAr:'', bodyEn:'', icon:'', sort:0, active:true })}><X size={16}/> إلغاء</Button>}
               </div>
               <table style={table}>
                 <thead>
@@ -2093,8 +2120,8 @@ const AdminDashboard = () => {
                       <td>{f.sort}</td>
                       <td>{f.active? '✓':'✗'}</td>
                       <td style={tdActions}>
-                         <button style={iconBtn} onClick={()=> setFeatureForm({ id:f.id, titleAr:f.title?.ar||'', titleEn:f.title?.en||'', bodyAr:f.body?.ar||'', bodyEn:f.body?.en||'', icon:f.icon||'', sort:f.sort||0, active:!!f.active })}><Edit3 size={16} /></button>
-                         <button style={iconBtnDanger} onClick={()=> deleteFeature(f.id)}><Trash2 size={16} /></button>
+                         <Button variant="ghost" size="sm" onClick={()=> setFeatureForm({ id:f.id, titleAr:f.title?.ar||'', titleEn:f.title?.en||'', bodyAr:f.body?.ar||'', bodyEn:f.body?.en||'', icon:f.icon||'', sort:f.sort||0, active:!!f.active })}><Edit3 size={16} /></Button>
+                         <Button variant="danger" size="sm" onClick={()=> deleteFeature(f.id)}><Trash2 size={16} /></Button>
                        </td>
                      </tr>
                    ))}
@@ -2127,8 +2154,8 @@ const AdminDashboard = () => {
                 </select>
               </div>
               <div style={actionsRow}>
-                <button type="submit" style={primaryBtn}><Save size={16} /> {appLinkForm.id? 'حفظ' : 'إضافة'}</button>
-                {appLinkForm.id && <button type="button" style={ghostBtn} onClick={()=>setAppLinkForm({ id:null, platform:'web', url:'', labelAr:'', labelEn:'', active:true })}><X size={16}/> إلغاء</button>}
+                <Button type="submit" variant="primary"><Save size={16} /> {appLinkForm.id? 'حفظ' : 'إضافة'}</Button>
+                {appLinkForm.id && <Button type="button" variant="ghost" onClick={()=>setAppLinkForm({ id:null, platform:'web', url:'', labelAr:'', labelEn:'', active:true })}><X size={16}/> إلغاء</Button>}
               </div>
               <table style={table}>
                 <thead>
@@ -2142,8 +2169,8 @@ const AdminDashboard = () => {
                       <td>{resolveLocalized(a.label, locale) || a.label?.ar || a.label?.en || '—'}</td>
                       <td>{a.active? '✓':'✗'}</td>
                       <td style={tdActions}>
-                        <button style={iconBtn} onClick={()=> setAppLinkForm({ id:a.id, platform:a.platform, url:a.url, labelAr:a.label?.ar||'', labelEn:a.label?.en||'', active:!!a.active })}><Edit3 size={16} /></button>
-                        <button style={iconBtnDanger} onClick={()=> deleteAppLink(a.id)}><Trash2 size={16} /></button>
+                        <Button variant="ghost" size="sm" onClick={()=> setAppLinkForm({ id:a.id, platform:a.platform, url:a.url, labelAr:a.label?.ar||'', labelEn:a.label?.en||'', active:!!a.active })}><Edit3 size={16} /></Button>
+                        <Button variant="danger" size="sm" onClick={()=> deleteAppLink(a.id)}><Trash2 size={16} /></Button>
                       </td>
                     </tr>
                   ))}
@@ -2153,9 +2180,8 @@ const AdminDashboard = () => {
             </form>
         </div>
       )}
-        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 
@@ -2181,16 +2207,11 @@ const formRow = { background: 'var(--color-surface)', padding: '1rem 1.1rem 1.25
 const formGrid = { display: 'grid', gap: '.65rem', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))' };
 const actionsRow = { display: 'flex', gap: '.6rem', flexWrap: 'wrap' };
 const subTitle = { margin: 0, fontSize: '1rem', fontWeight: 700 };
-const primaryBtn = { display: 'inline-flex', alignItems: 'center', gap: '.4rem', border: 0, background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-alt))', color: '#fff', padding: '.6rem .95rem', borderRadius: 10, cursor: 'pointer', fontSize: '.75rem', fontWeight: 600, boxShadow: '0 10px 20px -12px rgba(var(--color-primary-rgb),0.35)' };
-const ghostBtn = { ...primaryBtn, background: 'var(--color-bg-alt)', color: 'var(--color-text)', boxShadow: 'none' };
-// Secondary button (neutral variant)
-const secondaryBtn = { ...primaryBtn, background: 'var(--color-bg-alt)', color: 'var(--color-text)', boxShadow: 'none' };
-// Link-like button used for small cancel actions
-const linkBtnStyle = { background: 'transparent', border: 0, color: 'var(--color-text)', opacity: .9, cursor: 'pointer', padding: '.4rem .6rem', borderRadius: 8, fontSize: '.75rem', fontWeight: 600 };
+// Deprecated local button styles removed after unification to shared UI Button
+// (primaryBtn, ghostBtn, secondaryBtn, linkBtnStyle)
 const table = { width: '100%', borderCollapse: 'collapse', background: 'var(--color-surface)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 14px -6px rgba(0,0,0,.06)', border: '1px solid var(--color-border-soft)' };
 const tdActions = { display: 'flex', gap: '.35rem', alignItems: 'center' };
-const iconBtn = { background: 'var(--color-bg-alt)', border: 0, width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, cursor: 'pointer', color: 'var(--color-text)' };
-const iconBtnDanger = { ...iconBtn, background: '#fee2e2', color: '#b91c1c' };
+// Deprecated icon button styles removed after unification (iconBtn, iconBtnDanger)
 const emptyCell = { textAlign: 'center', padding: '1rem', fontSize: '.75rem', color: 'var(--color-text-faint)' };
 const mutedP = { fontSize: '.75rem', color: 'var(--color-text-soft)', margin: '.25rem 0 1rem' };
 const ulClean = { margin: 0, padding: '0 1rem', listStyle: 'disc', lineHeight: 1.9 };
@@ -2338,7 +2359,7 @@ const CategoriesAdmin = () => {
     <div style={sectionWrap}>
       <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
         <h3 style={subTitle}>إدارة التصنيفات</h3>
-        <button type="button" onClick={load} style={primaryBtn}>تحديث</button>
+  <Button type="button" variant="primary" onClick={load}>تحديث</Button>
         {loading && <span style={{fontSize:'.65rem',color:'#64748b'}}>...تحميل</span>}
         {error && <span style={{fontSize:'.65rem',color:'#b91c1c'}}>خطأ: {error}</span>}
       </div>
@@ -2362,8 +2383,8 @@ const CategoriesAdmin = () => {
           )}
         </div>
         <div style={actionsRow}>
-          <button type="submit" style={primaryBtn}>حفظ</button>
-          {form.id && <button type="button" style={ghostBtn} onClick={reset}>إلغاء</button>}
+          <Button type="submit" variant="primary">حفظ</Button>
+          {form.id && <Button type="button" variant="ghost" onClick={reset}>إلغاء</Button>}
         </div>
       </form>
       <div style={{overflowX:'auto'}}>
@@ -2380,8 +2401,8 @@ const CategoriesAdmin = () => {
                 <td>{c.image ? <img src={c.image} alt="cat" style={{width:38,height:38,objectFit:'cover',borderRadius:6}} /> : '—'}</td>
                 <td>{c.productCount||0}</td>
                 <td style={tdActions}>
-                  <button style={iconBtn} title="تعديل" onClick={()=> setForm({ id:c.id, slug:c.slug, nameAr:c.name?.ar||'', nameEn:c.name?.en||'', descriptionAr:c.description?.ar||'', descriptionEn:c.description?.en||'', image:c.image||'', icon:c.icon||'' })}>✎</button>
-                  <button style={iconBtnDanger} title="حذف" onClick={()=> del(c.id)}>🗑</button>
+                  <Button variant="ghost" size="sm" title="تعديل" onClick={()=> setForm({ id:c.id, slug:c.slug, nameAr:c.name?.ar||'', nameEn:c.name?.en||'', descriptionAr:c.description?.ar||'', descriptionEn:c.description?.en||'', image:c.image||'', icon:c.icon||'' })}>✎</Button>
+                  <Button variant="danger" size="sm" title="حذف" onClick={()=> del(c.id)}>🗑</Button>
                 </td>
               </tr>
             ))}
@@ -2413,7 +2434,7 @@ const ReviewsModeration = () => {
     <div style={sectionWrap}>
       <h3 style={subTitle}>مراجعات بإنتظار الموافقة</h3>
       <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-        <button type="button" onClick={load} style={primaryBtn}>تحديث</button>
+        <Button type="button" variant="primary" onClick={load}>تحديث</Button>
         {loading && <span style={{fontSize:'.6rem',color:'#64748b'}}>...تحميل</span>}
         {error && <span style={{fontSize:'.6rem',color:'#b91c1c'}}>خطأ: {error}</span>}
       </div>
@@ -2432,8 +2453,8 @@ const ReviewsModeration = () => {
               <td>{r.title || '—'}</td>
               <td style={{fontSize:'.65rem'}}>{r.body?.slice(0,140)}</td>
               <td style={tdActions}>
-                <button onClick={()=>act(r.id,'approve')} style={iconBtn} title="موافقة">✔</button>
-                <button onClick={()=>act(r.id,'reject')} style={iconBtnDanger} title="رفض">✖</button>
+                <Button onClick={()=>act(r.id,'approve')} size="sm" variant="primary" title="موافقة">✔</Button>
+                <Button onClick={()=>act(r.id,'reject')} size="sm" variant="danger" title="رفض">✖</Button>
               </td>
             </tr>
           ))}

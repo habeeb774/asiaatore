@@ -29,7 +29,7 @@ function resolveMaybeHook(name, fallbackFactory) {
     const v = typeof window !== 'undefined' ? window[name] : undefined;
     if (!v) return fallbackFactory();
     if (typeof v === 'function') {
-      try { const res = v(); if (res) return res; } catch (e) { /* ignore */ }
+    try { const res = v(); if (res) return res; } catch { /* ignore */ }
     }
     if (typeof v === 'object') return v;
     return fallbackFactory();
@@ -43,7 +43,7 @@ function resolveMaybeHook(name, fallbackFactory) {
 function useSafeSidebar() {
   try {
     return useSidebar();
-  } catch (e) {
+  } catch {
     return { open: false, toggle: () => {}, openSidebar: () => {}, closeSidebar: () => {} };
   }
 }
@@ -51,7 +51,7 @@ function useSafeSidebar() {
 function useSafeLocation() {
   try {
     return useLocation();
-  } catch (e) {
+  } catch {
     return { pathname: '/' };
   }
 }
@@ -64,7 +64,7 @@ const defaultSettings = () => ({ setting: {} });
 const formatPrice = (n, locale = 'en') => {
   try {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: 'SAR', maximumFractionDigits: 2 }).format(n || 0);
-  } catch (e) {
+  } catch {
     return (n || 0).toFixed(2) + ' SAR';
   }
 };
@@ -101,7 +101,7 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
         [{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }],
         { duration: 280, easing: 'cubic-bezier(.2,.9,.3,1)' }
       );
-    } catch (e) {}
+  } catch {}
   }, [cartCount]);
 
   const onToggleSidebar = useCallback(() => toggle && toggle(), [toggle]);
@@ -215,7 +215,7 @@ export const SidebarNav = React.memo(function SidebarNav({ className = '' }) {
   const { setting } = resolveMaybeHook('__useSettings__', defaultSettings);
   const [collapsed, setCollapsed] = useState(false);
 
-  useEffect(() => { try { const saved = localStorage.getItem('sb_collapsed'); if (saved != null) setCollapsed(saved === '1'); } catch (e) {} }, []);
+  useEffect(() => { try { const saved = localStorage.getItem('sb_collapsed'); if (saved != null) setCollapsed(saved === '1'); } catch {} }, []);
   useEffect(() => { try { localStorage.setItem('sb_collapsed', collapsed ? '1' : '0'); } catch {} }, [collapsed]);
 
   const isAdmin = user?.role === 'admin';
@@ -241,7 +241,7 @@ export const SidebarNav = React.memo(function SidebarNav({ className = '' }) {
     if (typeof lbl === 'string') return lbl;
     try {
       return lbl[locale] || lbl.en || lbl.ar || Object.values(lbl)[0] || '';
-    } catch (e) { return String(lbl || ''); }
+    } catch { return String(lbl || ''); }
   };
 
   return (

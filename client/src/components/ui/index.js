@@ -1,9 +1,9 @@
 export { Button, ButtonLink, buttonVariants } from './Button';
-export { Input } from './Input';
+export { Input } from './input';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
-export { Badge } from './Badge';
-export { Label } from './Label';
-export { Skeleton } from './Skeleton';
+export { Badge } from './badge';
+export { Label } from './label';
+export { Skeleton } from './skeleton';
 export { Chip } from './Chip';
 export { default as Carousel } from './Carousel';
 export { default as Modal } from './Modal';
@@ -13,3 +13,4 @@ export { default as FloatingCart } from './FloatingCart';
 export { ToastProvider, useToast } from './ToastProvider';
 export { default as ModalMount } from './ModalMount';
 export { default as Panel } from './Panel';
+export { Tooltip } from './Tooltip';

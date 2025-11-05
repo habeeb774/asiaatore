@@ -1,10 +1,10 @@
 import React from 'react';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Label } from '../components/ui/Label';
-import { Badge } from '../components/ui/Badge';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import { Skeleton } from '../components/ui/Skeleton';
+import { Button } from '../components/ui';
+import { Input } from '../components/ui';
+import { Label } from '../components/ui';
+import { Badge } from '../components/ui';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui';
+import { Skeleton } from '../components/ui';
 
 export default function StyleGuide() {
   return (

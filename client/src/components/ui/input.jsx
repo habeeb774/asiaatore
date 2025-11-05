@@ -1,19 +1,19 @@
 import React from 'react';
 import { cn } from '../../lib/utils.js';
 
-export const Input = React.forwardRef(function Input({ className, ...props }, ref) {
-  return (
-    <input
-      ref={ref}
-      className={cn(
-        'flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm shadow-sm',
-        'placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        className
-      )}
-      {...props}
-    />
-  );
+// Input primitive using the centralized .ui-input styles
+export const Input = React.forwardRef(function Input({ className = '', size = 'md', leading, trailing, ...props }, ref) {
+  const cls = cn('ui-input', size === 'sm' ? 'ui-input--sm' : size === 'lg' ? 'ui-input--lg' : '', className);
+  if (leading || trailing) {
+    return (
+      <label className={cls}>
+        {leading ? <span className="ui-input__leading">{leading}</span> : null}
+        <input ref={ref} {...props} />
+        {trailing ? <span className="ui-input__trailing">{trailing}</span> : null}
+      </label>
+    );
+  }
+  return <input ref={ref} className={cn(cls, 'ui-input__native')} {...props} />;
 });
 
 export default Input;

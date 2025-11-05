@@ -1,6 +1,7 @@
 import React from 'react';
 import Seo from '../../components/Seo';
 import api from '../../api/client';
+import AdminLayout from '../../components/admin/AdminLayout';
 
 // Tiny sparkline canvas (no external deps)
 function Sparkline({ points = [], width = 560, height = 100, stroke = '#111827', fill = 'rgba(17,24,39,0.08)' }) {
@@ -188,9 +189,8 @@ const Analytics = () => {
   };
 
   return (
-    <div className="admin-page-wrapper">
+    <AdminLayout title="التحليلات / Analytics">
       <Seo title="التحليلات | Analytics" description="Analytics overview" />
-      <h1 className="page-title">التحليلات / Analytics</h1>
       {error && <div className="error" style={{ marginTop:8 }}>{String(error)}</div>}
 
       {/* Filters */}
@@ -364,7 +364,7 @@ const Analytics = () => {
           </table>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 export default Analytics;

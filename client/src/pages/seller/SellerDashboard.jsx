@@ -1,5 +1,6 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { Link } from 'react-router-dom';
+import { Button, ButtonLink, buttonVariants } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useOrders } from '../../context/OrdersContext';
 import { useStore } from '../../context/StoreContext';
@@ -7,7 +8,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { localizeName } from '../../utils/locale';
 const ProductManager = React.lazy(() => import('./ProductManager'));
 // Shared admin styles (includes .skeleton and layout helpers)
-import '../../styles/AdminPage.scss';
+// Styles consolidated into `styles/index.scss`
 
 const SellerDashboard = () => {
   const auth = useAuth() || {};
@@ -66,9 +67,9 @@ const SellerDashboard = () => {
           <div>لا تملك صلاحية الدخول إلى لوحة البائع</div>
           <div className="text-xs text-gray-500 mt-2">لأغراض التجربة، يمكنك تسجيل دخول تجريبي كبائع من قائمة الحساب في الهيدر.</div>
           {typeof devLoginAs === 'function' && (
-            <button className="btn-primary mt-4" onClick={() => devLoginAs('seller')}>
+            <Button variant="primary" className="mt-4" onClick={() => devLoginAs('seller')}>
               تسجيل دخول تجريبي كبائع الآن
-            </button>
+            </Button>
           )}
         </div>
       ) : (
@@ -76,16 +77,16 @@ const SellerDashboard = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>لوحة البائع</h2>
         <div className="flex items-center gap-2">
-          <Link to="/seller/products" className="btn-primary" style={{ background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-alt))' }}>إدارة المنتجات</Link>
-          <Link to={`/vendor/${user.id}`} className="btn-secondary" style={{ background: 'var(--color-bg-alt)', color: 'var(--color-text)' }}>متجرى العام</Link>
+          <Link to="/seller/products" className={buttonVariants({ variant: 'primary', size: 'md', className: '' })} style={{ background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-alt))' }}>إدارة المنتجات</Link>
+          <Link to={`/vendor/${user.id}`} className={buttonVariants({ variant: 'secondary', size: 'md' })} style={{ background: 'var(--color-bg-alt)', color: 'var(--color-text)' }}>متجرى العام</Link>
         </div>
       </div>
       <p className="mb-6">مرحباً، {user.name}</p>
 
       {/* Tabs */}
       <div className="mb-6 flex items-center gap-2 text-sm">
-        <button className={`btn-chip ${tab==='overview'?'bg-primary-red text-white':'bg-gray-100'}`} onClick={()=>setTab('overview')}>نظرة عامة</button>
-        <button className={`btn-chip ${tab==='products'?'bg-primary-red text-white':'bg-gray-100'}`} onClick={()=>setTab('products')}>منتجاتي</button>
+        <Button variant="ghost" size="sm" className={`btn-chip ${tab==='overview'?'bg-primary-red text-white':'bg-gray-100'}`} onClick={()=>setTab('overview')}>نظرة عامة</Button>
+        <Button variant="ghost" size="sm" className={`btn-chip ${tab==='products'?'bg-primary-red text-white':'bg-gray-100'}`} onClick={()=>setTab('products')}>منتجاتي</Button>
       </div>
 
       {tab==='overview' && (
@@ -119,9 +120,9 @@ const SellerDashboard = () => {
           <div className="mb-6">
             <h3 className="font-semibold mb-3">إجراءات سريعة</h3>
             <div className="flex flex-wrap items-center gap-3">
-              <Link to="/seller/products" className="btn-outline">إضافة منتج جديد</Link>
-              <Link to="/products" className="btn-outline">استعراض المتجر</Link>
-              <a href="#" className="btn-outline" onClick={(e)=>e.preventDefault()}>إعدادات الشحن (قريباً)</a>
+              <Link to="/seller/products" className={buttonVariants({ variant: 'outline', size: 'md' })}>إضافة منتج جديد</Link>
+              <Link to="/products" className={buttonVariants({ variant: 'outline', size: 'md' })}>استعراض المتجر</Link>
+              <Button variant="outline" size="md" onClick={(e)=>e.preventDefault()}>إعدادات الشحن (قريباً)</Button>
             </div>
           </div>
         </>

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
 import ReactLeafletCompat from '../../utils/reactLeafletCompat.jsx';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
+import { Badge } from '../../components/ui';
 import { Navigation, Upload, AlertCircle } from 'lucide-react';
 import DriverSupport from '../../components/DriverSupport.jsx';
 

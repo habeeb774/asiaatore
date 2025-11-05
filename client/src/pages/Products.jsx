@@ -6,6 +6,7 @@ import ProductGridSkeleton from '../components/products/ProductGridSkeleton.jsx'
 import { useProducts, useProductPrefetch, useNextPagePrefetch } from '../api/products';
 import { useLanguage } from '../context/LanguageContext';
 import Seo from '../components/Seo';
+import Button from '../components/ui/Button';
 import { useSettings } from '../context/SettingsContext';
 import { t } from '../utils/i18n';
 import Breadcrumbs from '../components/common/Breadcrumbs';
@@ -257,14 +258,15 @@ const Products = () => {
           {/* Load more / incremental pagination */}
           {currentPage < totalPages && (
             <div className="flex justify-center mt-6">
-              <button
-                className="btn-primary px-4 py-2"
+              <Button
+                variant="primary"
+                className="px-4 py-2"
                 onClick={() => {
                   setServerParams(prev => ({ ...prev, page: (Number(prev.page) || 1) + 1 }));
                   setFilters(f => ({ ...f, page: (Number(f.page) || 1) + 1 }));
                 }}
                 disabled={isFetching}
-              >{isFetching ? (locale==='ar' ? 'جارٍ التحميل...' : 'Loading...') : (locale==='ar' ? 'تحميل المزيد' : 'Load more')}</button>
+              >{isFetching ? (locale==='ar' ? 'جارٍ التحميل...' : 'Loading...') : (locale==='ar' ? 'تحميل المزيد' : 'Load more')}</Button>
             </div>
           )}
         </section>

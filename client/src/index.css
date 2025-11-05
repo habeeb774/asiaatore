@@ -1,4 +1,8 @@
-@import './styles/ui.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ui.css is imported from JS (main.jsx) to avoid PostCSS @import ordering errors */
 
 /* Force home-hero background to use only colorPrimary and remove any gradient */
 .home-hero {
@@ -29,10 +33,6 @@ body.dark-mode {
   color: #f1f5f9;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* SCSS files are imported from JS (see main.jsx) to avoid PostCSS @import order issues */
 
 
@@ -41,6 +41,7 @@ body.dark-mode {
   --font-sans: 'Cairo', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans Arabic', sans-serif;
   --font-serif: 'Amiri', 'Noto Naskh Arabic', serif;
   font-family: var(--font-sans);
+  font-size: 80%;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -69,9 +70,9 @@ body.dark-mode {
   --primary-dark: #10b981;
   --secondary: #fbbf24;
   --accent: #a78bfa;
-  --background: #0f172a;
-  --surface: #1e293b;
-  --text-primary: #f1f5f9;
+  --background: #a8adb8;
+  --surface: #c5c9d0;
+  --text-primary: #f7fbff;
   --text-secondary: #cbd5e1;
   color-scheme: dark;
   color: var(--text-primary);
@@ -86,7 +87,7 @@ body.dark-mode {
   color-scheme: light;
 }
 .theme-dark {
-  --color-bg: #0b0f19;
+  --color-bg: #b9bbc1;
   --color-fg: rgba(255, 255, 255, 0.90);
   --color-muted: #94a3b8;
   color-scheme: dark;

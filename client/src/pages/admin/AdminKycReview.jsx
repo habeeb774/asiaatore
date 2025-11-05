@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import adminApi from '../../api/admin';
+import { Button } from '../../components/ui';
+import AdminLayout from '../../components/admin/AdminLayout';
 
 export default function AdminKycReview() {
   const [items, setItems] = useState([]);
@@ -37,8 +39,8 @@ export default function AdminKycReview() {
     }
   };
   return (
-    <div className="container-custom p-4">
-      <h2 className="text-xl font-bold mb-4">مراجعة KYC للبائعين</h2>
+    <AdminLayout title="مراجعة KYC للبائعين">
+      <div className="container-custom p-4">
       <div className="flex items-center gap-2 mb-3 text-sm">
         <label>الحالة:</label>
         <select className="border px-2 py-1" value={status} onChange={e=>setStatus(e.target.value)}>
@@ -47,7 +49,7 @@ export default function AdminKycReview() {
           <option value="rejected">Rejected</option>
           <option value="none">None</option>
         </select>
-        <button className="btn-secondary btn-xs" onClick={load}>تحديث</button>
+  <Button variant="outline" size="sm" onClick={load}>تحديث</Button>
       </div>
       {error && <div className="text-sm text-red-600 mb-2">خطأ: {String(error)}</div>}
       {loading ? (
@@ -59,8 +61,8 @@ export default function AdminKycReview() {
               <div className="flex justify-between items-center">
                 <div className="font-semibold">{s.storeName} — {s.user?.email || s.userId}</div>
                 <div className="flex gap-2">
-                  <button className="btn-primary btn-xs" onClick={()=>approve(s.id)}>موافقة</button>
-                  <button className="btn-danger btn-xs" onClick={()=>reject(s.id)}>رفض</button>
+                  <Button variant="primary" size="sm" onClick={()=>approve(s.id)}>موافقة</Button>
+                  <Button variant="danger" size="sm" onClick={()=>reject(s.id)}>رفض</Button>
                 </div>
               </div>
               <div>Company: {s.companyName || '—'} | CR: {s.crNumber || '—'}</div>
@@ -72,6 +74,7 @@ export default function AdminKycReview() {
           {items.length === 0 && <li className="text-gray-500">لا يوجد عناصر</li>}
         </ul>
       )}
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

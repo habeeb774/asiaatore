@@ -6,8 +6,26 @@ import jsxA11y from 'eslint-plugin-jsx-a11y'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  // ignore large build artifacts and generated assets
-  globalIgnores(['client/dist/**', 'dist/**', 'client/.vite/**', 'node_modules/**']),
+  // ignore large build artifacts, scripts, TypeScript and generated assets
+  globalIgnores([
+    'client/dist/**',
+    'dist/**',
+    'client/.vite/**',
+    'node_modules/**',
+    'themes/**',
+  '.gh-pages/**',
+  '.frontend-gh-pages/**',
+    'temp/**',
+    'uploads/**',
+    'public/**',
+    'client/public/**',
+    'client/scripts/**',
+    'client/src/**/*.ts',
+    'client/src/**/*.tsx',
+    'client/tests/**',
+    'client/**/*.spec.ts',
+    'client/**/*.test.ts',
+  ]),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

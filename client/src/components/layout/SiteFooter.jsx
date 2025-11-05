@@ -1,6 +1,5 @@
 import React from 'react';
 import SafeImage from '../common/SafeImage';
-import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
 import { resolveLocalized } from '../../utils/locale';
@@ -10,74 +9,98 @@ import { Phone, Smartphone, Mail, MessageCircle } from 'lucide-react';
 
 function FooterAbout({ isAr, storeName, logo, aboutLines }) {
   return (
-    <ul className={`footer-about text-slate-700 ${isAr ? 'text-right' : 'text-left'} flex-shrink-0 min-w-[280px] snap-start`}>
-      <div className="flex items-center gap-2 mb-3">
-          <SafeImage src={logo} alt={storeName} className="h-10 w-auto" />
-          <span className="sr-only">{storeName}</span>
-        </div>
-      <div className="text-sm leading-7 space-y-1">
+    <div className={`space-y-4 text-slate-700 text-center ${isAr ? 'md:text-right' : 'md:text-left'}`}>
+      <div className={`flex justify-center md:justify-start ${isAr ? 'md:justify-end' : 'md:justify-start'}`}>
+        <SafeImage src={logo} alt={storeName} className="h-12 w-auto" />
+        <span className="sr-only">{storeName}</span>
+      </div>
+      <div className="text-sm leading-7 space-y-2">
         {aboutLines.map((line, idx) => (
           <p key={idx}>{line}</p>
         ))}
-      </div>
-    </ul>
-  );
-}
-
-function FooterLinks({ t, linkBlog, linkSocial, linkReturns, linkPrivacy }) {
-  return (
-    <ul className="footer-links text-slate-700 text-center border-s border-slate-200 ps-6 md:ps-8 flex-shrink-0 min-w-[220px] snap-start">
-  <h3 className="mb-3 text-base font-extrabold" style={{ color: 'var(--brand-orange)' }}>{t.links}</h3>
-      <ul className="space-y-2 text-sm">
-        <li><a href={linkBlog} className="footer-link hover:text-slate-900">{t.blog}</a></li>
-        <li><a href={linkSocial} className="footer-link hover:text-slate-900">{t.social}</a></li>
-        <li><a href={linkReturns} className="footer-link hover:text-slate-900">{t.returns}</a></li>
-        <li><a href={linkPrivacy} className="footer-link hover:text-slate-900">{t.privacy}</a></li>
-      </ul>
-    </ul>
-  );
-}
-
-function FooterSupport({ t, chatPath, supportMobile, supportPhone, supportEmail }) {
-  return (
-    <div className="footer-support text-slate-700 text-center border-s border-slate-200 ps-6 md:ps-8 flex-shrink-0 min-w-[220px] sm:min-w-[260px] snap-start">
-  <h3 className="mb-3 text-base font-extrabold" style={{ color: 'var(--brand-orange)' }}>{t.support}</h3>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 justify-items-center md:flex md:flex-wrap md:justify-center">
-        <Link to={chatPath} aria-label={t.chat} className="footer-support-link inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
-          <span className="footer-icon flex items-center justify-center rounded-md bg-slate-100 hover:bg-slate-200 w-8 h-8 sm:w-9 sm:h-9 transition-colors"><MessageCircle size={16} /></span>
-          <span className="hidden sm:inline">{t.chat}</span>
-        </Link>
-        <a href={`tel:${supportMobile}`} aria-label={t.mobile} className="footer-support-link inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
-          <span className="footer-icon flex items-center justify-center rounded-md bg-slate-100 hover:bg-slate-200 w-8 h-8 sm:w-9 sm:h-9 transition-colors"><Smartphone size={16} /></span>
-          <span className="hidden sm:inline">{t.mobile}</span>
-        </a>
-        <a href={`tel:${supportPhone}`} aria-label={t.phone} className="footer-support-link inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
-          <span className="footer-icon flex items-center justify-center rounded-md bg-slate-100 hover:bg-slate-200 w-8 h-8 sm:w-9 sm:h-9 transition-colors"><Phone size={16} /></span>
-          <span className="hidden sm:inline">{t.phone}</span>
-        </a>
-        <a href={`mailto:${supportEmail}`} aria-label={t.email} className="footer-support-link inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm leading-none text-slate-800 whitespace-nowrap rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-shadow hover:shadow-sm">
-          <span className="footer-icon flex items-center justify-center rounded-md bg-slate-100 hover:bg-slate-200 w-8 h-8 sm:w-9 sm:h-9 transition-colors"><Mail size={16} /></span>
-          <span className="hidden sm:inline">{t.email}</span>
-        </a>
       </div>
     </div>
   );
 }
 
-function FooterAppBadges({ t, appStoreUrl, playStoreUrl, isRtl, taxNumber }) {
+function FooterLinks({ t, linkBlog, linkSocial, linkReturns, linkPrivacy, isAr }) {
   return (
-    <div className="footer-app-badges text-slate-700 text-center border-s border-slate-200 ps-6 md:ps-8 flex-shrink-0 min-w-[260px] snap-start">
-  <h3 className="mb-3 text-base font-extrabold" style={{ color: 'var(--brand-orange)' }}>{t.appTitle}</h3>
+    <div className="text-center">
+      <h3 className="mb-4 text-lg font-bold text-[#E6A400]">{t.links}</h3>
+      <div className={`space-y-2 text-sm text-slate-700 ${isAr ? 'md:text-right' : 'md:text-left'}`}>
+        <a href={linkBlog} className="block transition-colors hover:text-[#E6A400]">{t.blog}</a>
+        <a href={linkSocial} className="block transition-colors hover:text-[#E6A400]">{t.social}</a>
+        <a href={linkReturns} className="block transition-colors hover:text-[#E6A400]">{t.returns}</a>
+        <a href={linkPrivacy} className="block transition-colors hover:text-[#E6A400]">{t.privacy}</a>
+      </div>
+    </div>
+  );
+}
+
+function FooterSupport({ t, supportWhatsapp, supportMobile, supportPhone, supportEmail }) {
+  const items = [
+    {
+      label: t.whatsapp,
+      href: `https://wa.me/${supportWhatsapp}`,
+      aria: 'WhatsApp',
+      Icon: MessageCircle
+    },
+    {
+      label: t.mobile,
+      href: `tel:${supportMobile}`,
+      aria: t.mobile,
+      Icon: Smartphone
+    },
+    {
+      label: t.phone,
+      href: `tel:${supportPhone}`,
+      aria: t.phone,
+      Icon: Phone
+    },
+    {
+      label: t.email,
+      href: `mailto:${supportEmail}`,
+      aria: t.email,
+      Icon: Mail
+    }
+  ];
+
+  return (
+    <div className="text-center">
+      <h3 className="mb-4 text-lg font-bold text-[#E6A400]">{t.support}</h3>
+      <div className="grid grid-cols-2 gap-4">
+        {items.map(({ label, href, aria, Icon }) => (
+          <a
+            key={label}
+            href={href}
+            aria-label={aria}
+            className="group flex flex-col items-center gap-2 text-sm text-slate-700"
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-colors group-hover:border-[#E6A400]">
+              <Icon size={18} className="text-slate-600" />
+            </span>
+            <span>{label}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FooterAppBadges({ t, appStoreUrl, playStoreUrl, taxNumber, isAr }) {
+  return (
+    <div className="text-center">
+      <h3 className="mb-4 text-lg font-bold text-[#E6A400]">{t.appTitle}</h3>
       <AppBadges
         appStoreUrl={appStoreUrl}
         playStoreUrl={playStoreUrl}
         playBadgeAlt={t.playBadgeAlt}
         appStoreBadgeAlt={t.appStoreBadgeAlt}
-        isRtl={isRtl}
+        isRtl={isAr}
       />
-      <div className="text-center">
-        <div className="text-sm text-slate-700 mb-1">{isRtl ? 'الرقم الضريبي' : 'Tax number'}</div>
-        <div className="text-sm font-semibold tracking-wide">{taxNumber}</div>
+      <div className="mt-4 text-sm text-slate-700">
+        <p className="font-medium">{isAr ? 'الرقم الضريبي' : 'Tax number'}</p>
+        <span className="font-semibold tracking-wide">{taxNumber}</span>
       </div>
     </div>
   );
@@ -143,11 +166,10 @@ const SiteFooter = () => {
   const isAr = locale === 'ar';
   const storeName = resolveLocalized(setting?.siteName, locale) || (isAr ? (setting?.siteNameAr || 'شركة منفذ اسيا التجارية') : (setting?.siteNameEn || 'My Store'));
   const taxNumber = setting?.taxNumber || '311307460300003';
-  const address = (isAr ? setting?.addressAr : setting?.addressEn) || '';
-  const reg = setting?.commercialRegNo || '';
   const supportPhone = setting?.supportPhone || '920000000';
   const supportMobile = setting?.supportMobile || '+966500000000';
   const supportWhatsapp = setting?.supportWhatsapp || '966500000000';
+  const supportWhatsappDigits = (supportWhatsapp || '').replace(/[^0-9]/g, '') || '966500000000';
   const supportEmail = setting?.supportEmail || 'support@example.com';
   const linkBlog = setting?.linkBlog || '#';
   const linkSocial = setting?.linkSocial || '#';
@@ -155,7 +177,7 @@ const SiteFooter = () => {
   const linkPrivacy = setting?.linkPrivacy || '#';
   const appStoreUrl = setting?.appStoreUrl || '#';
   const playStoreUrl = setting?.playStoreUrl || '#';
-  const chatPath = isAr ? '/chat' : (locale === 'en' ? '/en/chat' : '/fr/chat');
+  const year = new Date().getFullYear();
 
   const t = {
     appTitle: isAr ? `تطبيق ${storeName}` : `${storeName} App`,
@@ -194,49 +216,73 @@ const SiteFooter = () => {
     );
 
   return (
-    <footer className="site-footer mt-12 bg-gradient-to-r from-white/90 via-[#F6FFF0] to-white/90 border-t border-slate-200">
-      <div className="container-custom px-4 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-          <div className="md:col-span-4">
-            <FooterAbout isAr={isAr} storeName={storeName} logo={setting?.logoUrl || setting?.logo || '/logo.svg'} aboutLines={aboutLines} />
-          </div>
-
-          <div className="md:col-span-2">
-            <FooterLinks t={t} linkBlog={linkBlog} linkSocial={linkSocial} linkReturns={linkReturns} linkPrivacy={linkPrivacy} />
-          </div>
-
-          <div className="md:col-span-3">
-            <FooterSupport t={t} chatPath={chatPath} supportMobile={supportMobile} supportPhone={supportPhone} supportEmail={supportEmail} />
-          </div>
-
-          <div className="md:col-span-3">
-            <FooterAppBadges t={t} appStoreUrl={appStoreUrl} playStoreUrl={playStoreUrl} isRtl={isAr} taxNumber={taxNumber} />
-          </div>
+    <footer dir={isAr ? 'rtl' : 'ltr'} className="bg-white border-t border-slate-200">
+      <div className="mx-auto w-full max-w-6xl px-4 py-12">
+        <div className="grid gap-10 text-center md:grid-cols-4 md:text-right">
+          <FooterAbout
+            isAr={isAr}
+            storeName={storeName}
+            logo={setting?.logoUrl || setting?.logo || '/logo.svg'}
+            aboutLines={aboutLines}
+          />
+          <FooterLinks
+            t={t}
+            linkBlog={linkBlog}
+            linkSocial={linkSocial}
+            linkReturns={linkReturns}
+            linkPrivacy={linkPrivacy}
+            isAr={isAr}
+          />
+          <FooterSupport
+            t={t}
+            supportWhatsapp={supportWhatsappDigits}
+            supportMobile={supportMobile}
+            supportPhone={supportPhone}
+            supportEmail={supportEmail}
+          />
+          <FooterAppBadges
+            t={t}
+            appStoreUrl={appStoreUrl}
+            playStoreUrl={playStoreUrl}
+            taxNumber={taxNumber}
+            isAr={isAr}
+          />
         </div>
 
-        <div className="mt-8 border-t border-slate-200 pt-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-slate-700">
-              <span className="block md:inline">© {new Date().getFullYear()} {storeName}.</span>
-              <span className="hidden md:inline">&nbsp;{isAr ? 'جميع الحقوق محفوظة' : 'All rights reserved'}.</span>
-              {(address || reg) && (
-                <span className="block md:inline ms-2">
-                  {isAr ? 'العنوان' : 'Address'}: {address || '-'}{reg ? ` · ${isAr ? 'السجل التجاري' : 'CR'}: ${reg}` : ''}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <a href={linkSocial} className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-primary focus:outline-none focus:ring-2 focus:ring-amber-500/40 rounded-md px-2 py-1">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="opacity-90"><path d="M22 5.924c-.68.302-1.412.505-2.183.597.786-.47 1.39-1.213 1.674-2.1-.734.435-1.549.75-2.415.921C18.5 4.17 17.45 3.7 16.273 3.7c-2.06 0-3.735 1.674-3.735 3.735 0 .293.034.578.096.85C9.69 7.947 7.12 6.53 5.07 4.368c-.321.55-.505 1.19-.505 1.87 0 1.29.656 2.427 1.654 3.092-.61-.02-1.188-.188-1.69-.47v.05c0 1.8 1.28 3.297 2.978 3.64-.312.084-.64.129-.978.129-.24 0-.474-.024-.699-.066.475 1.486 1.854 2.57 3.488 2.6-1.279 1.003-2.892 1.602-4.645 1.602-.302 0-.6-.018-.895-.053C6.467 21.04 8.244 21.7 10.17 21.7c6.444 0 9.968-5.34 9.968-9.97 0-.152-.004-.304-.01-.455.68-.49 1.27-1.1 1.74-1.8-.626.28-1.3.468-2 .573z"/></svg>
-                <span className="sr-only">{isAr ? 'مواقع التواصل' : 'Social'}</span>
-              </a>
-
-              <a href={linkPrivacy} className="text-sm text-slate-700 hover:text-slate-900 underline">
-                {isAr ? 'الشروط والخصوصية' : 'Privacy & Terms'}
-              </a>
-            </div>
+        <div className="mt-12 flex flex-col items-center gap-6 border-t border-slate-200 pt-6 text-center md:flex-row md:justify-between md:text-right">
+          <div className="flex items-center gap-3 text-sm text-slate-600">
+            <a
+              href="https://eauthenticate.saudibusiness.gov.sa/certificate-details/7029136350"
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+              aria-label={isAr ? 'شهادة موثوق' : 'Trusted certificate'}
+            >
+              <img src="https://cdn.salla.network/images/sbc.png?v=2.0.5" alt="sbc certificate" className="max-h-full" />
+            </a>
+            <span>{isAr ? 'موثَّق في منصة الأعمال' : 'Verified on the Business Platform'}</span>
           </div>
+
+          <ul className="flex flex-wrap items-center justify-center gap-3">
+            {[
+              { alt: 'mada', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/mada.png' },
+              { alt: 'mastercard', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/mastercard.png' },
+              { alt: 'visa', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/visa.png' },
+              { alt: 'bank transfer', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/bank.png' },
+              { alt: 'apple pay', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/apple_pay.png' },
+              { alt: 'tabby', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/tabby_installment.png' },
+              { alt: 'tamara', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/tamara_installment.png' },
+              { alt: 'cash on delivery', src: 'https://cdn.assets.salla.network/themes/1034648396/1.130.0/images/cod.png' }
+            ].map(({ alt, src }) => (
+              <li key={alt} className="flex h-8 w-14 items-center justify-center rounded-md border border-slate-200 bg-white p-1 shadow-sm">
+                <img src={src} alt={alt} className="max-h-full" />
+              </li>
+            ))}
+          </ul>
+
+          <p className="text-sm text-slate-500">
+            {isAr ? `صنع بإتقان على منصة سلة | ${year}` : `Crafted with care on the Salla platform | ${year}`}
+          </p>
         </div>
       </div>
     </footer>

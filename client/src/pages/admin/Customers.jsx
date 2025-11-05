@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDebounce } from 'use-debounce';
 import { Plus, RefreshCw, Upload, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import Seo from '../../components/Seo';
-import api from '../../api/client';
+import { adminApi } from '../../api/admin';
 import { useToast } from '../../context/ToastContext';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminTableSkeleton from '../../components/admin/AdminTableSkeleton';
-import { Button } from '../../components/common/Button';
+import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/Card';
@@ -48,7 +48,7 @@ const Customers = () => {
         sortBy: sort.by,
         sortDir: sort.dir,
       };
-      const res = await api.listUsers(params);
+  const res = await adminApi.listUsers(params);
       setUsers(res.users || []);
       setTotalUsers(res.total || 0);
     } catch (e) {
@@ -201,7 +201,7 @@ const Customers = () => {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <AdminTableSkeleton rows={pageSize} cols={6} />
+                    <AdminTableSkeleton rows={pageSize} cols={6} asRows />
                   ) : error ? (
                     <tr><td colSpan="6" className="text-center py-12 text-red-500">{error}</td></tr>
                   ) : users.length === 0 ? (

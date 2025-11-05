@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import api from '../../api/client';
+import { adminApi } from '../../api/admin';
 import { useToast } from '../../context/ToastContext';
-import { Button } from '../common/Button';
+import { Button } from '../ui/Button';
 import { Select } from '../common/Select';
 import { MoreVertical, Trash2, UserX, UserCheck } from 'lucide-react';
 
@@ -13,7 +13,7 @@ const UserRow = ({ user, onUserUpdated, onUserDeleted }) => {
 
   const handleRoleUpdate = async () => {
     try {
-      await api.adminUserUpdate(user.id, { role: newRole });
+  await adminApi.updateUser(user.id, { role: newRole });
       onUserUpdated({ ...user, role: newRole });
       setIsEditing(false);
       toast.success('تم تحديث الدور بنجاح');
@@ -25,11 +25,8 @@ const UserRow = ({ user, onUserUpdated, onUserDeleted }) => {
   const handleStatusToggle = async () => {
     const newStatus = !user.active;
     try {
-      if (newStatus) {
-        await api.adminUserActivate(user.id);
-      } else {
-        await api.adminUserDeactivate(user.id);
-      }
+      if (newStatus) await adminApi.activateUser(user.id);
+      else await adminApi.deactivateUser(user.id);
       onUserUpdated({ ...user, active: newStatus });
       toast.success(`تم ${newStatus ? 'تفعيل' : 'تعطيل'} المستخدم`);
     } catch (e) {
@@ -40,7 +37,7 @@ const UserRow = ({ user, onUserUpdated, onUserDeleted }) => {
   const handleDelete = async () => {
     if (window.confirm(`هل أنت متأكد من حذف المستخدم: ${user.name || user.email}؟`)) {
       try {
-        await api.adminUserDelete(user.id);
+  await adminApi.deleteUser(user.id);
         onUserDeleted(user.id);
         toast.success('تم حذف المستخدم بنجاح');
       } catch (e) {

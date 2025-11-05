@@ -1,4 +1,4 @@
-import '../../styles/Cart.css'
+// Styles consolidated into `styles/index.scss`
 import { resolveLocalized } from '../../utils/locale';
 
 const Cart = ({ cartItems, removeFromCart, updateQuantity, toggleCart }) => {

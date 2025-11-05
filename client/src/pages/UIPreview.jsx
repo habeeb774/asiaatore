@@ -1,9 +1,9 @@
 import React from 'react';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui';
+import { Badge } from '../components/ui';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import { Chip } from '../components/ui/Chip';
-import { Skeleton } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui';
 
 // Tiny UI preview playground to exercise variants and sizes
 export default function UIPreview() {

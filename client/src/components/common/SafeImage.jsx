@@ -42,7 +42,15 @@ export default function SafeImage({ src, alt, className = '', style = {}, loadin
       pending.current = null;
     };
     img.onerror = () => {
-      // keep last good image (no change)
+      // keep last good image (no change). If nothing has ever loaded, fall back
+      // to a local asset (site logo) to avoid broken external-placeholder DNS.
+      if (!lastGood.current) {
+        try {
+          // Prefer a neutral product fallback image to indicate missing media
+          lastGood.current = '/images/product-fallback.svg';
+          setCurrent(lastGood.current);
+        } catch {}
+      }
       pending.current = null;
     };
     // start loading

@@ -32,12 +32,13 @@ let attachUser;
 let authRoutes, productsRoutes, brandsRoutes, ordersRoutes, marketingRoutes, tierPricesRoutes, sellersRoutes, deliveryRoutes;
 let inventoryRoutes, reportsRoutes, invoicesRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
-let envRoutes;
+let envRoutes, endpointsRoutes;
 let adminUsersRoutes, adminStatsRoutes, adminAuditRoutes, adminSellersRoutes;
 let paypalRouter, bankRouter, stcRouter;
 let wishlistRoutes, cartRoutes, searchRoutes, supportRoutes;
 let setupRoutes;
 let shippingRoutes, shippingWebhooksRoutes, smsaRoutes;
+let DB_STATUS = { connected: false, lastPingMs: null, error: null };
 
 const app = express();
 let PORT = Number(process.env.PORT) || 4000;
@@ -184,7 +185,6 @@ try {
 } catch {}
 
 // Health endpoints and DB diagnostics
-let DB_STATUS = { connected: false, lastPingMs: null, error: null };
 async function pingDb() {
     const start = Date.now();
     try {
@@ -280,7 +280,7 @@ async function loadModulesAndMount() {
     prisma = prismaMod.default;
     const authMod = await import('./middleware/auth.js');
     attachUser = authMod.attachUser;
-    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR, invoicesR, legalR, shippingR, shippingWebhooksR, setupR, smsaR, envR] = await Promise.all([
+    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR, invoicesR, legalR, shippingR, shippingWebhooksR, setupR, smsaR, envR, endpointsR] = await Promise.all([
         import('./routes/auth.js'),
         import('./routes/products.js'),
         import('./routes/brands.js'),
@@ -313,13 +313,14 @@ async function loadModulesAndMount() {
         import('./routes/setup.js'),
         import('./routes/smsa.js'),
         import('./routes/env.js'),
+        import('./routes/endpoints.js'),
     ]);
     authRoutes = authR.default; productsRoutes = prodR.default; brandsRoutes = brandR.default; ordersRoutes = orderR.default;
     marketingRoutes = mktR.default; tierPricesRoutes = tierR.default; sellersRoutes = sellR.default; deliveryRoutes = delivR.default;
     inventoryRoutes = invR.default; reportsRoutes = repR.default; invoicesRoutes = invoicesR.default;
     paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default;
     settingsRoutes = settingsR.default; categoriesRoutes = categoriesR.default; reviewsRoutes = reviewsR.default; addressesRoutes = addressesR.default;
-    envRoutes = envR.default;
+    envRoutes = envR.default; endpointsRoutes = endpointsR.default;
     supportRoutes = supportR.default;
     shippingRoutes = shippingR.default; shippingWebhooksRoutes = shippingWebhooksR.default;
     adminUsersRoutes = adminUsersR.default; adminStatsRoutes = adminStatsR.default; adminAuditRoutes = adminAuditR.default;
@@ -368,6 +369,7 @@ async function loadModulesAndMount() {
     if (adminStatsRoutes) app.use('/api/admin/stats', adminStatsRoutes);
     if (adminAuditRoutes) app.use('/api/admin/audit', adminAuditRoutes);
     if (adminSellersRoutes) app.use('/api/admin/sellers', adminSellersRoutes);
+    app.use('/api/endpoints', endpointsRoutes);
 }
 await loadModulesAndMount();
 

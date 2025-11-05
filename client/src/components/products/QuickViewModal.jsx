@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import LazyImage from '../common/LazyImage';
+import Button from '../ui/Button';
 import { resolveLocalized } from '../../utils/locale';
 
 const QuickViewModal = ({ product, onClose }) => {
@@ -108,7 +109,7 @@ const QuickViewModal = ({ product, onClose }) => {
                 <span>{outOfStock ? (locale==='ar'?'غير متوفر':'Out of stock') : (locale==='ar'?'متوفر':'In stock')}{(selectedVariant?.stock ?? product.stock) != null ? ` · ${selectedVariant?.stock ?? product.stock}` : ''}</span>
               </div>
 
-              <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:12}}>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:12}}>
                 {/* quantity selector */}
                 <div style={{display:'flex',alignItems:'center',gap:6}}>
                   <button className="qv-qty-btn" onClick={() => setQty(q => Math.max(1, q-1))} disabled={qty<=1}>-</button>
@@ -116,7 +117,8 @@ const QuickViewModal = ({ product, onClose }) => {
                   <button className="qv-qty-btn" onClick={() => setQty(q => Math.min(q+1, (selectedVariant?.stock ?? product.stock) || maxPerItem || 99))} disabled={qty>=(selectedVariant?.stock ?? product.stock) || qty>=(maxPerItem||99)}>+</button>
                 </div>
 
-                <button
+                <Button
+                  variant="primary"
                   className={`add-btn ${btnState==='added'?'added':''} ${btnState==='max'?'at-max':''}`}
                   disabled={outOfStock || reachedMax}
                   style={outOfStock||reachedMax?{opacity:.6,cursor:'not-allowed'}:null}
@@ -135,9 +137,9 @@ const QuickViewModal = ({ product, onClose }) => {
                   }}
                 >
                   {outOfStock ? (locale==='ar'?'غير متوفر':'Out of stock') : reachedMax ? (locale==='ar'?'الحد الأقصى':'Max') : btnState==='added' ? (locale==='ar'?'✓ تمت الإضافة':'✓ Added') : (t && t('addToCart') )}
-                </button>
+                </Button>
                 {currentQty > 0 && <span style={{fontSize:12,color:'#475569'}}>({locale==='ar'?'في السلة':'In cart'}: {currentQty})</span>}
-                <button onClick={onClose} className="btn-secondary" style={{fontSize:12}}>{locale==='ar'?'إغلاق':'Close'}</button>
+                <Button variant="secondary" size="sm" onClick={onClose} style={{fontSize:12}}>{locale==='ar'?'إغلاق':'Close'}</Button>
               </div>
             </div>
         </div>

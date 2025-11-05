@@ -1,0 +1,16 @@
+{
+  "name": "my-store-client-theme",
+  "version": "1.0.0",
+  "description": "Wrapper theme that serves the client build as a Salla Twilight theme",
+  "license": "MIT",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "build-client": "cd ../../client && npm run build",
+    "prepare-theme": "node ./scripts/copy-client-build.js",
+    "watch": "pnpm run build-client && pnpm run prepare-theme && echo \"Ready for preview. Run: salla theme preview -ol\"",
+    "start": "pnpm run watch",
+    "preview": "npx serve ./public -l 8000"
+  },
+  "author": "",
+  "devDependencies": {}
+}

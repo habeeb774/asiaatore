@@ -16,7 +16,7 @@ async function loadLeaflet() {
       l.href = cssHref;
       document.head.appendChild(l);
     }
-  } catch (e) { /* ignore */ }
+  } catch { /* ignore */ }
 
   const [L, RL] = await Promise.all([
     import('leaflet'),
@@ -33,7 +33,7 @@ async function loadLeaflet() {
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
     }
-  } catch (e) { /* ignore */ }
+  } catch { /* ignore */ }
 
   loaded = {
     L,

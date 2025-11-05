@@ -1,0 +1,24 @@
+{% extends "templates/layouts/base.twig" %}
+
+{% block title %}الصفحة الرئيسية{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>أهلاً بك في متجرك</h1>
+    <p>ابدأ تخصيص الثيم باستخدام Salla Twilight.</p>
+  </div>
+</section>
+
+<section class="products">
+  <div class="container">
+    <h2>منتجات جديدة</h2>
+    {# مثال placeholder - استبدل لاحقًا بتركيب Twilight حين الربط مع سلة #}
+    <ul class="grid">
+      <li class="card">منتج 1</li>
+      <li class="card">منتج 2</li>
+      <li class="card">منتج 3</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}
