@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import { motion } from '../../lib/framerLazy';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Grid2x2, BadgePercent, ShoppingCart, User, Package } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
