@@ -197,10 +197,15 @@ const Home = () => {
       {byLocation.topStrip?.length > 0 && (
         <div className="top-strip bg-emerald-600 text-white text-sm">
           <div className="container-custom flex justify-center gap-4 py-2 overflow-x-auto">
-            {byLocation.topStrip.slice(0, 3).map((b) => (
+            {byLocation.topStrip.slice(0, 3).map((b) => {
+              const href = b.linkUrl || '#';
+              const isExternal = typeof href === 'string' && /^(https?:)?\/\//i.test(href) && !href.startsWith('/') ;
+              return (
               <a
                 key={b.id}
-                href={b.linkUrl || '#'}
+                href={href}
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
                 className="inline-flex items-center gap-2 hover:opacity-90 transition truncate"
               >
                 {b.image && (
@@ -215,7 +220,8 @@ const Home = () => {
                   {resolveLocalized(b.title, locale)}
                 </span>
               </a>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

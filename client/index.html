@@ -19,6 +19,9 @@
       @font-face { font-family: 'Cairo'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/cairo/Cairo-600.woff2') format('woff2'); }
       @font-face { font-family: 'Cairo'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/cairo/Cairo-700.woff2') format('woff2'); }
     </style>
+    <!-- Preload critical local fonts to reduce LCP and avoid FOIT -->
+    <link rel="preload" href="/fonts/cairo/Cairo-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/cairo/Cairo-700.woff2" as="font" type="font/woff2" crossorigin>
     <!-- Keep Google Fonts as a fallback in non-local environments.
          Inject the external links only when not running on localhost to avoid
          DNS / fonts.gstatic.com failures during local development. -->
@@ -69,6 +72,8 @@
     <meta property="og:url" content="https://manafadasiacompany.store">
     <meta property="og:image" content="https://cdn.salla.sa/PrYrB/PHSNk13lpAEEcwTP5AZuxmqPxq6RsHWBgiPscMOp.png">
     <meta name="robots" content="index, follow">
+  <!-- Search Console: replace the content value with your verification token -->
+  <meta name="google-site-verification" content="REPLACE_WITH_SEARCH_CONSOLE_TOKEN" />
 
     <!-- Theme initialisation (avoid FOUC). Color tokens live in SCSS (_design-system.scss). -->
     <script>
@@ -101,7 +106,15 @@
       };
     </script>
     <script async src="https://cdn.salla.network/js/twilight/2.14.245/twilight.js" type="text/javascript"></script>
-    <script async src="https://www.googletagmanager.com/gtm.js?id=G-T9K3R68JYJ"></script>
+    <!-- Google Analytics / GA4: Measurement ID is set below. Replace the ID if needed. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-T9K3R68JYJ"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);} 
+      gtag('js', new Date());
+      // Replace the measurement ID with your own if different
+      gtag('config', 'G-T9K3R68JYJ', { 'anonymize_ip': true });
+    </script>
     <script type="application/ld+json">
       {"@context":"https://schema.org",
        "@type":"Organization",
@@ -175,6 +188,20 @@
       })();
     </script>
     <div id="root"></div>
+    <!-- Unregister any existing Service Worker when running locally to avoid stale cached assets during audits -->
+    <script>
+      (function(){
+        try{
+          var host = (window && window.location && window.location.hostname) || '';
+          var isLocal = /(^localhost$)|(^127\.)|(^0:0:0:0:0:0:0:1$)/.test(host);
+          if (isLocal && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs){
+              regs.forEach(function(r){ try{ r.unregister(); }catch(e){} });
+            }).catch(function(){});
+          }
+        }catch(e){}
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

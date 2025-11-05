@@ -7,7 +7,7 @@ export function connectSse(path = '/api/events', onEvent = () => {}, opts = {}) 
   function start() {
     try {
       es = new EventSource(path, { withCredentials: true });
-    } catch (e) {
+    } catch {
       scheduleReconnect();
       return;
     }
@@ -18,7 +18,7 @@ export function connectSse(path = '/api/events', onEvent = () => {}, opts = {}) 
       try {
         const data = JSON.parse(ev.data);
         onEvent('message', data, ev);
-      } catch (e) {
+      } catch {
         onEvent('message', ev.data, ev);
       }
     };

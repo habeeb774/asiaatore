@@ -11,6 +11,7 @@ import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.
 import ZoomableImage from '../components/products/ZoomableImage.jsx';
 import LazyImage from '../components/common/LazyImage.jsx';
 import Button, { buttonVariants } from '../components/ui/Button';
+import { motion } from '../lib/framerLazy';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -57,6 +58,41 @@ const ProductDetails = () => {
   const discountAmount = hasDiscount ? (oldPrice - priceNum) : 0;
   const discountPercent = hasDiscount ? Math.round((1 - (priceNum / oldPrice)) * 100) : 0;
   const outOfStock = product?.stock != null && product.stock <= 0;
+
+  // Inject JSON-LD for the product to improve SEO / rich results
+  useEffect(() => {
+    try {
+      if (!product) return;
+      const ld = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": nameText,
+        "image": (product.gallery || []).map(g => g.variants?.large || g.url).filter(Boolean),
+        "description": descText,
+        "sku": product.sku || String(product.id),
+        "brand": { "@type": "Brand", "name": product.brand?.name || '' },
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": "SAR",
+          "price": (priceNum != null ? Number(priceNum).toFixed(2) : undefined),
+          "availability": outOfStock ? "http://schema.org/OutOfStock" : "http://schema.org/InStock",
+          "url": (typeof window !== 'undefined' && window.location && window.location.href) || ''
+        }
+      };
+      const id = 'ld-product-jsonld';
+      let script = document.getElementById(id);
+      if (!script) {
+        script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.id = id;
+        document.head.appendChild(script);
+      }
+      script.textContent = JSON.stringify(ld);
+      return () => {
+        try { const s = document.getElementById(id); if (s) s.remove(); } catch (e) {}
+      };
+    } catch (e) { /* ignore */ }
+  }, [product, nameText, descText, priceNum, outOfStock]);
 
   // swipe gestures for switching images on mobile (declare hooks before any early returns)
   const swipeRef = useRef(null);

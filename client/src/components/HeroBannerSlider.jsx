@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import LazyImage from './common/LazyImage';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
@@ -48,7 +48,9 @@ const HeroBannerSlider = () => {
         document.head.appendChild(link);
         return () => { try { document.head.removeChild(link); } catch {} };
       }
-  } catch {}
+    } catch {
+      // ignore
+    }
   }, [banners]);
 
   // autoplay is handled by the shared Carousel component below
@@ -59,20 +61,7 @@ const HeroBannerSlider = () => {
 
   const currentBanner = banners[current];
 
-  // التنقل اليدوي
-  const goTo = (idx) => setCurrent(idx);
-  const next = () => setCurrent((prev) => (prev + 1) % banners.length);
-  const prev = () => setCurrent((prev) => (prev - 1 + banners.length) % banners.length);
-
-  // دعم الضغط على الإعلان
-  const handleBannerClick = () => {
-    try {
-      if (currentBanner?.id) api.marketingTrack({ event: 'click', bannerId: currentBanner.id, location: 'hero' }).catch(()=>{});
-    } catch(e){ }
-    if (currentBanner?.linkUrl) {
-      try { window.open(currentBanner.linkUrl, '_blank', 'noopener,noreferrer'); } catch(e) { window.location.href = currentBanner.linkUrl; }
-    }
-  };
+  // manual navigation handled inline by the Carousel/dots; helper functions removed (unused)
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl h-[300px] md:h-[450px] lg:h-[550px]">
@@ -86,7 +75,7 @@ const HeroBannerSlider = () => {
             onClick={() => {
               try { if (banner?.id) api.marketingTrack({ event: 'click', bannerId: banner.id, location: 'hero' }).catch(()=>{}); } catch {}
               if (banner?.linkUrl) {
-                try { window.open(banner.linkUrl, '_blank', 'noopener,noreferrer'); } catch(e) { window.location.href = banner.linkUrl; }
+                try { window.open(banner.linkUrl, '_blank', 'noopener,noreferrer'); } catch { window.location.href = banner.linkUrl; }
               }
             }}
             role={banner?.linkUrl ? 'button' : undefined}
@@ -199,7 +188,9 @@ function TrackImpression({ banners = [], currentIndex = 0 }) {
         // best-effort fire-and-forget
         fetch('/api/marketing/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: 'impression', bannerId: b.id, location: 'hero' }) }).catch(()=>{});
       }
-  } catch {}
+    } catch {
+      // ignore
+    }
   }, [banners, currentIndex]);
   return null;
 }

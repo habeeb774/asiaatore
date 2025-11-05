@@ -53,7 +53,7 @@ export default defineConfig(async ({ mode }) => {
           brotliSize: true
         })
       }
-    } catch (e) {
+    } catch {
       // Not fatal: continue without visualizer
       console.warn('[vite] rollup-plugin-visualizer not available, skipping treemap')
     }
@@ -265,7 +265,7 @@ export default defineConfig(async ({ mode }) => {
               }
             });
             // Optional: surface proxy errors to vite console for visibility
-            proxy.on('error', (err, _req, _res) => {
+            proxy.on('error', (err) => {
               console.warn('[vite-proxy] /api error:', err?.message || err);
             });
           },

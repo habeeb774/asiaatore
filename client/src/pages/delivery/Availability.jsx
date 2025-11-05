@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { motion } from '../../lib/framerLazy';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
 import { Button } from '../../components/ui/Button';

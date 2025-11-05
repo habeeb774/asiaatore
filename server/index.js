@@ -377,6 +377,22 @@ await loadModulesAndMount();
 if (process.env.SERVE_CLIENT === 'true') {
     const dist = path.join(process.cwd(), 'client', 'dist');
     if (fs.existsSync(dist)) {
+        // Serve fingerprinted static assets with long cache, but keep index.html short-lived
+        app.use((req, res, next) => {
+            try {
+                if (isProd) {
+                    // fingerprinted assets -> long cache
+                    if (/\.(?:js|css|woff2|webp|png|jpg|jpeg|svg)$/.test(req.path)) {
+                        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+                    }
+                    // index.html -> no long caching
+                    if (req.path === '/' || req.path.endsWith('index.html')) {
+                        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+                    }
+                }
+            } catch (e) { /* ignore */ }
+            next();
+        });
         app.use(express.static(dist, { maxAge: isProd ? '7d' : 0 }));
         app.get('*', (req, res, next) => {
             if (req.path.startsWith('/api/')) return next();

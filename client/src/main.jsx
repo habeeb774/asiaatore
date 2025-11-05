@@ -41,6 +41,7 @@ if (typeof window !== 'undefined') {
   }
 }
 import { ThemeProvider } from './context/ThemeContext';
+import { ExperimentProvider } from './context/ExperimentContext';
 import ScrollTopButton from './components/common/ScrollTopButton';
 // Leaflet CSS is imported by the map route to avoid bundling it into the main entry
 
@@ -83,7 +84,8 @@ const GlobalToastEvents = () => {
 const Providers = ({ children }) => (
   <I18nextProvider i18n={i18n}>
     <ThemeProvider>
-      <LanguageProvider>
+      <ExperimentProvider>
+        <LanguageProvider>
         <AuthProvider>
           <ProductsProvider>
             <CartProvider>
@@ -108,6 +110,7 @@ const Providers = ({ children }) => (
           </ProductsProvider>
         </AuthProvider>
       </LanguageProvider>
+      </ExperimentProvider>
     </ThemeProvider>
   </I18nextProvider>
 );

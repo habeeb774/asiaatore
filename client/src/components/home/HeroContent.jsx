@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import SafeImage from '../../components/common/SafeImage';
+import { motion } from '../../lib/framerLazy';
 
 export default function HeroContent({ siteName, locale, t, baseProductsPath, setting, heroVisual }) {
   return (

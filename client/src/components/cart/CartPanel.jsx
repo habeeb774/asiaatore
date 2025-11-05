@@ -1,11 +1,12 @@
 import React from 'react';
+import { motion } from '../../lib/framerLazy';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 
 const formatPrice = (n, locale = 'en') => {
   try {
     return new Intl.NumberFormat(locale, { style: 'currency', currency: 'SAR', maximumFractionDigits: 2 }).format(n || 0);
-  } catch (e) {
+  } catch {
     return (n || 0).toFixed(2) + ' SAR';
   }
 };

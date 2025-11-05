@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from '../../lib/framerLazy';
 import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useSettings } from '../../context/SettingsContext';
+import { useExperiments } from '../../context/ExperimentContext';
 import api from '../../api/client';
 import { ButtonLink } from '../ui';
 
@@ -38,7 +39,7 @@ const OptimizedImage = React.memo(({ src, alt = '', className = '', placeholderC
 });
 
 // Slide body content (texts and a single primary CTA)
-const SlideContent = React.memo(({ slide, locale, t }) => (
+const SlideContent = React.memo(({ slide, locale, t, ctaVariant }) => (
   <motion.div key={slide.id} initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20, scale: 1.05 }} transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }} className="space-y-5">
     {/* Small badge (optional) */}
     {t && (
@@ -59,16 +60,17 @@ const SlideContent = React.memo(({ slide, locale, t }) => (
     )}
 
     {/* Single, clear primary CTA */}
-    <motion.div className="mt-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
-      <ButtonLink
-        href={slide.link || '/products'}
-        variant="primary"
-        className="min-w-[220px] text-white bg-white/10 hover:bg-white/20 border border-transparent backdrop-blur-sm text-lg px-8 py-4 shadow-lg"
-        aria-label={locale==='ar' ? 'تسوّق الآن' : 'Shop Now'}
-      >
-        {locale==='ar' ? 'تسوّق الآن' : 'Shop Now'}
-      </ButtonLink>
-    </motion.div>
+      <motion.div className="mt-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
+        {/* Variant A: subtle translucent CTA (default). Variant B: high-contrast solid CTA for testing */}
+        <ButtonLink
+          href={slide.link || '/products'}
+          variant="primary"
+          className={ctaVariant === 'B' ? 'min-w-[220px] bg-white text-gray-900 hover:bg-white/95 border border-transparent text-lg px-8 py-4 shadow-lg' : 'min-w-[220px] text-white bg-white/10 hover:bg-white/20 border border-transparent backdrop-blur-sm text-lg px-8 py-4 shadow-lg'}
+          aria-label={locale==='ar' ? (ctaVariant==='B' ? 'اكتشف العروض' : 'تسوّق الآن') : (ctaVariant==='B' ? 'Explore Deals' : 'Shop Now')}
+        >
+          {locale==='ar' ? (ctaVariant==='B' ? 'اكتشف العروض' : 'تسوّق الآن') : (ctaVariant==='B' ? 'Explore Deals' : 'Shop Now')}
+        </ButtonLink>
+      </motion.div>
   </motion.div>
 ));
 
@@ -102,7 +104,13 @@ const Slide = React.memo(({ slide }) => (
 const HomeHero = () => {
   const { locale, t } = useLanguage();
   const { setting } = useSettings();
+  const { variantFor } = useExperiments();
   const [ads, setAds] = useState([]);
+
+  // determine CTA variant for A/B testing
+  const ctaVariant = useMemo(() => {
+    try { return variantFor('hero_cta', ['A', 'B']) || 'A'; } catch { return 'A'; }
+  }, [variantFor]);
 
   useEffect(() => {
     let mounted = true;
@@ -178,24 +186,45 @@ const HomeHero = () => {
 
   // Ensure current index is valid when slides length changes
   useEffect(() => {
+    if (slidesData.length === 0) {
+      // if there are no slides, ensure index is zero but avoid repeated sets
+      if (currentIndex !== 0) setCurrentIndex(0);
+      return;
+    }
     if (currentIndex >= slidesData.length) setCurrentIndex(0);
   }, [slidesData.length, currentIndex]);
 
   // Preload next slide image for smoother transitions
   useEffect(() => {
     if (!slidesData.length) return;
-    const next = slidesData[(currentIndex + 1) % slidesData.length];
+    const nextIndex = (currentIndex + 1) % slidesData.length;
+    const next = slidesData[nextIndex];
     if (next?.src) {
       const img = new Image();
       img.src = normalizeSrc(next.src);
     }
   }, [currentIndex, slidesData]);
 
-  const goToSlide = useCallback((i) => setCurrentIndex(i), []);
-  const goToNext = useCallback(() => setCurrentIndex((p) => (p === slidesData.length - 1 ? 0 : p + 1)), [slidesData.length]);
-  const goToPrev = useCallback(() => setCurrentIndex((p) => (p === 0 ? slidesData.length - 1 : p - 1)), [slidesData.length]);
+  const goToSlide = useCallback((i) => {
+    if (!slidesData.length) return;
+    setCurrentIndex(i);
+  }, [slidesData.length]);
+
+  const goToNext = useCallback(() => {
+    if (!slidesData.length) return;
+    setCurrentIndex((p) => (p === slidesData.length - 1 ? 0 : p + 1));
+  }, [slidesData.length]);
+
+  const goToPrev = useCallback(() => {
+    if (!slidesData.length) return;
+    setCurrentIndex((p) => (p === 0 ? slidesData.length - 1 : p - 1));
+  }, [slidesData.length]);
 
   useEffect(() => {
+    if (!slidesData.length) {
+      if (autoPlayRef.current) { clearInterval(autoPlayRef.current); autoPlayRef.current = null; }
+      return;
+    }
     if (!isAutoPlaying || isHovering) {
       if (autoPlayRef.current) { clearInterval(autoPlayRef.current); autoPlayRef.current = null; }
       return;
@@ -258,7 +287,7 @@ const HomeHero = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center text-white">
               <AnimatePresence mode="wait">
-                      <SlideContent slide={slidesData[currentIndex]} locale={locale} t={t} />
+                <SlideContent slide={slidesData[currentIndex]} locale={locale} t={t} ctaVariant={ctaVariant} />
               </AnimatePresence>
               {/* صورة مركزية اختيارية من الإعدادات */}
                     {slidesData[currentIndex]?.centerImage && (

@@ -207,7 +207,7 @@ const ProductCard = ({
   );
   
   // حساب الخصومات والأسعار
-  const { baseOld, priceNum, hasDiscount, discountPercent, savings, outOfStock } = useMemo(() => {
+  const { baseOld, hasDiscount, discountPercent, savings, outOfStock } = useMemo(() => {
     const baseOldRaw = (product?.oldPrice ?? product?.originalPrice);
     const baseOld = baseOldRaw != null ? +baseOldRaw : undefined;
     const priceNum = product?.price != null ? +product.price : undefined;
@@ -262,8 +262,8 @@ const ProductCard = ({
   }), [product.imageVariants]);
   
   return (
-    <div className="product-card" data-id={product.id}>
-      <Link to={detailsPath} className="product-image product-media" aria-label={name}>
+    <div className="product-card group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transform transition-all duration-200 hover:scale-105" data-id={product.id}>
+      <Link to={detailsPath} className="product-image product-media block relative bg-gray-50 aspect-square overflow-hidden" aria-label={name}>
         <LazyImage
           src={product.imageVariants?.thumb || product.image}
           alt={name}
@@ -285,21 +285,35 @@ const ProductCard = ({
           locale={locale}
         />
         
-        <div className="product-overlay">
-          <button
-            className="quick-view-btn"
-            onClick={handleQuickView}
-          >
-            {t('quickView')}
-          </button>
+        {/* overlay actions (appear on hover) */}
+        <div className="product-overlay pointer-events-none absolute inset-0 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute top-3 right-3 flex flex-col gap-2 pointer-events-auto">
+            <button
+              className="bg-white/90 text-gray-800 hover:bg-white p-2 rounded-lg shadow-md"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleQuickView(e); }}
+              aria-label={t('quickView')}
+              type="button"
+            >
+              {t('quickView')}
+            </button>
+            <button
+              className="bg-primary-600 text-white p-2 rounded-lg shadow-md hover:opacity-95"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddToCart(product, 1); }}
+              aria-label={t('addToCart')}
+              type="button"
+            >
+              +
+            </button>
+          </div>
         </div>
       </Link>
       
-      <h3 className="product-title clamp-2">{name}</h3>
-      
-      <RatingStars rating={product.rating} />
-      
-      <PriceDisplay
+      <div className="p-4">
+        <h3 className="product-title clamp-2 text-base font-semibold text-gray-900 mb-2">{name}</h3>
+
+        <RatingStars rating={product.rating} />
+
+        <PriceDisplay
         price={product.price}
         baseOld={baseOld}
         hasDiscount={hasDiscount}
@@ -308,21 +322,22 @@ const ProductCard = ({
         showPriceBadge={showPriceBadge}
         locale={locale}
       />
-      
-      <div className="actions">
-        <AddToCartButton
-          product={product}
-          currentQty={currentQty}
-          maxPerItem={maxPerItem}
-          outOfStock={outOfStock}
-          locale={locale}
-          t={t}
-          onAddToCart={handleAddToCart}
-        />
-        
-        <Link to={detailsPath}>
-          {t('details')}
-        </Link>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <AddToCartButton
+              product={product}
+              currentQty={currentQty}
+              maxPerItem={maxPerItem}
+              outOfStock={outOfStock}
+              locale={locale}
+              t={t}
+              onAddToCart={handleAddToCart}
+            />
+          </div>
+          <Link to={detailsPath} className="text-sm text-gray-600 hover:text-primary-600 pointer-events-auto">
+            {t('details')}
+          </Link>
+        </div>
       </div>
       
       {open && (

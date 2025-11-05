@@ -28,10 +28,22 @@ function FooterLinks({ t, linkBlog, linkSocial, linkReturns, linkPrivacy, isAr }
     <div className="text-center">
       <h3 className="mb-4 text-lg font-bold text-[#E6A400]">{t.links}</h3>
       <div className={`space-y-2 text-sm text-slate-700 ${isAr ? 'md:text-right' : 'md:text-left'}`}>
-        <a href={linkBlog} className="block transition-colors hover:text-[#E6A400]">{t.blog}</a>
-        <a href={linkSocial} className="block transition-colors hover:text-[#E6A400]">{t.social}</a>
-        <a href={linkReturns} className="block transition-colors hover:text-[#E6A400]">{t.returns}</a>
-        <a href={linkPrivacy} className="block transition-colors hover:text-[#E6A400]">{t.privacy}</a>
+        {(() => {
+          const items = [
+            { href: linkBlog, label: t.blog },
+            { href: linkSocial, label: t.social },
+            { href: linkReturns, label: t.returns },
+            { href: linkPrivacy, label: t.privacy }
+          ];
+          return items.map((it, i) => {
+            const isExternal = typeof it.href === 'string' && /^(https?:)?\/\//i.test(it.href) && !it.href.startsWith('/');
+            return (
+              <a key={i} href={it.href} className="block transition-colors hover:text-[#E6A400]" target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener noreferrer' : undefined}>
+                {it.label}
+              </a>
+            );
+          });
+        })()}
       </div>
     </div>
   );
@@ -173,8 +185,9 @@ const SiteFooter = () => {
   const supportEmail = setting?.supportEmail || 'support@example.com';
   const linkBlog = setting?.linkBlog || '#';
   const linkSocial = setting?.linkSocial || '#';
-  const linkReturns = setting?.linkReturns || '#';
-  const linkPrivacy = setting?.linkPrivacy || '#';
+  // Prefer admin-provided absolute links; otherwise point to internal legal routes so footer always works.
+  const linkReturns = setting?.linkReturns || '/legal/returns';
+  const linkPrivacy = setting?.linkPrivacy || '/legal/privacy';
   const appStoreUrl = setting?.appStoreUrl || '#';
   const playStoreUrl = setting?.playStoreUrl || '#';
   const year = new Date().getFullYear();
