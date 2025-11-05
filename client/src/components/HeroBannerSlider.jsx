@@ -48,7 +48,7 @@ const HeroBannerSlider = () => {
         document.head.appendChild(link);
         return () => { try { document.head.removeChild(link); } catch {} };
       }
-    } catch (e) {}
+  } catch {}
   }, [banners]);
 
   // autoplay is handled by the shared Carousel component below
@@ -84,7 +84,7 @@ const HeroBannerSlider = () => {
           <div
             className={`w-full h-full flex items-center justify-center bg-black/5 cursor-pointer transition-all duration-300`}
             onClick={() => {
-              try { if (banner?.id) api.marketingTrack({ event: 'click', bannerId: banner.id, location: 'hero' }).catch(()=>{}); } catch (e) {}
+              try { if (banner?.id) api.marketingTrack({ event: 'click', bannerId: banner.id, location: 'hero' }).catch(()=>{}); } catch {}
               if (banner?.linkUrl) {
                 try { window.open(banner.linkUrl, '_blank', 'noopener,noreferrer'); } catch(e) { window.location.href = banner.linkUrl; }
               }
@@ -199,7 +199,7 @@ function TrackImpression({ banners = [], currentIndex = 0 }) {
         // best-effort fire-and-forget
         fetch('/api/marketing/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: 'impression', bannerId: b.id, location: 'hero' }) }).catch(()=>{});
       }
-    } catch (e) {}
+  } catch {}
   }, [banners, currentIndex]);
   return null;
 }

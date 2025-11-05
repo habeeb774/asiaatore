@@ -37,7 +37,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 if (typeof window !== 'undefined') {
   // Prefer CDN-included AOS (via index.html) and initialize it if present.
   if (window.AOS && typeof window.AOS.init === 'function') {
-    try { window.AOS.init({ duration: 600, once: true }); } catch (e) {}
+  try { window.AOS.init({ duration: 600, once: true }); } catch {}
   }
 }
 import { ThemeProvider } from './context/ThemeContext';

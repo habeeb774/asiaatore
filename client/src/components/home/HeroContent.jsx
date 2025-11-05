@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from '../../lib/framerLazy';
 import { Link } from 'react-router-dom';
 import SafeImage from '../../components/common/SafeImage';
 

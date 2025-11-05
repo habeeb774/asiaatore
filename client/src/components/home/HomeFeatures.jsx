@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from '../../lib/framerLazy';
 
 /**
  * HomeFeatures

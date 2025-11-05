@@ -15,43 +15,58 @@ function normalizeSrc(src){
   return s;
 }
 
-// Lightweight, memoized image with lazy loading
-const OptimizedImage = React.memo(({ src, alt, className, placeholderClass = 'bg-gray-200' }) => {
+// Lightweight, memoized image with placeholder, lazy/eager loading and fetchPriority
+const OptimizedImage = React.memo(({ src, alt = '', className = '', placeholderClass = 'bg-gray-200', loading = 'lazy' }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const normalized = normalizeSrc(src);
   return (
-    <div className={`${className} ${placeholderClass} transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-      <img src={normalizeSrc(src)} alt={alt} loading="lazy" decoding="async" onLoad={() => setIsLoaded(true)} className="w-full h-full object-cover" />
+    <div className={`${className} relative overflow-hidden`}>
+      {/* placeholder layer - visible until image loads */}
+      <div className={`${placeholderClass} absolute inset-0 w-full h-full transition-opacity duration-300 ${isLoaded ? 'opacity-0' : 'opacity-100'}`} aria-hidden="true" />
+      {/* actual image */}
+      <img
+        src={normalized}
+        alt={alt}
+        loading={loading}
+        fetchPriority={loading === 'eager' ? 'high' : 'low'}
+        decoding="async"
+        className={`w-full h-full object-cover block transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setIsLoaded(true)}
+      />
     </div>
   );
 });
 
-// Slide body content (texts and CTAs)
+// Slide body content (texts and a single primary CTA)
 const SlideContent = React.memo(({ slide, locale, t }) => (
-  <motion.div key={slide.id} initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20, scale: 1.05 }} transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }} className="space-y-6">
-    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.5, delay: 0.4 }} className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold border border-white/30">
-      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-      {t('saleBadge')}
-    </motion.div>
-    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-      <span className="block bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">{slide.title}</span>
+  <motion.div key={slide.id} initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20, scale: 1.05 }} transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }} className="space-y-5">
+    {/* Small badge (optional) */}
+    {t && (
+      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.45, delay: 0.3 }} className="inline-flex items-center gap-2 bg-white/12 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-semibold border border-white/20">
+        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+        {slide.badge || t('saleBadge')}
+      </motion.div>
+    )}
+
+    {/* Primary heading: emphasize product/category */}
+    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight">
+      <span className="block text-white">{slide.title}</span>
     </h1>
-    <p className="text-xl sm:text-2xl md:text-3xl text-white/90 font-light max-w-2xl mx-auto leading-relaxed">{slide.subtitle}</p>
-    <motion.div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}>
+
+    {/* Offer/value line — make this clear and prominent */}
+    {slide.subtitle && (
+      <p className="text-lg sm:text-2xl md:text-3xl text-white/95 font-medium max-w-3xl mx-auto leading-snug">{slide.subtitle}</p>
+    )}
+
+    {/* Single, clear primary CTA */}
+    <motion.div className="mt-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
       <ButtonLink
         href={slide.link || '/products'}
-        variant="ghost"
-        className="min-w-[200px] text-white border-2 border-white/50 hover:bg-white/10 hover:border-white bg-transparent backdrop-blur-sm text-lg px-8 py-4"
-        aria-label={locale==='ar'?'تسوق الآن':'Shop Now'}
+        variant="primary"
+        className="min-w-[220px] text-white bg-white/10 hover:bg-white/20 border border-transparent backdrop-blur-sm text-lg px-8 py-4 shadow-lg"
+        aria-label={locale==='ar' ? 'تسوّق الآن' : 'Shop Now'}
       >
-        {locale==='ar'?'تسوق الآن':'Shop Now'}
-      </ButtonLink>
-      <ButtonLink
-        href="/about"
-        variant="ghost"
-        className="min-w-[200px] text-white border-2 border-white/50 hover:bg-white/10 hover:border-white bg-transparent backdrop-blur-sm text-lg px-8 py-4"
-        aria-label={locale==='ar'?'تعرف علينا':'About Us'}
-      >
-        {locale==='ar'?'تعرف علينا':'About Us'}
+        {locale==='ar' ? 'تسوّق الآن' : 'Shop Now'}
       </ButtonLink>
     </motion.div>
   </motion.div>
@@ -67,7 +82,7 @@ const Slide = React.memo(({ slide }) => (
         <div className="absolute inset-0 z-0" style={{ background: slide.baseBg }} />
       ) : (
         <div className="absolute inset-0 z-0 w-full h-full">
-          <OptimizedImage src={slide.baseBg} alt="hero base" className="w-full h-full object-cover" />
+          <OptimizedImage src={slide.baseBg} alt={slide.title ? `${slide.title} background` : 'hero base'} className="w-full h-full" loading={'eager'} />
         </div>
       )
     )}
@@ -79,7 +94,7 @@ const Slide = React.memo(({ slide }) => (
 
     {/* image on top so transparency shows the base background */}
     <div className="relative z-10 w-full h-full">
-      <OptimizedImage src={slide.src} alt={slide.title} className="w-full h-full" placeholderClass={slide.isAd ? 'bg-transparent' : 'bg-gray-200'} />
+      <OptimizedImage src={slide.src} alt={slide.title} className="w-full h-full" placeholderClass={slide.isAd ? 'bg-transparent' : 'bg-gray-200'} loading={slide.isAd ? 'lazy' : 'eager'} />
     </div>
   </motion.div>
 ));
@@ -243,14 +258,14 @@ const HomeHero = () => {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center text-white">
               <AnimatePresence mode="wait">
-                <SlideContent slide={slidesData[currentIndex]} locale={locale} t={t} />
+                      <SlideContent slide={slidesData[currentIndex]} locale={locale} t={t} />
               </AnimatePresence>
               {/* صورة مركزية اختيارية من الإعدادات */}
-              {slidesData[currentIndex]?.centerImage && (
-                <div className="mt-8 flex justify-center">
-                  <img src={slidesData[currentIndex].centerImage} alt="" className="max-h-48 sm:max-h-64 md:max-h-72 object-contain drop-shadow-xl" loading="lazy" />
-                </div>
-              )}
+                    {slidesData[currentIndex]?.centerImage && (
+                      <div className="mt-8 flex justify-center">
+                        <img src={slidesData[currentIndex].centerImage} alt={slidesData[currentIndex].title || ''} className="max-h-48 sm:max-h-64 md:max-h-72 object-contain drop-shadow-xl" loading="lazy" />
+                      </div>
+                    )}
             </div>
           </div>
         </div>

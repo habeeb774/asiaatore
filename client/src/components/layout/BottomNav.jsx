@@ -4,7 +4,6 @@ import { Home, Grid2x2, BadgePercent, ShoppingCart, User, Package } from 'lucide
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { motion } from '../../lib/framerLazy';
 
 export default function BottomNav() {
   // Safe wrappers: call hooks at top-level inside small custom hooks so ESLint rules-of-hooks are satisfied

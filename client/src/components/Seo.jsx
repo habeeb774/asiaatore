@@ -13,7 +13,7 @@ const setMeta = (nameOrProp, value, attr = 'name') => {
       document.head.appendChild(el);
     }
     el.setAttribute('content', value);
-  } catch (e) {}
+  } catch {}
 };
 
 const Seo = ({ title, description, image, url }) => {

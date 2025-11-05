@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/client';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card.jsx';
-import { motion } from '../../lib/framerLazy';
 import { Truck, Save, Loader, AlertCircle } from 'lucide-react';
 
 export default function DeliveryAvailability() {
