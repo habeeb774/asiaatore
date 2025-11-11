@@ -1,22 +1,23 @@
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from '../../components/features/admin/AdminLayout';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAdmin } from '../../context/AdminContext';
-import { useOrders } from '../../context/OrdersContext';
-import api from '../../api/client';
-import { adminApi } from '../../api/admin';
-import { Edit3, Trash2, Plus, Save, X } from 'lucide-react';
-import ProductPicker from '../../components/admin/ProductPicker';
-import { useAuth } from '../../context/AuthContext';
+import { useAdmin } from '../../stores/AdminContext';
+import { useOrders } from '../../stores/OrdersContext';
+import api from '../../services/api/client';
+import { adminApi } from '../../services/api/admin';
+import { Edit3, Trash2, Save, X } from 'lucide-react';
+import { useAuth } from '../../stores/AuthContext';
 
 import Seo from '../../components/Seo';
 import '../../styles/AdminPage.scss';
 const AdsAdmin = React.lazy(() => import('../AdsAdmin'));
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../stores/SettingsContext';
 
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
-import { Button } from '../../components/ui';
+import { Button, Label } from '../../components/ui';
+import Input from '../../components/ui/input';
+import Select from '../../components/ui/select';
 
 const AdminDashboard = () => {
   const { locale } = useLanguage();
@@ -27,8 +28,8 @@ const AdminDashboard = () => {
   const {
     products: adminProducts, users, orders,
     addProduct, updateProduct, deleteProduct,
-    addUser, updateUser, deleteUser,
-    addOrder, updateOrder, deleteOrder
+    addUser, updateUser,
+    addOrder, updateOrder
   } = useAdmin();
 
   // Local shadow list for API-backed products (to avoid breaking existing context usage)
@@ -53,11 +54,6 @@ const AdminDashboard = () => {
   const [loadingRemote, setLoadingRemote] = useState(false);
   const [errorRemote, setErrorRemote] = useState(null);
 
-  const setView = v => {
-    params.set('view', v);
-    navigate(`/admin?${params.toString()}`, { replace: true });
-  };
-
   const [productForm, setProductForm] = useState({ id: null, nameAr: '', nameEn: '', price: '', stock: '', status: 'active', category: 'general', oldPrice: '', image: '' });
   const [productImageFile, setProductImageFile] = useState(null);
   const [imageMode, setImageMode] = useState('file'); // 'file' | 'url'
@@ -69,21 +65,9 @@ const AdminDashboard = () => {
   const [finLoading, setFinLoading] = useState(false);
   const [finError, setFinError] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
-  const [loadingStats, setLoadingStats] = useState(false);
   const [sort, setSort] = useState('created_desc');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [audit, setAudit] = useState([]);
-  const quickAdminLogin = async () => {
-    try {
-      const resp = await api.authLogin('admin@example.com', 'Admin123!');
-      if (resp?.token) {
-        try { localStorage.setItem('my_store_token', resp.token); } catch {}
-        alert('تم تسجيل الدخول كمدير (dev). أعد المحاولة.');
-      }
-    } catch (e) {
-      alert('فشل تسجيل الدخول التلقائي: ' + e.message);
-    }
-  };
   const [userForm, setUserForm] = useState({ id: null, name: '', role: 'user', active: true });
   const [orderForm, setOrderForm] = useState({ id: null, total: '', status: 'pending', customer: '', items: 1 });
   const [filter, setFilter] = useState('');
@@ -118,14 +102,22 @@ const AdminDashboard = () => {
     const start = (productPage - 1) * productPageSize;
     return filteredProducts.slice(start, start + productPageSize);
   }, [filteredProducts, productPage, productPageSize]);
-  // ------- Tier Pricing (per product) -------
-  const [openTierProductId, setOpenTierProductId] = useState(null); // which product row expanded
-  const [tiersByProduct, setTiersByProduct] = useState({}); // productId -> list
-  const [tierLoading, setTierLoading] = useState(false);
-  const [tierError, setTierError] = useState(null);
+  // ------- Product Images Management -------
+  const [openImageProductId, setOpenImageProductId] = useState(null); // which product row expanded for images
+  const [productImages, setProductImages] = useState({}); // productId -> list of images
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(null);
+  const [newImageFile, setNewImageFile] = useState(null);
+  const [newImageAltAr, setNewImageAltAr] = useState('');
+  const [newImageAltEn, setNewImageAltEn] = useState('');
+  const newImageFileRef = useRef(null);
   const emptyTierForm = { id:null, minQty:'', price:'', packagingType:'unit', noteAr:'', noteEn:'' };
   const [tierForm, setTierForm] = useState(emptyTierForm);
   const packagingOptions = ['unit','carton','bundle'];
+  const [openTierProductId, setOpenTierProductId] = useState(null); // which product row expanded for tiers
+  const [tierLoading, setTierLoading] = useState(false);
+  const [tierError, setTierError] = useState(null);
+  const [tiersByProduct, setTiersByProduct] = useState({});
   const loadTiers = async (productId) => {
     setTierLoading(true); setTierError(null);
     try {
@@ -174,18 +166,76 @@ const AdminDashboard = () => {
     setTierForm({ id:tier.id, minQty:tier.minQty, price:tier.price, packagingType:tier.packagingType, noteAr:tier.note?.ar||'', noteEn:tier.note?.en||'' });
   };
   const deleteTier = async (tier) => {
-    if (!window.confirm('حذف الشريحة؟')) return;
+    if (!window.confirm('حذف هذه الشريحة؟')) return;
     setTierLoading(true); setTierError(null);
     try {
       await api.tierDelete(tier.id);
       setTiersByProduct(m => ({ ...m, [openTierProductId]: (m[openTierProductId]||[]).filter(t => t.id !== tier.id) }));
     } catch (e) { setTierError(e.message); } finally { setTierLoading(false); }
   };
+  const loadProductImages = async (productId) => {
+    setImageLoading(true); setImageError(null);
+    try {
+      const product = await api.getProduct(productId);
+      setProductImages(m => ({ ...m, [productId]: product.images || [] }));
+    } catch (e) { setImageError(e.message); } finally { setImageLoading(false); }
+  };
+  const toggleProductImages = (productId) => {
+    setImageError(null);
+    setNewImageFile(null);
+    setNewImageAltAr('');
+    setNewImageAltEn('');
+    if (openImageProductId === productId) { setOpenImageProductId(null); return; }
+    setOpenImageProductId(productId);
+    if (!productImages[productId]) loadProductImages(productId);
+  };
+  const addProductImage = async (productId) => {
+    if (!newImageFile) return;
+    setImageLoading(true); setImageError(null);
+    try {
+      const formData = new FormData();
+      formData.append('image', newImageFile);
+      if (newImageAltAr) formData.append('altAr', newImageAltAr);
+      if (newImageAltEn) formData.append('altEn', newImageAltEn);
+      const updated = await api.addProductImage(productId, formData);
+      setProductImages(m => ({ ...m, [productId]: updated.images || [] }));
+      setNewImageFile(null);
+      setNewImageAltAr('');
+      setNewImageAltEn('');
+      // Update the product in the list to reflect new images
+      if (apiBacked) {
+        setApiProducts(prev => prev.map(p => p.id === productId ? updated : p));
+      }
+    } catch (e) { setImageError(e.message); } finally { setImageLoading(false); }
+  };
+  const updateProductImage = async (imageId, data) => {
+    setImageLoading(true); setImageError(null);
+    try {
+      await api.updateProductImage(imageId, data);
+      // Reload images for the current product
+      if (openImageProductId) {
+        const product = await api.getProduct(openImageProductId);
+        setProductImages(m => ({ ...m, [openImageProductId]: product.images || [] }));
+      }
+    } catch (e) { setImageError(e.message); } finally { setImageLoading(false); }
+  };
+  const deleteProductImage = async (imageId) => {
+    if (!window.confirm('حذف هذه الصورة؟')) return;
+    setImageLoading(true); setImageError(null);
+    try {
+      await api.deleteProductImage(imageId);
+      // Reload images for the current product
+      if (openImageProductId) {
+        const product = await api.getProduct(openImageProductId);
+        setProductImages(m => ({ ...m, [openImageProductId]: product.images || [] }));
+        // Update the product in the list
+        if (apiBacked) {
+          setApiProducts(prev => prev.map(p => p.id === openImageProductId ? product : p));
+        }
+      }
+    } catch (e) { setImageError(e.message); } finally { setImageLoading(false); }
+  };
   const effectiveUsers = remoteUsers.length ? remoteUsers : users;
-  const filteredUsers = useMemo(
-    () => effectiveUsers.filter(u => (u.name||'').toLowerCase().includes(f) || (u.role||'').includes(f)),
-    [effectiveUsers, f]
-  );
   // Orders filters (advanced)
   const [orderStatusFilter, setOrderStatusFilter] = useState('');
   const [orderMethodFilter, setOrderMethodFilter] = useState('');
@@ -248,12 +298,6 @@ const AdminDashboard = () => {
   const [marketingAppLinks, setMarketingAppLinks] = useState([]);
   const [featureForm, setFeatureForm] = useState({ id:null, titleAr:'', titleEn:'', bodyAr:'', bodyEn:'', icon:'', sort:0, active:true });
   // Offers management state
-  const [offers, setOffers] = useState([]);
-  const [offersLoading, setOffersLoading] = useState(false);
-  const [offersError, setOffersError] = useState(null);
-  const [offerFilter, setOfferFilter] = useState('');
-  const [offerSort, setOfferSort] = useState('recent'); // recent | discount_desc | price_asc | price_desc
-  const [offerCategoryFilter, setOfferCategoryFilter] = useState('');
   const [offerForm, setOfferForm] = useState({ id:null, nameAr:'', nameEn:'', price:'', oldPrice:'', image:'', category:'general' });
   // New: Add-discount helper form
   const [addDiscFilter, setAddDiscFilter] = useState('');
@@ -961,186 +1005,15 @@ const AdminDashboard = () => {
   }, [financials]);
 
   // ------- Offers: loaders & handlers -------
-  const loadOffers = async () => {
-    setOffersLoading(true); setOffersError(null);
-    try {
-      const list = await api.listOffers();
-      setOffers(Array.isArray(list) ? list : []);
-    } catch (e) {
-      setOffersError(e.message);
-    } finally { setOffersLoading(false); }
-  };
-
-  useEffect(() => {
-    if (view === 'offers' && !offers.length) loadOffers();
-  }, [view]);
+  // Offers functionality removed as offers view is not implemented
 
   // Ensure categories are available when entering Offers for filtering and form select
-  useEffect(() => {
-    if (view !== 'offers') return;
-    if (catList.length) return;
-    let mounted = true;
-    setCatLoading(true); setCatError(null);
-    api.listCategories({ withCounts: 1 }).then(res => {
-      const list = Array.isArray(res?.categories) ? res.categories : [];
-      const map = new Map();
-      for (const c of list) { if (c?.slug && !map.has(c.slug)) map.set(c.slug, c); }
-      const uniq = Array.from(map.values()).sort((a,b) => (b.productCount||0) - (a.productCount||0) || String(a.name?.ar||a.name?.en||a.slug).localeCompare(String(b.name?.ar||b.name?.en||b.slug), 'ar'));
-      if (mounted) setCatList(uniq);
-    }).catch(err => { if (mounted) setCatError(err.message||'فشل تحميل التصنيفات'); }).finally(() => { if (mounted) setCatLoading(false); });
-    return () => { mounted = false; };
-  }, [view, catList.length]);
-
-  const visibleOffers = useMemo(() => {
-    let list = [...offers];
-    const q = (offerFilter||'').toLowerCase();
-    if (q) list = list.filter(o => ((resolveLocalized(o.name, locale) || o.name?.ar || o.name?.en || '') + '').toLowerCase().includes(q));
-    if (offerCategoryFilter) list = list.filter(o => (o.category||'') === offerCategoryFilter);
-    switch (offerSort) {
-      case 'discount_desc':
-        list.sort((a,b)=> ((a.originalPrice||a.oldPrice||0)-(a.price||0)) < ((b.originalPrice||b.oldPrice||0)-(b.price||0)) ? 1 : -1);
-        break;
-      case 'price_asc': list.sort((a,b)=> (a.price||0)-(b.price||0)); break;
-      case 'price_desc': list.sort((a,b)=> (b.price||0)-(a.price||0)); break;
-      case 'recent':
-      default:
-        list.sort((a,b)=> String(b.updatedAt||b.id).localeCompare(String(a.updatedAt||a.id)));
-    }
-    return list;
-  }, [offers, offerFilter, offerSort]);
+  // Offers functionality removed
 
   // Ensure products list is available when entering Offers
-  useEffect(() => {
-    if (view !== 'offers') return;
-    if (apiProducts.length) return;
-    (async () => {
-      try {
-        const list = await api.listProducts();
-        if (Array.isArray(list)) { setApiProducts(list); setApiBacked(true); }
-      } catch { /* ignore load errors here */ }
-    })();
-  }, [view, apiProducts.length]);
+  // Offers functionality removed
 
-  const resetOfferForm = () => setOfferForm({ id:null, nameAr:'', nameEn:'', price:'', oldPrice:'', image:'', category:'general' });
 
-  const editOffer = (o) => {
-    setOfferForm({ id:o.id, nameAr:o.name?.ar||'', nameEn:o.name?.en||'', price:o.price||'', oldPrice:o.originalPrice||o.oldPrice||'', image:o.image||'', category:o.category||'general' });
-  };
-
-  const round2 = (n) => Math.max(0, Math.round((+n + Number.EPSILON) * 100) / 100);
-  // Eligible only (used for batch eligible list and some filters)
-  const availableForDiscount = useMemo(() => {
-    const needle = (addDiscFilter||'').toLowerCase();
-    return (apiBacked ? apiProducts : effectiveProducts)
-      .filter(p => !p.oldPrice && p.price > 0)
-      .filter(p => {
-        if (!needle) return true;
-        const name = (resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.name || '').toLowerCase();
-        return name.includes(needle);
-      })
-      .slice(0, 300);
-  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter, locale]);
-  // For the single-product "اختر المنتج" select: optionally show all products (not just eligible)
-  const availableForAddPicker = useMemo(() => {
-    const needle = (addDiscFilter||'').toLowerCase();
-    let list = (apiBacked ? apiProducts : effectiveProducts)
-      .filter(p => (p.price||0) > 0);
-    if (!addDiscShowAll) list = list.filter(p => !p.oldPrice);
-    if (needle) list = list.filter(p => {
-      const name = (resolveLocalized(p.name, locale) || p.name?.ar || p.name?.en || p.name || '').toLowerCase();
-      return name.includes(needle);
-    });
-    return list.slice(0, 300);
-  }, [apiBacked, apiProducts, effectiveProducts, addDiscFilter, addDiscShowAll, locale]);
-  const selectedAddDiscProduct = useMemo(() => {
-    return availableForDiscount.find(p => p.id === addDiscForm.productId) || (apiBacked ? apiProducts.find(p=>p.id===addDiscForm.productId) : effectiveProducts.find(p=>p.id===addDiscForm.productId));
-  }, [availableForDiscount, addDiscForm.productId, apiBacked, apiProducts, effectiveProducts]);
-  const onAddDiscPercent = (v) => {
-    setAddDiscForm(f => {
-      const price = selectedAddDiscProduct?.price || 0;
-      const perc = +v || 0;
-      const np = price ? round2(price * (100 - perc) / 100) : '';
-      return { ...f, percent: v, newPrice: np };
-    });
-  };
-  const onAddDiscNewPrice = (v) => {
-    setAddDiscForm(f => {
-      const price = selectedAddDiscProduct?.price || 0;
-      const np = +v || 0;
-      const perc = price ? Math.max(0, Math.round((1 - (np/price)) * 100)) : '';
-      return { ...f, newPrice: v, percent: perc };
-    });
-  };
-  const applyAddDiscount = async (e) => {
-    e?.preventDefault?.();
-    if (!addDiscForm.productId) { setOffersError('اختر منتجاً لإضافة خصم'); return; }
-    const basePrice = +selectedAddDiscProduct?.price || 0;
-    const newPrice = +addDiscForm.newPrice || 0;
-    if (!(basePrice>0) || !(newPrice>0) || newPrice >= basePrice) {
-      setOffersError('السعر الجديد غير صالح. يجب أن يكون أقل من السعر الحالي');
-      return;
-    }
-    setOffersLoading(true); setOffersError(null);
-    try {
-      await api.updateProduct(addDiscForm.productId, { oldPrice: basePrice, price: round2(newPrice) });
-      await loadOffers();
-      setAddDiscForm({ productId:'', percent:'', newPrice:'' });
-      setAddDiscFilter('');
-    } catch (e2) {
-      setOffersError(e2.message);
-    } finally { setOffersLoading(false); }
-  };
-
-  const submitOffer = async (e) => {
-    e.preventDefault(); setOffersLoading(true); setOffersError(null);
-    try {
-      if (offerForm.oldPrice && +offerForm.oldPrice <= +offerForm.price) {
-        throw new Error('السعر القديم يجب أن يكون أعلى من السعر الحالي لاحتساب الخصم');
-      }
-      const payload = {
-        nameAr: offerForm.nameAr || offerForm.nameEn || 'عرض',
-        nameEn: offerForm.nameEn || offerForm.nameAr || 'Offer',
-        price: +offerForm.price,
-        oldPrice: offerForm.oldPrice ? +offerForm.oldPrice : null,
-        category: offerForm.category || 'general',
-        image: offerForm.image || undefined
-      };
-      if (offerForm.id) {
-        await api.updateProduct(offerForm.id, payload);
-        await loadOffers();
-      } else {
-        await api.createProduct(payload);
-        await loadOffers();
-      }
-      resetOfferForm();
-    } catch (e2) {
-      setOffersError(e2.message);
-    } finally { setOffersLoading(false); }
-  };
-
-  const clearOfferDiscount = async (id) => {
-    if (!id) return;
-    if (!window.confirm('مسح الخصم لهذا المنتج؟')) return;
-    setOffersLoading(true); setOffersError(null);
-    try {
-      await api.updateProduct(id, { oldPrice: null });
-      // Remove from current offers list since it no longer qualifies
-      setOffers(os => os.filter(o => o.id !== id));
-      // If editing the same offer, reset form
-      setOfferForm(f => (f.id === id ? { id:null, nameAr:'', nameEn:'', price:'', oldPrice:'', image:'', category:'general' } : f));
-    } catch (e) {
-      setOffersError(e.message);
-    } finally { setOffersLoading(false); }
-  };
-
-  const removeOffer = async (id) => {
-    if (!window.confirm('حذف هذا العرض؟')) return;
-    setOffersLoading(true); setOffersError(null);
-    try {
-      await api.deleteProduct(id);
-      setOffers(os => os.filter(o => o.id !== id));
-    } catch (e) { setOffersError(e.message); } finally { setOffersLoading(false); }
-  };
 
   if (!isAdmin) {
     return (
@@ -1304,33 +1177,24 @@ const AdminDashboard = () => {
           <form onSubmit={submitProduct} style={formRow}>
             <h3 style={subTitle}>{productForm.id ? 'تعديل منتج' : 'إضافة منتج'}</h3>
             <div style={formGrid}>
-              <input placeholder="الاسم (AR)" value={productForm.nameAr} onChange={e=>setProductForm(f=>({...f,nameAr:e.target.value}))} />
-              <input placeholder="Name (EN)" value={productForm.nameEn} onChange={e=>setProductForm(f=>({...f,nameEn:e.target.value}))} />
-              <input
-                type="number"
-                placeholder="السعر"
-                required
-                value={productForm.price}
-                onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))}
-              />
-              <input
-                type="number"
-                placeholder="المخزون"
-                required
-                value={productForm.stock}
-                onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))}
-              />
-              <input placeholder="السعر السابق" type="number" value={productForm.oldPrice} onChange={e=>setProductForm(f=>({...f,oldPrice:e.target.value}))} />
+              <Label htmlFor="nameAr">الاسم (AR)</Label>
+              <Input id="nameAr" placeholder="الاسم (AR)" value={productForm.nameAr} onChange={e=>setProductForm(f=>({...f,nameAr:e.target.value}))} />
+              <Label htmlFor="nameEn">Name (EN)</Label>
+              <Input id="nameEn" placeholder="Name (EN)" value={productForm.nameEn} onChange={e=>setProductForm(f=>({...f,nameEn:e.target.value}))} />
+              <Label htmlFor="price">السعر</Label>
+              <Input id="price" type="number" placeholder="السعر" required value={productForm.price} onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))} />
+              <Label htmlFor="stock">المخزون</Label>
+              <Input id="stock" type="number" placeholder="المخزون" required value={productForm.stock} onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))} />
+              <Label htmlFor="oldPrice">السعر السابق</Label>
+              <Input id="oldPrice" placeholder="السعر السابق" type="number" value={productForm.oldPrice} onChange={e=>setProductForm(f=>({...f,oldPrice:e.target.value}))} />
               <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                <select
-                  value={productForm.category}
-                  onChange={e=>setProductForm(f=>({...f,category:e.target.value}))}
-                >
+                <Label htmlFor="category">التصنيف</Label>
+                <Select id="category" value={productForm.category} onChange={e=>setProductForm(f=>({...f,category:e.target.value}))}>
                   <option value="">اختر التصنيف</option>
                   {catOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
-                </select>
+                </Select>
                 {catLoading && <span style={{fontSize:'.6rem',color:'#64748b'}}>...تحميل التصنيفات</span>}
                 {catError && <span style={{fontSize:'.6rem',color:'#b91c1c'}}>خطأ: {catError}</span>}
               </div>
@@ -1378,7 +1242,7 @@ const AdminDashboard = () => {
               )}
               <div style={{fontSize:'.6rem',color:'#64748b'}}>المسموح: JPG/PNG/WEBP · الحد الأقصى: 4MB</div>
               {imageMode === 'url' && (
-                <input placeholder="رابط الصورة (https://...)" value={productForm.image} onChange={e=>setProductForm(f=>({...f,image:e.target.value}))} />
+                <Input placeholder="رابط الصورة (https://...)" value={productForm.image} onChange={e=>setProductForm(f=>({...f,image:e.target.value}))} />
               )}
               { (productImageFile || productForm.id || productForm.image) && (
                 <div style={{display:'flex',flexDirection:'column',gap:4,alignItems:'flex-start'}}>
@@ -1401,14 +1265,12 @@ const AdminDashboard = () => {
                   )}
                 </div>
               ) }
-              <select
-                value={productForm.status}
-                onChange={e => setProductForm(f => ({ ...f, status: e.target.value }))}
-              >
+              <Label htmlFor="status">الحالة</Label>
+              <Select id="status" value={productForm.status} onChange={e => setProductForm(f => ({ ...f, status: e.target.value }))}>
                 <option value="active">نشط</option>
                 <option value="draft">مسودة</option>
                 <option value="archived">مؤرشف</option>
-              </select>
+              </Select>
             </div>
             <div style={actionsRow}>
               <Button type="submit" variant="primary">
@@ -1422,27 +1284,27 @@ const AdminDashboard = () => {
             </div>
           </form>
           <div style={{display:'flex',gap:'.75rem',flexWrap:'wrap'}}>
-            <select value={sort} onChange={e=>setSort(e.target.value)} style={searchInput}>
+            <Select value={sort} onChange={e=>setSort(e.target.value)} size="sm" style={searchInput}>
               <option value="created_desc">الأحدث</option>
               <option value="created_asc">الأقدم</option>
               <option value="price_desc">الأعلى سعراً</option>
               <option value="price_asc">الأقل سعراً</option>
               <option value="stock_desc">أعلى مخزون</option>
               <option value="stock_asc">أقل مخزون</option>
-            </select>
-            <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} style={searchInput}>
+            </Select>
+            <Select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} size="sm" style={searchInput}>
               <option value="">كل التصنيفات</option>
               {catOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
-            </select>
+            </Select>
             {catLoading && <span style={{fontSize:'.65rem',color:'#64748b'}}>...تحميل التصنيفات</span>}
             {catError && <span style={{fontSize:'.65rem',color:'#b91c1c'}}>خطأ: {catError}</span>}
           </div>
           <table style={table}>
             <thead>
               <tr>
-                <th>الاسم</th><th>التصنيف</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th>شرائح</th><th>إجراءات</th>
+                <th>الاسم</th><th>التصنيف</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th>شرائح</th><th>الصور</th><th>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -1463,6 +1325,12 @@ const AdminDashboard = () => {
                           {open ? 'إخفاء' : 'إدارة'}
                         </Button>
                         {tiers.length>0 && <div style={{fontSize:'.55rem',marginTop:4,opacity:.7}}>{tiers.length} شريحة{lowestTier? ` (من ${lowestTier.price})`:''}</div>}
+                      </td>
+                      <td>
+                        <Button size="sm" variant={openImageProductId === p.id ? 'primary' : 'outline'} onClick={()=>toggleProductImages(p.id)}>
+                          {openImageProductId === p.id ? 'إخفاء' : 'إدارة'}
+                        </Button>
+                        {(productImages[p.id] || []).length > 0 && <div style={{fontSize:'.55rem',marginTop:4,opacity:.7}}>{(productImages[p.id] || []).length} صورة</div>}
                       </td>
                       <td style={tdActions}>
                         <Button
@@ -1568,6 +1436,108 @@ const AdminDashboard = () => {
                         </td>
                       </tr>
                     )}
+                    {openImageProductId === p.id && (
+                      <tr>
+                        <td colSpan={8} style={{background:'#f8fafc', padding:'1rem .75rem'}}>
+                          <div style={{display:'flex',flexDirection:'column',gap:'.75rem'}}>
+                            <div style={{fontSize:'.8rem',fontWeight:700}}>إدارة صور المنتج</div>
+                            <form onSubmit={addProductImage} style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'flex-end'}}>
+                              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                                <label style={{fontSize:'.6rem',fontWeight:600}}>الصورة</label>
+                                <input
+                                  ref={newImageFileRef}
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={e=> setNewImageFile(e.target.files?.[0]||null)}
+                                  style={{fontSize:'.7rem'}}
+                                />
+                              </div>
+                              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                                <label style={{fontSize:'.6rem',fontWeight:600}}>النص البديل AR</label>
+                                <input
+                                  value={newImageAltAr}
+                                  onChange={e=>setNewImageAltAr(e.target.value)}
+                                  placeholder="وصف الصورة بالعربية"
+                                  style={{...tierInput, minWidth:120}}
+                                />
+                              </div>
+                              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                                <label style={{fontSize:'.6rem',fontWeight:600}}>Alt Text EN</label>
+                                <input
+                                  value={newImageAltEn}
+                                  onChange={e=>setNewImageAltEn(e.target.value)}
+                                  placeholder="Image description in English"
+                                  style={{...tierInput, minWidth:120}}
+                                />
+                              </div>
+                              <div style={{display:'flex',gap:6}}>
+                                <Button type="submit" size="sm" variant="primary" disabled={!newImageFile || imageLoading}>
+                                  إضافة صورة
+                                </Button>
+                              </div>
+                            </form>
+                            <div style={{display:'grid',gap:8,gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))'}}>
+                              {(productImages[p.id] || []).map(img => (
+                                <div key={img.id} style={{border:'1px solid #e2e8f0',borderRadius:8,padding:8,background:'#fff'}}>
+                                  <img
+                                    src={img.url}
+                                    alt={img.altAr || img.altEn || 'Product image'}
+                                    style={{width:'100%',height:120,objectFit:'cover',borderRadius:4,marginBottom:6}}
+                                  />
+                                  <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                                    <input
+                                      value={img.altAr || ''}
+                                      onChange={e=> {
+                                        const updated = (productImages[p.id] || []).map(i => i.id === img.id ? {...i, altAr: e.target.value} : i);
+                                        setProductImages(prev => ({...prev, [p.id]: updated}));
+                                      }}
+                                      placeholder="النص البديل AR"
+                                      style={{...tierInput, fontSize:'.6rem', padding:'.3rem .4rem'}}
+                                    />
+                                    <input
+                                      value={img.altEn || ''}
+                                      onChange={e=> {
+                                        const updated = (productImages[p.id] || []).map(i => i.id === img.id ? {...i, altEn: e.target.value} : i);
+                                        setProductImages(prev => ({...prev, [p.id]: updated}));
+                                      }}
+                                      placeholder="Alt Text EN"
+                                      style={{...tierInput, fontSize:'.6rem', padding:'.3rem .4rem'}}
+                                    />
+                                    <div style={{display:'flex',gap:4}}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={()=>updateProductImage(img.id, { altAr: img.altAr, altEn: img.altEn })}
+                                        disabled={imageLoading}
+                                        style={{flex:1, fontSize:'.6rem'}}
+                                      >
+                                        تحديث
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="danger"
+                                        onClick={()=>deleteProductImage(img.id)}
+                                        disabled={imageLoading}
+                                        style={{fontSize:'.6rem'}}
+                                      >
+                                        حذف
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {!(productImages[p.id] || []).length && !imageLoading && (
+                                <div style={{gridColumn:'1/-1', textAlign:'center', padding:'2rem', color:'#64748b', fontSize:'.7rem'}}>
+                                  لا توجد صور لهذا المنتج
+                                </div>
+                              )}
+                            </div>
+                            {imageLoading && <div style={{fontSize:'.6rem',marginTop:4}}>...تحميل</div>}
+                            {imageError && <div style={{fontSize:'.6rem',color:'#b91c1c',marginTop:4}}>خطأ: {imageError}</div>}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </React.Fragment>
                 );
               })}
@@ -1583,9 +1553,9 @@ const AdminDashboard = () => {
               <span style={{fontSize:'.65rem'}}>صفحة {productPage} / {productTotalPages}</span>
               <Button variant={productPage===productTotalPages? 'ghost' : 'primary'} disabled={productPage===productTotalPages} onClick={()=>setProductPage(p=>Math.min(productTotalPages,p+1))}>التالي</Button>
               <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
-              <select value={productPageSize} onChange={e=>{ setProductPageSize(+e.target.value); setProductPage(1); }} style={searchInput}>
+              <Select value={productPageSize} onChange={e=>{ setProductPageSize(+e.target.value); setProductPage(1); }} size="sm" style={searchInput}>
                 {[10,20,30,50,100].map(n=> <option key={n} value={n}>{n}</option>)}
-              </select>
+              </Select>
               <span style={{fontSize:'.65rem',opacity:.7}}>{filteredProducts.length} عنصر</span>
             </div>
           )}
@@ -1600,16 +1570,16 @@ const AdminDashboard = () => {
         <div style={sectionWrap}>
           <h3 style={subTitle}>الطلبات (تحويل بنكي / عام)</h3>
           <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:12}}>
-            <select value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)} style={searchInput}>
+            <Select value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)} size="sm" style={searchInput}>
               <option value="">كل الحالات</option>
               {['pending','processing','pending_bank_review','paid','shipped','completed','cancelled'].map(s=> <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={orderMethodFilter} onChange={e=>setOrderMethodFilter(e.target.value)} style={searchInput}>
+            </Select>
+            <Select value={orderMethodFilter} onChange={e=>setOrderMethodFilter(e.target.value)} size="sm" style={searchInput}>
               <option value="">كل الطرق</option>
               {['paypal','bank','cod','stc'].map(m=> <option key={m} value={m}>{m}</option>)}
-            </select>
-            <input type="date" value={orderDateFrom} onChange={e=>setOrderDateFrom(e.target.value)} style={searchInput} />
-            <input type="date" value={orderDateTo} onChange={e=>setOrderDateTo(e.target.value)} style={searchInput} />
+            </Select>
+            <Input type="date" value={orderDateFrom} onChange={e=>setOrderDateFrom(e.target.value)} size="sm" style={searchInput} />
+            <Input type="date" value={orderDateTo} onChange={e=>setOrderDateTo(e.target.value)} size="sm" style={searchInput} />
             <Button variant="primary" type="button" onClick={()=>{setOrderStatusFilter('');setOrderMethodFilter('');setOrderDateFrom('');setOrderDateTo('');}}>مسح الفلاتر</Button>
             <Button variant="primary" type="button" onClick={async ()=> {
               try {
@@ -1738,9 +1708,9 @@ const AdminDashboard = () => {
               <span style={{fontSize:'.65rem'}}>صفحة {orderPage} / {orderTotalPages}</span>
               <Button variant={orderPage===orderTotalPages? 'ghost' : 'primary'} disabled={orderPage===orderTotalPages} onClick={()=>setOrderPage(p=>Math.min(orderTotalPages,p+1))}>التالي</Button>
               <span style={{marginInlineStart:10,fontSize:'.65rem'}}>عدد الصفوف:</span>
-              <select value={orderPageSize} onChange={e=>{ setOrderPageSize(+e.target.value); setOrderPage(1); }} style={searchInput}>
+              <Select value={orderPageSize} onChange={e=>{ setOrderPageSize(+e.target.value); setOrderPage(1); }} size="sm" style={searchInput}>
                 {[20,50,100,200,500].map(n=> <option key={n} value={n}>{n}</option>)}
-              </select>
+              </Select>
               <span style={{fontSize:'.65rem',opacity:.7}}>{filteredOrders.length} عنصر</span>
             </div>
           )}
@@ -2186,16 +2156,8 @@ const AdminDashboard = () => {
 };
 
 // Styles (inline objects لسهولة النقل)
-const pageWrap = { direction: 'rtl', padding: '1.25rem 0', fontSize: '.85rem' };
-const title = { margin: '0 0 1rem', fontSize: '1.4rem', fontWeight: 700 };
-const tabsBar = { display: 'flex', gap: '.4rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' };
-const tabBtn = { background: '#f1f5f9', border: 0, padding: '.55rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 500 };
-const tabBtnActive = { ...tabBtn, background: 'linear-gradient(90deg,#69be3c,#f6ad55)', color: '#fff', boxShadow: '0 2px 8px -2px rgba(0,0,0,.25)' };
 const searchInput = { padding: '.55rem .75rem', border: '1px solid #e2e8f0', borderRadius: 10, minWidth: 160, fontSize: '.8rem', background: '#fff' };
 // Base input styles used in forms
-const input = { ...searchInput, minWidth: 180 };
-const inputSmall = { ...searchInput, minWidth: 110 };
-const grid3 = { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' };
 const statBox = { background: 'var(--color-surface)', padding: '1rem', borderRadius: 14, boxShadow: '0 4px 14px -6px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column', gap: '.35rem', border: '1px solid var(--color-border-soft)' };
 const statValue = { fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text)' };
 const statLabel = { fontSize: '.7rem', letterSpacing: '.5px', color: 'var(--color-text-faint)', fontWeight: 600 };
@@ -2215,7 +2177,6 @@ const tdActions = { display: 'flex', gap: '.35rem', alignItems: 'center' };
 const emptyCell = { textAlign: 'center', padding: '1rem', fontSize: '.75rem', color: 'var(--color-text-faint)' };
 const mutedP = { fontSize: '.75rem', color: 'var(--color-text-soft)', margin: '.25rem 0 1rem' };
 const ulClean = { margin: 0, padding: '0 1rem', listStyle: 'disc', lineHeight: 1.9 };
-const errorText = { fontSize: '.75rem', color: '#b91c1c' };
 // Tier pricing sub-table styles
 const tierLabel = { fontSize: '.55rem', fontWeight: 600, color: 'var(--color-text-soft)' };
 const tierInput = { ...searchInput, minWidth: 90, fontSize: '.65rem', padding: '.4rem .5rem' };
@@ -2274,7 +2235,7 @@ export default AdminDashboard;
 
 // Lazy inline component for reviews moderation (kept here for simplicity)
 import { useState as _useState, useEffect as _useEffect } from 'react';
-import _rawApi from '../../api/client';
+import _rawApi from '../../services/api/client';
 
 // Inline Categories Admin manager
 const CategoriesAdmin = () => {

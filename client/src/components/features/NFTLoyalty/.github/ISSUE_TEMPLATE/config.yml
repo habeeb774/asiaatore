@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/my-store/nft-loyalty#readme
+    about: Check our documentation for common questions and guides
+  - name: 💬 Discord Community
+    url: https://discord.gg/my-store
+    about: Join our Discord community for discussions and support
+  - name: 🐛 Report Security Issue
+    url: https://github.com/my-store/nft-loyalty/security/advisories/new
+    about: Report security vulnerabilities privately

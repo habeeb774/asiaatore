@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { motion } from '../lib/framerLazy';
-import { useMarketing } from '../context/MarketingContext';
-import { useLanguage } from '../context/LanguageContext';
-import { useSettings } from '../context/SettingsContext';
+import { useMarketing } from '../stores/MarketingContext';
+import { useLanguage } from '../stores/LanguageContext';
+import { useSettings } from '../stores/SettingsContext';
 import Seo from '../components/Seo';
-import api from '../api/client';
+import api from '../services/api/client';
 
 /* --------------------- Skeleton Placeholder --------------------- */
 const FeatureSkeleton = () => (

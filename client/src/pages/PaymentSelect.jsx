@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from 'react';
-import { PaymentContext } from '../context/PaymentContext';
-import { CheckoutContext } from '../context/CheckoutContext';
+import { PaymentContext } from '../stores/PaymentContext';
+import { CheckoutContext } from '../stores/CheckoutContext';
 import { useNavigate } from 'react-router-dom';
 
 const PaymentSelect = () => {

@@ -2,17 +2,17 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDebounce } from 'use-debounce';
 import { Plus, RefreshCw, Upload, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import Seo from '../../components/Seo';
-import { adminApi } from '../../api/admin';
-import { useToast } from '../../context/ToastContext';
-import AdminLayout from '../../components/admin/AdminLayout';
-import AdminTableSkeleton from '../../components/admin/AdminTableSkeleton';
+import { adminApi } from '../../services/api/admin';
+import { useToast } from '../../stores/ToastContext';
+import AdminLayout from '../../components/features/admin/AdminLayout';
+import AdminTableSkeleton from '../../components/features/admin/AdminTableSkeleton';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/Card';
-import { KpiCard } from '../../components/admin/KpiCard';
-import AddUserForm from '../../components/admin/AddUserForm';
-import UserRow from '../../components/admin/UserRow';
+import { KpiCard } from '../../components/features/admin/KpiCard';
+import AddUserForm from '../../components/features/admin/AddUserForm';
+import UserRow from '../../components/features/admin/UserRow';
 
 const Customers = () => {
   // Filters and pagination state

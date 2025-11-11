@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { useMarketing } from '../../context/MarketingContext';
-import { useSettings } from '../../context/SettingsContext';
+import { useMarketing } from '../../stores/MarketingContext';
+import { useSettings } from '../../stores/SettingsContext';
 import SafeImage from '../common/SafeImage';
 
 export default function TopStrip() {

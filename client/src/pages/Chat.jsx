@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useChat } from '../context/ChatContext.jsx';
-import api from '../api/client.js';
+import { useChat } from '../stores/ChatContext';
+import api from '../services/api/client.js';
 import { useLocation } from 'react-router-dom';
 
 function initials(name = '') {

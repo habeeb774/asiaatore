@@ -8,6 +8,7 @@ import compression from 'compression';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 import cookieParser from 'cookie-parser';
+import { createClient } from 'redis';
 import { registerSse } from './utils/realtimeHub.js';
 import path from 'path';
 import fs from 'fs';
@@ -26,6 +27,24 @@ if (!process.env.DATABASE_URL) {
     }
 }
 
+// Prepare encryption key for sensitive data
+if (!process.env.ENCRYPTION_KEY) {
+    const fallbackKey = 'dev-encryption-key-32-chars-long!!';
+    const shouldQuickStart = process.env.QUICK_START_DB === '1' || (!isProd && process.env.QUICK_START_DB !== '0');
+    if (shouldQuickStart) {
+        process.env.ENCRYPTION_KEY = fallbackKey;
+        console.warn('[ENCRYPTION] Using fallback ENCRYPTION_KEY for dev. Set ENCRYPTION_KEY in production.');
+    } else if (isProd) {
+        console.error('[ENCRYPTION] ENCRYPTION_KEY not set in production. Sensitive data encryption will fail.');
+    }
+}
+
+// Structured logging (initialize early for Redis setup)
+const rootLogger = pino({ level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'), base: { env: process.env.NODE_ENV || 'development' } });
+// Separate namespaces for app vs api logs
+const appLogger = rootLogger.child({ component: 'app' });
+const apiLogger = rootLogger.child({ component: 'api' });
+
 // Defer prisma and route imports until after env is ready
 let prisma; // will be set via dynamic import
 let attachUser;
@@ -34,20 +53,28 @@ let inventoryRoutes, reportsRoutes, invoicesRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
 let envRoutes, endpointsRoutes;
 let adminUsersRoutes, adminStatsRoutes, adminAuditRoutes, adminSellersRoutes;
-let paypalRouter, bankRouter, stcRouter;
+let paypalRouter, bankRouter, stcRouter, stripeRouter;
 let wishlistRoutes, cartRoutes, searchRoutes, supportRoutes;
 let setupRoutes;
 let shippingRoutes, shippingWebhooksRoutes, smsaRoutes;
+let sitemapRoutes;
+let uiSettingsRoutes;
+let subscriptionsRoutes, analyticsRoutes, uploadsRoutes, notificationsRoutes;
 let DB_STATUS = { connected: false, lastPingMs: null, error: null };
+
+// Redis client for caching
+let redisClient;
+if (process.env.REDIS_URL) {
+  redisClient = createClient({ url: process.env.REDIS_URL });
+  redisClient.on('error', (err) => appLogger.error('Redis Client Error', err));
+  redisClient.connect().catch((err) => appLogger.warn('Redis connection failed', err));
+  global.redisClient = redisClient;
+} else {
+  appLogger.info('Redis not configured, skipping caching');
+}
 
 const app = express();
 let PORT = Number(process.env.PORT) || 4000;
-
-// Structured logging
-const rootLogger = pino({ level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'), base: { env: process.env.NODE_ENV || 'development' } });
-// Separate namespaces for app vs api logs
-const appLogger = rootLogger.child({ component: 'app' });
-const apiLogger = rootLogger.child({ component: 'api' });
 
 // Mount API request logger only for /api/* with request-id and sanitized headers
 app.use('/api', pinoHttp({
@@ -157,6 +184,26 @@ app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// CSRF protection for state-changing requests
+app.use('/api', (req, res, next) => {
+  const methods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+  if (!methods.includes(req.method)) return next();
+  // Skip CSRF for auth routes or if disabled
+  if (req.path.startsWith('/auth') || process.env.DISABLE_CSRF === 'true') return next();
+  // Check Origin or Referer header
+  const origin = req.headers.origin || req.headers.referer;
+  if (!origin) {
+    return res.status(403).json({ error: 'CSRF_MISSING_ORIGIN', message: 'Origin or Referer header required' });
+  }
+  // In development, allow all origins (like CORS does)
+  if (!isProd) return next();
+  const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (allowedOrigins.length && !allowedOrigins.some(o => origin.startsWith(o))) {
+    return res.status(403).json({ error: 'CSRF_INVALID_ORIGIN', message: 'Invalid Origin or Referer' });
+  }
+  next();
+});
+
 // Trust proxy when behind a proxy (Railway/Render/etc.)
 // Enable automatically in production unless explicitly disabled
 if (isProd || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
@@ -164,8 +211,10 @@ if (isProd || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 // Rate limits (focused)
 const authLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_AUTH_WINDOW_MS || 60_000), max: Number(process.env.RATE_LIMIT_AUTH_MAX || 10) });
 const payLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_PAY_WINDOW_MS || 300_000), max: Number(process.env.RATE_LIMIT_PAY_MAX || 5) });
+const apiLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_API_WINDOW_MS || 900_000), max: Number(process.env.RATE_LIMIT_API_MAX || 100), message: { error: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } });
 if (process.env.RATE_LIMIT_AUTH_ENABLE === 'true') app.use('/api/auth', authLimiter);
 if (process.env.RATE_LIMIT_PAY_ENABLE === 'true') app.use('/api/pay', payLimiter);
+if (process.env.RATE_LIMIT_API_ENABLE !== 'false') app.use('/api', apiLimiter);
 
 // Attach user (JWT from Authorization, with dev headers permitted in non-prod)
 // Attach user (injected later after dynamic imports)
@@ -214,34 +263,21 @@ app.get('/robots.txt', (_req, res) => {
     ].filter(Boolean);
     res.type('text/plain').send(lines.join('\n'));
 });
+// sitemap.xml is served by a dedicated route module (server/routes/sitemap.js)
 
-app.get('/sitemap.xml', async (_req, res) => {
-    const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const urls = new Set();
-    // Core static pages
-    ['/','/products','/offers','/brands','/cart','/checkout','/login','/register'].forEach(p => urls.add(p));
-    // Try to include categories and recent products from DB (best-effort)
+// Lightweight endpoint to accept sendBeacon hits from the client for best-effort analytics.
+// This endpoint intentionally accepts any content type and returns 204 quickly.
+app.post('/_collect_event', express.text({ type: '*/*' }), (req, res) => {
     try {
-        if (prisma) {
-            const [cats, prods] = await Promise.all([
-                prisma.category?.findMany?.({ select: { slug: true, updatedAt: true }, take: 500 }).catch(() => []),
-                prisma.product?.findMany?.({ select: { slug: true, updatedAt: true }, where: { status: 'ACTIVE' }, orderBy: { updatedAt: 'desc' }, take: 1000 }).catch(() => [])
-            ]);
-            (cats||[]).forEach(c => c?.slug && urls.add(`/category/${encodeURIComponent(c.slug)}`));
-            (prods||[]).forEach(p => p?.slug && urls.add(`/products/${encodeURIComponent(p.slug)}`));
-        }
-    } catch {}
-
-    const xml = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-        ...Array.from(urls).map(u => {
-            const loc = base ? `${base}${u}` : u;
-            return `  <url><loc>${loc}</loc></url>`;
-        }),
-        '</urlset>'
-    ].join('\n');
-    res.type('application/xml').send(xml);
+        const raw = req.body || '';
+        let parsed = raw;
+        try { parsed = JSON.parse(String(raw)); } catch (e) { /* leave as text */ }
+        apiLogger.info({ event: parsed }, 'Beacon event collected');
+    } catch (e) {
+        appLogger.warn('Failed to process beacon event');
+    }
+    // Always return 204 No Content so sendBeacon isn't blocked
+    res.status(204).end();
 });
 
 // Holder to register SSE after auth middleware is mounted so req.user is available
@@ -280,47 +316,66 @@ async function loadModulesAndMount() {
     prisma = prismaMod.default;
     const authMod = await import('./middleware/auth.js');
     attachUser = authMod.attachUser;
-    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR, invoicesR, legalR, shippingR, shippingWebhooksR, setupR, smsaR, envR, endpointsR] = await Promise.all([
-        import('./routes/auth.js'),
-        import('./routes/products.js'),
-        import('./routes/brands.js'),
-        import('./routes/orders.js'),
-        import('./routes/marketing.js'),
-        import('./routes/tierPrices.js'),
-        import('./routes/sellers.js'),
-        import('./routes/delivery.js'),
-        import('./routes/inventory.js'),
-        import('./routes/reports.js'),
+    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, stripeR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR, invoicesR, legalR, shippingR, shippingWebhooksR, setupR, smsaR, envR, uiSettingsR, endpointsR, sitemapR, subscriptionsR, analyticsR, uploadsR] = await Promise.all([
+        import('./controllers/auth.js'),
+        import('./controllers/products.js'),
+        import('./controllers/brands.js'),
+        import('./controllers/orders.js'),
+        import('./controllers/marketing.js'),
+        import('./controllers/tierPrices.js'),
+        import('./controllers/sellers.js'),
+        import('./controllers/delivery.js'),
+        import('./controllers/inventory.js'),
+        import('./controllers/reports.js'),
         import('./paypal.js'),
         import('./bank.js'),
         import('./stc.js'),
-        import('./routes/settings.js'),
-        import('./routes/categories.js'),
-        import('./routes/reviews.js'),
-        import('./routes/wishlist.js'),
-        import('./routes/cart.js'),
-        import('./routes/search.js'),
-        import('./routes/addresses.js'),
-        import('./routes/support.js'),
-        import('./routes/adminUsers.js'),
-        import('./routes/adminStats.js'),
-        import('./routes/adminAudit.js'),
-        import('./routes/ads.js'),
-        import('./routes/invoices.js'),
-        import('./routes/legal.js'),
-        import('./routes/shipping.js'),
-        import('./routes/shipping-webhooks.js'),
-        import('./routes/setup.js'),
-        import('./routes/smsa.js'),
-        import('./routes/env.js'),
-        import('./routes/endpoints.js'),
+        import('./stripe.js'),
+        import('./controllers/settings.js'),
+        import('./controllers/categories.js'),
+        import('./controllers/reviews.js'),
+        import('./controllers/wishlist.js'),
+        import('./controllers/cart.js'),
+        import('./controllers/search.js'),
+        import('./controllers/addresses.js'),
+        import('./controllers/support.js'),
+        import('./controllers/adminUsers.js'),
+        import('./controllers/adminStats.js'),
+        import('./controllers/adminAudit.js'),
+        import('./controllers/ads.js'),
+        import('./controllers/invoices.js'),
+        import('./controllers/legal.js'),
+        import('./controllers/shipping.js'),
+        import('./controllers/shipping-webhooks.js'),
+        import('./controllers/setup.js'),
+        import('./controllers/smsa.js'),
+        import('./controllers/env.js'),
+        import('./controllers/endpoints.js'),
+            import('./controllers/uiSettings.js'),
+        import('./controllers/sitemap.js'),
+        import('./controllers/subscriptions.js'),
+        import('./controllers/analytics.js'),
+        import('./controllers/uploads.js'),
     ]);
+    let notificationsR;
+    try {
+      notificationsR = await import('./controllers/notifications.js');
+      console.log('notificationsR imported successfully:', !!notificationsR.default);
+    } catch (e) {
+      console.error('Failed to import notifications:', e);
+      notificationsR = { default: null };
+    }
     authRoutes = authR.default; productsRoutes = prodR.default; brandsRoutes = brandR.default; ordersRoutes = orderR.default;
     marketingRoutes = mktR.default; tierPricesRoutes = tierR.default; sellersRoutes = sellR.default; deliveryRoutes = delivR.default;
     inventoryRoutes = invR.default; reportsRoutes = repR.default; invoicesRoutes = invoicesR.default;
-    paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default;
+    paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default; stripeRouter = stripeR.default;
     settingsRoutes = settingsR.default; categoriesRoutes = categoriesR.default; reviewsRoutes = reviewsR.default; addressesRoutes = addressesR.default;
     envRoutes = envR.default; endpointsRoutes = endpointsR.default;
+    uiSettingsRoutes = uiSettingsR.default;
+    subscriptionsRoutes = subscriptionsR.default;
+    analyticsRoutes = analyticsR.default;
+    uploadsRoutes = uploadsR.default;
+    notificationsRoutes = notificationsR.default;
     supportRoutes = supportR.default;
     shippingRoutes = shippingR.default; shippingWebhooksRoutes = shippingWebhooksR.default;
     adminUsersRoutes = adminUsersR.default; adminStatsRoutes = adminStatsR.default; adminAuditRoutes = adminAuditR.default;
@@ -329,6 +384,7 @@ async function loadModulesAndMount() {
     wishlistRoutes = wishlistR.default; cartRoutes = cartR.default; searchRoutes = searchR.default;
     setupRoutes = setupR.default;
     smsaRoutes = smsaR.default;
+    sitemapRoutes = sitemapR.default;
     // Now replace placeholder attachUser with real one by reordering middleware: remove last no-op? Not trivial; just use real middleware for subsequent routers.
     app.use(attachUser);
     // Mount SSE route AFTER auth so query/cookie/Bearer tokens populate req.user
@@ -346,10 +402,16 @@ async function loadModulesAndMount() {
     app.use('/api/sellers', sellersRoutes);
     app.use('/api/delivery', deliveryRoutes);
     app.use('/api/settings', settingsRoutes);
+    // per-user UI settings (developer settings) - supports get/post/export with file fallback
+    if (uiSettingsRoutes) app.use('/api/ui-settings', uiSettingsRoutes);
     app.use('/api/env', envRoutes);
     app.use('/api/categories', categoriesRoutes);
     app.use('/api/reviews', reviewsRoutes);
     app.use('/api/addresses', addressesRoutes);
+    app.use('/api/subscriptions', subscriptionsRoutes);
+    app.use('/api/analytics', analyticsRoutes);
+    app.use('/api/uploads', uploadsRoutes);
+    app.use('/api/notifications', notificationsRoutes);
     // Shipping: quote + webhook receivers
     if (shippingRoutes) app.use('/api/shipping', shippingRoutes);
     if (shippingWebhooksRoutes) app.use('/api/shipping', shippingWebhooksRoutes);
@@ -362,8 +424,11 @@ async function loadModulesAndMount() {
     app.use('/api/pay/paypal', paypalRouter);
     app.use('/api/pay/bank', bankRouter);
     app.use('/api/pay/stc', stcRouter);
+    app.use('/api/pay/stripe', stripeRouter);
     app.use('/api/ads', adsR.default);
     app.use('/api/shipping/smsa', smsaRoutes);
+    // Sitemap route (serves /sitemap.xml)
+    if (sitemapRoutes) app.use('/', sitemapRoutes);
     // Admin routes
     if (adminUsersRoutes) app.use('/api/admin/users', adminUsersRoutes);
     if (adminStatsRoutes) app.use('/api/admin/stats', adminStatsRoutes);

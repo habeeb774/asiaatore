@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import api from '../../api/client';
+import React, { useEffect, useState, memo } from 'react';
+import api from '../../services/api/client';
 import StockAdjustModal from './StockAdjustModal';
 
-export default function ProductList() {
+const ProductList = memo(function ProductList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -137,7 +137,9 @@ export default function ProductList() {
           </tbody>
         </table>
       )}
-      <StockAdjustModal open={modalOpen} onClose={handleModalClose} product={selectedProduct} onAdjusted={handleAdjusted} />
+            <StockAdjustModal open={modalOpen} onClose={handleModalClose} product={selectedProduct} onAdjusted={handleAdjusted} />
     </div>
   );
-}
+});
+
+export default ProductList;

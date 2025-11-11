@@ -1,7 +1,7 @@
 import React from 'react';
 import Seo from '../../components/Seo';
-import AdminLayout from '../../components/admin/AdminLayout';
-import api from '../../api/client';
+import AdminLayout from '../../components/features/admin/AdminLayout';
+import api from '../../services/api/client';
 import { Button } from '../../components/ui';
 
 function useOverview() {

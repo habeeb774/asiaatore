@@ -1,31 +1,18 @@
 import React from 'react';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
 import { Link } from 'react-router-dom';
-import api from '../../api/client';
+import { useBrands } from '../../hooks/useBrands';
 import SafeImage from '../common/SafeImage';
 
 const fallbackStyle = { width: 80, height: 48, background: '#f3f4f6', borderRadius: 10 };
 
 export default function BrandsStrip({ title = 'Popular Brands', max = 14 }) {
-  const [brands, setBrands] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
-  const [err, setErr] = React.useState(null);
   const listRef = React.useRef(null);
   const { locale } = useLanguage();
 
-  React.useEffect(() => {
-    let active = true;
-    setLoading(true); setErr(null);
-    api.brandsList().then((list) => {
-      if (!active) return;
-      setBrands(Array.isArray(list) ? list.slice(0, max) : []);
-    }).catch((e) => {
-      if (!active) return;
-      setErr(e?.message || 'Failed to load brands');
-    }).finally(() => active && setLoading(false));
-    return () => { active = false; };
-  }, [max]);
+  // Use React Query hook for brands with caching
+  const { data: brands = [], isLoading: loading, error } = useBrands();
 
   // Frontend graceful fallback when DB is unavailable or API fails
   const fallbackBrands = React.useMemo(() => [
@@ -36,7 +23,8 @@ export default function BrandsStrip({ title = 'Popular Brands', max = 14 }) {
     { id: 'fb-5', slug: 'green-tea', name: { en: 'Green Tea', ar: 'الشاي الأخضر' }, logo: '/logo.svg' },
     { id: 'fb-6', slug: 'orient-delights', name: { en: 'Orient Delights', ar: 'لذائذ الشرق' }, logo: '/logo.svg' }
   ], []);
-  const showing = (!loading && Array.isArray(brands) && brands.length > 0) ? brands : fallbackBrands;
+
+  const showing = (!loading && Array.isArray(brands) && brands.length > 0) ? brands.slice(0, max) : fallbackBrands;
 
   return (
     <section className="section-padding bg-white" aria-labelledby="brands-head">
@@ -71,7 +59,7 @@ export default function BrandsStrip({ title = 'Popular Brands', max = 14 }) {
                 </Link>
               </li>
             ))}
-            {!loading && !err && brands.length === 0 && (
+            {!loading && !error && brands.length === 0 && (
               <li className="text-sm opacity-70">—</li>
             )}
           </ul>

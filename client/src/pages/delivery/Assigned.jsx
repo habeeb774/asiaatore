@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import api from '../../api/client';
+import api from '../../services/api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';

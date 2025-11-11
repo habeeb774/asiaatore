@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/client';
+import api from '../services/api/client';
 
 const initialAd = { title: '', body: '', image: '', linkUrl: '', status: true };
 

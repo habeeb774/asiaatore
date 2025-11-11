@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useOrders } from '../context/OrdersContext';
-import { useAuth } from '../context/AuthContext';
-import { useSettings } from '../context/SettingsContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useOrders } from '../stores/OrdersContext';
+import { useAuth } from '../stores/AuthContext';
+import { useSettings } from '../stores/SettingsContext';
+import { useLanguage } from '../stores/LanguageContext';
 import Seo from '../components/Seo';
 import { Button, ButtonLink, buttonVariants } from '../components/ui';
-import AdminTableSkeleton from '../components/admin/AdminTableSkeleton.jsx';
+import AdminTableSkeleton from '../components/features/admin/AdminTableSkeleton';
 import { openInvoicePdfByOrder } from '../services/invoiceService';
 
 const Orders = () => {

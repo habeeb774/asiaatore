@@ -15,7 +15,7 @@ import authRoutes from './routes/auth.js';
 dotenv.config({ override: true });
 
 const app = express();
-const PORT = Number(process.env.PORT) || 4000;
+const PORT = Number(process.env.PORT) || 8829;
 const isProd = process.env.NODE_ENV === 'production';
 
 // --- Security Middleware ---

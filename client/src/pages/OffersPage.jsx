@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../stores/LanguageContext';
 import ProductGrid from '../components/products/ProductGrid';
 import ProductGridSkeleton from '../components/products/ProductGridSkeleton.jsx';
 import Seo from '../components/Seo';
-import api from '../api/client';
-import { useSettings } from '../context/SettingsContext';
+import api from '../services/api/client';
+import { useSettings } from '../stores/SettingsContext';
 
 const OffersPage = () => {
   const { t, locale } = useLanguage();

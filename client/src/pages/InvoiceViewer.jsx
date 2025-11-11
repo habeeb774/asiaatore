@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { Button, ButtonLink, buttonVariants } from '../components/ui';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../stores/LanguageContext';
 
 const InvoiceViewer = () => {
   const { id } = useParams();

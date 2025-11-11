@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactFullpage from '@fullpage/react-fullpage';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
 import { Link } from 'react-router-dom';
-import { useProducts } from '../../context/ProductsContext';
+import { useProducts } from '../../stores/ProductsContext';
 
 // Minimal FullLanding scaffold with three sections: Hero, Video, Featured Products
 export default function FullLanding() {
@@ -83,7 +83,7 @@ export default function FullLanding() {
         navigation
         navigationPosition={locale === 'ar' ? 'left' : 'right'}
         scrollingSpeed={700}
-        render={({ state, fullpageApi }) => {
+        render={({ fullpageApi }) => {
           return (
             <div id="fullpage-wrapper" className="full-landing-root">
               <div className="section fp-section" id="section-hero">

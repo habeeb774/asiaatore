@@ -311,6 +311,43 @@ async function main() {
     }
   });
   console.log('Store settings ensured (singleton).');
+
+  // Seed ads for hero carousel
+  const ads = [
+    {
+      title: 'عرض خاص - خصم 50%',
+      description: 'اكتشف أحدث العروض والخصومات',
+      image: 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?auto=format&fit=crop&w=1200&q=70',
+      link: '/products',
+      active: true
+    },
+    {
+      title: 'منتجات جديدة',
+      description: 'اكتشف مجموعتنا الجديدة من المنتجات',
+      image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=70',
+      link: '/products?sort=newest',
+      active: true
+    },
+    {
+      title: 'شحن مجاني',
+      description: 'لطلبات فوق 200 ريال',
+      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=70',
+      link: '/shipping-info',
+      active: true
+    }
+  ];
+
+  for (const ad of ads) {
+    const existing = await prisma.ad.findFirst({
+      where: { title: ad.title }
+    }).catch(() => null);
+    
+    if (!existing) {
+      await prisma.ad.create({ data: ad });
+      console.log(`Ad created: ${ad.title}`);
+    }
+  }
+  console.log('Ads seeding completed.');
 }
 
 main().catch(e => { console.error(e); process.exit(1); }).finally(async ()=> { await prisma.$disconnect(); });

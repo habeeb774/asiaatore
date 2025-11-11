@@ -3,11 +3,11 @@ import { useLocation } from 'react-router-dom';
 import ProductFilters from '../components/products/ProductFilters';
 import ProductGrid from '../components/products/ProductGrid';
 import ProductGridSkeleton from '../components/products/ProductGridSkeleton.jsx';
-import { useProducts, useProductPrefetch, useNextPagePrefetch } from '../api/products';
-import { useLanguage } from '../context/LanguageContext';
+import { useProducts, useProductPrefetch, useNextPagePrefetch } from '../services/api/products';
+import { useLanguage } from '../stores/LanguageContext';
 import Seo from '../components/Seo';
 import Button from '../components/ui/Button';
-import { useSettings } from '../context/SettingsContext';
+import { useSettings } from '../stores/SettingsContext';
 import { t } from '../utils/i18n';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 

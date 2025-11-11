@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { adminApi } from '../../api/admin';
-import AdminLayout from '../../components/admin/AdminLayout';
+import { useAuth } from '../../stores/AuthContext';
+import adminApi from '../../services/api/admin';
+import AdminLayout from '../../components/features/admin/AdminLayout';
 import { Button } from '../../components/ui';
 
 const searchInput = { padding: '.55rem .75rem', border: '1px solid #e2e8f0', borderRadius: 10, minWidth: 160, fontSize: '.8rem', background: '#fff' };

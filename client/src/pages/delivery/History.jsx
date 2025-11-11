@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api/client';
+import { useAuth } from '../../stores/AuthContext';
 import { Badge } from '../../components/ui';
 import { Calendar, Package, Clock } from 'lucide-react';
 

@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from '../../lib/framerLazy';
 import { Menu as MenuIcon, X as CloseIcon, Home as HomeIcon } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { useSettings } from '../../context/SettingsContext';
-import { useSidebar } from '../../context/SidebarContext';
+import { useLanguage } from '../../stores/LanguageContext';
+import { useSettings } from '../../stores/SettingsContext';
+import { useSidebar } from '../../stores/SidebarContext';
 import SafeImage from '../common/SafeImage';
 
 // Minimal Tailwind-based AppShell combining Header + Sidebar

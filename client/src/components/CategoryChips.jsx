@@ -1,16 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import api from '../api/client';
+import useCategories from '../hooks/useCategories';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
+import { useLanguage } from '../stores/LanguageContext';
 import { Chip } from './ui/Chip';
 
 const scrollShadows = 'after:content-[" "] after:absolute after:top-0 after:right-0 after:w-8 after:h-full after:pointer-events-none after:bg-gradient-to-l after:from-white after:to-transparent';
 
 const CategoryChips = () => {
   const [cats, setCats] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
   const trackRef = useRef(null);
@@ -19,23 +17,27 @@ const CategoryChips = () => {
   const [showAll, setShowAll] = useState(false);
   const MAX_DEFAULT = 10;
 
+  // Use React Query hook for categories with caching
+  const { data: categories = [], isLoading: loading, error } = useCategories({ withCounts: 1 });
+
+  // Sync categories to local state and cache in localStorage
   useEffect(() => {
-    setLoading(true);
-    // Try to hydrate from cache first for instant UI
+    if (Array.isArray(categories) && categories.length > 0) {
+      setCats(categories);
+      try { localStorage.setItem('cats_cache', JSON.stringify(categories)); } catch {}
+    }
+  }, [categories]);
+
+  // Try to hydrate from cache first for instant UI
+  useEffect(() => {
     try {
       const cached = localStorage.getItem('cats_cache');
-      if (cached) {
+      if (cached && !cats.length) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) setCats(parsed);
       }
     } catch {}
-    api.listCategories({ withCounts: 1 }).then(r => {
-      if (r?.categories) {
-        setCats(r.categories);
-        try { localStorage.setItem('cats_cache', JSON.stringify(r.categories)); } catch {}
-      }
-    }).catch(e => setError(e.message)).finally(()=> setLoading(false));
-  }, []);
+  }, [cats.length]);
 
   // Deduplicate categories by slug > id > Arabic name
   const uniqueCats = useMemo(() => {
@@ -105,14 +107,80 @@ const CategoryChips = () => {
                 return StoreIcon;
               case 'tag':
                 return Tag;
+              case 'apple':
+              case 'fruit':
+              case 'fruits':
+                return Apple;
+              case 'beef':
+              case 'meat':
+              case 'chicken':
+                return Beef;
+              case 'milk':
+              case 'dairy':
+                return Milk;
+              case 'sparkles':
+              case 'offers':
+              case 'deals':
+                return Sparkles;
+              case 'shopping-bag':
+              case 'bag':
+                return ShoppingBag;
+              case 'package':
+                return Package;
+              case 'truck':
+              case 'delivery':
+                return Truck;
+              case 'car':
+                return Car;
+              case 'home':
+              case 'household':
+                return Home;
+              case 'wrench':
+              case 'tools':
+                return Wrench;
+              case 'droplets':
+              case 'cleaning':
+              case 'detergent':
+                return Droplets;
+              case 'zap':
+              case 'energy':
+              case 'electronics':
+                return Zap;
+              case 'heart':
+              case 'health':
+                return Heart;
+              case 'star':
+              case 'premium':
+                return Star;
+              case 'gift':
+                return Gift;
+              case 'percent':
+              case 'discount':
+                return Percent;
             }
+            // Enhanced regex patterns for Arabic and English category names
             if (/(ماء|مشروب|مشروبات|drinks?|beverages?|water)/.test(n)) return CupSoda;
             if (/(شاي|قهوة|coffee|tea)/.test(n)) return Coffee;
             if (/(بسكويت|كوكي|كوكيز|biscuits?|cookies?)/.test(n)) return Cookie;
-            if (/(سكر|sugar)/.test(n)) return Candy;
+            if (/(سكر|candy|sugar)/.test(n)) return Candy;
             if (/(مكرونة|معكرونة|أرز|ارز|pasta|rice)/.test(n)) return Utensils;
             if (/(صلصات|مخللات|sauces?|pickles?)/.test(n)) return Utensils;
             if (/(سوبرماركت|supermarket)/.test(n)) return StoreIcon;
+            // Food products - منتجات غذائية
+            if (/(غذائي|طعام|food|foods|منتجات غذائية|خضار|فواكه|vegetables?|fruits?|meat|لحم|دجاج|chicken|beef|dairy|حليب|cheese|جبن)/.test(n)) return Apple;
+            // Cleaning products - منظفات
+            if (/(منظف|تنظيف|cleaning|detergent|soap|صابون|bleach|تبييض|disinfectant|مطهر)/.test(n)) return Droplets;
+            // Offers - عروض
+            if (/(عروض|خصومات|offers?|deals?|discounts?|promotions?|تخفيضات|sales?)/.test(n)) return Sparkles;
+            // Household items
+            if (/(منزلي|household|kitchen|مطبخ|bathroom|حمام|toilet|مرحاض)/.test(n)) return Home;
+            // Electronics and appliances
+            if (/(كهربائي|إلكتروني|electronics?|appliances?|devices?)/.test(n)) return Zap;
+            // Health and beauty
+            if (/(صحة|جمال|health|beauty|cosmetics?|perfume|عطر|skincare|عناية)/.test(n)) return Heart;
+            // Baby products
+            if (/(طفل|رضع|baby|infant|diaper|حفاضات)/.test(n)) return Heart;
+            // Default fallback
             return Tag;
           };
           const Icon = pickIcon();

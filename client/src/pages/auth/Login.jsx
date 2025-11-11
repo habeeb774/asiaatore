@@ -8,6 +8,8 @@ const Login = () => {
   const { devLoginAs, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [showMfa, setShowMfa] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -16,15 +18,16 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      // Let backend error codes drive toasts via AuthContext, but short-circuit obvious empty fields
+    if (!email || !password || (showMfa && !mfaCode)) {
       return;
     }
     setLoading(true);
     try {
-      const res = await login(email, password);
+      const res = await login(email, password, showMfa ? mfaCode : null);
       if (res?.ok) {
         navigate('/');
+      } else if (res?.error === 'MFA_REQUIRED') {
+        setShowMfa(true);
       }
     } finally {
       setLoading(false);
@@ -60,6 +63,20 @@ const Login = () => {
               onChange={(e)=>setPassword(e.target.value)}
             />
           </div>
+          {showMfa && (
+            <div className="mb-3">
+              <label className="text-sm" htmlFor="mfa-code">رمز MFA (من تطبيق المصادقة)</label>
+              <input
+                id="mfa-code"
+                name="mfaCode"
+                type="text"
+                className="w-full mt-1 p-2 border rounded"
+                value={mfaCode}
+                onChange={(e)=>setMfaCode(e.target.value)}
+                maxLength={6}
+              />
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <button className="btn-primary px-6 py-2" disabled={loading}>{loading ? 'جاري الدخول…' : 'دخول'}</button>
             <a href="#" className="text-sm text-primary-red">نسيت كلمة المرور؟</a>

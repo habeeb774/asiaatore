@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getInvoiceUrl } from '../services/orderService';
 import { useParams, Link } from 'react-router-dom';
-import { useOrders } from '../context/OrdersContext';
-import { useAuth } from '../context/AuthContext';
+import { useOrders } from '../stores/OrdersContext';
+import { useAuth } from '../stores/AuthContext';
 import { uploadBankReceipt, initBankTransfer } from '../services/paymentService';
 import { openInvoicePdfByOrder } from '../services/invoiceService';
 import Button from '../components/ui/Button';
@@ -229,7 +229,7 @@ const OrderDetails = () => {
               onClick={async () => {
                 setWaSending(true);
                 try {
-                  const api = (await import('../api/client')).default;
+                  const api = (await import('../services/api/client')).default;
                   const res = await api.whatsappSendInvoiceByOrder(order.id);
                   if (res?.ok) {
                     alert('تم إرسال رابط الفاتورة عبر واتساب');

@@ -1,7 +1,7 @@
 import React from 'react';
 import Seo from '../../components/Seo';
-import api from '../../api/client';
-import AdminLayout from '../../components/admin/AdminLayout';
+import api from '../../services/api/client';
+import AdminLayout from '../../components/features/admin/AdminLayout';
 
 function usePendingBank(from, to, page) {
   const [data, setData] = React.useState({ orders: [], total: 0, page: 1, totalPages: 1 });

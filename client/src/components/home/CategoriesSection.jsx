@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from '../../lib/framerLazy.jsx';
 import { resolveLocalized } from '../../utils/locale';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import SafeImage from '../common/SafeImage';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../services/api/client';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30, scale: 0.98 },
@@ -14,9 +16,42 @@ const fadeInUp = {
   }),
 };
 
-const CategoriesSectionModern = ({ categories = [], title, onSelect, selected }) => {
+const CategoriesSectionModern = ({ title, onSelect, selected }) => {
   const { locale } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Fetch categories from API
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    isError: categoriesError,
+    error: categoriesQueryError,
+  } = useQuery({
+    queryKey: ['categories', { withCounts: true }],
+    queryFn: async () => {
+      const data = await api.listCategories({ withCounts: true });
+      if (Array.isArray(data)) {
+        // Normalize category data for UI components
+        return data.map(cat => ({
+          id: cat.id,
+          slug: cat.slug,
+          name: cat.name || { ar: cat.nameAr, en: cat.nameEn },
+          nameAr: cat.nameAr || cat.name,
+          nameEn: cat.nameEn || cat.name,
+          image: cat.image,
+          productCount: cat.productCount || 0,
+        }));
+      }
+      return [];
+    },
+    enabled: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    retry: 2,
+  });
+
+  // Use API data or fallback to empty array
+  const categories = useMemo(() => categoriesData || [], [categoriesData]);
 
   useEffect(() => {
     if (categories.length > 1) {
@@ -26,6 +61,36 @@ const CategoriesSectionModern = ({ categories = [], title, onSelect, selected })
       return () => clearInterval(interval);
     }
   }, [categories]);
+
+  // Show loading state
+  if (categoriesLoading) {
+    return (
+      <section className="categories-section-modern my-12">
+        <div className="container-fixed px-4 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-3xl font-extrabold text-emerald-700 tracking-wide drop-shadow-sm">
+              {title || (locale === 'ar' ? 'تصفح حسب الفئة' : 'Browse by Category')}
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="aspect-square w-full bg-gray-200 dark:bg-gray-700 rounded-2xl mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Show error state
+  if (categoriesError) {
+    console.warn('Failed to load categories from API:', categoriesQueryError);
+    // Continue with empty categories - error is logged but doesn't break the page
+  }
 
   if (!Array.isArray(categories) || categories.length === 0) return null;
 

@@ -1,7 +1,11 @@
 import React from 'react';
+import { Button } from '../../components/ui/Button';
+import Input from '../../components/ui/input';
+import Select from '../../components/ui/select';
 import Seo from '../../components/Seo';
-import api from '../../api/client';
-import AdminLayout from '../../components/admin/AdminLayout';
+import api from '../../services/api/client';
+import AdminLayout from '../../components/features/admin/AdminLayout';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 
 // Tiny sparkline canvas (no external deps)
 function Sparkline({ points = [], width = 560, height = 100, stroke = '#111827', fill = 'rgba(17,24,39,0.08)' }) {
@@ -197,173 +201,217 @@ const Analytics = () => {
       <div style={{ marginTop:16, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <strong>الفترة:</strong>
         {presetRanges.map(r => (
-          <button key={r.key} onClick={() => onPreset(r.key)} className={range===r.key? 'btn btn-primary':'btn'} style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6, background: range===r.key?'#111827':'#fff', color: range===r.key?'#fff':'#111' }}>{r.label}</button>
+          <Button
+            key={r.key}
+            variant={range === r.key ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => onPreset(r.key)}
+            style={range === r.key ? undefined : { color: '#111' }}
+          >
+            {r.label}
+          </Button>
         ))}
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <label>من: <input type="date" value={from} onChange={e=>setFrom(e.target.value)} /></label>
-          <label>إلى: <input type="date" value={to} onChange={e=>setTo(e.target.value)} /></label>
+          <label>من: <Input type="date" value={from} onChange={e=>setFrom(e.target.value)} size="sm" /></label>
+          <label>إلى: <Input type="date" value={to} onChange={e=>setTo(e.target.value)} size="sm" /></label>
           <label>الحالة:
-            <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+            <Select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} size="sm">
               <option value="">الكل</option>
               <option value="pending">معلق</option>
               <option value="processing">قيد المعالجة</option>
               <option value="paid">مدفوع</option>
               <option value="shipped">تم الشحن</option>
               <option value="cancelled">ملغي</option>
-            </select>
+            </Select>
           </label>
           <label>طريقة الدفع:
-            <select value={methodFilter} onChange={e=>setMethodFilter(e.target.value)}>
+            <Select value={methodFilter} onChange={e=>setMethodFilter(e.target.value)} size="sm">
               <option value="">الكل</option>
               <option value="paypal">PayPal</option>
               <option value="bank">تحويل بنكي</option>
               <option value="cod">الدفع عند الاستلام</option>
               <option value="stc">STC Pay</option>
-            </select>
+            </Select>
           </label>
-          <button onClick={refresh} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>{loading?'جاري التحميل…':'تحديث'}</button>
+          <Button onClick={refresh} size="sm">{loading ? 'جاري التحميل…' : 'تحديث'}</Button>
         </div>
         <div style={{ marginInlineStart:'auto', display:'flex', gap:8, alignItems:'center' }}>
-          <button onClick={() => downloadExport('csv')} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تصدير CSV</button>
-          <button onClick={() => downloadExport('xlsx')} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تصدير Excel</button>
+          <Button onClick={() => downloadExport('csv')} size="sm" variant="outline">تصدير CSV</Button>
+          <Button onClick={() => downloadExport('xlsx')} size="sm" variant="outline">تصدير Excel</Button>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="cards" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:16, marginTop:16 }}>
-        <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
-          <div className="muted">الطلبات (الفترة)</div>
-          {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.totalOrders}</div>}
-        </div>
-        <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
-          <div className="muted">الإيراد (الفترة)</div>
-          {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.totalRevenue.toFixed(2)} SAR</div>}
-        </div>
-        <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
-          <div className="muted">متوسط الطلب</div>
-          {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.avgOrder.toFixed(2)} SAR</div>}
-        </div>
-        <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
-          <div className="muted">العملاء الفريدون</div>
-          {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.uniqueCustomers}</div>}
-        </div>
+        <Card>
+          <CardContent>
+            <div className="muted">الطلبات (الفترة)</div>
+            {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.totalOrders}</div>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <div className="muted">الإيراد (الفترة)</div>
+            {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.totalRevenue.toFixed(2)} SAR</div>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <div className="muted">متوسط الطلب</div>
+            {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.avgOrder.toFixed(2)} SAR</div>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <div className="muted">العملاء الفريدون</div>
+            {loading ? <div>...</div> : <div style={{ fontSize:24, fontWeight:700 }}>{agg.uniqueCustomers}</div>}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Trends */}
-      <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-          <h3 style={{ margin:0 }}>الاتجاه اليومي (من {from} إلى {to})</h3>
+      <Card style={{ marginTop:12 }}>
+        <CardHeader style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <CardTitle>الاتجاه اليومي (من {from} إلى {to})</CardTitle>
           {loading ? <span className="muted">جاري التحميل…</span> : null}
-        </div>
-        <div style={{ marginTop:8, display:'grid', gap:10 }}>
-          <div>
-            <div className="muted">الإيراد</div>
-            <Sparkline points={trendRevenue} width={560} height={100} />
+        </CardHeader>
+        <CardContent>
+          <div style={{ marginTop:8, display:'grid', gap:10 }}>
+            <div>
+              <div className="muted">الإيراد</div>
+              <Sparkline points={trendRevenue} width={560} height={100} />
+            </div>
+            <div>
+              <div className="muted">عدد الطلبات</div>
+              <Sparkline points={trendOrders} width={560} height={70} stroke="#0ea5e9" fill="rgba(14,165,233,0.12)" />
+            </div>
           </div>
-          <div>
-            <div className="muted">عدد الطلبات</div>
-            <Sparkline points={trendOrders} width={560} height={70} stroke="#0ea5e9" fill="rgba(14,165,233,0.12)" />
+          <div className="muted" style={{ marginTop:8, display:'flex', gap:16, flexWrap:'wrap' }}>
+            <span>إجمالي الإيراد: {trendRevenue.reduce((a,b)=>a+b,0).toFixed(2)} SAR</span>
+            <span>إجمالي الطلبات: {trendOrders.reduce((a,b)=>a+b,0)}</span>
           </div>
-        </div>
-        <div className="muted" style={{ marginTop:8, display:'flex', gap:16, flexWrap:'wrap' }}>
-          <span>إجمالي الإيراد: {trendRevenue.reduce((a,b)=>a+b,0).toFixed(2)} SAR</span>
-          <span>إجمالي الطلبات: {trendOrders.reduce((a,b)=>a+b,0)}</span>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Financials (server aggregated) */}
-      <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-          <h3 style={{ margin:0 }}>التقارير المالية (تجميعي)</h3>
+      <Card style={{ marginTop:12 }}>
+        <CardHeader style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+          <CardTitle>التقارير المالية (تجميعي)</CardTitle>
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => downloadExport('csv')} className="btn" style={{ padding:'6px 10px', border:'1px solid #ddd', borderRadius:6 }}>تصدير CSV (طلبات)</button>
+            <Button onClick={() => downloadExport('csv')} size="sm" variant="outline">تصدير CSV (طلبات)</Button>
           </div>
-        </div>
-        {loading ? <div className="muted">جاري التحميل…</div> : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:16, marginTop:12 }}>
-            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
-              <div className="muted">إجمالي الإيراد</div>
-              <div style={{ fontWeight:700, fontSize:22 }}>{(fin?.totals?.totalRevenue||0).toFixed(2)} SAR</div>
+        </CardHeader>
+        <CardContent>
+          {loading ? <div className="muted">جاري التحميل…</div> : (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:16, marginTop:12 }}>
+              <Card>
+                <CardContent>
+                  <div className="muted">إجمالي الإيراد</div>
+                  <div style={{ fontWeight:700, fontSize:22 }}>{(fin?.totals?.totalRevenue||0).toFixed(2)} SAR</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <div className="muted">إجمالي الطلبات</div>
+                  <div style={{ fontWeight:700, fontSize:22 }}>{fin?.totals?.totalOrders||0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <div className="muted">متوسط قيمة الطلب</div>
+                  <div style={{ fontWeight:700, fontSize:22 }}>{(fin?.totals?.overallAov||0).toFixed(2)} SAR</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <div className="muted">العملاء النشطون (الفترة)</div>
+                  <div style={{ fontWeight:700, fontSize:22 }}>{fin?.totals?.activeCustomersWindow||0}</div>
+                </CardContent>
+              </Card>
             </div>
-            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
-              <div className="muted">إجمالي الطلبات</div>
-              <div style={{ fontWeight:700, fontSize:22 }}>{fin?.totals?.totalOrders||0}</div>
-            </div>
-            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
-              <div className="muted">متوسط قيمة الطلب</div>
-              <div style={{ fontWeight:700, fontSize:22 }}>{(fin?.totals?.overallAov||0).toFixed(2)} SAR</div>
-            </div>
-            <div className="card" style={{ padding:12, border:'1px solid #f0f0f0', borderRadius:8 }}>
-              <div className="muted">العملاء النشطون (الفترة)</div>
-              <div style={{ fontWeight:700, fontSize:22 }}>{fin?.totals?.activeCustomersWindow||0}</div>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Distributions */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:16, marginTop:12 }}>
-        <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
-          <h3 style={{ marginTop:0 }}>التوزيع حسب الحالة</h3>
-          {loading ? <div>...</div> : (
-            <table style={{ width:'100%', fontSize:12 }}>
-              <tbody>
-                {Object.entries(agg.byStatus).sort((a,b)=>b[1]-a[1]).map(([k,v]) => (
-                  <tr key={k}><td style={{ padding:'4px 0' }}>{k}</td><td style={{ textAlign:'end' }}>{v}</td></tr>
-                ))}
-                {Object.keys(agg.byStatus).length===0 && <tr><td colSpan={2} className="muted">لا بيانات</td></tr>}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8 }}>
-          <h3 style={{ marginTop:0 }}>التوزيع حسب طريقة الدفع</h3>
-          {loading ? <div>...</div> : (
-            <table style={{ width:'100%', fontSize:12 }}>
-              <tbody>
-                {Object.entries(agg.byMethod).sort((a,b)=>b[1]-a[1]).map(([k,v]) => (
-                  <tr key={k}><td style={{ padding:'4px 0' }}>{k}</td><td style={{ textAlign:'end' }}>{v}</td></tr>
-                ))}
-                {Object.keys(agg.byMethod).length===0 && <tr><td colSpan={2} className="muted">لا بيانات</td></tr>}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>التوزيع حسب الحالة</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? <div>...</div> : (
+              <table style={{ width:'100%', fontSize:12 }}>
+                <tbody>
+                  {Object.entries(agg.byStatus).sort((a,b)=>b[1]-a[1]).map(([k,v]) => (
+                    <tr key={k}><td style={{ padding:'4px 0' }}>{k}</td><td style={{ textAlign:'end' }}>{v}</td></tr>
+                  ))}
+                  {Object.keys(agg.byStatus).length===0 && <tr><td colSpan={2} className="muted">لا بيانات</td></tr>}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>التوزيع حسب طريقة الدفع</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? <div>...</div> : (
+              <table style={{ width:'100%', fontSize:12 }}>
+                <tbody>
+                  {Object.entries(agg.byMethod).sort((a,b)=>b[1]-a[1]).map(([k,v]) => (
+                    <tr key={k}><td style={{ padding:'4px 0' }}>{k}</td><td style={{ textAlign:'end' }}>{v}</td></tr>
+                  ))}
+                  {Object.keys(agg.byMethod).length===0 && <tr><td colSpan={2} className="muted">لا بيانات</td></tr>}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Top lists */}
-      <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
-        <h3 style={{ marginTop:0 }}>أفضل المنتجات (حسب الإيراد)</h3>
-        {loading ? <div>...</div> : (
-          <table style={{ width:'100%', fontSize:12 }}>
-            <thead>
-              <tr><th style={{ textAlign:'start' }}>المنتج</th><th>الكمية</th><th>الإيراد</th></tr>
-            </thead>
-            <tbody>
-              {agg.topProducts.map((p,i) => (
-                <tr key={i}><td style={{ padding:'4px 0' }}>{p.name}</td><td style={{ textAlign:'center' }}>{p.qty}</td><td style={{ textAlign:'end' }}>{p.revenue.toFixed(2)} SAR</td></tr>
-              ))}
-              {agg.topProducts.length===0 && <tr><td colSpan={3} className="muted">لا بيانات</td></tr>}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <div className="card" style={{ padding:16, border:'1px solid #eee', borderRadius:8, marginTop:12 }}>
-        <h3 style={{ marginTop:0 }}>أفضل العملاء (حسب الإيراد)</h3>
-        {loading ? <div>...</div> : (
-          <table style={{ width:'100%', fontSize:12 }}>
-            <thead>
-              <tr><th style={{ textAlign:'start' }}>العميل</th><th>الطلبات</th><th>الإيراد</th></tr>
-            </thead>
-            <tbody>
-              {agg.topCustomers.map((c,i) => (
-                <tr key={i}><td style={{ padding:'4px 0' }}>{c.id === 'guest' ? 'ضيف' : c.id}</td><td style={{ textAlign:'center' }}>{c.orders}</td><td style={{ textAlign:'end' }}>{c.revenue.toFixed(2)} SAR</td></tr>
-              ))}
-              {agg.topCustomers.length===0 && <tr><td colSpan={3} className="muted">لا بيانات</td></tr>}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <Card style={{ marginTop:12 }}>
+        <CardHeader>
+          <CardTitle>أفضل المنتجات (حسب الإيراد)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? <div>...</div> : (
+            <table style={{ width:'100%', fontSize:12 }}>
+              <thead>
+                <tr><th style={{ textAlign:'start' }}>المنتج</th><th>الكمية</th><th>الإيراد</th></tr>
+              </thead>
+              <tbody>
+                {agg.topProducts.map((p,i) => (
+                  <tr key={i}><td style={{ padding:'4px 0' }}>{p.name}</td><td style={{ textAlign:'center' }}>{p.qty}</td><td style={{ textAlign:'end' }}>{p.revenue.toFixed(2)} SAR</td></tr>
+                ))}
+                {agg.topProducts.length===0 && <tr><td colSpan={3} className="muted">لا بيانات</td></tr>}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+      <Card style={{ marginTop:12 }}>
+        <CardHeader>
+          <CardTitle>أفضل العملاء (حسب الإيراد)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? <div>...</div> : (
+            <table style={{ width:'100%', fontSize:12 }}>
+              <thead>
+                <tr><th style={{ textAlign:'start' }}>العميل</th><th>الطلبات</th><th>الإيراد</th></tr>
+              </thead>
+              <tbody>
+                {agg.topCustomers.map((c,i) => (
+                  <tr key={i}><td style={{ padding:'4px 0' }}>{c.id === 'guest' ? 'ضيف' : c.id}</td><td style={{ textAlign:'center' }}>{c.orders}</td><td style={{ textAlign:'end' }}>{c.revenue.toFixed(2)} SAR</td></tr>
+                ))}
+                {agg.topCustomers.length===0 && <tr><td colSpan={3} className="muted">لا بيانات</td></tr>}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
     </AdminLayout>
   );
 };

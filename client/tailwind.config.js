@@ -10,16 +10,18 @@ module.exports = {
 				serif: ['Amiri', 'Noto Naskh Arabic', ...defaultTheme.fontFamily.serif],
 			},
 			colors: {
-				primary: "var(--color-primary)",
-				secondary: "var(--color-secondary)",
-				accent: "var(--color-accent)",
+				primary: "var(--brand-primary)",
+				primaryAlt: "var(--brand-primary-alt)",
+				secondary: "var(--brand-secondary)",
+				accent: "var(--brand-accent)",
+				gradient: "var(--brand-gradient-primary)",
+				ring: "var(--brand-ring)",
 				muted: "var(--color-muted)",
 				background: "var(--color-bg)",
 				foreground: "var(--color-fg)",
 				success: "var(--color-success)",
 				warning: "var(--color-warning)",
-				danger: "var(--color-danger)",
-				ring: "var(--color-ring)"
+				danger: "var(--color-danger)"
 			},
 			boxShadow: {
 				card: "0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)",

@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Skeleton } from '../components/ui';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../stores/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import Seo from '../components/Seo';
-import { useSettings } from '../context/SettingsContext';
-import api from '../api/client';
+import { useSettings } from '../stores/SettingsContext';
+import api from '../services/api/client';
 
 const CatalogPage = () => {
   const location = useLocation();

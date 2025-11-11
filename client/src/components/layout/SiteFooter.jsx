@@ -1,7 +1,7 @@
 import React from 'react';
 import SafeImage from '../common/SafeImage';
-import { useLanguage } from '../../context/LanguageContext';
-import { useSettings } from '../../context/SettingsContext';
+import { useLanguage } from '../../stores/LanguageContext';
+import { useSettings } from '../../stores/SettingsContext';
 import { resolveLocalized } from '../../utils/locale';
 import { Phone, Smartphone, Mail, MessageCircle } from 'lucide-react';
 

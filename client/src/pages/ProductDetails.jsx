@@ -1,17 +1,25 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, Shield, Clock, Heart, Share2 } from 'lucide-react';
-import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
-import { useProducts } from '../context/ProductsContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useCart } from '../stores/CartContext';
+import { useWishlist } from '../stores/WishlistContext';
+import { useProducts } from '../stores/ProductsContext';
+import { useLanguage } from '../stores/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
-import api from '../api/client';
+import api from '../services/api/client';
 import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.jsx';
 import ZoomableImage from '../components/products/ZoomableImage.jsx';
 import LazyImage from '../components/common/LazyImage.jsx';
+import OptimizedImage from '../components/ui/OptimizedImage';
 import Button, { buttonVariants } from '../components/ui/Button';
 import { motion } from '../lib/framerLazy';
+
+// Import Swiper components
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination, Autoplay, Navigation } from 'swiper/modules';
+
+// Import React Query
+import { useQuery } from '@tanstack/react-query';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -58,6 +66,28 @@ const ProductDetails = () => {
   const discountAmount = hasDiscount ? (oldPrice - priceNum) : 0;
   const discountPercent = hasDiscount ? Math.round((1 - (priceNum / oldPrice)) * 100) : 0;
   const outOfStock = product?.stock != null && product.stock <= 0;
+
+  // Fetch similar products using React Query
+  const {
+    data: similarProducts,
+    isLoading: similarLoading,
+    isError: similarError,
+  } = useQuery({
+    queryKey: ['products', 'similar', id],
+    queryFn: async () => {
+      const data = await api.getSimilarProducts(id);
+      if (Array.isArray(data)) {
+        return data.map(p => ({
+          ...p,
+          displayImage: p.gallery?.[0]?.variants?.thumb || p.gallery?.[0]?.variants?.medium || p.gallery?.[0]?.url || p.image,
+        }));
+      }
+      return [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    enabled: !!id, // Only run when we have an id
+  });
 
   // Inject JSON-LD for the product to improve SEO / rich results
   useEffect(() => {
@@ -159,37 +189,107 @@ const ProductDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           <div>
             <div ref={swipeRef} className="bg-white rounded-2xl p-3 md:p-6 shadow-lg mb-4 select-none">
+              {/* Main Image Swiper */}
               <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
-                <ZoomableImage
-                  src={(product.gallery?.[selectedImage]?.variants?.large) || (product.gallery?.[selectedImage]?.variants?.medium) || product.gallery?.[selectedImage]?.url || product.image || placeholderImg}
-                  alt={nameText}
-                  onError={(e)=>{ try{ e.currentTarget.src = placeholderImg; }catch{} }}
-                  className="w-full h-full"
-                />
-                {product.gallery?.length > 1 && (
-                  <div className="absolute bottom-2 inset-x-2 hidden md:flex justify-between pointer-events-none">
-                    <span className="pointer-events-auto bg-black/40 text-white px-2 py-1 rounded-full text-xs">{selectedImage+1} / {product.gallery.length}</span>
-                  </div>
+                <Swiper
+                  modules={[Pagination, Autoplay, Navigation]}
+                  spaceBetween={0}
+                  slidesPerView={1}
+                  navigation={{
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                  }}
+                  pagination={{
+                    clickable: true,
+                    dynamicBullets: true,
+                  }}
+                  autoplay={{
+                    delay: 5000,
+                    disableOnInteraction: false,
+                  }}
+                  loop={product.gallery?.length > 1}
+                  onSlideChange={(swiper) => setSelectedImage(swiper.activeIndex)}
+                  className="product-image-swiper"
+                >
+                  {/* Main product image */}
+                  {product.image && (
+                    <SwiperSlide>
+                      <div className="relative w-full h-full">
+                        <ZoomableImage
+                          src={product.imageVariants?.large || product.imageVariants?.medium || product.image || placeholderImg}
+                          alt={nameText}
+                          onError={(e)=>{ try{ e.currentTarget.src = placeholderImg; }catch{} }}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black/40 text-white px-2 py-1 rounded-full text-xs">
+                          الصورة الرئيسية
+                        </div>
+                      </div>
+                    </SwiperSlide>
+                  )}
+
+                  {/* Gallery images */}
+                  {product.gallery?.map((img, idx) => (
+                    <SwiperSlide key={img.id || idx}>
+                      <div className="relative w-full h-full">
+                        <ZoomableImage
+                          src={img.variants?.large || img.variants?.medium || img.url}
+                          alt={resolveLocalized(img.alt, locale) || img.alt?.ar || img.alt?.en || nameText}
+                          onError={(e)=>{ try{ e.currentTarget.src = placeholderImg; }catch{} }}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black/40 text-white px-2 py-1 rounded-full text-xs">
+                          {idx + 1} / {product.gallery.length}
+                        </div>
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+
+                {/* Navigation buttons */}
+                {(product.gallery?.length > 1 || product.image) && (
+                  <>
+                    <div className="swiper-button-next !text-white !bg-black/50 !w-10 !h-10 !rounded-full hover:!bg-black/70"></div>
+                    <div className="swiper-button-prev !text-white !bg-black/50 !w-10 !h-10 !rounded-full hover:!bg-black/70"></div>
+                  </>
                 )}
               </div>
             </div>
-            {product.gallery?.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto no-scrollbar py-1 snap-x snap-mandatory" role="tablist" aria-label="thumbnails">
-                {product.gallery.map((img, idx) => (
-                    <button
-                    key={img.id || idx}
-                    onClick={()=>setSelectedImage(idx)}
+
+            {/* Thumbnail gallery */}
+            {(product.gallery?.length > 0 || product.image) && (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar py-1 snap-x snap-mandatory" role="tablist" aria-label="صور المنتج">
+                {/* Main image thumbnail */}
+                {product.image && (
+                  <button
+                    onClick={() => setSelectedImage(0)}
                     role="tab"
-                    aria-selected={selectedImage===idx}
-                    className={`border rounded-lg p-1 min-w-[5rem] w-20 h-20 overflow-hidden flex-shrink-0 snap-start ${selectedImage===idx?'ring-2 ring-primary':''}`}
+                    aria-selected={selectedImage === 0}
+                    className={`border rounded-lg p-1 min-w-[5rem] w-20 h-20 overflow-hidden flex-shrink-0 snap-start ${selectedImage === 0 ? 'ring-2 ring-primary' : ''}`}
                   >
-                    <LazyImage
-                      src={img.variants?.thumb || img.variants?.medium || img.url}
-                      alt={resolveLocalized(img.alt, locale) || img.alt?.ar || img.alt?.en || 'صورة'}
+                    <img
+                      src={product.imageVariants?.thumb || product.image}
+                      alt="الصورة الرئيسية"
                       className="w-full h-full object-cover"
-                      sizes="80px"
-                      skeleton={true}
-                      onLoad={()=>{ /* no-op */ }}
+                      loading="lazy"
+                    />
+                  </button>
+                )}
+
+                {/* Gallery thumbnails */}
+                {product.gallery?.map((img, idx) => (
+                  <button
+                    key={img.id || idx}
+                    onClick={() => setSelectedImage(product.image ? idx + 1 : idx)}
+                    role="tab"
+                    aria-selected={selectedImage === (product.image ? idx + 1 : idx)}
+                    className={`border rounded-lg p-1 min-w-[5rem] w-20 h-20 overflow-hidden flex-shrink-0 snap-start ${selectedImage === (product.image ? idx + 1 : idx) ? 'ring-2 ring-primary' : ''}`}
+                  >
+                    <img
+                      src={img.variants?.thumb || img.url}
+                      alt={resolveLocalized(img.alt, locale) || img.alt?.ar || img.alt?.en || 'صورة المنتج'}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </button>
                 ))}
@@ -379,18 +479,19 @@ const ProductDetails = () => {
           </div>
         )}
 
-        {products && products.length > 0 && (
+        {/* Similar Products Section */}
+        {(similarProducts && similarProducts.length > 0) && (
           <div className="mb-16">
-            <h2 className="text-2xl font-bold mb-8">منتجات ذات صلة</h2>
+            <h2 className="text-2xl font-bold mb-8">منتجات مشابهة</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {products.filter(p => p.category === product.category && p.id !== product.id).slice(0,3).map(relatedProduct => (
+              {similarProducts.slice(0, 6).map(relatedProduct => (
                 <motion.div key={relatedProduct.id} className="product-card p-6" whileHover={{ y: -5 }}>
                   <div className="relative mb-4">
-                    <img
+                    <OptimizedImage
                       src={relatedProduct.displayImage || relatedProduct.image || placeholderImg}
                       alt={resolveLocalized(relatedProduct.name, locale) || 'منتج'}
                       className="w-full h-48 object-cover rounded-lg"
-                      onError={(e)=>{ e.currentTarget.src = placeholderImg; }}
+                      placeholder="/images/product-fallback.svg"
                     />
                     <span className="absolute top-2 right-2 bg-primary-red text-white px-2 py-1 rounded text-sm">{relatedProduct.category}</span>
                     {((relatedProduct.originalPrice ?? relatedProduct.oldPrice) > (relatedProduct.price || 0)) && (()=>{
@@ -411,6 +512,23 @@ const ProductDetails = () => {
                     <Link to={`/product/${relatedProduct.id}`} className={buttonVariants({ variant: 'primary', size: 'sm', className: 'text-sm px-4 py-2' })}>عرض المنتج</Link>
                   </div>
                 </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {similarLoading && (
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-8">منتجات مشابهة</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="product-card p-6">
+                  <div className="relative mb-4">
+                    <div className="w-full h-48 bg-gray-200 rounded-lg animate-pulse"></div>
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                </div>
               ))}
             </div>
           </div>

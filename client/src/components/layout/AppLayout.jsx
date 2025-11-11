@@ -4,17 +4,18 @@ import HeaderNav from './HeaderNav';
 import AnnouncementBar from './AnnouncementBar';
 import CategoryScroller from './CategoryScroller';
 import Breadcrumbs from './BreadcrumbsProxy.jsx';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { useLocation } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
-import { useTheme } from '../../context/ThemeContext';
+import { ToastContainer } from 'react-toastify';
+import { useTheme } from '../../stores/ThemeContext';
 import SiteFooter from './SiteFooter';
 import { FloatingCart } from '../ui';
-import { SidebarProvider } from '../../context/SidebarContext';
+import { SidebarProvider } from '../../stores/SidebarContext';
 import BottomNav from './BottomNav';
 import SearchOverlay from '../search/SearchOverlay';
 import CartSidebar from '../cart/CartSidebar';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../stores/CartContext';
 import PageLoader from '../common/PageLoader';
 import AdminSetupModal from '../setup/AdminSetupModal.jsx';
 
@@ -28,11 +29,50 @@ const AppLayout = ({ children }) => {
   // السماح بفتح السلة من أي مكان في التطبيق
   const contentRef = React.useRef(null);
 
+  // إضافة اختصار لوحة المفاتيح "/" لفتح البحث
+  React.useEffect(() => {
+    const handleKeyDown = (event) => {
+      // فحص ما إذا كان المفتاح المضغوط هو "/"
+      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        // التأكد من أننا لسنا داخل حقل إدخال
+        const activeElement = document.activeElement;
+        const isInputField = activeElement && (
+          activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT' ||
+          activeElement.contentEditable === 'true' ||
+          activeElement.getAttribute('role') === 'textbox'
+        );
+
+        // إذا لم نكن في حقل إدخال، افتح البحث
+        if (!isInputField) {
+          event.preventDefault(); // منع السلوك الافتراضي للمتصفح
+          try {
+            window.dispatchEvent(new CustomEvent('search:focus'));
+          } catch (error) {
+            console.warn('Failed to trigger search focus:', error);
+          }
+        }
+      }
+    };
+
+    // إضافة event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // تنظيف عند إلغاء المكون
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   // دفع المحتوى تلقائيًا عند توسعة الشريط الجانبي (desktop)
   React.useEffect(() => {
     if (typeof document === 'undefined' || !contentRef.current) return;
     const aside = document.getElementById('app-sidebar');
     if (!aside) return;
+
+    // Capture the current element to avoid ref issues in cleanup
+    const contentElement = contentRef.current;
 
     const applyPush = () => {
       try {
@@ -43,14 +83,12 @@ const AppLayout = ({ children }) => {
 
         // only push on desktop widths
         if (window.innerWidth < 769) {
-          contentRef.current.style.marginLeft = '';
-          contentRef.current.style.marginRight = '';
+          contentElement.style.marginLeft = '';
+          contentElement.style.marginRight = '';
           return;
         }
 
         const dir = document.documentElement?.getAttribute('dir') || 'ltr';
-        const isCollapsed = String(aside.getAttribute('data-collapsed')) === 'true';
-        const isHover = String(aside.getAttribute('data-hover')) === 'true';
         // Previously we treated collapsed (mini) sidebar as an overlay and did not push the
         // content. Change: always reserve space equal to the sidebar width so the page
         // shrinks instead of being covered when the sidebar is collapsed.
@@ -59,17 +97,17 @@ const AppLayout = ({ children }) => {
         const width = aside.offsetWidth || 0;
         if (width > 0) {
           if (dir === 'rtl') {
-            contentRef.current.style.marginRight = `${width}px`;
-            contentRef.current.style.marginLeft = '';
+            contentElement.style.marginRight = `${width}px`;
+            contentElement.style.marginLeft = '';
           } else {
-            contentRef.current.style.marginLeft = `${width}px`;
-            contentRef.current.style.marginRight = '';
+            contentElement.style.marginLeft = `${width}px`;
+            contentElement.style.marginRight = '';
           }
         } else {
-          contentRef.current.style.marginLeft = '';
-          contentRef.current.style.marginRight = '';
+          contentElement.style.marginLeft = '';
+          contentElement.style.marginRight = '';
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     };
@@ -81,9 +119,9 @@ const AppLayout = ({ children }) => {
     return () => {
       mo.disconnect();
       window.removeEventListener('resize', applyPush);
-      if (contentRef.current) {
-        contentRef.current.style.marginLeft = '';
-        contentRef.current.style.marginRight = '';
+      if (contentElement) {
+        contentElement.style.marginLeft = '';
+        contentElement.style.marginRight = '';
       }
     };
   }, [contentRef]);
@@ -157,7 +195,7 @@ const AppLayout = ({ children }) => {
                     <Breadcrumbs items={items} />
                   </div>
                 );
-              } catch (e) {
+              } catch {
                 return null;
               }
             })()}
@@ -193,6 +231,18 @@ const AppLayout = ({ children }) => {
           )}
         </div>
       </SidebarProvider>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     </ToastProvider>
   );
 };

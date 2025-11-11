@@ -1,10 +1,10 @@
 import React, { useMemo, useState, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, ButtonLink, buttonVariants } from '../../components/ui';
-import { useAuth } from '../../context/AuthContext';
-import { useOrders } from '../../context/OrdersContext';
-import { useStore } from '../../context/StoreContext';
-import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../stores/AuthContext';
+import { useOrders } from '../../stores/OrdersContext';
+import { useStore } from '../../stores/StoreContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { localizeName } from '../../utils/locale';
 const ProductManager = React.lazy(() => import('./ProductManager'));
 // Shared admin styles (includes .skeleton and layout helpers)

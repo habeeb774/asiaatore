@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import api from '../api/client'
+import api from '../services/api/client'
 import { Link } from 'react-router-dom'
-import { useLanguage } from '../context/LanguageContext'
+import { useLanguage } from '../stores/LanguageContext'
 import { resolveLocalized } from '../utils/locale'
 
 const Categories = () => {

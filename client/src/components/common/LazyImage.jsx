@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { productFallback } from '../../assets';
 
 // A lightweight lazy image with IntersectionObserver + optional skeleton
 // Props: src, alt, srcSet, sizes, className (applied to <img>), wrapperClassName, style (wrapper), imgStyle
@@ -22,6 +23,12 @@ export default function LazyImage({
   rootMargin = '200px',
   skeleton = true,
   priority = false,
+  // New: blur placeholder for smoother loading
+  blurPlaceholder = true,
+  // New: retry on error
+  retryOnError = true,
+  maxRetries = 2,
+  // Event handlers
   onLoad,
   onError,
   ...rest
@@ -29,8 +36,40 @@ export default function LazyImage({
   const containerRef = useRef(null);
   const [inView, setInView] = useState(priority || false);
   const [loaded, setLoaded] = useState(false);
-  // Effective sizes: explicit sizes win; otherwise fallback to a sensible default for product grids
+  const [error, setError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [imageSrc, setImageSrc] = useState(src);
+  
   const effectiveSizes = sizes || defaultSizes;
+  // Memoized error handler
+  const handleError = useCallback((e) => {
+    if (onError) return onError(e);
+
+    const target = e.currentTarget;
+    if (!target.dataset.fallbackApplied) {
+      if (retryOnError && retryCount < maxRetries) {
+        // Retry loading the image
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          target.src = imageSrc;
+        }, 1000 * (retryCount + 1)); // Exponential backoff
+        return;
+      }
+
+      // Apply fallback
+      target.dataset.fallbackApplied = '1';
+      setError(true);
+      setImageSrc(productFallback);
+      target.src = productFallback;
+    }
+  }, [onError, retryOnError, maxRetries, retryCount, imageSrc]);
+
+  // Memoized load handler
+  const handleLoad = useCallback((e) => {
+    setLoaded(true);
+    setError(false);
+    onLoad && onLoad(e);
+  }, [onLoad]);
 
   useEffect(() => {
     if (priority || inView) return; // skip IO if priority or already in view
@@ -61,16 +100,20 @@ export default function LazyImage({
       className={wrapperClassName}
       style={{ position: 'relative', display: 'block', ...style }}
     >
-      {skeleton && !loaded && (
+      {skeleton && !loaded && !error && (
         <div
           aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%)',
-            backgroundSize: '400% 100%',
-            animation: 'lazyimg-shimmer 1.2s ease-in-out infinite',
+            background: blurPlaceholder
+              ? 'linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%)'
+              : '#f3f4f6',
+            backgroundSize: blurPlaceholder ? '400% 100%' : '100% 100%',
+            animation: blurPlaceholder ? 'lazyimg-shimmer 1.2s ease-in-out infinite' : 'none',
             borderRadius: 8,
+            filter: blurPlaceholder ? 'blur(10px)' : 'none',
+            transform: blurPlaceholder ? 'scale(1.1)' : 'none',
           }}
         />
       )}
@@ -92,29 +135,18 @@ export default function LazyImage({
               loading={priority ? 'eager' : 'lazy'}
               fetchPriority={priority ? 'high' : undefined}
               decoding="async"
-              onLoad={(e) => {
-                setLoaded(true);
-                onLoad && onLoad(e);
-              }}
-              onError={(e) => {
-                try {
-                  if (onError) return onError(e);
-                  const target = e.currentTarget;
-                  // prevent infinite loop
-                  if (!target.dataset.fallbackApplied) {
-                    target.dataset.fallbackApplied = '1';
-                    target.src = '/images/hero-image.svg';
-                  }
-                } catch {}
-              }}
+              onLoad={handleLoad}
+              onError={handleError}
               className={className}
               style={{
                 display: 'block',
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                transition: 'opacity 220ms ease',
+                transition: 'opacity 220ms ease, filter 220ms ease',
                 opacity: loaded ? 1 : 0,
+                filter: loaded ? 'none' : blurPlaceholder ? 'blur(10px)' : 'none',
+                transform: loaded ? 'scale(1)' : blurPlaceholder ? 'scale(1.1)' : 'scale(1)',
                 ...imgStyle,
               }}
               {...rest}
@@ -129,34 +161,44 @@ export default function LazyImage({
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : undefined}
             decoding="async"
-            onLoad={(e) => {
-              setLoaded(true);
-              onLoad && onLoad(e);
-            }}
-            onError={(e) => {
-              try {
-                if (onError) return onError(e);
-                const target = e.currentTarget;
-                if (!target.dataset.fallbackApplied) {
-                  target.dataset.fallbackApplied = '1';
-                  target.src = '/images/hero-image.svg';
-                }
-              } catch {}
-            }}
+            onLoad={handleLoad}
+            onError={handleError}
             className={className}
             style={{
               display: 'block',
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              transition: 'opacity 220ms ease',
+              transition: 'opacity 220ms ease, filter 220ms ease',
               opacity: loaded ? 1 : 0,
+              filter: loaded ? 'none' : blurPlaceholder ? 'blur(10px)' : 'none',
+              transform: loaded ? 'scale(1)' : blurPlaceholder ? 'scale(1.1)' : 'scale(1)',
               ...imgStyle,
             }}
             {...rest}
           />
         )
       )}
+
+      {/* Error state indicator */}
+      {error && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f9fafb',
+            color: '#6b7280',
+            fontSize: '12px',
+            borderRadius: 8,
+          }}
+        >
+          Image unavailable
+        </div>
+      )}
+
       <style>{`
         @keyframes lazyimg-shimmer {
           0% { background-position: 100% 0; }

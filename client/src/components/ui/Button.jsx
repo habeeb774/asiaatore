@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 
 // Button primitive that maps to the centralized UI styles in _ui.scss
@@ -44,9 +45,21 @@ const Button = React.forwardRef(function Button(
   );
 });
 
-export const ButtonLink = React.forwardRef(function ButtonLink({ href, variant = 'primary', size = 'md', className, children, ...rest }, ref) {
+export const ButtonLink = React.forwardRef(function ButtonLink({ to, href, variant = 'primary', size = 'md', className, children, ...rest }, ref) {
+  const compClass = buttonVariants({ variant, size, className });
+
+  // Use React Router Link if 'to' prop is provided
+  if (to) {
+    return (
+      <Link ref={ref} to={to} className={compClass} {...rest}>
+        {children}
+      </Link>
+    );
+  }
+
+  // Fallback to regular anchor tag
   return (
-    <a ref={ref} href={href} className={buttonVariants({ variant, size, className })} {...rest}>
+    <a ref={ref} href={href} className={compClass} {...rest}>
       {children}
     </a>
   );

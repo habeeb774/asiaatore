@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../stores/AuthContext';
 import Seo from '../../components/Seo';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../stores/SettingsContext';
 
 const Register = () => {
   const { devLoginAs } = useAuth();

@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion } from '../../lib/framerLazy';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../api/client';
+import { useAuth } from '../../stores/AuthContext';
+import api from '../../services/api/client';
 import { Button } from '../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Truck, Save, Loader, AlertCircle } from 'lucide-react';
 
 export default function DeliveryAvailability() {
@@ -124,7 +123,7 @@ export default function DeliveryAvailability() {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+      <div>
         <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
           <Truck className="w-6 h-6 text-blue-500" /> 
           حالة التوافر
@@ -132,14 +131,10 @@ export default function DeliveryAvailability() {
         <p className="text-gray-600 text-sm mt-1">
           قم بتحديث حالتك ومعلومات المركبة لتظهر للمديرين والعملاء.
         </p>
-      </motion.div>
+      </div>
 
       {error && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
-        >
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-red-700 text-sm">{error}</p>
@@ -152,7 +147,7 @@ export default function DeliveryAvailability() {
               </button>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {loading ? (

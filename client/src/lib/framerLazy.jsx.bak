@@ -1,0 +1,144 @@
+import React from 'react'
+
+// Filter out framer-motion specific props when falling back to DOM element
+function filterMotionProps(props) {
+  const motionProps = new Set([
+    'whileTap', 'whileHover', 'whileFocus', 'whileDrag', 'whileInView',
+    'initial', 'animate', 'exit', 'transition', 'variants', 'layout',
+    'drag', 'dragConstraints', 'dragElastic', 'dragMomentum',
+    'onAnimationStart', 'onAnimationComplete', 'onUpdate'
+  ])
+  const filtered = {}
+  for (const key in props) {
+    if (!motionProps.has(key)) {
+      filtered[key] = props[key]
+    }
+  }
+  return filtered
+}
+
+let _ready = null
+let _loading = false
+function ensureLoaded() {
+  if (_ready) return _ready
+  if (_loading) return _ready // prevent duplicate loads
+  _loading = true
+  _ready = import('framer-motion').then(m => m).catch(() => null)
+  return _ready
+}
+
+function createLazyComponent(getterName) {
+  return function LazyComp(props) {
+    const [C, setC] = React.useState(() => null)
+    React.useEffect(() => {
+      let mounted = true
+      // Delay loading significantly to prioritize critical content
+      // Only load after user interaction or after a longer delay
+      const timer = setTimeout(() => {
+        ensureLoaded().then(mod => {
+          if (!mounted) return
+          if (!mod) return setC(() => null)
+          const Real = mod[getterName]
+          setC(() => Real || null)
+        })
+      }, 2000) // Increased delay to 2 seconds
+
+      // Also listen for user interaction to load earlier if needed
+      const loadOnInteraction = () => {
+        clearTimeout(timer)
+        ensureLoaded().then(mod => {
+          if (!mounted) return
+          if (!mod) return setC(() => null)
+          const Real = mod[getterName]
+          setC(() => Real || null)
+        })
+        // Remove listeners after loading
+        window.removeEventListener('click', loadOnInteraction)
+        window.removeEventListener('scroll', loadOnInteraction)
+        window.removeEventListener('keydown', loadOnInteraction)
+      }
+
+      window.addEventListener('click', loadOnInteraction, { once: true })
+      window.addEventListener('scroll', loadOnInteraction, { once: true })
+      window.addEventListener('keydown', loadOnInteraction, { once: true })
+
+      return () => {
+        mounted = false
+        clearTimeout(timer)
+        window.removeEventListener('click', loadOnInteraction)
+        window.removeEventListener('scroll', loadOnInteraction)
+        window.removeEventListener('keydown', loadOnInteraction)
+      }
+    }, [])
+
+    if (!C) return props.fallback || null
+    const Comp = C
+    return <Comp {...props} />
+  }
+}
+
+// Proxy for motion.* components. Accessing motion.div, motion.span, etc.
+// returns a React component that will render the real motion.<el> once loaded.
+export const motion = new Proxy({}, {
+  get(_target, prop) {
+    // prop can be 'div', 'span', 'svg', etc.
+    // use a generated displayName for easier debugging
+    const name = String(prop)
+    const Comp = function MotionProxy(props) {
+      const [Real, setReal] = React.useState(null)
+      React.useEffect(() => {
+        let mounted = true
+        // Delay loading significantly to prioritize critical content
+        const timer = setTimeout(() => {
+          ensureLoaded().then(mod => {
+            if (!mounted) return
+            if (!mod) return setReal(() => null)
+            const motionObj = mod.motion || mod
+            const RealComp = motionObj && motionObj[name]
+            setReal(() => RealComp || null)
+          })
+        }, 2000) // Increased delay to 2 seconds
+
+        // Also listen for user interaction to load earlier if needed
+        const loadOnInteraction = () => {
+          clearTimeout(timer)
+          ensureLoaded().then(mod => {
+            if (!mounted) return
+            if (!mod) return setReal(() => null)
+            const motionObj = mod.motion || mod
+            const RealComp = motionObj && motionObj[name]
+            setReal(() => RealComp || null)
+          })
+          // Remove listeners after loading
+          window.removeEventListener('click', loadOnInteraction)
+          window.removeEventListener('scroll', loadOnInteraction)
+          window.removeEventListener('keydown', loadOnInteraction)
+        }
+
+        window.addEventListener('click', loadOnInteraction, { once: true })
+        window.addEventListener('scroll', loadOnInteraction, { once: true })
+        window.addEventListener('keydown', loadOnInteraction, { once: true })
+
+        return () => {
+          mounted = false
+          clearTimeout(timer)
+          window.removeEventListener('click', loadOnInteraction)
+          window.removeEventListener('scroll', loadOnInteraction)
+          window.removeEventListener('keydown', loadOnInteraction)
+        }
+      }, [])
+      if (!Real) return props.fallback || React.createElement(name, filterMotionProps(props))
+      const R = Real
+      return <R {...props} />
+    }
+    Comp.displayName = `LazyMotion.${name}`
+    return Comp
+  }
+})
+
+export const AnimatePresence = createLazyComponent('AnimatePresence')
+
+export default {
+  motion,
+  AnimatePresence
+}

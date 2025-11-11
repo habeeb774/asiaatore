@@ -62,6 +62,14 @@ export async function createAlRajhiTransaction(orderPayload) {
   return apiPost('/pay/alrajhi/create', orderPayload);
 }
 
+export async function createStripePaymentIntent(orderPayload) {
+  return apiPost('/pay/stripe/create-intent', orderPayload);
+}
+
+export async function confirmStripePayment({ paymentIntentId, paymentMethodId }) {
+  return apiPost('/pay/stripe/confirm', { paymentIntentId, paymentMethodId });
+}
+
 export default {
   createPayPalTransaction,
   capturePayPalOrder,
@@ -71,5 +79,7 @@ export default {
   confirmBankTransfer,
   uploadBankReceipt,
   enableCashOnDelivery,
-  createAlRajhiTransaction
+  createAlRajhiTransaction,
+  createStripePaymentIntent,
+  confirmStripePayment
 };

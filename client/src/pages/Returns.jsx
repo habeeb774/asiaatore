@@ -1,6 +1,6 @@
 import React from 'react'
-import { useSettings } from '../context/SettingsContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useSettings } from '../stores/SettingsContext';
+import { useLanguage } from '../stores/LanguageContext';
 import Seo from '../components/Seo';
 
 const Returns = () => {

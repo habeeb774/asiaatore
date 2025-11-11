@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Seo from '../../components/Seo';
-import AdminLayout from '../../components/admin/AdminLayout';
-import { useSettings } from '../../context/SettingsContext';
+import AdminLayout from '../../components/features/admin/AdminLayout';
+import { useSettings } from '../../stores/SettingsContext';
 import { Button } from '../../components/ui';
+import Input from '../../components/ui/input';
 import EnvEditor from './EnvEditor';
 import SettingsUi from './SettingsUi';
 import SettingsLogo from './SettingsLogo';
@@ -409,7 +410,7 @@ const Settings = () => {
     setWaLoading(true);
     setMsg('');
     try {
-      const api = (await import('../../api/client')).default;
+      const api = (await import('../../services/api/client')).default;
       const res = await api.whatsappHealth({ suppressLog: true });
   setWaDiag(res?.health || res || null);
     } catch (e) {
@@ -429,7 +430,7 @@ const Settings = () => {
     if (!id) { setWaSendResult({ ok:false, message:'يرجى إدخال رقم الطلب' }); return; }
     setWaSending(true);
     try {
-      const api = (await import('../../api/client')).default;
+      const api = (await import('../../services/api/client')).default;
       const res = await api.whatsappSendInvoiceByOrder(id);
       setWaSendResult(res?.result || res || { ok:true });
     } catch (e) {
@@ -525,10 +526,12 @@ const Settings = () => {
               <label htmlFor="siteNameAr" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>اسم المتجر (AR)</span>
                 <input id="siteNameAr" value={form.siteNameAr} onChange={e=>onChange('siteNameAr', e.target.value)} placeholder="مثال: متجر النخبة" />
+          <Input id="siteNameAr" value={form.siteNameAr} onChange={e=>onChange('siteNameAr', e.target.value)} placeholder="مثال: متجر النخبة" />
               </label>
               <label htmlFor="siteNameEn" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>Store Name (EN)</span>
                 <input id="siteNameEn" value={form.siteNameEn} onChange={e=>onChange('siteNameEn', e.target.value)} placeholder="e.g., Elite Store" />
+          <Input id="siteNameEn" value={form.siteNameEn} onChange={e=>onChange('siteNameEn', e.target.value)} placeholder="e.g., Elite Store" />
                 {errors.siteNameEn && <small style={{color:'#dc2626'}}>{errors.siteNameEn}</small>}
               </label>
             </div>
@@ -559,19 +562,25 @@ const Settings = () => {
               <label htmlFor="colorPrimary" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>اللون الأساسي</span>
                 <input id="colorPrimary" type="color" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
+          <Input id="colorPrimary" type="color" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
                 <input aria-label="Hex" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
+          <Input aria-label="Hex" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
                 {errors.colorPrimary && <small style={{color:'#dc2626'}}>{errors.colorPrimary}</small>}
               </label>
               <label htmlFor="colorSecondary" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>اللون الثانوي</span>
                 <input id="colorSecondary" type="color" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
+          <Input id="colorSecondary" type="color" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
                 <input aria-label="Hex" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
+          <Input aria-label="Hex" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
                 {errors.colorSecondary && <small style={{color:'#dc2626'}}>{errors.colorSecondary}</small>}
               </label>
               <label htmlFor="colorAccent" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>لون مميز</span>
                 <input id="colorAccent" type="color" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
+          <Input id="colorAccent" type="color" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
                 <input aria-label="Hex" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
+          <Input aria-label="Hex" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
                 {errors.colorAccent && <small style={{color:'#dc2626'}}>{errors.colorAccent}</small>}
               </label>
             </div>
@@ -603,11 +612,13 @@ const Settings = () => {
               <label htmlFor="supportPhone" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>رقم الهاتف (هاتف)</span>
                 <input id="supportPhone" value={form.supportPhone} onChange={e=>onChange('supportPhone', e.target.value)} placeholder="مثال: 920000000" />
+          <Input id="supportPhone" value={form.supportPhone} onChange={e=>onChange('supportPhone', e.target.value)} placeholder="مثال: 920000000" />
                 {errors.supportPhone && <small style={{color:'#dc2626'}}>{errors.supportPhone}</small>}
               </label>
               <label htmlFor="supportMobile" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>رقم الجوال (Mobile)</span>
                 <input id="supportMobile" value={form.supportMobile} onChange={e=>onChange('supportMobile', e.target.value)} placeholder="مثال: +9665XXXXXXXX" />
+          <Input id="supportMobile" value={form.supportMobile} onChange={e=>onChange('supportMobile', e.target.value)} placeholder="مثال: +9665XXXXXXXX" />
                 {errors.supportMobile && <small style={{color:'#dc2626'}}>{errors.supportMobile}</small>}
               </label>
               <label htmlFor="supportWhatsapp" style={{display:'grid', gap:4}}>
@@ -621,15 +632,18 @@ const Settings = () => {
               <label htmlFor="supportEmail" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>البريد الإلكتروني</span>
                 <input id="supportEmail" type="email" value={form.supportEmail} onChange={e=>onChange('supportEmail', e.target.value)} placeholder="support@example.com" />
+          <Input id="supportEmail" type="email" value={form.supportEmail} onChange={e=>onChange('supportEmail', e.target.value)} placeholder="support@example.com" />
                 {errors.supportEmail && <small style={{color:'#dc2626'}}>{errors.supportEmail}</small>}
               </label>
               <label htmlFor="supportHours" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>ساعات العمل (اختياري)</span>
                 <input id="supportHours" value={form.supportHours} onChange={e=>onChange('supportHours', e.target.value)} placeholder="مثال: 9ص - 6م (السبت-الخميس)" />
+          <Input id="supportHours" value={form.supportHours} onChange={e=>onChange('supportHours', e.target.value)} placeholder="مثال: 9ص - 6م (السبت-الخميس)" />
               </label>
               <label htmlFor="taxNumber" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>الرقم الضريبي (اختياري)</span>
                 <input id="taxNumber" value={form.taxNumber} onChange={e=>onChange('taxNumber', e.target.value)} placeholder="مثال: 311307460300003" />
+          <Input id="taxNumber" value={form.taxNumber} onChange={e=>onChange('taxNumber', e.target.value)} placeholder="مثال: 311307460300003" />
               </label>
             </div>
           </div>

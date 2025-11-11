@@ -1,0 +1,26 @@
+version: v1
+labels:
+  - label: 'bug'
+    sync: true
+    matcher:
+      title: '/bug|fix|error|issue/i'
+  - label: 'enhancement'
+    sync: true
+    matcher:
+      title: '/feat|feature|enhancement/i'
+  - label: 'documentation'
+    sync: true
+    matcher:
+      files: '*.md'
+  - label: 'tests'
+    sync: true
+    matcher:
+      files: '*test*|*spec*'
+  - label: 'dependencies'
+    sync: true
+    matcher:
+      files: 'package.json|package-lock.json|yarn.lock'
+  - label: 'ci'
+    sync: true
+    matcher:
+      files: '.github/*'

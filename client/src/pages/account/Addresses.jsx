@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../../api/client';
+import api from '../../services/api/client';
 
 export default function AddressesPage() {
   const [loading, setLoading] = useState(true);

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from '../../lib/framerLazy';
 import { X } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
-import api from '../../api/client';
+import api from '../../services/api/client';
 import { useNavigate } from 'react-router-dom';
 
 // call useLanguage inside a small safe custom hook so the component
@@ -247,9 +247,14 @@ export default function SearchOverlay() {
               <div className="bg-white/95 dark:bg-slate-900/90 rounded-xl shadow-xl p-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="text-sm font-semibold opacity-80">{(t && (t('search') || 'Search'))}</div>
-                  <button onClick={closeOverlay} className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" aria-label={t?.('close') || 'Close'}>
-                    <X size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">Esc</kbd> <span className="hidden sm:inline">{locale === 'ar' ? 'للإغلاق' : 'to close'}</span>
+                    </div>
+                    <button onClick={closeOverlay} className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" aria-label={t?.('close') || 'Close'}>
+                      <X size={18} />
+                    </button>
+                  </div>
                 </div>
                 <form onSubmit={onSubmit} className="relative">
                   <input

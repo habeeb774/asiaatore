@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api/client';
+import { useAuth } from '../../stores/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui';
+import { Badge } from '../../components/ui/badge';
 import RoutePlanner from '../../components/RoutePlanner';
 // Shared admin styles for skeletons
 // Styles consolidated into `styles/index.scss`

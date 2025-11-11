@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 // Page-scoped styles (moved from global main.jsx)
 // Styles consolidated into `styles/index.scss`
 import { useParams } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../stores/LanguageContext';
 import Seo from '../components/Seo';
-import { useProducts } from '../context/ProductsContext';
+import { useProducts } from '../stores/ProductsContext';
 import { localizeName, localizeField } from '../utils/locale';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../stores/CartContext';
 import ProductReviews from '../components/ProductReviews';
-import { useSettings } from '../context/SettingsContext';
+import { useSettings } from '../stores/SettingsContext';
 import ProductDetailSkeleton from '../components/products/ProductDetailSkeleton.jsx';
 
 const ProductDetailPage = () => {

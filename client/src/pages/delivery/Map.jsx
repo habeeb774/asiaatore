@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../api/client';
+import { useAuth } from '../../stores/AuthContext';
+import api from '../../services/api/client';
 import ReactLeafletCompat from '../../utils/reactLeafletCompat.jsx';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui';

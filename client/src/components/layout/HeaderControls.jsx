@@ -1,14 +1,14 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Search, ShoppingCart, User, Sun, Moon, Monitor, Languages } from 'lucide-react';
-import { useSidebar } from '../../context/SidebarContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useSidebar } from '../../stores/SidebarContext';
+import { useTheme } from '../../stores/ThemeContext';
 
 // safe wrapper hook: calls useTheme but catches when context is not available
 function useSafeTheme() {
   try {
     return useTheme();
-  } catch (e) {
+  } catch {
     return { theme: 'system', setTheme: () => {} };
   }
 }
@@ -17,12 +17,12 @@ function useSafeTheme() {
 function useSafeSidebar() {
   try {
     return useSidebar();
-  } catch (e) {
+  } catch {
     return {};
   }
 }
 
-export default function HeaderControls({ t, locale, setLocale, panel, setPanel, cartItems, cartTotal, updateQuantity, user }) {
+export default function HeaderControls({ t, locale, setLocale, cartItems, user }) {
   const cartBtnRef = useRef(null);
   const cartCount = Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + (i.quantity || 1), 0) : 0;
   const langs = ['ar', 'en', 'fr'];
@@ -75,10 +75,26 @@ export default function HeaderControls({ t, locale, setLocale, panel, setPanel, 
       )}
       {/* (search button moved next to profile on the right) */}
       {/* زر تغيير اللغة يظهر فقط في الشاشات الكبيرة */}
+      <button
+        type="button"
+        onClick={onCycleLanguage}
+        className="hidden md:inline-flex border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300"
+        aria-label={t?.('changeLanguage') || 'Change language'}
+        title={locale === 'ar' ? 'English' : locale === 'en' ? 'Français' : 'العربية'}
+      >
+        <Languages size={18} />
+      </button>
 
-      
-
-      {/* تم نقل زر تغيير الثيم إلى القائمة الجانبية */}
+      {/* زر تغيير الثيم - إضافة زر بارز في الهيدر */}
+      <button
+        type="button"
+        onClick={() => setTheme(nextTheme)}
+        className="border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 hidden sm:inline-flex"
+        aria-label={t?.('toggleTheme') || 'Toggle theme'}
+        title={themeLabel}
+      >
+        <ThemeIcon size={18} />
+      </button>
 
   {/* زر السلة أصبح في BottomNav فقط */}
 
@@ -100,15 +116,7 @@ export default function HeaderControls({ t, locale, setLocale, panel, setPanel, 
           </Link>
         )}
 
-        {/* Search button immediately to the right of profile */}
-        <button
-          type="button"
-          onClick={() => { try { window.dispatchEvent(new CustomEvent('search:focus')); } catch { window.dispatchEvent(new Event('search:focus')); } }}
-          className="header-search-button border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-          aria-label={t?.('openSearch') || 'Open search'}
-        >
-          <Search size={18} />
-        </button>
+        {/* Search button removed - now integrated directly in HeaderNav */}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckoutContext } from '../context/CheckoutContext';
-import { PaymentContext } from '../context/PaymentContext';
+import { CheckoutContext } from '../stores/CheckoutContext';
+import { PaymentContext } from '../stores/PaymentContext';
 
 const PaymentMethod = () => {
   const { cartItems } = useContext(CheckoutContext) || {};

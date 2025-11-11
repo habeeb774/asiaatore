@@ -230,3 +230,64 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Import UI token helpers and component helpers
   NOTE: imports are handled from JS (see main.jsx) to avoid PostCSS ordering issues. */
+
+/* Advanced Notifications Animations */
+@keyframes slide-in {
+  from {
+    transform: translateX(var(--slide-direction, -100%));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
+}
+
+[dir="rtl"] .animate-slide-in {
+  --slide-direction: 100%;
+}
+
+[dir="ltr"] .animate-slide-in {
+  --slide-direction: -100%;
+}
+
+/* Floating animations for hero section */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 7s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}

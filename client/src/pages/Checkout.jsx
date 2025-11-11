@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrdersContext';
 import { useAuth } from '../context/AuthContext';
 import * as paymentService from '../services/paymentService';
-import api from '../api/client';
+import api from '../services/api/client';
 
 const Checkout = () => {
   const { cartItems, clearCart } = useCart() || {};

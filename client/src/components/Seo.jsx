@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useSettings } from '../context/SettingsContext';
+import { useSettings } from "../stores/SettingsContext";
 
 // Small SEO helper for single-page app to update title and common meta tags
 const setMeta = (nameOrProp, value, attr = 'name') => {

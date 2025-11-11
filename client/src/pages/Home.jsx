@@ -1,335 +1,190 @@
-import React, {
-  useMemo,
-  useState,
-  useEffect,
-  Suspense,
-  lazy,
-  startTransition,
-  useDeferredValue
-} from 'react';
+import React, { Suspense, lazy, useMemo, useEffect } from 'react';
 
 // 🧱 مكونات خفيفة تُحمّل مباشرة
-import ProductCard, { ProductCardSkeleton } from '../components/shared/ProductCard';
-const CategoryChips = lazy(() => import('../components/CategoryChips'));
-import Seo from '../components/Seo';
-import HomeHero from '../components/home/HomeHero';
-import ViewportGate from '../components/shared/ViewportGate';
-import TitledSection from '../components/shared/TitledSection';
-
-// 💤 مكونات ثقيلة تُحمّل لاحقًا بشكل Lazy (Code Splitting)
-const ProductSlider = lazy(() => import('../components/products/ProductSlider'));
-const HomeFeatures = lazy(() => import('../components/home/HomeFeatures'));
-const BrandsStrip = lazy(() => import('../components/home/BrandsStrip'));
-const Offers = lazy(() => import('./Offers'));
+import ProductCard from '../components/shared/ProductCard';
+import TopStrip from '../components/shared/TopStrip';
+import Header from '../components/layout/Header';
+import Footer from '../components/layout/Footer';
+import HeroSection from '../components/home/HeroSection';
+import FeaturesSection from '../components/home/FeaturesSection';
+import DiscountedProductsSection from '../components/home/DiscountedProductsSection';
+import FeaturedProductsSection from '../components/home/FeaturedProductsSection';
+import CategorySection from '../components/home/CategorySection';
+import StatsSection from '../components/home/StatsSection';
+import TestimonialsSection from '../components/home/TestimonialsSection';
+import FAQSection from '../components/home/FAQSection';
+import ContactSection from '../components/home/ContactSection';
 
 // 🧠 السياقات
-import { useLanguage } from '../context/LanguageContext';
-import { useProducts } from '../context/ProductsContext';
-import { useSettings } from '../context/SettingsContext';
-import { useMarketing } from '../context/MarketingContext';
+import { useLanguage } from '../stores/LanguageContext';
+import { useProducts } from '../stores/ProductsContext';
+import { useSettings } from '../stores/SettingsContext';
+import { useMarketing } from '../stores/MarketingContext';
 
-// ⚙️ أدوات مساعدة
-import { resolveLocalized } from '../utils/locale';
-// لا حاجة لاستدعاء API مباشر هنا؛ المكونات الداخلية تتكفل بجلب البيانات
+// 🎣 الـ Hooks المخصصة
+import { useDeferredRender, useMotion, usePrefersReducedMotion } from '../hooks/useHomePage';
+import { useHomeProducts, useMotionVariants, useProductTiles } from '../hooks/useHomeProducts';
+import { useMarketingFeatures, useSiteConfig, useTopStripBanners } from '../hooks/useHomeMarketing';
 
 // 🎨 الأنماط
 // Styles consolidated into `styles/index.scss`
 
+/**
+ * Home Page Component - Main landing page with optimized performance
+ *
+ * Features:
+ * - Lazy loading for heavy components
+ * - Deferred rendering for better initial load
+ * - Motion animations with reduced motion support
+ * - Responsive design with viewport optimization
+ * - SEO optimized with structured data
+ */
 const Home = () => {
+  // 🧠 السياقات
   const { t, locale } = useLanguage();
   const { setting } = useSettings() || {};
   const { products, loading } = useProducts() || { products: [], loading: false };
-  const deferredProducts = useDeferredValue(products || []);
-  const { features: marketingFeatures, byLocation } = useMarketing() || { byLocation:{ topStrip:[], homepage:[], footer:[]}, features:[] };
-  
-  // 🧩 الحالة المحلية
-  const [deferRender, setDeferRender] = useState(false); // تأجيل العناصر الثقيلة
-  const [Motion, setMotion] = useState(null);
-
-  // 🎯 تفعيل التأجيل بعد أول عرض للصفحة
-  useEffect(() => {
-    let mounted = true;
-    let timeoutId;
-
-    const schedule = () => {
-      // استخدام startTransition داخل try/catch للحفاظ على استقرار React 18
-      try {
-        startTransition(() => {
-          if (mounted) setDeferRender(true);
-        });
-      } catch {
-        if (mounted) setDeferRender(true);
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      if ('requestIdleCallback' in window) {
-        const idleId = window.requestIdleCallback(schedule, { timeout: 1000 });
-        return () => {
-          mounted = false;
-          window.cancelIdleCallback?.(idleId);
-        };
-      } else {
-        timeoutId = setTimeout(schedule, 700);
-      }
-    }
-
-    return () => {
-      mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, []);
-
-  // أزلنا جلب التصنيفات هنا لتفادي الاستدعاءات الزائدة؛ مكوّن CategoryChips يتكفل بجلبها عند ظهوره
-
-  const latestProducts = useMemo(
-    () => (deferredProducts || []).slice(-6).reverse(),
-    [deferredProducts]
-  );
-
-  const DiscountedSlider = useMemo(
-    () => (deferredProducts || [])
-      .filter((p) => p.oldPrice && p.oldPrice > p.price)
-      .slice(0, 6),
-    [deferredProducts]
-  );
-
-  const sliderProducts = useMemo(
-    () => (deferredProducts || []).slice(0, 12),
-    [deferredProducts]
-  );
-
-  // 🌍 إعداد البيانات المحلية (الاسم والعنوان)
-  const siteName =
-    locale === 'ar'
-      ? setting?.siteNameAr || 'شركة منفذ اسيا التجارية'
-      : setting?.siteNameEn || 'My Store';
-
-  const pageTitle =
-    locale === 'ar' ? `${t('home')} | ${siteName}` : `${siteName} | ${t('home')}`;
-
-  const features = useMemo(
-    () =>
-      marketingFeatures?.slice(0, 6).map((f) => ({
-        id: f.id,
-        icon: <span className="text-3xl" aria-hidden="true">{f.icon}</span>,
-        title: resolveLocalized(f.title, locale) || f.title,
-        description: resolveLocalized(f.body, locale) || f.body,
-      })) || [],
-    [marketingFeatures, locale]
-  );
-
-  // 🧩 التحقق من تفضيل المستخدم للحركة
-  const prefersReducedMotion = useMemo(() => {
-    try {
-      return (
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      );
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // ⚙️ متغيرات الحركة (تستخدم فقط إذا تم تحميل framer-motion)
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 },
-    },
+  const { features: marketingFeatures, byLocation } = useMarketing() || {
+    byLocation: { topStrip: [], homepage: [], footer: [] },
+    features: []
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
-  };
+  // 🎣 الـ Hooks المخصصة
+  const deferRender = useDeferredRender();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const Motion = useMotion(deferRender, prefersReducedMotion);
 
-  // 🧠 تحميل framer-motion بعد التأجيل فقط (لتقليل حجم الباندل الأساسي)
+  // 📊 إدارة البيانات
+  const { latestProducts, discountedProducts, featuredProducts } = useHomeProducts(products);
+  const { containerVariants, itemVariants } = useMotionVariants();
+  const features = useMarketingFeatures(marketingFeatures, locale);
+  const { siteName, pageTitle } = useSiteConfig(locale, setting, t);
+  const topStripBanners = useTopStripBanners(byLocation.topStrip, locale);
+
+  // 🎨 إدارة العرض
+  const productTiles = useProductTiles(latestProducts, loading, Motion, itemVariants, t, locale);
+
+  // 📱 التحقق من حجم الشاشة
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  }, []);
+
+  // 🏷️ تحديث عنوان الصفحة
   useEffect(() => {
-    if (!deferRender || prefersReducedMotion) return;
-    let cancelled = false;
-    let idleId = null;
-    let timeoutId = null;
-
-    const load = () => {
-      import('framer-motion')
-        .then((m) => {
-          if (cancelled) return;
-          const MotionObj = m.m || m.motion;
-          if (MotionObj && typeof MotionObj === 'object' && 'div' in MotionObj) {
-            setMotion(MotionObj);
-          } else {
-            setMotion(null);
-          }
-        })
-        .catch(() => {});
-    };
-
-    try {
-      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-        idleId = window.requestIdleCallback(load, { timeout: 800 });
-      } else {
-        timeoutId = setTimeout(load, 0);
-      }
-    } catch {
-      timeoutId = setTimeout(load, 0);
+    if (pageTitle) {
+      document.title = pageTitle;
     }
+  }, [pageTitle]);
 
-    return () => {
-      cancelled = true;
-      try {
-        if (idleId && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
-          window.cancelIdleCallback(idleId);
-        }
-      } catch {}
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [deferRender, prefersReducedMotion]);
+  // 📊 البيانات المنظمة لـ SEO
+  const structuredData = useMemo(() => ({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": pageTitle,
+    "description": locale === 'ar' ? "متجر إلكتروني شامل يقدم مجموعة واسعة من المنتجات" : "Comprehensive online store offering a wide range of products",
+    "url": typeof window !== 'undefined' ? window.location.href : "",
+    "publisher": {
+      "@type": "Organization",
+      "name": siteName,
+      "logo": {
+        "@type": "ImageObject",
+        "url": "/logo.png"
+      }
+    }
+  }), [pageTitle, locale, siteName]);
 
-  // 🧩 واجهة المستخدم
   return (
-    <div className="home-page-wrapper min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Seo title={pageTitle} description={t('heroLead')} />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* البيانات المنظمة لـ SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
 
-      {/* 💡 شريط علوي تسويقي */}
-      {byLocation.topStrip?.length > 0 && (
-        <div className="top-strip bg-emerald-600 text-white text-sm">
-          <div className="container-custom flex justify-center gap-4 py-2 overflow-x-auto">
-            {byLocation.topStrip.slice(0, 3).map((b) => {
-              const href = b.linkUrl || '#';
-              const isExternal = typeof href === 'string' && /^(https?:)?\/\//i.test(href) && !href.startsWith('/') ;
-              return (
-              <a
-                key={b.id}
-                href={href}
-                target={isExternal ? '_blank' : undefined}
-                rel={isExternal ? 'noopener noreferrer' : undefined}
-                className="inline-flex items-center gap-2 hover:opacity-90 transition truncate"
-              >
-                {b.image && (
-                  <img
-                    src={b.image}
-                    alt={resolveLocalized(b.title, locale)}
-                    loading="lazy"
-                    className="h-8 w-auto rounded-md object-cover"
-                  />
-                )}
-                <span className="font-medium truncate max-w-xs">
-                  {resolveLocalized(b.title, locale)}
-                </span>
-              </a>
-              );
-            })}
-          </div>
-        </div>
+      {/* الشرائط العلوية */}
+      {topStripBanners.length > 0 && (
+        <TopStrip banners={topStripBanners} />
       )}
 
-      <HomeHero siteName={siteName} locale={locale} t={t} />
+      {/* الهيدر */}
+      <Header />
 
-      {/* 🧭 شريط الفئات */}
-      <div className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-        <div className="container-custom py-3">
-          <Suspense fallback={<div className="h-8 bg-white/70 dark:bg-gray-800/70 rounded-lg animate-pulse" aria-busy="true" aria-live="polite" />}>
-            <CategoryChips />
-          </Suspense>
-        </div>
-      </div>
+      {/* المحتوى الرئيسي */}
+      <main className="relative">
+        {/* قسم البطل */}
+        <HeroSection />
 
-      {/* 🔄 التحميل المتدرج للمحتوى */}
-      {deferRender ? (
-        <>
-          {/* مميزات الصفحة */}
-          <Suspense fallback={<div className="container-custom py-8 animate-pulse"><div className="h-6 bg-gray-100 dark:bg-gray-800 rounded w-1/3 mb-6" /></div>}>
-            <ViewportGate>
-              <HomeFeatures features={features} />
-            </ViewportGate>
-          </Suspense>
+        {/* المميزات */}
+        {features.length > 0 && (
+          <FeaturesSection features={features} Motion={Motion} containerVariants={containerVariants} />
+        )}
 
-          {/* المنتجات المميزة */}
-          <TitledSection
-            title={locale === 'ar' ? 'المنتجات المميزة' : 'Featured Products'}
-            viewAllLink="/products"
-            className="bg-gradient-to-t from-white to-emerald-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300"
-          >
-            <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 animate-pulse">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-48 bg-white/80 dark:bg-gray-800 rounded-2xl shadow-md" />)}</div>}>
-              <ViewportGate threshold={0.2}>
-                <ProductSlider products={sliderProducts} limit={12} />
-              </ViewportGate>
-            </Suspense>
-          </TitledSection>
+        {/* المنتجات المميزة */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                {t('featuredProducts')}
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                {locale === 'ar' ? 'اكتشف أحدث منتجاتنا المميزة' : 'Discover our latest featured products'}
+              </p>
+            </div>
 
-          {/* الماركات */}
-          <Suspense fallback={<div className="container-custom py-6"><div className="h-10 bg-white dark:bg-gray-800 rounded-lg animate-pulse" /></div>}>
-            <ViewportGate>
-              <BrandsStrip />
-            </ViewportGate>
-          </Suspense>
-
-          {/* العروض */}
-          <Suspense fallback={<div className="container-custom py-8"><div className="h-6 bg-gray-100 dark:bg-gray-800 rounded w-1/3 mb-6 animate-pulse" /></div>}>
-            <ViewportGate>
-              <Offers products={DiscountedSlider} />
-            </ViewportGate>
-          </Suspense>
-
-          {/* المنتجات الأخيرة */}
-          <ViewportGate>
-            <TitledSection
-              title={t("latestProducts")}
-              viewAllLink="/products"
-              className="bg-gradient-to-b from-white to-emerald-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300"
+            <Motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
             >
-              {Motion && Motion.div ? (
-                <Motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.2 }}
-                  className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6"
-                >
-                  {loading
-                    ? Array.from({ length: 6 }).map((_, i) => (
-                        <Motion.div key={i} variants={itemVariants}>
-                          <ProductCardSkeleton />
-                        </Motion.div>
-                      ))
-                    : latestProducts.length > 0
-                    ? latestProducts.map((p) => (
-                        <Motion.div key={p.id} variants={itemVariants}>
-                          <ProductCard product={p} />
-                        </Motion.div>
-                      ))
-                    : (
-                      <p className="col-span-full text-center text-gray-500 dark:text-gray-400 py-10">
-                        {t("noProductsFound")}
-                      </p>
-                    )}
-                </Motion.div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
-                  {loading
-                    ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
-                    : latestProducts.length > 0
-                    ? latestProducts.map((p) => <ProductCard key={p.id} product={p} />)
-                    : <p className="col-span-full text-center text-gray-500 dark:text-gray-400 py-10">{t("noProductsFound")}</p>}
-                </div>
-              )}
-            </TitledSection>
-          </ViewportGate>
-        </>
-      ) : (
-        // 💨 مرحلة التحميل المبدئي (skeleton)
-        <div className="container-custom py-8">
-          <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded w-1/3 mb-6 animate-pulse" />
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-40 bg-white dark:bg-gray-800 rounded-lg shadow-sm animate-pulse" />
-            ))}
+              {productTiles}
+            </Motion.div>
           </div>
-        </div>
-      )}
+        </section>
+
+        {/* المنتجات المخفضة */}
+        {discountedProducts.length > 0 && (
+          <DiscountedProductsSection
+            products={discountedProducts}
+            Motion={Motion}
+            containerVariants={containerVariants}
+            itemVariants={itemVariants}
+            t={t}
+            locale={locale}
+          />
+        )}
+
+        {/* المنتجات المميزة الإضافية */}
+        {featuredProducts.length > 0 && (
+          <FeaturedProductsSection
+            products={featuredProducts}
+            Motion={Motion}
+            containerVariants={containerVariants}
+            itemVariants={itemVariants}
+            t={t}
+            locale={locale}
+          />
+        )}
+
+        {/* الفئات */}
+        <CategorySection />
+
+        {/* قسم الإحصائيات */}
+        <StatsSection />
+
+        {/* قسم الشهادات */}
+        <TestimonialsSection />
+
+        {/* قسم الأسئلة الشائعة */}
+        <FAQSection />
+
+        {/* قسم الاتصال */}
+        <ContactSection />
+      </main>
+
+      {/* الفوتر */}
+      <Footer />
     </div>
   );
 };

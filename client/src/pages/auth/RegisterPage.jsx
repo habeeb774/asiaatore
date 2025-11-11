@@ -1,18 +1,23 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../../api/client';
+import api from '../../services/api/client';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui';
+import { Input } from '../../components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useAuth } from '../../stores/AuthContext';
 
 const registerSchema = z.object({
   name: z.string().trim().optional(),
-  email: z.string().email('البريد الإلكتروني غير صحيح').min(1, 'البريد مطلوب'),
+  email: z.string().email('البريد الإلكتروني غير صحيح').optional(),
+  phone: z.string().trim().optional(),
   password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
   confirm: z.string().min(6, 'التأكيد مطلوب')
+}).refine((data) => data.email || data.phone, {
+  message: 'يجب إدخال البريد الإلكتروني أو رقم الجوال',
+  path: ['email']
 }).refine((data) => data.password === data.confirm, {
   message: 'كلمتا المرور غير متطابقتين',
   path: ['confirm']
@@ -20,6 +25,7 @@ const registerSchema = z.object({
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { setAuthData } = useAuth();
   const { register, handleSubmit, setFocus, setError, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(registerSchema),
     mode: 'onSubmit'
@@ -28,13 +34,17 @@ const RegisterPage = () => {
 
   const onSubmit = async (data) => {
     try {
-      const res = await api.authRegister(data.email.trim(), data.password, (data.name || '').trim());
-      if (res?.ok) {
-        navigate('/login', { replace: true, state: { justRegistered: true } });
+      const res = await api.authRegister(data.email, data.password, (data.name || '').trim(), data.phone);
+      if (res?.ok && res.accessToken && res.user) {
+        // Auto-login: set the token and user directly
+        setAuthData(res.accessToken, res.user);
+        navigate('/', { replace: true });
         return;
       }
       // If API returns ok=false (unlikely on 2xx), fall back to generic
-      const msg = res?.error === 'EMAIL_EXISTS' ? 'البريد مستخدم بالفعل' : (res?.error || 'فشل التسجيل');
+      const msg = res?.error === 'EMAIL_EXISTS' ? 'البريد مستخدم بالفعل' :
+                  res?.error === 'PHONE_EXISTS' ? 'رقم الجوال مستخدم بالفعل' :
+                  (res?.error || 'فشل التسجيل');
       setError('root', { message: msg });
     } catch (e) {
       // Map structured errors from api.request()
@@ -42,6 +52,9 @@ const RegisterPage = () => {
       const status = e?.status;
       if (code === 'EMAIL_EXISTS' || status === 409) {
         return setError('email', { message: 'البريد مستخدم بالفعل' });
+      }
+      if (code === 'PHONE_EXISTS') {
+        return setError('phone', { message: 'رقم الجوال مستخدم بالفعل' });
       }
       if (code === 'INVALID_INPUT' || status === 400) {
         return setError('root', { message: 'بيانات غير صالحة، تحقق من الحقول' });
@@ -75,11 +88,20 @@ const RegisterPage = () => {
             <Input
               id="email"
               type="email"
-              label="البريد الإلكتروني"
+              label="البريد الإلكتروني (اختياري)"
               autoComplete="email"
               placeholder="example@mail.com"
               error={errors.email?.message}
               {...register('email')}
+            />
+            <Input
+              id="phone"
+              type="tel"
+              label="رقم الجوال (اختياري)"
+              autoComplete="tel"
+              placeholder="05xxxxxxxx"
+              error={errors.phone?.message}
+              {...register('phone')}
             />
             <Input
               id="password"

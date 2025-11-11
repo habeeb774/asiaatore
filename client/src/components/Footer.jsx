@@ -1,10 +1,10 @@
 // components/Footer.js
 import React from 'react';
-import { useMarketing } from '../context/MarketingContext';
+import { useMarketing } from '../stores/MarketingContext';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
-import { useSettings } from '../context/SettingsContext';
-import { useLanguage } from '../context/LanguageContext';
+import api from '../services/api/client';
+import { useSettings } from '../stores/SettingsContext';
+import { useLanguage } from '../stores/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 
 const Footer = () => {

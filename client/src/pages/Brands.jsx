@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import LazyImage from '../components/common/LazyImage';
-import api from '../api/client';
-import { useLanguage } from '../context/LanguageContext';
+import { useBrands } from '../hooks/useBrands';
+import { useLanguage } from '../stores/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useSettings } from '../context/SettingsContext';
+import { useSettings } from '../stores/SettingsContext';
 import Seo from '../components/Seo';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 
@@ -21,26 +21,13 @@ const BrandSkeleton = () => (
 const Brands = () => {
   const { locale } = useLanguage();
   const { setting } = useSettings() || {};
-  const [brands, setBrands] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('products_desc');
   const [searchParams] = useSearchParams();
   const preselect = searchParams.get('brand') || '';
 
-  useEffect(()=> {
-    let active = true;
-    (async()=>{
-      setLoading(true); setError(null);
-      try {
-        const list = await api.brandsList();
-        if (!active) return;
-        setBrands(Array.isArray(list)? list: []);
-      } catch (e) { if(active) setError(e.message); } finally { if(active) setLoading(false); }
-    })();
-    return ()=> { active=false; };
-  }, []);
+  // Use React Query hook for brands with caching
+  const { data: brands = [], isLoading: loading, error } = useBrands();
 
   const filtered = useMemo(()=> {
     let list = [...brands];

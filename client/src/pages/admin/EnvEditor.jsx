@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui';
 
 // Lazy API import helper (not a React hook - avoid naming starting with `use`)
-const loadApi = async () => (await import('../../api/client')).default;
+const loadApi = async () => (await import('../../../../server/db/client')).default;
 
 export default function EnvEditor() {
   const [loading, setLoading] = useState(true);

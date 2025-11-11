@@ -21,7 +21,7 @@ async function emptyDb() {
 		await prisma.product.deleteMany();
 		await prisma.brand.deleteMany();
 		await prisma.user.deleteMany();
-		await prisma.storesetting.deleteMany();
+		await prisma.storeSetting.deleteMany();
 		await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
 		console.log('All data deleted successfully.');
 	} catch (e) {

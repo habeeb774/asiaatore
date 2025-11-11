@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import AdminLayout from '../../components/admin/AdminLayout';
-import DataTable from '../../components/admin/DataTable';
-import ConfirmModal from '../../components/admin/ConfirmModal';
+import AdminLayout from '../../components/features/admin/AdminLayout';
+import DataTable from '../../components/features/admin/DataTable';
+import ConfirmModal from '../../components/features/admin/ConfirmModal';
 import Drawer from '../../components/ui/Drawer';
-import ImageUploader from '../../components/admin/ImageUploader';
-import { useProducts } from '../../api/products';
+import ImageUploader from '../../components/features/admin/ImageUploader';
+import { useProducts } from '../../services/api/products';
 
 export default function AdminProducts() {
 	const [q, setQ] = useState('');

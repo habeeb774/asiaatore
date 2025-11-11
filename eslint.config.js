@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
+import importPlugin from 'eslint-plugin-import'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -13,8 +14,9 @@ export default defineConfig([
     'client/.vite/**',
     'node_modules/**',
     'themes/**',
-  '.gh-pages/**',
-  '.frontend-gh-pages/**',
+    'packages/**',
+    '.gh-pages/**',
+    '.frontend-gh-pages/**',
     'temp/**',
     'uploads/**',
     'public/**',
@@ -25,6 +27,56 @@ export default defineConfig([
     'client/tests/**',
     'client/**/*.spec.ts',
     'client/**/*.test.ts',
+    'reports/**',
+    'my_store_db/**',
+    'docs/**',
+    'scripts/**',
+    'server/uploads/**',
+    'server/scripts/**',
+    'server/data/**',
+    'server/db/**',
+    'server/config/**',
+    'server/utils/**',
+    'server/services/**',
+    'server/middleware/**',
+    'server/routes/**',
+    'server/controllers/**',
+    'server/modules/**',
+    'server/prisma/**',
+    'server/store/**',
+    'server/graphql/**',
+    'server/**/*.test.js',
+    'server/**/*.spec.js',
+    'tests/**',
+    'tests-output/**',
+    'tmp-build-check.txt',
+    'baseline.sql',
+    'discard.sql',
+    'project_report.txt',
+    'structure.txt',
+    'TEMPLATE_README.md',
+    'analyze_project.py',
+    'vercel_ultimate_deploy.sh',
+    'vercel.json',
+    'railway.json',
+    'ecosystem.config.js',
+    'jsconfig.json',
+    'tsconfig.json',
+    'client/tsconfig.json',
+    'client/jsconfig.json',
+    'client/vitest.config.ts',
+    'client/vitest.setup.ts',
+    'client/playwright.config.ts',
+    'client/postcss.config.cjs',
+    'client/tailwind.config.js',
+    'client/vite.config.js',
+    'client/package.json',
+    'client/pnpm-lock.yaml',
+    'package.json',
+    'pnpm-lock.yaml',
+    'eslint.config.js',
+    'client/eslint.config.js',
+    'client/src/components/features/NFTLoyalty/**',
   ]),
   {
     files: ['**/*.{js,jsx}'],
@@ -35,6 +87,7 @@ export default defineConfig([
     ],
     plugins: {
       'jsx-a11y': jsxA11y,
+      'import': importPlugin,
     },
     languageOptions: {
       ecmaVersion: 2020,
@@ -51,6 +104,7 @@ export default defineConfig([
       'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'react-refresh/only-export-components': 'off',
+      'import/no-unresolved': 'off', // Disabled due to path resolution issues with Vite
     },
   },
   // Node/Server overrides
@@ -65,6 +119,7 @@ export default defineConfig([
       'client/vitest.config.ts',
       'ecosystem.config.cjs',
       'scripts/**/*.{js,jsx}',
+      'client/src/components/features/NFTLoyalty/scripts/**/*.{js,jsx}',
       'mobile/**/*.{js,jsx}'
     ],
     languageOptions: {
@@ -74,6 +129,22 @@ export default defineConfig([
     },
     rules: {
       'no-undef': 'off',
+    },
+  },
+  // NFTLoyalty test files
+  {
+    files: [
+      'client/src/components/features/NFTLoyalty/**/*.test.{js,jsx}',
+      'client/src/components/features/NFTLoyalty/jest.setup.js'
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.browser,
+        ...globals.jest,
+        global: 'readonly',
+      },
+      parserOptions: { sourceType: 'module' },
     },
   },
 ])

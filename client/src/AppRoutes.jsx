@@ -1,10 +1,10 @@
 import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
-import { ChatProvider } from './context/ChatContext.jsx';
+import { ChatProvider } from './stores/ChatContext.jsx';
 import { RouteErrorBoundary, PageFallback } from './components/routing/RouteBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './stores/AuthContext';
 import AdminUsers from './pages/admin/AdminUsers';
 import Reports from './pages/admin/Reports';
 import BankTransfers from './pages/admin/BankTransfers';
@@ -12,9 +12,12 @@ import Analytics from './pages/admin/Analytics';
 import Customers from './pages/admin/Customers';
 import Settings from './pages/admin/Settings';
 import AccountSecurity from './pages/AccountSecurity';
+import DeveloperSettings from './pages/admin/DeveloperSettings.jsx';
+import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
+import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Lazy load heavy pages to split bundles per-route
-const Home = React.lazy(() => import('./pages/Home'));
+const Home = React.lazy(() => import('./pages/MainHome.jsx'));
 const Cart = React.lazy(() => import('./pages/Cart'));
 const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
 const LoginPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.LoginPage })));
@@ -25,47 +28,103 @@ const VerifyEmailPage = React.lazy(() => import('./pages/auth/VerifyEmailPage.js
 const Orders = React.lazy(() => import('./pages/Orders'));
 const MyOrders = React.lazy(() => import('./pages/MyOrders'));
 const OrderDetails = React.lazy(() => import('./pages/OrderDetails'));
-const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
-const ProductInventory = React.lazy(() => import('./pages/admin/ProductInventory.jsx'));
-const AdminOrders = React.lazy(() => import('./pages/admin/Orders.jsx'));
-const AdminProductsAdmin = React.lazy(() => import('./pages/admin/Products.jsx'));
-const AdminInvoices = React.lazy(() => import('./pages/admin/Invoices.jsx'));
-const AdminMarketing = React.lazy(() => import('./pages/admin/Marketing.jsx'));
-const AdminApps = React.lazy(() => import('./pages/admin/Apps.jsx'));
-const AdminIntegrations = React.lazy(() => import('./pages/admin/Integrations.jsx'));
-const SellerDashboard = React.lazy(() => import('./pages/seller/SellerDashboard.jsx'));
-const DeliveryDashboard = React.lazy(() => import('./pages/delivery/DeliveryDashboard.jsx'));
+const AdminDashboard = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/AdminDashboard'));
+const ProductInventory = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/ProductInventory.jsx'));
+const AdminOrders = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Orders.jsx'));
+const AdminProductsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Products.jsx'));
+const AdminInvoices = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Invoices.jsx'));
+const AdminMarketing = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Marketing.jsx'));
+const AdminApps = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Apps.jsx'));
+const AdminIntegrations = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Integrations.jsx'));
+const SellerDashboard = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerDashboard.jsx'));
+const DeliveryDashboard = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliveryDashboard.jsx'));
 import Canonical from './components/Canonical';
-import { initAnalytics, trackPageView } from './lib/analytics';
-import { AnimatePresence, motion } from './lib/framerLazy';
+import { AnimatePresence, motion } from './lib/framerLazy.js';
 // NOTE: useLanguage was imported but unused; removed to prevent lint warning.
-const ProductDetailPage = React.lazy(() => import('./pages/ProductDetailPage'));
-const StoresPage = React.lazy(() => import('./pages/StoresPage'));
-const OffersPage = React.lazy(() => import('./pages/OffersPage'));
-const InvoiceViewer = React.lazy(() => import('./pages/InvoiceViewer'));
-const CatalogPage = React.lazy(() => import('./pages/CatalogPage'));
-const LegalPage = React.lazy(() => import('./pages/Legal.jsx'));
-const ProductsPage = React.lazy(() => import('./pages/Products'));
-const ChatPage = React.lazy(() => import('./pages/Chat.jsx'));
-const StyleGuide = React.lazy(() => import('./pages/StyleGuide'));
-const ProfilePage = React.lazy(() => import('./pages/account/Profile'));
-const ProductManager = React.lazy(() => import('./pages/seller/ProductManager'));
-const OrderTracker = React.lazy(() => import('./pages/orders/OrderTracker.jsx'));
-const AddressesPage = React.lazy(() => import('./pages/account/Addresses.jsx'));
-const SellerKyc = React.lazy(() => import('./pages/seller/SellerKyc.jsx'));
-const AdminKycReview = React.lazy(() => import('./pages/admin/AdminKycReview.jsx'));
-const DeliveryMap = React.lazy(() => import('./pages/delivery/Map.jsx'));
-const DeliveryHistory = React.lazy(() => import('./pages/delivery/History.jsx'));
-const DeliveryAvailability = React.lazy(() => import('./pages/delivery/Availability.jsx'));
-const DeliverySummary = React.lazy(() => import('./pages/delivery/DeliverySummary.jsx'));
-const UIPreview = React.lazy(() => import('./pages/UIPreview.jsx'));
+const ProductDetailPage = React.lazy(() => import(/* webpackChunkName: "product" */ './pages/ProductDetailPage'));
+const StoresPage = React.lazy(() => import(/* webpackChunkName: "stores" */ './pages/StoresPage'));
+const OffersPage = React.lazy(() => import(/* webpackChunkName: "offers" */ './pages/OffersPage'));
+const InvoiceViewer = React.lazy(() => import(/* webpackChunkName: "invoice" */ './pages/InvoiceViewer'));
+const CatalogPage = React.lazy(() => import(/* webpackChunkName: "catalog" */ './pages/CatalogPage'));
+const LegalPage = React.lazy(() => import(/* webpackChunkName: "legal" */ './pages/Legal.jsx'));
+const ProductsPage = React.lazy(() => import(/* webpackChunkName: "products" */ './pages/Products'));
+const ChatPage = React.lazy(() => import(/* webpackChunkName: "chat" */ './pages/Chat.jsx'));
+const ProductReviews = React.lazy(() => import(/* webpackChunkName: "reviews" */ './pages/ProductReviews'));
+const StyleGuide = React.lazy(() => import(/* webpackChunkName: "styleguide" */ './pages/StyleGuide'));
+const SubscriptionPlans = React.lazy(() => import(/* webpackChunkName: "subscriptions" */ './pages/SubscriptionPlans'));
+const ProfilePage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Profile'));
+const ProductManager = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/ProductManager'));
+const OrderTracker = React.lazy(() => import(/* webpackChunkName: "orders" */ './pages/orders/OrderTracker.jsx'));
+const AddressesPage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Addresses.jsx'));
+const SellerKyc = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerKyc.jsx'));
+const AdminKycReview = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/AdminKycReview.jsx'));
+const DeliveryMap = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Map.jsx'));
+const DeliveryHistory = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/History.jsx'));
+const DeliveryAvailability = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Availability.jsx'));
+const DeliverySummary = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliverySummary.jsx'));
+const UIPreview = React.lazy(() => import(/* webpackChunkName: "ui" */ './pages/UIPreview.jsx'));
+const SearchResults = React.lazy(() => import(/* webpackChunkName: "search" */ './pages/SearchResults'));
 // Home page now fully implemented (replaces placeholder)
+const ToastTest = React.lazy(() => import('./pages/ToastTest.jsx'));
+const HeroDemo = React.lazy(() => import(/* webpackChunkName: "demo" */ './pages/HeroDemo.jsx'));
+const NFTLoyaltyPage = React.lazy(() => import(/* webpackChunkName: "nft" */ './pages/NFTLoyaltyPage'));
+const GamificationPage = React.lazy(() => import(/* webpackChunkName: "gamification" */ './pages/GamificationPage'));
+const ARViewerPage = React.lazy(() => import(/* webpackChunkName: "ar" */ './pages/ARViewerPage'));
+const VoiceCommercePage = React.lazy(() => import(/* webpackChunkName: "voice" */ './pages/VoiceCommercePage'));
+const SocialCommercePage = React.lazy(() => import(/* webpackChunkName: "social" */ './pages/SocialCommercePage'));
+const SmartInventoryPage = React.lazy(() => import(/* webpackChunkName: "inventory" */ './pages/SmartInventoryPage'));
+const PersonalizationPage = React.lazy(() => import(/* webpackChunkName: "personalization" */ './pages/PersonalizationPage'));
+const SustainabilityPage = React.lazy(() => import(/* webpackChunkName: "sustainability" */ './pages/SustainabilityPage'));
 
 const RouteTracker = () => {
   const location = useLocation();
+  const [analyticsLoaded, setAnalyticsLoaded] = React.useState(false);
+
+  // Lazy load analytics on user interaction
+  const loadAnalytics = React.useCallback(() => {
+    if (analyticsLoaded) return;
+    try {
+      initAnalytics();
+      setAnalyticsLoaded(true);
+    } catch {}
+  }, [analyticsLoaded]);
+
+  // Load analytics on first user interaction
+  React.useEffect(() => {
+    const handleInteraction = () => {
+      loadAnalytics();
+      // Remove listeners after first interaction
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+
+    // Add interaction listeners
+    window.addEventListener('click', handleInteraction, { once: true });
+    window.addEventListener('scroll', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true });
+
+    // Fallback: load after 30 seconds if no interaction (increased delay)
+    const timeout = setTimeout(() => {
+      loadAnalytics();
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    }, 30000);
+
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [loadAnalytics]);
+
   useEffect(() => {
-    // Ensure GA initialized once in browser
-    try { initAnalytics(); } catch {}
     try {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
@@ -73,8 +132,10 @@ const RouteTracker = () => {
         path: location.pathname,
         timestamp: Date.now()
       });
-      // GA4 page_view
-      trackPageView(location.pathname);
+      // GA4 page_view - only if analytics is loaded
+      if (analyticsLoaded) {
+        trackPageView(location.pathname);
+      }
       // Dispatch a single SPA re-init event for home enhancements (throttled per route change)
       const ev = new CustomEvent('reinit:home', {
         detail: { path: location.pathname, ts: Date.now() }
@@ -84,7 +145,7 @@ const RouteTracker = () => {
         try { document.dispatchEvent(ev); } catch {}
       });
     } catch {}
-  }, [location]);
+  }, [location, analyticsLoaded]);
   return null;
 };
 
@@ -161,11 +222,16 @@ const AppRoutes = () => {
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/product/:productId/reviews" element={<ProductReviews />} />
+          <Route path="/search" element={<SearchResults />} />
         <Route path="/stores" element={<StoresPage />} />
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/style-guide" element={<StyleGuide />} />
     <Route path="/ui" element={<UIPreview />} />
+  <Route path="/demo/hero" element={<HeroDemo />} />
+  <Route path="/test/toast" element={<ToastTest />} />
   <Route path="/cart" element={<Cart />} />
+  <Route path="/subscriptions" element={<SubscriptionPlans />} />
   <Route path="/checkout" element={<CheckoutPage />} />
   <Route path="/orders" element={<Orders />} />
   <Route path="/legal/:slug" element={<LegalPage />} />
@@ -276,7 +342,9 @@ const AppRoutes = () => {
   <Route path="/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/login" />} />
   <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
   <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
+  <Route path="/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/login" />} />
   <Route path="/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/login" />} />
+  <Route path="/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['developer']} element={<DeveloperSettings />} redirectTo="/login" />} />
   <Route path="/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/login" />} />
   <Route path="/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/login" />} />
   <Route path="/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/login" />} />
@@ -289,6 +357,17 @@ const AppRoutes = () => {
   <Route path="/reset-password" element={<ResetPasswordPage />} />
   <Route path="/verify-email" element={<VerifyEmailPage />} />
 
+  {/* Advanced Features */}
+  <Route path="/gamification" element={<ProtectedRoute isAuthed={!!user} element={<GamificationPage />} redirectTo="/login" />} />
+  <Route path="/ar-viewer" element={<ARViewerPage />} />
+  <Route path="/voice-commerce" element={<VoiceCommercePage />} />
+  <Route path="/social-commerce" element={<ProtectedRoute isAuthed={!!user} element={<SocialCommercePage />} redirectTo="/login" />} />
+  <Route path="/smart-inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin','seller']} element={<SmartInventoryPage />} redirectTo="/login" />} />
+  <Route path="/personalization" element={<ProtectedRoute isAuthed={!!user} element={<PersonalizationPage />} redirectTo="/login" />} />
+  <Route path="/sustainability" element={<SustainabilityPage />} />
+  <Route path="/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/login" />} />
+  <Route path="/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/login" />} />
+
         {/* English prefixed */}
   <Route path="/en" element={<Home />} />
   <Route path="/en/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/en/login" />} />
@@ -296,11 +375,16 @@ const AppRoutes = () => {
   <Route path="/en/catalog" element={<CatalogPage />} />
   <Route path="/en/products" element={<ProductsPage />} />
   <Route path="/en/product/:id" element={<ProductDetailPage />} />
+  <Route path="/en/search" element={<SearchResults />} />
         <Route path="/en/stores" element={<StoresPage />} />
     <Route path="/en/offers" element={<OffersPage />} />
     <Route path="/en/style-guide" element={<StyleGuide />} />
-  <Route path="/en/ui" element={<UIPreview />} />
+  <Route path="/fr/ui" element={<UIPreview />} />
+  <Route path="/fr/demo/hero" element={<HeroDemo />} />
+  <Route path="/fr/test/toast" element={<ToastTest />} />
+  <Route path="/en/test/toast" element={<ToastTest />} />
   <Route path="/en/cart" element={<Cart />} />
+  <Route path="/en/subscriptions" element={<SubscriptionPlans />} />
   <Route path="/en/checkout" element={<CheckoutPage />} />
   <Route path="/en/orders" element={<Orders />} />
   <Route path="/en/legal/:slug" element={<LegalPage />} />
@@ -410,6 +494,7 @@ const AppRoutes = () => {
   <Route path="/en/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/en/login" />} />
   <Route path="/en/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/en/login" />} />
   <Route path="/en/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/en/login" />} />
   <Route path="/en/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/en/login" />} />
   <Route path="/en/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/en/login" />} />
   <Route path="/en/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/en/login" />} />
@@ -422,19 +507,34 @@ const AppRoutes = () => {
   <Route path="/en/forgot" element={<ForgotPasswordPage />} />
   <Route path="/en/reset-password" element={<ResetPasswordPage />} />
   <Route path="/en/verify-email" element={<VerifyEmailPage />} />
-  {/* Duplicate /admin protected route removed (now defined above) */}
-  {/* French prefixed */}
+  <Route path="/en/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
+  <Route path="/en/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
+
+  {/* Advanced Features */}
+  <Route path="/en/gamification" element={<ProtectedRoute isAuthed={!!user} element={<GamificationPage />} redirectTo="/en/login" />} />
+  <Route path="/en/ar-viewer" element={<ARViewerPage />} />
+  <Route path="/en/voice-commerce" element={<VoiceCommercePage />} />
+  <Route path="/en/social-commerce" element={<ProtectedRoute isAuthed={!!user} element={<SocialCommercePage />} redirectTo="/en/login" />} />
+  <Route path="/en/smart-inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin','seller']} element={<SmartInventoryPage />} redirectTo="/en/login" />} />
+  <Route path="/en/personalization" element={<ProtectedRoute isAuthed={!!user} element={<PersonalizationPage />} redirectTo="/en/login" />} />
+  <Route path="/en/sustainability" element={<SustainabilityPage />} />
+  <Route path="/en/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
+  <Route path="/en/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
+
+        {/* French prefixed */}
   <Route path="/fr" element={<Home />} />
   <Route path="/fr/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/fr/login" />} />
   <Route path="/fr/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/fr/login" />} />
   <Route path="/fr/catalog" element={<CatalogPage />} />
   <Route path="/fr/products" element={<ProductsPage />} />
   <Route path="/fr/product/:id" element={<ProductDetailPage />} />
+  <Route path="/fr/search" element={<SearchResults />} />
   <Route path="/fr/stores" element={<StoresPage />} />
-  <Route path="/fr/offers" element={<OffersPage />} />
-  <Route path="/fr/style-guide" element={<StyleGuide />} />
+    <Route path="/fr/offers" element={<OffersPage />} />
+    <Route path="/fr/style-guide" element={<StyleGuide />} />
   <Route path="/fr/ui" element={<UIPreview />} />
   <Route path="/fr/cart" element={<Cart />} />
+  <Route path="/fr/subscriptions" element={<SubscriptionPlans />} />
   <Route path="/fr/checkout" element={<CheckoutPage />} />
   <Route path="/fr/orders" element={<Orders />} />
   <Route path="/fr/legal/:slug" element={<LegalPage />} />
@@ -543,6 +643,7 @@ const AppRoutes = () => {
   <Route path="/fr/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/fr/login" />} />
@@ -555,6 +656,17 @@ const AppRoutes = () => {
   <Route path="/fr/forgot" element={<ForgotPasswordPage />} />
   <Route path="/fr/reset-password" element={<ResetPasswordPage />} />
   <Route path="/fr/verify-email" element={<VerifyEmailPage />} />
+
+  {/* Advanced Features */}
+  <Route path="/fr/gamification" element={<ProtectedRoute isAuthed={!!user} element={<GamificationPage />} redirectTo="/fr/login" />} />
+  <Route path="/fr/ar-viewer" element={<ARViewerPage />} />
+  <Route path="/fr/voice-commerce" element={<VoiceCommercePage />} />
+  <Route path="/fr/social-commerce" element={<ProtectedRoute isAuthed={!!user} element={<SocialCommercePage />} redirectTo="/fr/login" />} />
+  <Route path="/fr/smart-inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin','seller']} element={<SmartInventoryPage />} redirectTo="/fr/login" />} />
+  <Route path="/fr/personalization" element={<ProtectedRoute isAuthed={!!user} element={<PersonalizationPage />} redirectTo="/fr/login" />} />
+  <Route path="/fr/sustainability" element={<SustainabilityPage />} />
+  <Route path="/fr/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/fr/login" />} />
+  <Route path="/fr/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/fr/login" />} />
       </Routes>
       </RouteContainer>
       </AnimatePresence>

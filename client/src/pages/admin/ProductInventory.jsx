@@ -1,6 +1,6 @@
 import React from 'react';
 import ProductList from '../../components/inventory/ProductList';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from '../../components/features/admin/AdminLayout';
 
 export default function ProductInventory() {
   return (

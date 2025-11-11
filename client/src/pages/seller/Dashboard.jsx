@@ -4,10 +4,10 @@
 // Do not add new logic here; consider porting any needed code to SellerDashboard.jsx.
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useOrders } from '../../context/OrdersContext';
-import { useStore } from '../../context/StoreContext';
-import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../stores/AuthContext';
+import { useOrders } from '../../stores/OrdersContext';
+import { useStore } from '../../stores/StoreContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { localizeName } from '../../utils/locale';
 
 const SellerDashboard = () => {

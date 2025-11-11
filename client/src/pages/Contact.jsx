@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import Button from '../components/ui/Button';
-import { motion } from 'framer-motion';
-import { useSettings } from '../context/SettingsContext';
-import { useLanguage } from '../context/LanguageContext';
+import { motion } from '../lib/framerLazy';
+import { useSettings } from '../stores/SettingsContext';
+import { useLanguage } from '../stores/LanguageContext';
 import Seo from '../components/Seo';
 
 const Contact = () => {

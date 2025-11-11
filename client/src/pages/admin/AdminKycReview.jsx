@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import adminApi from '../../api/admin';
+import adminApi from '../../services/api/admin';
 import { Button } from '../../components/ui';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from '../../components/features/admin/AdminLayout';
 
 export default function AdminKycReview() {
   const [items, setItems] = useState([]);

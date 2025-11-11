@@ -1,5 +1,6 @@
 export { Button, ButtonLink, buttonVariants } from './Button';
 export { Input } from './input';
+export { Select } from './select';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
 export { Badge } from './badge';
 export { Label } from './label';

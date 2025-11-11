@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import api from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import api from '../services/api/client';
+import { useAuth } from '../stores/AuthContext';
 
 /** ProductReviews
  * Props: productId
@@ -40,7 +41,15 @@ export default function ProductReviews({ productId }) {
 
   return (
     <div className="product-reviews" dir="rtl" style={{ marginTop:'2rem' }}>
-      <h3 style={{ fontSize:'1rem', marginBottom:'.75rem' }}>آراء العملاء</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem' }}>
+        <h3 style={{ fontSize:'1rem', margin: 0 }}>آراء العملاء</h3>
+        <Link 
+          to={`/product/${productId}/reviews`}
+          style={{ fontSize: '.7rem', color: '#3b82f6', textDecoration: 'none' }}
+        >
+          عرض جميع المراجعات →
+        </Link>
+      </div>
       {loading && <div style={{ fontSize:'.7rem', color:'#64748b' }}>جاري التحميل...</div>}
       {error && <div style={{ fontSize:'.65rem', color:'#dc2626' }}>{error}</div>}
       {!loading && !reviews.length && <div style={{ fontSize:'.65rem', color:'#475569' }}>لا توجد مراجعات بعد.</div>}

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useOrders } from '../../context/OrdersContext';
-import { useAdmin } from '../../context/AdminContext';
-import { useAuth } from '../../context/AuthContext';
+import { useOrders } from '../../stores/OrdersContext';
+import { useAdmin } from '../../stores/AdminContext';
+import { useAuth } from '../../stores/AuthContext';
 import { Skeleton } from '../../components/ui';
 import Modal from '../../components/ui/Modal';
-import AdminLayout from '../../components/admin/AdminLayout';
-import { useToast } from '../../context/ToastContext';
+import AdminLayout from '../../components/features/admin/AdminLayout';
+import { useToast } from '../../stores/ToastContext';
 
 const statusOptions = ['pending','paid','shipped','completed','cancelled'];
 
@@ -160,9 +160,9 @@ const OrdersManagement = () => {
                   message: `تغيير حالة ${selected.length} طلب إلى ${bulkStatus}?`,
                   confirmLabel: 'تأكيد',
                   cancelLabel: 'إلغاء',
-                  onConfirm: async () => {
+                      onConfirm: async () => {
                     try {
-                      await import('../../api/admin').then(m=>m.adminApi.bulkUpdateOrdersStatus(selected, bulkStatus));
+                      await import('../../services/api/admin').then(m=>m.adminApi.bulkUpdateOrdersStatus(selected, bulkStatus));
                       selected.forEach(id => mergeOrder({ id, status: bulkStatus }));
                       setSelected([]);
                       setSelectAll(false);
@@ -183,7 +183,7 @@ const OrdersManagement = () => {
                 if (!selected.length) return toast?.warn?.('اختر طلبات للإسناد');
                 if (!assignDriver) return toast?.warn?.('اختر سائقاً لإتمام الإسناد');
                 try {
-                  await import('../../api/admin').then(m=>m.adminApi.deliveryAssignBulk(selected, assignDriver));
+                  await import('../../services/api/admin').then(m=>m.adminApi.deliveryAssignBulk(selected, assignDriver));
                   selected.forEach(id => mergeOrder({ id, deliveryDriverId: assignDriver, deliveryStatus: 'assigned' }));
                   setSelected([]);
                   setSelectAll(false);
@@ -192,7 +192,7 @@ const OrdersManagement = () => {
               }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#06b6d4',color:'#fff'}}>إسناد مجمّع</button>
               <button type="button" onClick={async ()=>{
                 try {
-                  const res = await import('../../api/admin').then(m=>m.adminApi.deliveryAssignAuto({ limit: 50 }));
+                  const res = await import('../../services/api/admin').then(m=>m.adminApi.deliveryAssignAuto({ limit: 50 }));
                   if (refresh) await refresh();
                   toast?.success?.(`تم الإسناد التلقائي`);
                 } catch(e){ toast?.error?.('فشل الإسناد التلقائي: '+(e.message||e)); }
@@ -210,7 +210,7 @@ const OrdersManagement = () => {
               <button type="button" onClick={async ()=>{
                 try {
                   const params = { status: filter==='all'?undefined:filter, from: dateFrom || undefined, to: dateTo || undefined };
-                  const csv = await import('../../api/admin').then(m=>m.adminApi.exportOrdersCsv(params));
+                  const csv = await import('../../services/api/admin').then(m=>m.adminApi.exportOrdersCsv(params));
                   const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a'); a.href = url; a.download = 'orders.csv'; a.click(); URL.revokeObjectURL(url);
@@ -220,7 +220,7 @@ const OrdersManagement = () => {
               <button type="button" onClick={async ()=>{
                 try {
                   const params = { status: filter==='all'?undefined:filter, from: dateFrom || undefined, to: dateTo || undefined };
-                  const blob = await import('../../api/admin').then(m=>m.adminApi.exportOrdersXlsx(params));
+                  const blob = await import('../../services/api/admin').then(m=>m.adminApi.exportOrdersXlsx(params));
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a'); a.href = url; a.download = 'orders.xlsx'; a.click(); URL.revokeObjectURL(url);
                   toast?.success?.('تم تنزيل XLSX');

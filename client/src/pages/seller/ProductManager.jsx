@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { localizeName } from '../../utils/locale';
-import { useAuth } from '../../context/AuthContext';
-import { useStore } from '../../context/StoreContext';
-import api from '../../api/client';
+import { useAuth } from '../../stores/AuthContext';
+import { useStore } from '../../stores/StoreContext';
+import api from '../../services/api/client';
 import useCategories from '../../hooks/useCategories';
 
 const STORAGE_KEY = 'my_store_seller_products';

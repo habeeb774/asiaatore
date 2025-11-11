@@ -8,6 +8,7 @@ import { emitOrderEvent } from '../../utils/realtimeHub.js';
 import InventoryService from '../../services/inventoryService.js';
 import { ensureInvoiceForOrder } from '../../utils/invoice.js';
 import { sendInvoiceWhatsApp } from '../../services/whatsapp.js';
+import { encrypt, decrypt } from '../../utils/crypto.js';
 
 function providerTrackingUrl(provider, trackingNumber) {
   try {
@@ -34,7 +35,7 @@ export function mapOrder(o) {
     grandTotal: o.grandTotal,
     total: o.grandTotal,
     paymentMethod: o.paymentMethod,
-    paymentMeta: o.paymentMeta,
+    paymentMeta: o.paymentMeta ? JSON.parse(decrypt(JSON.parse(o.paymentMeta))) : null,
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
     items: (o.items || []).map(i => ({
@@ -254,7 +255,7 @@ export const OrdersService = {
         tax: totals.tax,
         grandTotal: totals.grandTotal,
         paymentMethod: input.paymentMethod || null,
-        paymentMeta: input.paymentMeta || null,
+        paymentMeta: input.paymentMeta ? JSON.stringify(encrypt(JSON.stringify(input.paymentMeta))) : null,
         items: {
           create: items.map(i => ({
             productId: i.productId,
@@ -355,7 +356,7 @@ export const OrdersService = {
     const updateData = {
       status: body.status || existing.status,
       paymentMethod: body.paymentMethod != null ? body.paymentMethod : existing.paymentMethod,
-      paymentMeta: body.paymentMeta != null ? (body.paymentMeta || null) : existing.paymentMeta,
+      paymentMeta: body.paymentMeta != null ? (body.paymentMeta ? JSON.stringify(encrypt(JSON.stringify(body.paymentMeta))) : null) : existing.paymentMeta,
       subtotal: totals.subtotal,
       discount: totals.discount,
       tax: totals.tax,

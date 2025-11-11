@@ -35,7 +35,7 @@ const OrderDetails = lazy(() => import('./pages/OrderDetails'));
 const ProductManager = lazy(() => import('./pages/seller/ProductManager'));
 const Account = lazy(() => import('./pages/account/Account'));
 const Blog = lazy(() => import('./pages/Blog'));
-const Offers = lazy(() => import('./pages/Offers'));
+const Offers = lazy(() => import('./pages/MainHome'));
 const Categories = lazy(() => import('./pages/Categories'));
 const Category = lazy(() => import('./pages/Category'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));

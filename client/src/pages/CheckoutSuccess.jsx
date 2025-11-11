@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useOrders } from '../context/OrdersContext';
-import api from '../api/client';
-import { useCart } from '../context/CartContext';
+import { useOrders } from '../stores/OrdersContext';
+import api from '../services/api/client';
+import { useCart } from '../stores/CartContext';
 import * as paymentService from '../services/paymentService';
-import { useSettings } from '../context/SettingsContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useSettings } from '../stores/SettingsContext';
+import { useLanguage } from '../stores/LanguageContext';
 import Seo from '../components/Seo';
 import { Button } from '../components/ui';
 

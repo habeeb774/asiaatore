@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, ButtonLink, buttonVariants } from '../components/ui';
-import { useOrders } from '../context/OrdersContext';
-import { useAuth } from '../context/AuthContext';
+import { useOrders } from '../stores/OrdersContext';
+import { useAuth } from '../stores/AuthContext';
 import { openInvoicePdfByOrder } from '../services/invoiceService';
 
 // Simple status progression map for visual tracking
@@ -14,17 +14,47 @@ const STATUS_FLOW = [
   'delivered'
 ];
 
-function StatusTracker({ status }) {
-  const idx = STATUS_FLOW.indexOf(status);
+function StatusTracker({ status, orderId, onStatusUpdate }) {
+  const [liveStatus, setLiveStatus] = useState(status);
+  const esRef = useRef(null);
+
+  useEffect(() => {
+    setLiveStatus(status);
+  }, [status]);
+
+  useEffect(() => {
+    if (!orderId) return;
+    // Open SSE for live order updates
+    const es = new EventSource('/api/events');
+    esRef.current = es;
+    const onOrderUpdate = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data && data.id === orderId && data.status) {
+          setLiveStatus(data.status);
+          onStatusUpdate && onStatusUpdate(data.status);
+        }
+      } catch {}
+    };
+    es.addEventListener('order.updated', onOrderUpdate);
+    es.onerror = () => {};
+    return () => { es.close(); };
+  }, [orderId, onStatusUpdate]);
+
+  const idx = STATUS_FLOW.indexOf(liveStatus);
   return (
-    <div className="offers-page catalog-page container-custom px-4 py-8">
+    <div className="flex items-center gap-2 py-2">
       {STATUS_FLOW.map((s, i) => {
         const reached = idx >= i;
+        const isCurrent = idx === i;
         return (
-          <div key={s} className="flex items-center gap-1">
-            <span className={`px-2 py-1 rounded border ${reached ? 'bg-green-600 text-white border-green-600' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>{s}</span>
-            {i < STATUS_FLOW.length - 1 && <span className={`w-6 h-px ${idx >= i+1 ? 'bg-green-600' : 'bg-gray-300'}`}></span>}
-          </div>
+          <React.Fragment key={s}>
+            <div className={`px-2 py-1 rounded border text-xs ${reached ? 'bg-green-600 text-white border-green-600' : isCurrent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+              {s}
+              {isCurrent && <span className="ml-1 animate-pulse">●</span>}
+            </div>
+            {i < STATUS_FLOW.length - 1 && <span className={`w-4 h-px ${idx >= i+1 ? 'bg-green-600' : 'bg-gray-300'}`}></span>}
+          </React.Fragment>
         );
       })}
     </div>
@@ -34,7 +64,17 @@ function StatusTracker({ status }) {
 const MyOrders = () => {
   const { paged, loading, error, refresh } = useOrders() || {};
   const { user } = useAuth() || {};
-  const myOrders = useMemo(() => (paged || []).filter(o => String(o.userId) === String(user?.id || 'guest')), [paged, user]);
+  const [orders, setOrders] = useState(paged || []);
+  
+  useEffect(() => {
+    setOrders(paged || []);
+  }, [paged]);
+
+  const myOrders = useMemo(() => orders.filter(o => String(o.userId) === String(user?.id || 'guest')), [orders, user]);
+
+  const handleStatusUpdate = (orderId, newStatus) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+  };
 
   if (!user) return <div className="container-custom px-4 py-12 text-center">الرجاء تسجيل الدخول لعرض طلباتك</div>;
   if (loading) return <div className="container-custom px-4 py-12 text-center text-sm opacity-70">جار التحميل...</div>;
@@ -69,7 +109,7 @@ const MyOrders = () => {
                   )}
                 </div>
                 <div className="text-sm flex flex-col items-start gap-1 min-w-[180px]">
-                  <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs">{o.status}</span>
+                  <StatusTracker status={o.status} orderId={o.id} onStatusUpdate={(newStatus) => handleStatusUpdate(o.id, newStatus)} />
                   <Link to={`/order/${o.id}`} className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'text-xs' })}>تفاصيل</Link>
                   <Link to={`/order/${o.id}/track`} className={buttonVariants({ variant: 'secondary', size: 'sm', className: 'text-xs' })}>تتبع</Link>
                   <ButtonLink href={`/api/orders/${o.id}/invoice`} variant="secondary" size="sm" target="_blank" rel="noopener">فاتورة</ButtonLink>
@@ -86,7 +126,6 @@ const MyOrders = () => {
                   )}
                 </div>
               </div>
-              <StatusTracker status={o.status} />
               <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {(o.items||[]).slice(0,6).map(it => {
                   const name = typeof it.name === 'string' ? it.name : (it.name?.ar || it.name?.en || it.productId);

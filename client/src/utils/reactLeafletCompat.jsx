@@ -18,10 +18,30 @@ async function loadLeaflet() {
     }
   } catch { /* ignore */ }
 
-  const [L, RL] = await Promise.all([
-    import('leaflet'),
-    import('react-leaflet')
+async function loadLeaflet() {
+  if (loaded) return loaded;
+  // Import CSS dynamically
+  try {
+    const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    if (!document.querySelector(`link[href="${cssHref}"]`)) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = cssHref;
+      document.head.appendChild(l);
+    }
+  } catch { /* ignore */ }
+
+  // Use dynamic import with computed module names to avoid static analysis
+  const leafletPath = 'leaflet';
+  const reactLeafletPath = 'react-leaflet';
+
+  const [leafletModule, reactLeafletModule] = await Promise.all([
+    import(/* @vite-ignore */ leafletPath),
+    import(/* @vite-ignore */ reactLeafletPath)
   ]);
+
+  const L = leafletModule.default || leafletModule;
+  const RL = reactLeafletModule.default || reactLeafletModule;
 
   // Fix default icon URLs if needed
   try {
@@ -40,6 +60,7 @@ async function loadLeaflet() {
     ...RL
   };
   return loaded;
+}
 }
 
 export default function ReactLeafletCompat({ children }) {
@@ -66,12 +87,13 @@ export default function ReactLeafletCompat({ children }) {
     // Provide a small MapClicker wrapper if not present
     MapClicker: (props) => {
       const map = mods.useMap();
+      const { onPick } = props;
       React.useEffect(() => {
         if (!map || typeof map.on !== 'function') return;
-        const handler = (e) => { try { props?.onPick && props.onPick({ lat: e?.latlng?.lat, lng: e?.latlng?.lng }); } catch {} };
+        const handler = (e) => { try { onPick && onPick({ lat: e?.latlng?.lat, lng: e?.latlng?.lng }); } catch {} };
         try { map.on('click', handler); } catch {}
         return () => { try { map && typeof map.off === 'function' && map.off('click', handler); } catch {} };
-      }, [map, props?.onPick]);
+      }, [map, onPick]);
       return null;
     }
   };

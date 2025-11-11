@@ -1,8 +1,0 @@
-# Ignore node scripts and test files that use TS/TSX or Node-only globals
-scripts/**
-tests/**
-src/**/*.ts
-src/**/*.tsx
-src/**/*.spec.ts
-src/**/*.test.ts
-src/**/*.test.tsx

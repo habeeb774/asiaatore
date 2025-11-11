@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../../context/LanguageContext';
-import api from '../../api/client';
-import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy } from 'lucide-react';
+import { useLanguage } from '../../stores/LanguageContext';
+import api from '../../services/api/client';
+import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
 
 const CategoryScroller = () => {
   const { locale } = useLanguage();
@@ -160,14 +160,45 @@ const CategoryScroller = () => {
               case 'utensils': case 'pasta': case 'rice': return Utensils;
               case 'store': case 'supermarket': return StoreIcon;
               case 'tag': return Tag;
+              case 'apple': case 'fruit': case 'fruits': return Apple;
+              case 'beef': case 'meat': case 'chicken': return Beef;
+              case 'milk': case 'dairy': return Milk;
+              case 'sparkles': case 'offers': case 'deals': return Sparkles;
+              case 'shopping-bag': case 'bag': return ShoppingBag;
+              case 'package': return Package;
+              case 'truck': case 'delivery': return Truck;
+              case 'car': return Car;
+              case 'home': case 'household': return Home;
+              case 'wrench': case 'tools': return Wrench;
+              case 'droplets': case 'cleaning': case 'detergent': return Droplets;
+              case 'zap': case 'energy': case 'electronics': return Zap;
+              case 'heart': case 'health': return Heart;
+              case 'star': case 'premium': return Star;
+              case 'gift': return Gift;
+              case 'percent': case 'discount': return Percent;
             }
+            // Enhanced regex patterns for Arabic and English category names
             if (/(ماء|مشروب|مشروبات|drinks?|beverages?|water)/.test(n)) return CupSoda;
             if (/(شاي|قهوة|coffee|tea)/.test(n)) return Coffee;
             if (/(بسكويت|كوكي|كوكيز|biscuits?|cookies?)/.test(n)) return Cookie;
-            if (/(سكر|sugar)/.test(n)) return Candy;
+            if (/(سكر|candy|sugar)/.test(n)) return Candy;
             if (/(مكرونة|معكرونة|أرز|ارز|pasta|rice)/.test(n)) return Utensils;
             if (/(صلصات|مخللات|sauces?|pickles?)/.test(n)) return Utensils;
             if (/(سوبرماركت|supermarket)/.test(n)) return StoreIcon;
+            // Food products - منتجات غذائية
+            if (/(غذائي|طعام|food|foods|منتجات غذائية|خضار|فواكه|vegetables?|fruits?|meat|لحم|دجاج|chicken|beef|dairy|حليب|cheese|جبن)/.test(n)) return Apple;
+            // Cleaning products - منظفات
+            if (/(منظف|تنظيف|cleaning|detergent|soap|صابون|bleach|تبييض|disinfectant|مطهر)/.test(n)) return Droplets;
+            // Offers - عروض
+            if (/(عروض|خصومات|offers?|deals?|discounts?|promotions?|تخفيضات|sales?)/.test(n)) return Sparkles;
+            // Household items
+            if (/(منزلي|household|kitchen|مطبخ|bathroom|حمام|toilet|مرحاض)/.test(n)) return Home;
+            // Electronics and appliances
+            if (/(كهربائي|إلكتروني|electronics?|appliances?|devices?)/.test(n)) return Zap;
+            // Health and beauty
+            if (/(صحة|جمال|health|beauty|cosmetics?|perfume|عطر|skincare|عناية)/.test(n)) return Heart;
+            // Baby products
+            if (/(طفل|رضع|baby|infant|diaper|حفاضات)/.test(n)) return Heart;
             return null;
           };
           const Icon = pickIcon();

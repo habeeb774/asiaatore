@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import LazyImage from './common/LazyImage';
-import api from '../api/client';
-import { useLanguage } from '../context/LanguageContext';
-import { listAds } from '../api/ads';
+import api from '../services/api/client';
+import { useLanguage } from '../stores/LanguageContext';
+import { listAds } from '../services/api/ads';
 import Carousel from './ui/Carousel';
 
 const AUTO_INTERVAL = 5000;

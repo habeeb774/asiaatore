@@ -1,4 +1,3 @@
-
 model Ad {
   id          Int      @id @default(autoincrement())
   title       String
@@ -36,6 +35,9 @@ model User {
   emailVerifiedAt DateTime?
   phoneVerifiedAt DateTime?
   role      Role           @default(user)
+  mfaSecret String?
+  mfaEnabled Boolean       @default(false)
+  notificationPreferences Json? // User notification preferences: {email: boolean, sms: boolean, offers: boolean, orders: boolean}
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   cart      CartItem[]
@@ -55,6 +57,29 @@ model User {
   // Invoicing back-relations
   invoices     Invoice[]
   invoiceLogs  InvoiceLog[]
+  uiSetting UiSetting?
+  // Subscription back-relations
+  subscriptions      Subscription[]
+  subscriptionBenefits SubscriptionBenefit[]
+  // Analytics back-relations
+  analyticsEvents     AnalyticsEvent[]
+  // Review back-relations
+  reviewHelpfulVotes   ReviewHelpful[]
+  reviewResponses      ReviewResponse[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+// Per-user UI settings stored as JSON. One record per user.
+model UiSetting {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Brand {
@@ -101,6 +126,12 @@ model Product {
   transactions InventoryTransaction[] @relation("ProductTransactions")
 
   @@index([brandId], map: "Product_brandId_fkey")
+  @@index([category])
+  @@index([status])
+  @@index([price])
+  @@index([stock])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Category {
@@ -152,6 +183,10 @@ model Order {
   @@index([deliveryStatus])
   @@index([outForDeliveryAt])
   @@index([deliveredAt])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model OrderItem {
@@ -197,11 +232,21 @@ model Review {
   deletedAt DateTime?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
+  // Enhanced review features
+  verified  Boolean      @default(false) // Verified purchase
+  helpful   Int          @default(0)     // Helpful votes
+  images    ReviewImage[]
+  responses ReviewResponse[]
+  helpfulVotes ReviewHelpful[]
   product   Product      @relation(fields: [productId], references: [id])
   user      User         @relation(fields: [userId], references: [id])
 
   @@index([productId], map: "Review_productId_fkey")
   @@index([userId], map: "Review_userId_fkey")
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
+  @@index([verified])
 }
 
 model WishlistItem {
@@ -286,7 +331,7 @@ model MarketingBanner {
   active    Boolean        @default(true)
   sort      Int            @default(0)
   createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  updatedAt DateTime       @default(now())
 }
 
 model AppLink {
@@ -297,7 +342,7 @@ model AppLink {
   labelEn   String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now())
 }
 
 model Address {
@@ -315,7 +360,7 @@ model Address {
   notes     String?
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
@@ -536,6 +581,7 @@ enum Role {
   admin
   seller
   delivery
+  developer
 }
 
 enum ReviewStatus {
@@ -676,4 +722,195 @@ model AuthToken {
   @@index([tokenHash])
   @@index([code])
   @@index([expiresAt])
+}
+
+// Subscription system models
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  nameAr      String
+  nameEn      String
+  descriptionAr String?
+  descriptionEn String?
+  price       Float
+  currency    String   @default("SAR")
+  interval    String   @default("month") // month, year, week
+  intervalCount Int    @default(1)
+  trialDays   Int      @default(0)
+  maxUsers    Int      @default(1)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions Subscription[]
+  features     SubscriptionFeature[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model Subscription {
+  id            String   @id @default(uuid())
+  userId        String
+  planId        String
+  status        String   @default("active") // active, cancelled, expired, trial
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEnd      DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+  cancelledAt   DateTime?
+  stripeSubscriptionId String?
+  paypalSubscriptionId String?
+  meta          Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+model SubscriptionFeature {
+  id          String   @id @default(uuid())
+  planId      String
+  nameAr      String
+  nameEn      String
+  descriptionAr String?
+  descriptionEn String?
+  value       String?  // For quantifiable features like "10 products", "unlimited" etc
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@index([sortOrder])
+}
+
+model SubscriptionBenefit {
+  id          String   @id @default(uuid())
+  userId      String
+  benefitType String   // discount_percentage, free_shipping, priority_support, etc
+  value       String   // "10", "true", "premium" etc
+  expiresAt   DateTime?
+  usedCount   Int      @default(0)
+  maxUses     Int?     // null for unlimited
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([benefitType])
+  @@index([expiresAt])
+}
+
+// Analytics system models
+model AnalyticsEvent {
+  id          String   @id @default(uuid())
+  eventType   String   // page_view, product_view, purchase, cart_add, etc
+  eventData   Json?    // Additional event data
+  userId      String?
+  sessionId   String?
+  userAgent   String?
+  ipAddress   String?
+  referrer    String?
+  url         String?
+  timestamp   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([sessionId])
+}
+
+model AnalyticsMetric {
+  id          String   @id @default(uuid())
+  metricType  String   // revenue, orders, users, page_views, etc
+  value       Float
+  dimensions  Json?    // Additional dimensions like {category: "electronics", period: "daily"}
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([metricType])
+  @@index([date])
+}
+
+model AnalyticsReport {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // custom, automated
+  config      Json     // Report configuration
+  schedule    String?  // cron expression for automated reports
+  isActive    Boolean  @default(true)
+  lastRun     DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model PredictiveInsight {
+  id          String   @id @default(uuid())
+  insightType String   // sales_forecast, customer_churn, product_recommendation, etc
+  title       String
+  description String
+  confidence  Float    // 0-1 confidence score
+  data        Json     // Insight data and predictions
+  status      String   @default("active") // active, dismissed, implemented
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+
+  @@index([insightType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Enhanced review system models
+model ReviewImage {
+  id        String   @id @default(uuid())
+  reviewId  String
+  url       String
+  alt       String?
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  review    Review   @relation(fields: [reviewId], references: [id])
+
+  @@index([reviewId])
+}
+
+model ReviewResponse {
+  id        String   @id @default(uuid())
+  reviewId  String
+  userId    String   // Admin or seller responding
+  response  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  review    Review   @relation(fields: [reviewId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([reviewId])
+  @@index([userId])
+}
+
+model ReviewHelpful {
+  id        String   @id @default(uuid())
+  reviewId  String
+  userId    String
+  helpful   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  review    Review   @relation(fields: [reviewId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
 }

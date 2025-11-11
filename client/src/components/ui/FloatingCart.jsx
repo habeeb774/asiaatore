@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCartIcon } from 'lucide-react';
-import useCartStore from '../../store/cart';
+import { useCart } from '../../stores/CartContext';
 
 const FloatingCart = () => {
-  const itemCount = useCartStore((state) => state.getItemCount());
+  const { cartItems = [] } = useCart();
+  const itemCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
   if (itemCount === 0) return null;
 

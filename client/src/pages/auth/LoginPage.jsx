@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../stores/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().email('البريد الإلكتروني غير صحيح').min(1, 'البريد مطلوب'),
+  identifier: z.string().min(1, 'المعرف مطلوب'),
   password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
 });
 
@@ -23,25 +23,45 @@ const LoginPage = () => {
   });
 
   const [showPwd, setShowPwd] = React.useState(false);
-  React.useEffect(() => { setFocus('email'); }, [setFocus]);
+  React.useEffect(() => { setFocus('identifier'); }, [setFocus]);
+
+  const [lastSubmitTime, setLastSubmitTime] = React.useState(0);
+  const SUBMIT_COOLDOWN = 2000; // 2 seconds between submissions
 
   const onSubmit = async (data) => {
+    const now = Date.now();
+    if (now - lastSubmitTime < SUBMIT_COOLDOWN) {
+      setError('root', { message: 'يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.' });
+      return;
+    }
+    setLastSubmitTime(now);
+
     try {
-      const r = await login(data.email.trim(), data.password);
+      const r = await login(data.identifier.trim(), data.password);
       if (r.ok) {
         navigate(redirectTo, { replace: true });
       } else {
-        const msg = r?.error === 'INVALID_LOGIN'
-          ? 'بيانات دخول خاطئة'
-          : r?.error === 'USER_BLOCKED'
-            ? 'تم إيقاف حسابك مؤقتًا'
-            : r?.error === 'EMAIL_NOT_VERIFIED'
-              ? 'يرجى تأكيد بريدك الإلكتروني أولاً'
-              : (r?.error || 'فشل تسجيل الدخول');
-        setError('root', { message: msg });
+        // Handle rate limiting with a more user-friendly message
+        if (r.error === 'RATE_LIMIT_EXCEEDED') {
+          setError('root', { message: 'تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.' });
+        } else {
+          const msg = r?.error === 'INVALID_LOGIN'
+            ? 'بيانات دخول خاطئة'
+            : r?.error === 'USER_BLOCKED'
+              ? 'تم إيقاف حسابك مؤقتًا'
+              : r?.error === 'EMAIL_NOT_VERIFIED'
+                ? 'يرجى تأكيد بريدك الإلكتروني أولاً'
+                : (r?.error || 'فشل تسجيل الدخول');
+          setError('root', { message: msg });
+        }
       }
     } catch (err) {
-      setError('root', { message: err.message || 'خطأ غير متوقع' });
+      // Handle network/rate limiting errors
+      if (err?.code === 'RATE_LIMIT_EXCEEDED' || err?.message?.includes('429')) {
+        setError('root', { message: 'تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.' });
+      } else {
+        setError('root', { message: err.message || 'خطأ غير متوقع' });
+      }
     }
   };
 
@@ -60,13 +80,13 @@ const LoginPage = () => {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" aria-describedby={errors.root ? 'login-error' : undefined}>
             <Input
-              id="email"
-              type="email"
-              label="البريد الإلكتروني"
-              autoComplete="email"
-              placeholder="example@mail.com"
-              error={errors.email?.message}
-              {...register('email')}
+              id="identifier"
+              type="text"
+              label="البريد الإلكتروني أو رقم الجوال"
+              autoComplete="username"
+              placeholder="example@mail.com أو 05xxxxxxxx"
+              error={errors.identifier?.message}
+              {...register('identifier')}
             />
             <div className="relative">
               <Input

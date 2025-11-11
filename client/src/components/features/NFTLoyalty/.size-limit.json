@@ -1,0 +1,14 @@
+[
+  {
+    "name": "NFT Loyalty Component",
+    "path": "dist/index.js",
+    "limit": "50 kB",
+    "gzip": true
+  },
+  {
+    "name": "NFT Loyalty Component (brotli)",
+    "path": "dist/index.js",
+    "limit": "35 kB",
+    "brotli": true
+  }
+]

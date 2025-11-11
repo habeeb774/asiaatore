@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../stores/SettingsContext';
 import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, BarChart3, Users, Settings, ReceiptText, Menu, X, MessageCircle, Sun, Moon, Globe } from 'lucide-react';
 import { Tooltip } from '../../components/ui';
-import { useLanguage } from '../../context/LanguageContext';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../stores/LanguageContext';
+import { useTheme } from '../../stores/ThemeContext';
+import { useAuth } from '../../stores/AuthContext';
 import useEventListener from '../../hooks/useEventListener';
-import { useSidebar } from '../../context/SidebarContext';
+import { useSidebar } from '../../stores/SidebarContext';
 
 // Centralized reducer for sidebar UI state
 function sidebarReducer(state, action) {
@@ -86,7 +86,15 @@ const NavLinkItem = React.memo(function NavLinkItem({
       aria-current={active ? 'page' : undefined}
       title={collapsed ? text : undefined}
       data-tip={collapsed ? text : undefined}
-      onClick={() => mobileMode && closeMobile()}
+      onClick={(e) => {
+        // Prevent default only if it's a submenu toggle
+        if (hasChildren) {
+          e.preventDefault();
+          toggleOpen();
+        } else if (mobileMode) {
+          closeMobile();
+        }
+      }}
       role="menuitem"
       tabIndex={0}
       aria-haspopup={hasChildren ? 'true' : undefined}
@@ -107,7 +115,11 @@ const NavLinkItem = React.memo(function NavLinkItem({
         <button
           aria-label={open ? (locale === 'ar' ? 'إغلاق' : 'Collapse') : (locale === 'ar' ? 'فتح' : 'Expand')}
           className={`nav-submenu-toggle ${open ? 'open' : ''}`}
-          onClick={toggleOpen}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleOpen();
+          }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(); } }}
           tabIndex={-1}
         >
@@ -485,6 +497,7 @@ const SidebarNav = () => {
         aria-labelledby="sidebar-brand"
         id="app-sidebar"
         tabIndex={-1}
+        style={{ background: 'var(--color_heading)', color: 'var(--white_color)' }}
       >
         <div className="sidebar-modern__inner">
           {/* Header */}
@@ -524,12 +537,36 @@ const SidebarNav = () => {
                 locale={locale}
                 // don't show collapsed/mini nav on mobile-sized screens
                 collapsed={Boolean(sb.collapsed && !sb.mobileOpen && !hoverExpand && !isMobile)}
-                mobileMode={true}
+                mobileMode={isMobile}
                 closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
                 t={t}
                 badges={sb.badges}
               />
             ))}
+
+            {/* Developer shortcut (visible to users with developer role) */}
+            {user?.role === 'developer' && (
+              <>
+                <li className="nav-section-label">
+                  {locale === 'ar' ? 'المطور' : 'Developer'}
+                </li>
+                <NavLinkItem
+                  item={{
+                    to: '/admin/developer-settings',
+                    labelAr: 'اعدادات المطور',
+                    labelEn: 'Developer Settings',
+                    navKey: 'developerSettings',
+                    icon: Settings
+                  }}
+                  pathname={pathname}
+                  locale={locale}
+                  collapsed={false}
+                  mobileMode={isMobile}
+                  closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
+                  t={t}
+                />
+              </>
+            )}
 
             {/* Admin Section */}
             {isAdmin && (
@@ -549,7 +586,7 @@ const SidebarNav = () => {
                   pathname={pathname}
                   locale={locale}
                   collapsed={false}
-                  mobileMode={true}
+                  mobileMode={isMobile}
                   closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
                   t={t}
                   badges={sb.badges}
@@ -566,7 +603,7 @@ const SidebarNav = () => {
                   pathname={pathname}
                   locale={locale}
                   collapsed={false}
-                  mobileMode={true}
+                  mobileMode={isMobile}
                   closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
                   t={t}
                 />
@@ -578,7 +615,7 @@ const SidebarNav = () => {
                     pathname={pathname}
                     locale={locale}
                     collapsed={false}
-                    mobileMode={true}
+                    mobileMode={isMobile}
                     closeMobile={() => dispatch({ type: 'SET_MOBILE_OPEN', value: false })}
                     t={t}
                   />

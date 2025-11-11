@@ -1,7 +1,7 @@
 import { t } from '../utils/i18n';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getProduct } from '../api/products';
+import { getProduct } from '../services/api/products';
 
 export default function ProductPage() {
   const { id } = useParams();

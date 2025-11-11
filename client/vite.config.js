@@ -66,6 +66,10 @@ export default defineConfig(async ({ mode }) => {
     resolve: {
       dedupe: ['react', 'react-dom']
     },
+    define: {
+      global: 'globalThis',
+      process: { env: {}, exit: () => {} }
+    },
     plugins: [
       react(),
       VitePWA({
@@ -185,6 +189,11 @@ export default defineConfig(async ({ mode }) => {
       visualizerPlugin
     ],
     build: {
+      // Optimize for performance
+      target: 'esnext',
+      minify: 'esbuild',
+      cssMinify: true,
+      sourcemap: false, // Disable in production for smaller bundles
       // Warn earlier about large chunks and help Rollup split common deps
       chunkSizeWarningLimit: 350,
       rollupOptions: {
@@ -199,12 +208,56 @@ export default defineConfig(async ({ mode }) => {
               if (id.includes('react-router') || id.includes('history') || id.includes('@remix-run')) return 'vendor.router'
               if (id.includes('@tanstack') || id.includes('react-query')) return 'vendor.tanstack'
               if (id.includes('framer-motion')) return 'vendor.motion'
-              if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor.leaflet'
+              // Removed leaflet from manual chunks - now loaded dynamically
               if (id.includes('i18next')) return 'vendor.i18next'
               if (id.includes('zustand')) return 'vendor.zustand'
               if (id.includes('@fontsource') || id.includes('@font-face') || id.includes('fontsource')) return 'vendor.fonts'
               if (id.includes('lodash')) return 'vendor.lodash'
               return 'vendor'
+            }
+
+            // Split large feature areas into separate chunks
+            if (id.includes('/src/pages/admin/') || id.includes('/src/components/admin/')) {
+              return 'chunk.admin'
+            }
+            if (id.includes('/src/pages/delivery/') || id.includes('/src/components/delivery/') || id.includes('/src/pages/orders/')) {
+              return 'chunk.delivery'
+            }
+            if (id.includes('/src/pages/seller/') || id.includes('/src/components/seller/')) {
+              return 'chunk.seller'
+            }
+            if (id.includes('/src/pages/auth/') || id.includes('/src/components/auth/')) {
+              return 'chunk.auth'
+            }
+            if (id.includes('/src/pages/account/') || id.includes('/src/components/account/')) {
+              return 'chunk.account'
+            }
+            if (id.includes('/src/context/') || id.includes('/src/hooks/')) {
+              return 'chunk.context'
+            }
+            if (id.includes('/src/components/shared/') || id.includes('/src/components/ui/')) {
+              return 'chunk.shared'
+            }
+            if (id.includes('/src/components/home/') || id.includes('/src/pages/Home') || id.includes('/src/pages/Catalog')) {
+              return 'chunk.home'
+            }
+            if (id.includes('/src/components/inventory/') || id.includes('/src/pages/inventory/')) {
+              return 'chunk.inventory'
+            }
+            if (id.includes('/src/components/search/') || id.includes('/src/pages/Search')) {
+              return 'chunk.search'
+            }
+            if (id.includes('/src/components/cart/') || id.includes('/src/pages/Cart') || id.includes('/src/pages/Checkout')) {
+              return 'chunk.cart'
+            }
+            if (id.includes('/src/components/marketing/') || id.includes('/src/pages/Offers') || id.includes('/src/pages/Ads')) {
+              return 'chunk.marketing'
+            }
+            if (id.includes('/src/services/') || id.includes('/src/api/')) {
+              return 'chunk.services'
+            }
+            if (id.includes('/src/utils/') || id.includes('/src/lib/')) {
+              return 'chunk.utils'
             }
           }
         }

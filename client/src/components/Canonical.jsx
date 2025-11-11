@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../stores/LanguageContext';
 
 /*
   Canonical + hreflang manager.
@@ -24,12 +24,13 @@ function ensureTag(tagName, attrs = {}) {
 const Canonical = ({ alternates = ['ar','en'] }) => {
   const location = useLocation();
   const langCtx = useLanguage();
+  const { locale } = langCtx;
 
   useEffect(() => {
     // detect locale prefix (simple heuristic: first segment if matches alternates but not default root)
     const segments = location.pathname.split('/').filter(Boolean);
-    let detectedLocale = langCtx?.locale || 'ar';
-    if (!langCtx?.locale) {
+    let detectedLocale = locale || 'ar';
+    if (!locale) {
       if (segments[0] && alternates.includes(segments[0])) detectedLocale = segments[0];
     }
 
@@ -74,7 +75,7 @@ const Canonical = ({ alternates = ['ar','en'] }) => {
       meta.setAttribute('content', lang === 'ar' ? 'ar_AR' : 'en_US');
       document.head.appendChild(meta);
     });
-  }, [location, alternates, langCtx?.locale]);
+  }, [location, alternates, locale]);
 
   return null;
 };

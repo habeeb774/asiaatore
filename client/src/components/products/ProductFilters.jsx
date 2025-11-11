@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 
 const ProductFilters = ({ state, onChange, sidebar = false }) => {

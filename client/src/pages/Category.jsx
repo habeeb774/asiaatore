@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import api from '../api/client'
-import { useLanguage } from '../context/LanguageContext'
+import api from '../services/api/client'
+import { useLanguage } from '../stores/LanguageContext'
 import { resolveLocalized } from '../utils/locale'
 import Breadcrumbs from '../components/common/Breadcrumbs'
 

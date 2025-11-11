@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactLeafletCompat from '../utils/reactLeafletCompat';
 import * as paymentService from '../services/paymentService';
-import { useOrders } from '../context/OrdersContext';
-import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
+import { useCart } from '../stores/CartContext';
+import { useAuth } from '../stores/AuthContext';
 import { localizeName } from '../utils/locale';
-import { useLanguage } from '../context/LanguageContext';
-import api from '../api/client';
+import { useLanguage } from '../stores/LanguageContext';
+import api from '../services/api/client';
 import Button, { ButtonLink } from '../components/ui/Button';
-import { useSettings } from '../context/SettingsContext';
+import { useSettings } from '../stores/SettingsContext';
+import { PayPalButtons } from '@paypal/react-paypal-js';
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 
 const CheckoutPage = () => {
   const { cartItems, clearCart } = useCart() || {};
@@ -16,6 +17,8 @@ const CheckoutPage = () => {
   const { setting } = useSettings() || {};
   const lang = useLanguage();
   const locale = lang?.locale ?? 'ar';
+  const stripe = useStripe();
+  const elements = useElements();
 
   const [open, setOpen] = useState({ address: true, payment: false, review: false, realpay: false, complete: false });
   const toggle = (k) => setOpen(o => ({ ...o, [k]: !o[k] }));
@@ -30,11 +33,14 @@ const CheckoutPage = () => {
   const [geoMsg, setGeoMsg] = useState('');
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [addrId, setAddrId] = useState('');
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressSaved, setAddressSaved] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const COUPON_KEY = 'my_store_last_coupon';
   const [coupon, setCoupon] = useState(()=>{ try { return localStorage.getItem(COUPON_KEY)||''; } catch { return ''; } });
   const [couponApplied, setCouponApplied] = useState(null);
+  const [couponValidating, setCouponValidating] = useState(false);
   const [shippingCost, setShippingCost] = useState(0);
   const [shippingInfo, setShippingInfo] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -50,10 +56,11 @@ const CheckoutPage = () => {
       bank: s.payBankEnabled !== false,
       stc: !!s.payStcEnabled,
       paypal: !!s.payPaypalEnabled,
+      stripe: !!s.payStripeEnabled,
     };
   }, [setting]);
   const paymentOptions = useMemo(() => (
-    ['cod','paypal','stc','bank'].filter(k => enabledPayments[k])
+    ['cod','paypal','stc','bank','stripe'].filter(k => enabledPayments[k])
   ), [enabledPayments]);
   // Ensure selected method remains valid if settings change
   useEffect(() => {
@@ -64,8 +71,75 @@ const CheckoutPage = () => {
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [bankInfo, setBankInfo] = useState(null);
+  // Mobile swipe navigation
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  const minSwipeDistance = 50;
+
+  // Payment processing state
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [paypalButtonsVisible, setPaypalButtonsVisible] = useState(false);
   const [stcSession, setStcSession] = useState(null);
-  const { refresh } = useOrders() || {};
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripeCardComplete, setStripeCardComplete] = useState(false);
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Swipe left: go forward
+      if (open.address && validate()) proceedAddress();
+      else if (open.payment) goReview();
+      else if (open.review) openRealPayment();
+    } else if (isRightSwipe) {
+      // Swipe right: go back
+      if (open.realpay) setOpen(o => ({ ...o, realpay: false, review: true }));
+      else if (open.review) setOpen(o => ({ ...o, review: false, payment: true }));
+      else if (open.payment) setOpen(o => ({ ...o, payment: false, address: true }));
+    }
+  };
+
+  // Auto-save address with debounce
+  const saveAddressDebounced = useMemo(
+    () => debounce(async (addressData) => {
+      if (!user || !validate()) return;
+      try {
+        setSavingAddress(true);
+        await api.addressesCreate(addressData);
+        setAddressSaved(true);
+        setTimeout(() => setAddressSaved(false), 2000);
+      } catch (e) {
+        console.warn('Auto-save address failed:', e);
+      } finally {
+        setSavingAddress(false);
+      }
+    }, 2000),
+    [user]
+  );
+
+  // Debounce utility
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
 
   const subtotal = useMemo(()=> (cartItems||[]).reduce((s,i)=> s + (i.price||0)*(i.quantity||1),0), [cartItems]);
 
@@ -98,32 +172,6 @@ const CheckoutPage = () => {
     };
     run();
   }, [addr.city, addr.country, addr?.geo?.lat, addr?.geo?.lng]);
-
-  useEffect(()=> { try { localStorage.setItem(ADDRESS_KEY, JSON.stringify(addr)); } catch {} }, [addr]);
-  useEffect(()=>{
-    // Load saved addresses for logged-in user
-    let live = true;
-    (async () => {
-      if (!user) return;
-      try {
-        const res = await api.addressesList();
-        const items = res.addresses || res.items || [];
-        if (!live) return;
-        setSavedAddresses(items);
-        const def = items.find(a => a.isDefault) || items[0];
-        if (def) {
-          setAddrId(def.id);
-          setAddr(a => ({ ...a, name: def.name || a.name, email: a.email, country: def.country || a.country, city: def.city || a.city, line1: def.street || a.line1, phone: def.phone || a.phone }));
-        }
-      } catch {}
-    })();
-    return () => { live = false };
-  }, [user?.id]);
-
-  const discountFromCoupon = couponApplied?.amount || 0;
-  const taxableBase = Math.max(0, subtotal - discountFromCoupon);
-  const tax = +(taxableBase * 0.15).toFixed(2);
-  const grandTotal = +(taxableBase + tax + (shippingCost || 0)).toFixed(2);
 
   const validateField = (name, value) => {
     const v = (value ?? '').toString();
@@ -168,10 +216,81 @@ const CheckoutPage = () => {
       if (el && typeof el.focus === 'function') {
         el.focus();
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        try { el.classList.add('field-flash'); setTimeout(()=> el.classList.remove('field-flash'), 900); } catch {}
+        // Enhanced focus indicator
+        try {
+          el.classList.add('field-error-focus');
+          setTimeout(() => el.classList.remove('field-error-focus'), 2000);
+        } catch {}
       }
     } catch (e) { /* no-op */ }
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + Enter to proceed to next step
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (open.address && validate()) {
+          proceedAddress();
+        } else if (open.payment) {
+          goReview();
+        } else if (open.review) {
+          openRealPayment();
+        }
+      }
+      // Escape to go back
+      else if (e.key === 'Escape') {
+        if (open.realpay) {
+          setOpen(o => ({ ...o, realpay: false, review: true }));
+        } else if (open.review) {
+          setOpen(o => ({ ...o, review: false, payment: true }));
+        } else if (open.payment) {
+          setOpen(o => ({ ...o, payment: false, address: true }));
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, addr]);
+  useEffect(()=>{
+    // Load saved addresses for logged-in user
+    let live = true;
+    (async () => {
+      if (!user) return;
+      try {
+        const res = await api.addressesList();
+        const items = res.addresses || res.items || [];
+        if (!live) return;
+        setSavedAddresses(items);
+        const def = items.find(a => a.isDefault) || items[0];
+        if (def) {
+          setAddrId(def.id);
+          setAddr(a => ({ ...a, name: def.name || a.name, email: a.email, country: def.country || a.country, city: def.city || a.city, line1: def.street || a.line1, phone: def.phone || a.phone }));
+        }
+      } catch {}
+    })();
+    return () => { live = false };
+  }, [user?.id]);
+
+  const discountFromCoupon = couponApplied?.amount || 0;
+  const taxableBase = Math.max(0, subtotal - discountFromCoupon);
+  const tax = +(taxableBase * 0.15).toFixed(2);
+  const grandTotal = +(taxableBase + tax + (shippingCost || 0)).toFixed(2);
+
+  // Memoized form validation to prevent calling validate() during render
+  const isFormValid = useMemo(() => {
+    const e = {
+      name: validateField('name', addr.name),
+      email: validateField('email', addr.email),
+      city: validateField('city', addr.city),
+      line1: validateField('line1', addr.line1),
+      phone: validateField('phone', addr.phone),
+    };
+    Object.keys(e).forEach(k => { if (!e[k]) delete e[k]; });
+    return Object.keys(e).length === 0;
+  }, [addr.name, addr.email, addr.city, addr.line1, addr.phone]);
 
   const onFieldChange = (name) => (e) => {
     const val = e?.target?.value ?? '';
@@ -183,16 +302,33 @@ const CheckoutPage = () => {
       if (msg) next[name] = msg; else delete next[name];
       return next;
     });
+
+    // Auto-save address for logged-in users
+    if (user && ['name', 'email', 'city', 'line1', 'phone'].includes(name)) {
+      const updatedAddr = { ...addr, [name]: val };
+      if (Object.values(updatedAddr).every(v => v)) {
+        saveAddressDebounced(updatedAddr);
+      }
+    }
   };
 
   const proceedAddress = () => { if (validate()) setOpen(o=>({...o,address:false,payment:true})); };
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     if (!coupon.trim()) return;
     const code = coupon.trim().toUpperCase();
-    if (code === 'SAVE10') setCouponApplied({ code, amount: Math.min(10, subtotal * 0.2) });
-    else if (code === 'FREESHIP') { setCouponApplied({ code, amount: 0 }); setShippingCost(0); }
-    else if (code === 'SAVE20') setCouponApplied({ code, amount: Math.min(20, subtotal * 0.3) });
-    else setCouponApplied(null);
+    try {
+      setCouponValidating(true);
+      // Simulate API call for coupon validation
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (code === 'SAVE10') setCouponApplied({ code, amount: Math.min(10, subtotal * 0.2) });
+      else if (code === 'FREESHIP') { setCouponApplied({ code, amount: 0 }); setShippingCost(0); }
+      else if (code === 'SAVE20') setCouponApplied({ code, amount: Math.min(20, subtotal * 0.3) });
+      else setCouponApplied(null);
+    } catch (e) {
+      setCouponApplied(null);
+    } finally {
+      setCouponValidating(false);
+    }
     try { localStorage.setItem(COUPON_KEY, code); } catch {}
   };
 
@@ -212,7 +348,7 @@ const CheckoutPage = () => {
     }),
     currency: 'SAR',
     paymentMethod,
-  paymentMeta: { address: addr, coupon: couponApplied?.code || null, shipping: shippingCost },
+    paymentMeta: { address: addr, coupon: couponApplied?.code || null, shipping: shippingCost },
     discount: discountFromCoupon,
     tax,
   });
@@ -231,6 +367,7 @@ const CheckoutPage = () => {
     }
     setCreating(true);
     try {
+      console.log('Order payload:', payload);
       const res = await api.createOrder(payload);
       if (!res?.order?.id) throw new Error('Create failed');
       setOrderId(res.order.id);
@@ -247,6 +384,7 @@ const CheckoutPage = () => {
   const goReview = async () => {
     // mark touched and validate; if invalid focus first invalid field
     if (!validate()) { focusFirstInvalidField(); return; }
+    if (!cartItems?.length) { setOrderError('السلة فارغة'); return; }
     try {
       await ensureOrder();
       setOpen(o=>({...o,address:false,payment:false,review:true}));
@@ -274,13 +412,6 @@ const CheckoutPage = () => {
   const finalize = () => {
     clearCart && clearCart();
     setOpen({ address:false,payment:false,review:false,realpay:false,complete:true });
-  };
-
-  // Editable items inside review
-  const updateItemQty = (id, qty) => {
-    const q = Math.max(1, Math.min(10, qty));
-    // mutate cart context directly (simplified: reuse updateQuantity from context if exists)
-    // We rely on cart context updateQuantity
   };
 
   const isCartEmpty = !(cartItems?.length) && !open.complete;
@@ -325,31 +456,71 @@ const CheckoutPage = () => {
   // <LeafletComponents.MapClicker /> so the local hook-based implementation
   // is not needed here and caused a lint error for an undefined `useMapEvents`.
 
-  // Progress: 3 steps => Cart(0) -> Address(1) -> Payment(2)
-  const stageIndex = open.review || open.payment || open.realpay || open.complete ? 2 : (open.address ? 1 : 0);
-  const progressPercent = Math.round(((stageIndex + 1) / 3) * 100);
+  // Progress: 4 steps => Cart(0) -> Address(1) -> Payment(2) -> Review(3) -> Complete(4)
+  const stageIndex = open.complete ? 4 : open.realpay ? 3 : open.review ? 2 : open.payment ? 1 : open.address ? 0 : -1;
+  const progressPercent = stageIndex >= 0 ? Math.round(((stageIndex + 1) / 4) * 100) : 0;
+
+  const steps = [
+    { name: 'السلة', icon: '🛒' },
+    { name: 'العنوان', icon: '📍' },
+    { name: 'الشحن والدفع', icon: '💳' },
+    { name: 'المراجعة', icon: '✅' },
+    { name: 'مكتمل', icon: '🎉' }
+  ];
 
   return (
-    <div className="container-custom px-4 py-12 checkout-page-enhanced">
+    <div
+      className="container-custom px-4 py-12 checkout-page-enhanced"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       {isCartEmpty && (
         <div className="mb-6"><h2 className="text-xl font-bold">السلة فارغة</h2></div>
       )}
-      {/* شريط تقدم علوي بسيط */}
-      <div className="checkout-progress mobile-gutters" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
-        <div className="checkout-progress__bar"><span style={{ width: `${progressPercent}%` }} /></div>
-        <div className="checkout-progress__labels">
-          <span className={stageIndex >= 0 ? 'is-active' : ''}>السلة</span>
-          <span className={stageIndex >= 1 ? 'is-active' : ''}>العنوان</span>
-          <span className={stageIndex >= 2 ? 'is-active' : ''}>الدفع</span>
+      {/* شريط تقدم محسن */}
+      <div className="checkout-progress enhanced" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+        <div className="checkout-progress__bar">
+          <span style={{ width: `${progressPercent}%` }} />
+        </div>
+        <div className="checkout-progress__steps">
+          {steps.map((step, index) => (
+            <div key={index} className={`step ${index <= stageIndex ? 'is-active' : ''} ${index === stageIndex ? 'is-current' : ''}`}>
+              <span className="step-icon">{step.icon}</span>
+              <span className="step-name">{step.name}</span>
+            </div>
+          ))}
         </div>
       </div>
       <h1 className="text-2xl font-bold mb-6">الدفع (Checkout)</h1>
-      {/* Stepper بسيط */}
-      <ol className="flex items-center gap-3 text-xs text-gray-600 mb-4">
-        <li className={`px-2 py-1 rounded ${open.address? 'bg-green-100 text-green-800':'bg-gray-100'}`}>1. العنوان</li>
-        <li className={`px-2 py-1 rounded ${open.payment? 'bg-green-100 text-green-800':'bg-gray-100'}`}>2. الشحن والدفع</li>
-        <li className={`px-2 py-1 rounded ${open.review? 'bg-green-100 text-green-800':'bg-gray-100'}`}>3. المراجعة</li>
-        <li className={`px-2 py-1 rounded ${open.realpay? 'bg-green-100 text-green-800':'bg-gray-100'}`}>4. الدفع</li>
+      {/* Keyboard shortcuts help */}
+      <div className="text-xs text-gray-500 mb-4 text-center">
+        <span>💡 </span>
+        <span className="hidden sm:inline">استخدم Ctrl+Enter للمتابعة أو Escape للرجوع</span>
+        <span className="sm:hidden">اسحب يميناً للرجوع أو يساراً للمتابعة</span>
+      </div>
+      {/* Stepper محسن */}
+      <ol className="checkout-stepper">
+        <li className={`step ${stageIndex >= 0 ? 'completed' : ''} ${stageIndex === 0 ? 'active' : ''}`}>
+          <span className="step-number">1</span>
+          <span className="step-label">السلة</span>
+        </li>
+        <li className={`step ${stageIndex >= 1 ? 'completed' : ''} ${stageIndex === 1 ? 'active' : ''}`}>
+          <span className="step-number">2</span>
+          <span className="step-label">العنوان</span>
+        </li>
+        <li className={`step ${stageIndex >= 2 ? 'completed' : ''} ${stageIndex === 2 ? 'active' : ''}`}>
+          <span className="step-number">3</span>
+          <span className="step-label">الشحن والدفع</span>
+        </li>
+        <li className={`step ${stageIndex >= 3 ? 'completed' : ''} ${stageIndex === 3 ? 'active' : ''}`}>
+          <span className="step-number">4</span>
+          <span className="step-label">المراجعة</span>
+        </li>
+        <li className={`step ${stageIndex >= 4 ? 'completed' : ''}`}>
+          <span className="step-number">5</span>
+          <span className="step-label">مكتمل</span>
+        </li>
       </ol>
   <div className="mb-4 border rounded overflow-hidden">
         <button type="button" onClick={()=>toggle('address')} className="w-full flex justify-between items-center px-4 py-3 bg-gray-50 text-sm font-semibold">
@@ -424,8 +595,16 @@ const CheckoutPage = () => {
             </div>
           )}
           <div className="flex gap-3">
-            <Button className="flex-1" variant="primary" type="button" onClick={proceedAddress}>حفظ و التالي</Button>
+            <Button className="flex-1" variant="primary" type="button" onClick={proceedAddress} disabled={!isFormValid}>
+              حفظ و التالي
+            </Button>
             <Button variant="secondary" type="button" onClick={()=>{ setAddr(loadAddress()); setErrors({}); }}>إعادة ضبط</Button>
+            {user && (
+              <div className="flex items-center gap-2 text-sm">
+                {savingAddress && <span className="text-blue-600">جاري الحفظ...</span>}
+                {addressSaved && <span className="text-green-600">✓ تم الحفظ</span>}
+              </div>
+            )}
           </div>
         </div>
         )}
@@ -445,7 +624,7 @@ const CheckoutPage = () => {
                   {paymentOptions.map(m => (
                     <label key={m} className={`border rounded p-2 flex items-center gap-2 cursor-pointer ${paymentMethod===m?'ring-2 ring-primary-red':''}`}>
                       <input type="radio" name="pm2" value={m} checked={paymentMethod===m} onChange={()=>setPaymentMethod(m)} />
-                      <span>{m==='cod'?'الدفع عند الاستلام': m==='paypal'?'PayPal': m==='stc'?'STC Pay':'تحويل بنكي'}</span>
+                      <span>{m==='cod'?'الدفع عند الاستلام': m==='paypal'?'PayPal': m==='stc'?'STC Pay': m==='bank'?'تحويل بنكي':'Stripe'}</span>
                     </label>
                   ))}
                 </div>
@@ -453,11 +632,26 @@ const CheckoutPage = () => {
               <div>
                 <h3 className="font-bold mb-2 text-sm">قسيمة الخصم</h3>
                 <div className="flex gap-2">
-                  <input id="coupon" name="coupon" className="border px-3 py-2 flex-1 text-sm" placeholder="رمز القسيمة" value={coupon} onChange={e=>setCoupon(e.target.value)} />
-                  <Button variant="secondary" type="button" onClick={applyCoupon}>تطبيق</Button>
+                  <input
+                    id="coupon"
+                    name="coupon"
+                    className="border px-3 py-2 flex-1 text-sm"
+                    placeholder="رمز القسيمة"
+                    value={coupon}
+                    onChange={e=>setCoupon(e.target.value)}
+                    disabled={couponValidating}
+                  />
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={couponValidating || !coupon.trim()}
+                  >
+                    {couponValidating ? 'جاري التحقق...' : 'تطبيق'}
+                  </Button>
                 </div>
                 {couponApplied && <div className="text-xs text-green-600 mt-1">تم تطبيق {couponApplied.code} خصم: {couponApplied.amount.toFixed(2)} ر.س</div>}
-                {!couponApplied && coupon && <div className="text-xs text-gray-500 mt-1">لا يوجد خصم فعلي (رمز غير معروف)</div>}
+                {!couponApplied && coupon && !couponValidating && <div className="text-xs text-gray-500 mt-1">رمز غير صالح</div>}
               </div>
             </div>
             <div className="checkout-summary bg-white border rounded p-4 text-sm space-y-3">
@@ -548,11 +742,12 @@ const CheckoutPage = () => {
           </div>
           <div className="p-4 space-y-6 max-w-xl">
             <div className="grid gap-3">
-              {(['paypal','stc','bank','cod'].filter(m => enabledPayments[m])).map(m => (
+              {(['paypal','stc','bank','cod','stripe'].filter(m => enabledPayments[m])).map(m => (
                 <label key={m} className={`border rounded p-3 cursor-pointer flex items-center justify-between ${paymentMethod===m?'ring-2 ring-primary-red':''}`}>
                   <span>
                     <input type="radio" name="pm4" value={m} checked={paymentMethod===m} onChange={()=>setPaymentMethod(m)} className="mr-2" />
                     {m==='paypal'?'PayPal': m==='stc'? 'STC Pay (محاكاة)' : m==='bank'? 'تحويل بنكي':'الدفع عند الاستلام'}
+                    {m==='stripe'?'Stripe':''}
                   </span>
                   <span className="text-xs text-gray-500">{m==='paypal'?'الدفع الآمن': m==='stc'?'محفظة رقمية': m==='bank'?'دفع يدوي':'رسوم محتملة'}</span>
                 </label>
@@ -570,7 +765,13 @@ const CheckoutPage = () => {
                   case 'paypal': {
                     const payload = buildOrderPayload();
                     const data = await paymentService.createPayPalTransaction({ items: payload.items, currency: payload.currency });
-                    if (data?.approvalUrl) window.location.href = data.approvalUrl; else throw new Error('لا يوجد رابط موافقة');
+                    if (data?.id) {
+                      setPaypalOrderId(data.id);
+                      setPaypalButtonsVisible(true);
+                      setMessage('انقر على زر PayPal أدناه لإكمال الدفع');
+                    } else {
+                      throw new Error('فشل في إنشاء طلب PayPal');
+                    }
                     break;
                   }
                   case 'stc': {
@@ -583,17 +784,39 @@ const CheckoutPage = () => {
                     if (data?.bank) { setBankInfo(data.bank); setMessage('تم تحميل بيانات البنك'); } else throw new Error('لا توجد بيانات بنك');
                     break;
                   }
+                  case 'stripe': {
+                    const payload = buildOrderPayload();
+                    const data = await paymentService.createStripePaymentIntent({ ...payload, amount: grandTotal });
+                    if (data?.clientSecret) { setStripeClientSecret(data.clientSecret); setMessage('أدخل بيانات البطاقة أدناه'); } else throw new Error('فشل في إنشاء Payment Intent');
+                    break;
+                  }
                   default: break;
                 }
               } catch(e){ setMessage(e?.message || 'حدث خطأ أثناء بدء الدفع. الرجاء المحاولة مرة أخرى.'); } finally { setProcessing(false); }
             }}>{processing?'...جاري المعالجة':'بدء عملية الدفع'}</Button>
-            {paymentMethod==='bank' && bankInfo && (
-              <div className="bg-gray-50 border p-4 rounded text-sm space-y-1">
-                <div>اسم الحساب: {bankInfo.accountName}</div>
-                <div>IBAN: {bankInfo.iban}</div>
-                <div>البنك: {bankInfo.bank}</div>
-                <div>المرجع: <strong>{bankInfo.reference}</strong></div>
-                <div className="text-xs text-gray-500">بعد التحويل سيتم تأكيد الطلب.</div>
+            {paymentMethod==='paypal' && paypalButtonsVisible && paypalOrderId && (
+              <div className="bg-blue-50 border p-4 rounded text-sm space-y-2">
+                <div>PayPal Order ID: {paypalOrderId}</div>
+                <PayPalButtons
+                  createOrder={() => Promise.resolve(paypalOrderId)}
+                  onApprove={async (data) => {
+                    try {
+                      setProcessing(true);
+                      setMessage('جاري تأكيد الدفع...');
+                      const oid = await ensureOrder();
+                      await paymentService.capturePayPalOrder({ paypalOrderId: data.orderID, localOrderId: oid });
+                      finalize();
+                      setMessage('تم الدفع بنجاح!');
+                    } catch (e) {
+                      setMessage('فشل في تأكيد الدفع: ' + e.message);
+                    } finally {
+                      setProcessing(false);
+                    }
+                  }}
+                  onError={(err) => {
+                    setMessage('حدث خطأ في PayPal: ' + err.message);
+                  }}
+                />
               </div>
             )}
             {paymentMethod==='stc' && stcSession && (
@@ -603,6 +826,58 @@ const CheckoutPage = () => {
                   <Button className="flex-1" variant="primary" disabled={processing} onClick={async ()=>{ try { setProcessing(true); const oid = await ensureOrder(); await paymentService.confirmStcPay({ orderId: oid, sessionId: stcSession, success:true }); finalize(); } catch(e){ setMessage(e.message); } finally { setProcessing(false); } }}>تأكيد (محاكاة)</Button>
                   <Button className="flex-1" variant="secondary" disabled={processing} onClick={()=>{ setStcSession(null); setMessage('تم إلغاء جلسة STC'); }}>إلغاء</Button>
                 </div>
+              </div>
+            )}
+            {paymentMethod==='stripe' && stripeClientSecret && (
+              <div className="bg-green-50 border p-4 rounded text-sm space-y-2">
+                <div>أدخل بيانات البطاقة:</div>
+                <div className="border p-3 rounded bg-white">
+                  <CardElement
+                    options={{
+                      style: {
+                        base: {
+                          fontSize: '16px',
+                          color: '#424770',
+                          '::placeholder': { color: '#aab7c4' },
+                        },
+                        invalid: { color: '#9e2146' },
+                      },
+                    }}
+                    onChange={(e) => setStripeCardComplete(e.complete)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  variant="primary"
+                  disabled={processing || !stripe || !elements || !stripeCardComplete}
+                  onClick={async () => {
+                    if (!stripe || !elements) return;
+                    try {
+                      setProcessing(true);
+                      setMessage('جاري معالجة الدفع...');
+                      const oid = await ensureOrder();
+                      const { error, paymentIntent } = await stripe.confirmCardPayment(stripeClientSecret, {
+                        payment_method: { card: elements.getElement(CardElement) }
+                      });
+                      if (error) {
+                        setMessage('فشل الدفع: ' + error.message);
+                      } else if (paymentIntent.status === 'succeeded') {
+                        await paymentService.confirmStripePayment({
+                          paymentIntentId: paymentIntent.id,
+                          paymentMethodId: paymentIntent.payment_method
+                        });
+                        finalize();
+                        setMessage('تم الدفع بنجاح!');
+                      }
+                    } catch (e) {
+                      setMessage('حدث خطأ: ' + e.message);
+                    } finally {
+                      setProcessing(false);
+                    }
+                  }}
+                >
+                  {processing ? 'جاري المعالجة...' : `ادفع ${grandTotal.toFixed(2)} ر.س`}
+                </Button>
               </div>
             )}
             {message && <div className="text-sm text-gray-700">{message}</div>}

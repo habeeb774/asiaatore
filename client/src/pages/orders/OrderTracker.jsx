@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import api from '../../api/client';
+import api from '../../services/api/client';
 import { useParams } from 'react-router-dom';
+import { CheckCircle, Clock, Truck, Package, MapPin } from 'lucide-react';
 
 export default function OrderTracker() {
   const { id } = useParams();
@@ -11,15 +12,11 @@ export default function OrderTracker() {
   const [sseError, setSseError] = useState(null);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await api.getOrder(id);
-        if (mounted) setOrder(res.order || res);
-      } catch {}
-    })();
-    return () => { mounted = false; };
-  }, [id]);
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     // Open SSE for live updates if backend is up; suppress noisy errors
@@ -33,7 +30,17 @@ export default function OrderTracker() {
           setEvents(prev => [{ t: Date.now(), type, data }, ...prev].slice(0, 200));
           if (type === 'delivery.updated') setOrder(o => ({ ...(o||{}), deliveryStatus: data.deliveryStatus, deliveredAt: data.deliveredAt || (o && o.deliveredAt) }));
           if (type === 'delivery.location') setOrder(o => ({ ...(o||{}), deliveryLocation: data.location }));
-          if (type === 'order.updated') setOrder(o => ({ ...(o||{}), status: data.status || (o && o.status) }));
+          if (type === 'order.updated') {
+            setOrder(o => ({ ...(o||{}), status: data.status || (o && o.status) }));
+            // Show notification for status change
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(`تحديث الطلب #${id}`, {
+                body: `حالة الطلب تغيرت إلى: ${data.status}`,
+                icon: '/icons/pwa-192.png',
+                tag: `order-${id}-status`
+              });
+            }
+          }
         }
       } catch {}
     };
@@ -46,6 +53,28 @@ export default function OrderTracker() {
 
   if (!order) return <div className="container-custom p-4">تحميل الطلب...</div>;
 
+  // Order status progression timeline
+  const statusSteps = [
+    { key: 'pending', label: 'في انتظار التأكيد', icon: Clock, color: 'text-yellow-600' },
+    { key: 'confirmed', label: 'مؤكد', icon: CheckCircle, color: 'text-blue-600' },
+    { key: 'processing', label: 'قيد المعالجة', icon: Package, color: 'text-orange-600' },
+    { key: 'shipped', label: 'تم الشحن', icon: Truck, color: 'text-purple-600' },
+    { key: 'delivered', label: 'تم التوصيل', icon: MapPin, color: 'text-green-600' }
+  ];
+
+  const getCurrentStepIndex = () => {
+    const status = order.status?.toLowerCase();
+    const deliveryStatus = order.deliveryStatus?.toLowerCase();
+    
+    if (deliveryStatus === 'delivered' || status === 'delivered') return 4;
+    if (deliveryStatus === 'shipped' || status === 'shipped') return 3;
+    if (status === 'processing' || status === 'confirmed') return 2;
+    if (status === 'confirmed') return 1;
+    return 0; // pending or unknown
+  };
+
+  const currentStepIndex = getCurrentStepIndex();
+
   return (
     <div className="container-custom p-4">
       <h2 className="text-xl font-bold mb-2">تتبع الطلب</h2>
@@ -55,6 +84,67 @@ export default function OrderTracker() {
       {sseError && (
         <div className="text-[11px] text-gray-500 mb-2">التحديثات الحية غير متاحة حالياً.</div>
       )}
+
+      {/* Order Status Timeline */}
+      <div className="bg-white border rounded-lg p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-4 text-center">حالة الطلب</h3>
+        <div className="relative">
+          {/* Progress line */}
+          <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200">
+            <div 
+              className="h-full bg-green-500 transition-all duration-500 ease-in-out"
+              style={{ width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%` }}
+            ></div>
+          </div>
+          
+          {/* Status steps */}
+          <div className="relative flex justify-between">
+            {statusSteps.map((step, index) => {
+              const isCompleted = index <= currentStepIndex;
+              const isCurrent = index === currentStepIndex;
+              const Icon = step.icon;
+              
+              return (
+                <div key={step.key} className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                    isCompleted 
+                      ? 'bg-green-500 border-green-500 text-white' 
+                      : isCurrent 
+                        ? 'bg-white border-blue-500 text-blue-500' 
+                        : 'bg-white border-gray-300 text-gray-400'
+                  }`}>
+                    <Icon size={18} />
+                  </div>
+                  <div className={`mt-2 text-xs text-center font-medium transition-colors duration-300 ${
+                    isCompleted 
+                      ? 'text-green-600' 
+                      : isCurrent 
+                        ? 'text-blue-600' 
+                        : 'text-gray-400'
+                  }`}>
+                    {step.label}
+                  </div>
+                  {isCurrent && (
+                    <div className="mt-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Current status description */}
+        <div className="mt-6 text-center">
+          <div className="text-sm text-gray-600">
+            {statusSteps[currentStepIndex]?.label}
+          </div>
+          {order.deliveredAt && (
+            <div className="text-xs text-green-600 mt-1">
+              تم التوصيل في: {new Date(order.deliveredAt).toLocaleString('ar')}
+            </div>
+          )}
+        </div>
+      </div>
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         <a
           href={`/api/orders/${order.id}/invoice`}
