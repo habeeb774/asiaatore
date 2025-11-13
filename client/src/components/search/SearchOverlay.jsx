@@ -1,44 +1,11 @@
-// Lazy image component for better performance
-const LazyImage = React.memo(({ src, alt, className, onLoad }) => {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    const img = new Image();
-    img.src = src;
-    img.onload = () => {
-      setLoaded(true);
-      onLoad?.();
-    };
-    img.onerror = () => setError(true);
-  }, [src, onLoad]);
-
-  if (error) {
-    return (
-      <div className={`${className} bg-gray-200 dark:bg-gray-700 flex items-center justify-center`}>
-        <Package size={20} className="text-gray-400" />
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${className} relative overflow-hidden bg-gray-100 dark:bg-gray-800`}>
-      {!loaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="animate-pulse bg-gray-300 dark:bg-gray-600 w-full h-full"></div>
-        </div>
-      )}
-      <img
-        src={src}
-        alt={alt}
-        className={`${className} ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
-        loading="lazy"
-      />
-    </div>
-  );
-});
-
-LazyImage.displayName = 'LazyImage';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from '../../lib/framerLazy';
+import { Search, X, Package, Tag, Star, Clock, TrendingUp, Filter, ChevronUp, ChevronDown, DollarSign } from 'lucide-react';
+import api from '../../services/api/client';
+import { resolveLocalized } from '../../utils/locale';
+import { useLanguage } from '../../stores/LanguageContext';
+import LazyImage from '../shared/LazyImage/LazyImage';
 
 // call useLanguage inside a small safe custom hook so the component
 // always calls hooks in the same order (rules-of-hooks compliance)
@@ -791,7 +758,11 @@ export default function SearchOverlay() {
                                   onClick={() => { saveRecentSearch(query.trim()); closeOverlay(); navigate(`/products/${p.slug || p.id}`); }}
                                 >
                                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                                    {p.image && <img src={p.image} alt={resolveLocalized(p.name, locale) || p.nameAr || p.nameEn || ''} className="w-full h-full object-cover" />}
+                                    <LazyImage
+                                      src={p.image}
+                                      alt={resolveLocalized(p.name, locale) || p.nameAr || p.nameEn || ''}
+                                      className="w-full h-full object-cover"
+                                    />
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <div className="text-sm font-semibold truncate text-gray-900 dark:text-white">{renderHighlighted(resolveLocalized(p.name, locale) || p.nameAr || p.nameEn || '', query)}</div>
@@ -872,7 +843,11 @@ export default function SearchOverlay() {
                               onClick={() => { closeOverlay(); navigate(`/products/${p.slug || p.id}`); }}
                             >
                               <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-700 mb-2">
-                                {p.image && <img src={p.image} alt={resolveLocalized(p.name, locale) || p.nameAr || p.nameEn || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />}
+                                <LazyImage
+                                  src={p.image}
+                                  alt={resolveLocalized(p.name, locale) || p.nameAr || p.nameEn || ''}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                />
                               </div>
                               <div className="text-sm font-medium truncate text-gray-900 dark:text-white">{resolveLocalized(p.name, locale) || p.nameAr || p.nameEn || ''}</div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{Number(p.price||0).toFixed(2)} ر.س</div>

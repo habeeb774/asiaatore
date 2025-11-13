@@ -52,7 +52,7 @@ const Header = React.memo(({ onToggleCart }) => {
         <div className="logo">
           <a href="/" aria-label="Go to homepage">
             <img
-              src={setting?.logoUrl || setting?.logo || "/images/site-logo.png"}
+              src={setting?.logoUrl || setting?.logo || "/images/site-logo.svg"}
               alt="Logo"
               loading="eager"
               decoding="sync"

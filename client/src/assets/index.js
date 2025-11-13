@@ -14,7 +14,7 @@ export { default as googlePlayBadge } from './badges/google-play-badge.svg';
 export const imageUrls = {
   heroImage: '/images/hero-image.svg',
   productFallback: '/images/product-fallback.svg',
-  siteLogo: '/images/site-logo.png',
+  siteLogo: '/images/site-logo.svg',
   categoryPlaceholder: '/images/category-placeholder.jpg',
   ogDefault: '/images/og-default.jpg',
   logo: '/images/logo.png',

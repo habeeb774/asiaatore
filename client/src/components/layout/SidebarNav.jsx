@@ -497,7 +497,6 @@ const SidebarNav = () => {
         aria-labelledby="sidebar-brand"
         id="app-sidebar"
         tabIndex={-1}
-        style={{ background: 'var(--color_heading)', color: 'var(--white_color)' }}
       >
         <div className="sidebar-modern__inner">
           {/* Header */}

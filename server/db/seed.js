@@ -300,7 +300,7 @@ async function main() {
       colorSecondary: '#f6ad55',
       colorAccent: '#0ea5e9',
       // sensible defaults for hero and top-strip
-      logo: '/images/site-logo.png',
+      logo: '/images/site-logo.svg',
       heroBackgroundImage: 'https://picsum.photos/seed/hero/1600/900',
       heroBackgroundGradient: 'linear-gradient(90deg,#69be3c 0%, #0ea5e9 100%)',
       heroCenterImage: 'https://picsum.photos/seed/hero-center/400/400',
