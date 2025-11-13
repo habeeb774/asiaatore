@@ -16,10 +16,25 @@ export default function ProductPage() {
   }, [id]);
 
   if (!product) return null;
+
+  // Handle multilingual product data
+  const productName = typeof product.name === 'object' && product.name[locale]
+    ? product.name[locale]
+    : typeof product.name === 'string'
+    ? product.name
+    : 'Product';
+
+  const productDescription = typeof (product.shortDescription || product.description) === 'object' &&
+    (product.shortDescription || product.description)[locale]
+    ? (product.shortDescription || product.description)[locale]
+    : typeof (product.shortDescription || product.description) === 'string'
+    ? (product.shortDescription || product.description)
+    : '';
+
   return (
     <div>
-      <h1>{t(product.name)}</h1>
-      <p>{t(product.shortDescription || product.description)}</p>
+      <h1>{productName}</h1>
+      <p>{productDescription}</p>
       {/* ...existing code... */}
     </div>
   );

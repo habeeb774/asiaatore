@@ -1,22 +1,23 @@
 /* Theme tokens and global look-and-feel for minimal/professional styles */
+/* Note: Core design tokens moved to _design-system.scss for consolidation */
 :root {
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* Radii - now using design system tokens */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0,0,0,.06);
-  --shadow-md: 0 10px 24px -8px rgba(0,0,0,.16);
-  --shadow-lg: 0 22px 60px -20px rgba(0,0,0,.30);
+  /* Shadows - now using design system tokens */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 
-  /* Surface colors derived from base tokens in index.css */
-  --surface-1: #ffffff;
-  --surface-2: #FAFAF8; /* soft off-white */
-  --surface-3: #F5F5F2; /* subtle alt */
+  /* Surface colors - now using design system tokens */
+  --surface-1: var(--color-surface);
+  --surface-2: var(--color-bg-alt);
+  --surface-3: var(--color-bg);
 
-  --border: rgba(12,18,28,0.08);
-  --text-muted: var(--color-muted);
+  --border: var(--color-border);
+  --text-muted: var(--color-text-faint);
 
   /* Brand colors (derived from provided logo) */
   --brand-green: #7cc243; /* background green */
@@ -32,23 +33,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface-1: #0E1626;
-    --surface-2: #101A2C;
-    --surface-3: #121E33;
+    --surface-1: var(--color-surface);
+    --surface-2: var(--color-bg-alt);
+    --surface-3: var(--color-bg);
 
-    --border: rgba(255,255,255,0.08);
-    --text-muted: #9aa4b2;
+    --border: var(--color-border);
+    --text-muted: var(--color-text-faint);
   }
 }
 
 /* Explicit theme override via data-theme (takes priority over system) */
 [data-theme='dark'] {
-  --surface-1: #0E1626;
-  --surface-2: #101A2C;
-  --surface-3: #121E33;
+  --surface-1: var(--color-surface);
+  --surface-2: var(--color-bg-alt);
+  --surface-3: var(--color-bg);
 
-  --border: rgba(255,255,255,0.08);
-  --text-muted: #9aa4b2;
+  --border: var(--color-border);
+  --text-muted: var(--color-text-faint);
 }
 
 /* Scrollbar polish */
@@ -60,17 +61,17 @@
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(2,6,23,.12), rgba(2,6,23,.18));
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 /* Optional theme presets */
 body.theme-minimal {
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-sm: var(--radius-md);
+  --radius-md: var(--radius-lg);
+  --radius-lg: var(--radius-2xl);
 }
 body.theme-professional {
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 }

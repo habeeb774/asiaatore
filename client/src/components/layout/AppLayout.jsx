@@ -19,15 +19,16 @@ import { useCart } from '../../stores/CartContext';
 import PageLoader from '../common/PageLoader';
 import AdminSetupModal from '../setup/AdminSetupModal.jsx';
 
+// مكون التخطيط الرئيسي للتطبيق - يحتوي على الشريط الجانبي، الهيدر، والمحتوى الرئيسي
 const AppLayout = ({ children }) => {
   const { locale } = useLanguage();
   const { pathname } = useLocation();
-  const isHome = pathname === '/' || pathname === '/en';
-  const [panel, setPanel] = React.useState(null);
+  const isHome = pathname === '/' || pathname === '/ar';
+  const [panel, setPanel] = React.useState(null); // حالة لإدارة اللوحات الجانبية مثل السلة
   const { cartItems = [], updateQuantity } = useCart();
 
   // السماح بفتح السلة من أي مكان في التطبيق
-  const contentRef = React.useRef(null);
+  const contentRef = React.useRef(null); // مرجع لعنصر المحتوى الرئيسي لإدارة الهوامش
 
   // إضافة اختصار لوحة المفاتيح "/" لفتح البحث
   React.useEffect(() => {
@@ -129,7 +130,7 @@ const AppLayout = ({ children }) => {
     const handler = () => setPanel('cart');
     window.addEventListener('cart:open', handler);
     return () => window.removeEventListener('cart:open', handler);
-  }, []);
+  }, []); // إضافة مستمع لحدث فتح السلة من أي مكان في التطبيق
 
   const cartTotal = Array.isArray(cartItems)
     ? cartItems.reduce(
@@ -138,7 +139,7 @@ const AppLayout = ({ children }) => {
           (Number(i.price || i.salePrice || 0) * Number(i.quantity || 1)),
         0
       )
-    : 0;
+    : 0; // حساب إجمالي سعر السلة
 
   return (
     <ToastProvider>
@@ -156,7 +157,7 @@ const AppLayout = ({ children }) => {
         >
           <PageLoader />
           <AdminSetupModal />
-          <SidebarNav />
+          <SidebarNav /> {/* الشريط الجانبي للتنقل */}
 
           <div
             ref={contentRef}
@@ -168,11 +169,11 @@ const AppLayout = ({ children }) => {
               minHeight: '100vh',
             }}
           >
-            <AnnouncementBar />
-            <HeaderNav />
+            <AnnouncementBar /> {/* شريط الإعلانات */}
+            <HeaderNav /> {/* الهيدر الرئيسي */}
 
             {/* ✅ عرض شريط الفئات فقط في غير الصفحة الرئيسية */}
-            {!isHome && <CategoryScroller />}
+            { <CategoryScroller />} {/* شريط تمرير الفئات */}
 
             {/* Breadcrumbs: render a simple, computed breadcrumb for most pages.
                Skip homepage and product detail pages (product page has its own bespoke breadcrumb). */}
@@ -198,20 +199,20 @@ const AppLayout = ({ children }) => {
               } catch {
                 return null;
               }
-            })()}
+            })()} {/* شريط التنقل (Breadcrumbs) */}
 
             {/* ✅ المحتوى */}
-            <main style={{ flex: 1 }}>{children}</main>
+            <main style={{ flex: 1 }}>{children}</main> {/* المحتوى الرئيسي للصفحة */}
 
             {/* ✅ مسافة لتجنب تغطية BottomNav */}
-            <div className="h-16 md:h-0" />
+            <div className="h-16 md:h-0" /> {/* مسافة للتنقل السفلي على الهواتف */}
 
-            <SiteFooter />
+            <SiteFooter /> {/* تذييل الموقع */}
           </div>
 
-          <FloatingCart />
-          <SearchOverlay />
-          <BottomNav panel={panel} setPanel={setPanel} />
+          <FloatingCart /> {/* سلة التسوق العائمة */}
+          <SearchOverlay /> {/* تراكب البحث */}
+          <BottomNav panel={panel} setPanel={setPanel} /> {/* التنقل السفلي للهواتف */}
 
           {/* ✅ السلة الجانبية */}
           {panel === 'cart' && (
@@ -228,7 +229,7 @@ const AppLayout = ({ children }) => {
               }
               updateQuantity={updateQuantity}
             />
-          )}
+          )} {/* عرض السلة الجانبية عند فتحها */}
         </div>
       </SidebarProvider>
       <ToastContainer
@@ -242,7 +243,7 @@ const AppLayout = ({ children }) => {
         draggable
         pauseOnHover
         theme="colored"
-      />
+      /> {/* حاوية الإشعارات (Toast) */}
     </ToastProvider>
   );
 };

@@ -2,6 +2,21 @@ import React, { createContext, useContext } from 'react';
 
 const LanguageContext = createContext();
 
+// LocalizedText component for displaying localized text
+export const LocalizedText = ({ children, ...props }) => {
+  return <span {...props}>{children}</span>;
+};
+
+// CurrencyDisplay component for displaying currency
+export const CurrencyDisplay = ({ amount, currency = 'SAR', ...props }) => {
+  const formatted = new Intl.NumberFormat('ar-SA', {
+    style: 'currency',
+    currency: currency,
+  }).format(amount);
+
+  return <span {...props}>{formatted}</span>;
+};
+
 export const LanguageProvider = ({ children }) => {
   return (
     <LanguageContext.Provider value={{

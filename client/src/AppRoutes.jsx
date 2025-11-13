@@ -17,7 +17,7 @@ import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
 import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Lazy load heavy pages to split bundles per-route
-const Home = React.lazy(() => import('./pages/MainHome.jsx'));
+const Home = React.lazy(() => import('./pages/Home'));
 const Cart = React.lazy(() => import('./pages/Cart'));
 const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
 const LoginPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.LoginPage })));
@@ -66,7 +66,6 @@ const UIPreview = React.lazy(() => import(/* webpackChunkName: "ui" */ './pages/
 const SearchResults = React.lazy(() => import(/* webpackChunkName: "search" */ './pages/SearchResults'));
 // Home page now fully implemented (replaces placeholder)
 const ToastTest = React.lazy(() => import('./pages/ToastTest.jsx'));
-const HeroDemo = React.lazy(() => import(/* webpackChunkName: "demo" */ './pages/HeroDemo.jsx'));
 const NFTLoyaltyPage = React.lazy(() => import(/* webpackChunkName: "nft" */ './pages/NFTLoyaltyPage'));
 const GamificationPage = React.lazy(() => import(/* webpackChunkName: "gamification" */ './pages/GamificationPage'));
 const ARViewerPage = React.lazy(() => import(/* webpackChunkName: "ar" */ './pages/ARViewerPage'));
@@ -228,7 +227,7 @@ const AppRoutes = () => {
     <Route path="/offers" element={<OffersPage />} />
     <Route path="/style-guide" element={<StyleGuide />} />
     <Route path="/ui" element={<UIPreview />} />
-  <Route path="/demo/hero" element={<HeroDemo />} />
+  {/* demo/hero removed - demo page not present in this template */}
   <Route path="/test/toast" element={<ToastTest />} />
   <Route path="/cart" element={<Cart />} />
   <Route path="/subscriptions" element={<SubscriptionPlans />} />
@@ -380,7 +379,7 @@ const AppRoutes = () => {
     <Route path="/en/offers" element={<OffersPage />} />
     <Route path="/en/style-guide" element={<StyleGuide />} />
   <Route path="/fr/ui" element={<UIPreview />} />
-  <Route path="/fr/demo/hero" element={<HeroDemo />} />
+  {/* fr/demo/hero removed - demo page not present in this template */}
   <Route path="/fr/test/toast" element={<ToastTest />} />
   <Route path="/en/test/toast" element={<ToastTest />} />
   <Route path="/en/cart" element={<Cart />} />

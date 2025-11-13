@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import { useLanguage } from '../../stores/LanguageContext';
-import Modal from '../Modal/Modal';
+import Modal from '../ui/Modal';
 import LazyImage from '../common/LazyImage';
 
 const NotificationsContext = createContext();

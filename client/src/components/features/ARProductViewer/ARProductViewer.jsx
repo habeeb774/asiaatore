@@ -8,7 +8,18 @@ const ARProductViewer = ({
   onClose,
   className = ''
 }) => {
-  const { t, language } = useLanguage();
+    // Get localized product name
+  const getProductName = () => {
+    if (typeof product.name === 'object' && product.name[locale]) {
+      return product.name[locale];
+    }
+    if (typeof product.name === 'string') {
+      return product.name;
+    }
+    return product.nameEn || 'Product';
+  };
+
+  const productName = getProductName();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [isSupported, setIsSupported] = useState(false);
@@ -99,7 +110,7 @@ const ARProductViewer = ({
 
       // Download the image
       const link = document.createElement('a');
-      link.download = `ar-${product.nameEn || product.name}-${Date.now()}.png`;
+      link.download = `ar-${productName}-${Date.now()}.png`;
       link.href = canvas.toDataURL();
       link.click();
     }
@@ -110,7 +121,7 @@ const ARProductViewer = ({
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Try ${product.nameEn || product.name} in AR!`,
+          title: `Try ${productName} in AR!`,
           text: 'Check out this product in augmented reality',
           url: window.location.href
         });
@@ -151,7 +162,7 @@ const ARProductViewer = ({
                 {t('arTryOn') || 'AR Try-On'}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {product.nameEn || product.name}
+                {productName}
               </p>
             </div>
           </div>

@@ -1,0 +1,23 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="ÙÙØªØ¬Ø§Øª Ø¢Ø³ÙÙÙØ©">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#g)"/>
+  <g fill="white" opacity="0.15">
+    <circle cx="120" cy="120" r="90"/>
+    <circle cx="700" cy="520" r="110"/>
+    <circle cx="620" cy="140" r="70"/>
+    <circle cx="200" cy="480" r="60"/>
+  </g>
+  <g>
+    <rect x="200" y="180" width="120" height="160" rx="16" fill="#fff" opacity="0.9"/>
+    <rect x="350" y="160" width="140" height="200" rx="18" fill="#fff" opacity="0.9"/>
+    <rect x="520" y="210" width="110" height="150" rx="14" fill="#fff" opacity="0.9"/>
+    <rect x="230" y="360" width="380" height="16" rx="8" fill="#fff" opacity="0.7"/>
+  </g>
+  <text x="400" y="420" text-anchor="middle" font-family="Verdana,Arial,sans-serif" font-size="28" fill="#ffffff" opacity="0.9">ÙÙØªØ¬Ø§Øª ÙØ®ØªØ§Ø±Ø©</text>
+</svg>
+

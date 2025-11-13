@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { useSettings } from '../stores/SettingsContext';
 
 /**
  * Header Component - Main navigation header with logo, search, and user actions
@@ -18,6 +19,9 @@ import React, { useState, useCallback, useRef } from 'react';
 const Header = React.memo(({ onToggleCart }) => {
   // State management
   const [searchValue, setSearchValue] = useState('');
+
+  // Get settings for store name and logo
+  const { setting } = useSettings();
 
   // Event handlers with useCallback for performance
   const handleSearchSubmit = useCallback((e) => {
@@ -44,15 +48,20 @@ const Header = React.memo(({ onToggleCart }) => {
   return (
     <header role="banner">
       <div className="container">
-        {/* Logo */}
+        {/* Logo and Store Name */}
         <div className="logo">
           <a href="/" aria-label="Go to homepage">
             <img
-              src="/images/site-logo.png"
+              src={setting?.logoUrl || setting?.logo || "/images/site-logo.png"}
               alt="Logo"
               loading="eager"
               decoding="sync"
             />
+            {(setting?.siteNameAr || setting?.siteNameEn || setting?.siteName) && (
+              <span className="store-name">
+                {setting.siteNameAr || setting.siteNameEn || setting.siteName}
+              </span>
+            )}
           </a>
         </div>
 

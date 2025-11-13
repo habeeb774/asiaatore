@@ -7,9 +7,9 @@ import { useToast } from '../../stores/ToastContext';
 import AdminLayout from '../../components/features/admin/AdminLayout';
 import AdminTableSkeleton from '../../components/features/admin/AdminTableSkeleton';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/common/Input';
-import { Select } from '../../components/common/Select';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/common/Card';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { KpiCard } from '../../components/features/admin/KpiCard';
 import AddUserForm from '../../components/features/admin/AddUserForm';
 import UserRow from '../../components/features/admin/UserRow';
@@ -161,13 +161,23 @@ const Customers = () => {
               <Select
                 value={filters.role}
                 onChange={e => handleFilterChange('role', e.target.value)}
-                options={roleOptions}
-              />
+              >
+                {roleOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
               <Select
                 value={filters.status}
                 onChange={e => handleFilterChange('status', e.target.value)}
-                options={statusOptions}
-              />
+              >
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
               <Input
                 type="date"
                 value={filters.from}
@@ -235,12 +245,11 @@ const Customers = () => {
                 <Select
                   value={pageSize}
                   onChange={e => setPageSize(Number(e.target.value))}
-                  options={[
-                    { value: 10, label: '10 / صفحة' },
-                    { value: 20, label: '20 / صفحة' },
-                    { value: 50, label: '50 / صفحة' },
-                  ]}
-                />
+                >
+                  <option value={10}>10 / صفحة</option>
+                  <option value={20}>20 / صفحة</option>
+                  <option value={50}>50 / صفحة</option>
+                </Select>
               </div>
             </div>
           </CardContent>

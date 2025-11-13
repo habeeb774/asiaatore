@@ -5,7 +5,7 @@ import AppRoutes from './AppRoutes';
 import './index.css';
 import './styles/ui.css';
 import './styles/design-tokens.css';
-import './styles/reda-store-theme.css';
+
 // Local Cairo font (self-hosted via package) - load only essential weights initially
 import '@fontsource/cairo/400.css';
 import '@fontsource/cairo/600.css';

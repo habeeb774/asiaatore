@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import api from '../services/api/client';
 import { useLanguage } from './LanguageContext';
@@ -10,23 +10,13 @@ export const CartProvider = ({ children }) => {
   const { user } = useAuth() || {};
   const lang = useLanguage();
   const locale = lang?.locale ?? 'ar';
-  const [cartItems, setCartItems] = useState(() => {
+  const [cartItems, setCartItems] = useState([]);
+  const [hasOldCartData, setHasOldCartData] = useState(() => {
     try {
       const raw = localStorage.getItem('my_store_cart');
-      const list = raw ? JSON.parse(raw) : [];
-      // Deduplicate by id on hydrate (sum quantities, cap to sane max)
-      const MAX = 10;
-      const map = new Map();
-      for (const it of Array.isArray(list) ? list : []) {
-        const id = it?.id || it?.productId;
-        if (!id) continue;
-        const prev = map.get(id) || { ...it, id, quantity: 0 };
-        const qty = Math.min(MAX, (prev.quantity || 0) + (parseInt(it.quantity || 1, 10) || 1));
-        map.set(id, { ...prev, quantity: qty });
-      }
-      return Array.from(map.values());
+      return raw && JSON.parse(raw).length > 0;
     } catch {
-      return [];
+      return false;
     }
   });
   const [loading, setLoading] = useState(false);
@@ -61,6 +51,60 @@ export const CartProvider = ({ children }) => {
     }
     return chosen;
   }
+
+  // Check if cart has old data from previous sessions
+  // Now handled by useState above
+
+  // Function to load old cart data when user chooses to
+  const loadOldCartData = useCallback(() => {
+    try {
+      const raw = localStorage.getItem('my_store_cart');
+      if (!raw) return;
+
+      const list = JSON.parse(raw);
+      // Deduplicate by id on hydrate (sum quantities, cap to sane max)
+      const MAX = 10;
+      const map = new Map();
+      for (const it of Array.isArray(list) ? list : []) {
+        const id = it?.id || it?.productId;
+        if (!id) continue;
+        const prev = map.get(id) || { ...it, id, quantity: 0 };
+        const qty = Math.min(MAX, (prev.quantity || 0) + (parseInt(it.quantity || 1, 10) || 1));
+        map.set(id, { ...prev, quantity: qty });
+      }
+      const oldItems = Array.from(map.values());
+      setCartItems(oldItems);
+      setHasOldCartData(false); // Mark as loaded
+
+      window.dispatchEvent(new CustomEvent('toast:show', {
+        detail: {
+          type: 'success',
+          title: locale === 'ar' ? 'تم تحميل السلة القديمة' : 'Old cart loaded',
+          description: locale === 'ar' ? 'تم استعادة المنتجات من الجلسة السابقة' : 'Products restored from previous session'
+        }
+      }));
+    } catch (error) {
+      console.error('Failed to load old cart data:', error);
+    }
+  }, [locale]);
+
+  // Function to clear old cart data on new session
+  const clearOldCartData = useCallback(() => {
+    try {
+      localStorage.removeItem('my_store_cart');
+      setCartItems([]);
+      setHasOldCartData(false);
+      window.dispatchEvent(new CustomEvent('toast:show', {
+        detail: {
+          type: 'info',
+          title: locale === 'ar' ? 'تم مسح السلة' : 'Cart cleared',
+          description: locale === 'ar' ? 'تم مسح البيانات القديمة من السلة' : 'Old cart data cleared'
+        }
+      }));
+    } catch (error) {
+      console.error('Failed to clear old cart data:', error);
+    }
+  }, [locale]);
 
   const addToCart = useCallback((product, qty = 1) => {
     if (!product || !product.id) return { ok: false, reason: 'INVALID_PRODUCT' };
@@ -255,7 +299,20 @@ export const CartProvider = ({ children }) => {
   }, [user]);
 
   const cartTotal = cartItems.reduce((sum, i) => sum + (Number(i.price || i.salePrice || 0) * Number(i.quantity || 1)), 0);
-  const value = { cartItems, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, maxPerItem: MAX_PER_ITEM, loading, error };
+  const value = { 
+    cartItems, 
+    addToCart, 
+    removeFromCart, 
+    updateQuantity, 
+    clearCart, 
+    clearOldCartData,
+    loadOldCartData,
+    hasOldCartData,
+    cartTotal, 
+    maxPerItem: MAX_PER_ITEM, 
+    loading, 
+    error 
+  };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

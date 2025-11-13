@@ -1,0 +1,91 @@
+/* Catalog Section Styles */
+.catalog-section .swiper {
+  overflow: visible;
+}
+
+.catalog-section .swiper-slide {
+  width: auto;
+  height: auto;
+}
+
+.catalog-section .catalog-swiper .swiper-slide {
+  max-width: 280px;
+  min-width: 240px;
+}
+
+.catalog-section .catalog-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2rem;
+}
+
+.catalog-section .catalog-pagination .swiper-pagination-bullet {
+  width: 12px;
+  height: 12px;
+  background: #d1d5db;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+  margin: 0 4px;
+}
+
+.catalog-section .catalog-pagination .swiper-pagination-bullet-active {
+  background: #10b981;
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.catalog-section .catalog-pagination .swiper-pagination-bullet-active-main {
+  background: #059669;
+  transform: scale(1.4);
+}
+
+/* Dark mode support */
+.dark .catalog-section .catalog-pagination .swiper-pagination-bullet {
+  background: #4b5563;
+}
+
+.dark .catalog-section .catalog-pagination .swiper-pagination-bullet-active {
+  background: #34d399;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .catalog-section .catalog-swiper .swiper-slide {
+    max-width: 200px;
+    min-width: 180px;
+  }
+
+  .catalog-section .catalog-pagination {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .catalog-section .catalog-swiper .swiper-slide {
+    max-width: 240px;
+    min-width: 220px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .catalog-section .catalog-swiper .swiper-slide {
+    max-width: 260px;
+    min-width: 240px;
+  }
+}
+
+/* Animation classes */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}

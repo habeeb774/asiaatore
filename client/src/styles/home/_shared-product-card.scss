@@ -1,0 +1,354 @@
+/* Shared Product Card Components - Common product card styles */
+@use '../_variables' as *;
+@use '../_mixins' as *;
+
+/* ===== PRODUCT CARD BASE ===== */
+
+.product-card-base {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border-soft, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1rem;
+  min-height: 100%;
+  box-shadow: var(--shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.1));
+  transition: all var(--transition-md, 0.2s ease);
+  overflow: hidden;
+}
+
+.product-card-base:hover {
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+  transform: translateY(-4px);
+  border-color: var(--color-border, #d1d5db);
+}
+
+/* Product card base mixin for use in media queries or complex selectors */
+@mixin product-card-base {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border-soft, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1rem;
+  min-height: 100%;
+  box-shadow: var(--shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.1));
+  transition: all var(--transition-md, 0.2s ease);
+  overflow: hidden;
+}
+
+/* ===== PRODUCT IMAGE CONTAINER ===== */
+
+.product-image-container {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--grad-soft, linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  transition: transform var(--transition-fast, 0.15s ease);
+}
+
+.product-card-base:hover .product-image-container {
+  transform: scale(1.02);
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition-md, 0.2s ease);
+}
+
+.product-card-base:hover .product-image {
+  transform: scale(1.05);
+}
+
+/* ===== PRODUCT BADGES ===== */
+
+.product-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: var(--grad-primary, linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%));
+  color: #ffffff;
+  font: 600 var(--text-xs, 0.75rem)/1 var(--font-sans, sans-serif);
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-md, 8px);
+  letter-spacing: 0.025em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+  backdrop-filter: blur(8px);
+}
+
+.product-badge-discount {
+  background: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.product-badge-gallery {
+  top: auto;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.625rem;
+}
+
+/* ===== PRODUCT TITLE ===== */
+
+.product-title {
+  font: 600 var(--text-sm, 0.875rem)/1.4 var(--font-sans, sans-serif);
+  margin: 0 0 0.5rem;
+  color: var(--color-text, #111827);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(var(--text-sm, 0.875rem) * 1.4 * 2);
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+/* ===== PRODUCT META ===== */
+
+.product-meta {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-soft, #6b7280);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.product-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.product-meta-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-border, #d1d5db);
+}
+
+/* ===== PRODUCT RATING ===== */
+
+.product-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.product-rating-star {
+  width: 14px;
+  height: 14px;
+  color: var(--color-warning, #f6c85f);
+}
+
+.product-rating-star--off {
+  color: var(--color-border, #d1d5db);
+}
+
+.product-rating-count {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-soft, #6b7280);
+  margin-left: 0.25rem;
+}
+
+/* ===== PRODUCT PRICE ===== */
+
+.product-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.product-price {
+  font: 700 var(--text-md, 1rem)/1 var(--font-sans, sans-serif);
+  color: var(--color-primary, #3b82f6);
+  background: var(--grad-primary-text, linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.product-price-old {
+  font: 500 var(--text-xs, 0.75rem)/1 var(--font-sans, sans-serif);
+  color: var(--color-text-faint, #9ca3af);
+  text-decoration: line-through;
+}
+
+.product-price-discount {
+  font: 600 var(--text-xs, 0.75rem)/1 var(--font-sans, sans-serif);
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.25rem 0.4rem 0.28rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+/* ===== PRODUCT PROGRESS ===== */
+
+.product-progress {
+  --track: #f1f5f9;
+  --fill: var(--color-primary, #3b82f6);
+  position: relative;
+  height: 6px;
+  background: var(--track);
+  border-radius: 30px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.product-progress-bar {
+  height: 100%;
+  width: var(--value, 0%);
+  background: linear-gradient(90deg, var(--color-primary, #3b82f6) 0%, var(--color-primary-light, #60a5fa) 100%);
+  transition: width 0.5s ease;
+}
+
+.product-progress-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--color-text-soft, #6b7280);
+  letter-spacing: 0.25px;
+}
+
+/* ===== PRODUCT ACTIONS ===== */
+
+.product-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.product-actions button,
+.product-actions a {
+  flex: 1;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #334155);
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.product-actions button:hover,
+.product-actions a:hover {
+  background: var(--color-bg-hover, #f1f5f9);
+  border-color: var(--color-border-hover, #d1d9e2);
+}
+
+.product-actions button.primary,
+.product-actions a.primary {
+  background: var(--grad-primary, linear-gradient(135deg, #3b82f6 0%, #2563eb 100%));
+  border: 0;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.product-actions button.primary:hover,
+.product-actions a.primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.product-actions button.outline,
+.product-actions a.outline {
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border-soft, #dfe4ea);
+}
+
+.product-actions button.outline:hover,
+.product-actions a.outline:hover {
+  background: var(--color-bg-soft, #f3f5f7);
+}
+
+.product-actions button.icon,
+.product-actions a.icon {
+  flex: 0 0 40px;
+  width: 40px;
+  padding: 0;
+}
+
+/* ===== PRODUCT SKELETON ===== */
+
+.product-card-skeleton {
+  border: 1px solid var(--color-border-soft, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.product-card-skeleton .image-skeleton {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-soft, #f3f4f6);
+}
+
+.product-card-skeleton .title-skeleton {
+  height: 1rem;
+  background: var(--color-bg-soft, #f3f4f6);
+  border-radius: 4px;
+}
+
+.product-card-skeleton .price-skeleton {
+  height: 0.875rem;
+  background: var(--color-bg-soft, #f3f4f6);
+  border-radius: 4px;
+  width: 60%;
+}
+
+/* ===== MIXINS FOR COMPLEX SELECTORS ===== */
+
+@mixin product-actions-button {
+  flex: 1;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #334155);
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+@mixin product-actions-button-primary {
+  background: var(--grad-primary, linear-gradient(135deg, #3b82f6 0%, #2563eb 100%));
+  border: 0;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}

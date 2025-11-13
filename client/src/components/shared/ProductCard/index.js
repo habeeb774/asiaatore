@@ -1,3 +1,3 @@
-export { default } from './ProductCard';
-export { ProductCardSkeleton } from './ProductCard';
-export { ProductCardGrid } from './ProductCard';
+export { default } from './ProductCardUnified';
+export { ProductCardSkeleton } from './ProductCardUnified';
+export { ProductCardGrid } from './ProductCardUnified';

@@ -9,7 +9,12 @@ TARGET_EXTENSIONS = ('.js', '.jsx', '.css', '.sass')
 
 report = []
 
+# المجلدات المستثناة
+EXCLUDE_DIRS = {'node_modules', '.git', 'dist', 'build', '.next', '.nuxt', 'coverage', 'logs', 'tmp', 'temp', 'uploads', 'themes', 'reports', 'monitoring', 'tests-output', 'shared', 'temp', 'uploads', 'themes', 'reports', 'monitoring', 'tests-output'}
+
 for root, dirs, files in os.walk(PROJECT_DIR):
+    # استثناء المجلدات
+    dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
     for file in files:
         if file.endswith(TARGET_EXTENSIONS):
             filepath = os.path.join(root, file)

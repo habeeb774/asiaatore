@@ -1,0 +1,459 @@
+/* HomePage Minimal Theme Styles - Clean, minimal design system */
+@use '../_variables' as *;
+@use '../_mixins' as *;
+@use './_shared-components' as shared;
+
+/* Minimal theme variables (scoped to .minimal-theme) */
+.minimal-theme {
+  --minimal-bg: #ffffff;
+  --minimal-text: #1a1a1a;
+  --minimal-text-soft: #6b7280;
+  --minimal-border: #e5e7eb;
+  --minimal-accent: #f3f4f6;
+  --minimal-shadow: 0 1px 3px rgba(0,0,0,.1);
+  --minimal-radius: 8px;
+  --minimal-space: 1rem;
+}
+
+/* Minimal page wrapper */
+.minimal-theme .home-page-wrapper {
+  background: var(--minimal-bg);
+  color: var(--minimal-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+/* Minimal section spacing */
+.minimal-theme .section-padding {
+  padding: 4rem 0;
+}
+
+/* Minimal container */
+.minimal-theme .container-custom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Minimal section head */
+.minimal-theme .home-section-head__title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--minimal-text);
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.minimal-theme .home-section-head__subtitle {
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--minimal-text-soft);
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Minimal hero */
+.minimal-theme .home-hero {
+  padding: 6rem 0;
+  text-align: center;
+}
+
+.minimal-theme .home-hero__title {
+  font-size: 3.75rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--minimal-text);
+  margin: 0 0 1.5rem;
+}
+
+.minimal-theme .home-hero__subtitle {
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: var(--minimal-text-soft);
+  margin: 0 0 1rem;
+}
+
+.minimal-theme .home-hero__lead {
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--minimal-text-soft);
+  max-width: 700px;
+  margin: 0 auto 2rem;
+}
+
+.minimal-theme .home-hero__actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.minimal-theme .home-hero__btn {
+  padding: 0.75rem 2rem;
+  border-radius: var(--minimal-radius);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+/* Minimal product grid */
+.minimal-theme .home-products .featured-grid {
+  @extend .grid-base;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* Minimal product card */
+.minimal-theme .home-products .product-card {
+  @extend .card-base;
+  @include shared.card-hover;
+  background: var(--minimal-bg);
+  border: 1px solid var(--minimal-border);
+  border-radius: var(--minimal-radius);
+  padding: 1.5rem;
+  box-shadow: var(--minimal-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.minimal-theme .home-products .product-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  transform: translateY(-2px);
+}
+
+.minimal-theme .home-products .product-card .product-image {
+  aspect-ratio: 1;
+  border-radius: var(--minimal-radius);
+  overflow: hidden;
+  background: var(--minimal-accent);
+  margin-bottom: 1rem;
+}
+
+.minimal-theme .home-products .product-card .product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Minimal badges */
+.minimal-theme .home-products .product-card .discount-badge,
+.minimal-theme .home-products .product-card .badge {
+  background: var(--minimal-text);
+  color: var(--minimal-bg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+/* Minimal product title */
+.minimal-theme .home-products .product-card .product-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--minimal-text);
+  margin: 0 0 0.5rem;
+}
+
+/* Minimal rating */
+.minimal-theme .home-products .product-card .rating-row {
+  margin-bottom: 0.5rem;
+}
+
+/* Minimal price */
+.minimal-theme .home-products .product-card .price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.minimal-theme .home-products .product-card .price-row .price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--minimal-text);
+}
+
+.minimal-theme .home-products .product-card .price-row .old {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--minimal-text-soft);
+  text-decoration: line-through;
+}
+
+/* Minimal actions */
+.minimal-theme .home-products .product-card .actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.minimal-theme .home-products .product-card .actions button,
+.minimal-theme .home-products .product-card .actions a {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border-radius: var(--minimal-radius);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+/* Minimal category grid */
+.minimal-theme .cats-grid {
+  @extend .grid-base;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+/* Minimal category card */
+.minimal-theme .cat-card {
+  @extend .card-base;
+  @include shared.card-hover;
+  background: var(--minimal-bg);
+  border: 1px solid var(--minimal-border);
+  border-radius: var(--minimal-radius);
+  overflow: hidden;
+  box-shadow: var(--minimal-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.minimal-theme .cat-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  transform: translateY(-2px);
+}
+
+.minimal-theme .cat-card__media {
+  aspect-ratio: 4/3;
+  background: var(--minimal-accent);
+}
+
+.minimal-theme .cat-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.minimal-theme .cat-card__overlay {
+  padding: 1rem;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.6));
+  color: white;
+}
+
+.minimal-theme .cat-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}
+
+.minimal-theme .cat-card__badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255,255,255,.2);
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+/* Minimal features */
+.minimal-theme .home-features__grid {
+  @extend .grid-base;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.minimal-theme .home-feature {
+  @extend .card-base;
+  @include shared.card-hover;
+  background: var(--minimal-bg);
+  border: 1px solid var(--minimal-border);
+  border-radius: var(--minimal-radius);
+  padding: 2rem 1.5rem;
+  box-shadow: var(--minimal-shadow);
+  text-align: center;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.minimal-theme .home-feature:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  transform: translateY(-2px);
+}
+
+.minimal-theme .home-feature__icon {
+  width: 3rem;
+  height: 3rem;
+  background: var(--minimal-accent);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--minimal-text);
+}
+
+.minimal-theme .home-feature__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--minimal-text);
+}
+
+.minimal-theme .home-feature__text {
+  font-size: 0.875rem;
+  color: var(--minimal-text-soft);
+  margin: 0;
+}
+
+/* Minimal blog */
+.minimal-theme .blog-preview-grid {
+  @extend .grid-base;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.minimal-theme .blog-card {
+  @extend .card-base;
+  @include shared.card-hover;
+  background: var(--minimal-bg);
+  border: 1px solid var(--minimal-border);
+  border-radius: var(--minimal-radius);
+  overflow: hidden;
+  box-shadow: var(--minimal-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.minimal-theme .blog-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  transform: translateY(-2px);
+}
+
+.minimal-theme .blog-card__media {
+  aspect-ratio: 16/10;
+  background: var(--minimal-accent);
+}
+
+.minimal-theme .blog-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.minimal-theme .blog-card__body {
+  padding: 1.5rem;
+}
+
+.minimal-theme .blog-card__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 0.5rem;
+  color: var(--minimal-text);
+}
+
+.minimal-theme .blog-card__excerpt {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--minimal-text-soft);
+  margin: 0 0 1rem;
+}
+
+.minimal-theme .blog-card__more {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--minimal-text);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.minimal-theme .blog-card__more:hover {
+  color: var(--minimal-text-soft);
+}
+
+/* Minimal buttons */
+.minimal-theme .btn-primary {
+  @extend .btn-primary;
+  background: var(--minimal-text);
+  color: var(--minimal-bg);
+  border: none;
+}
+
+.minimal-theme .btn-primary:hover {
+  background: #000;
+}
+
+.minimal-theme .btn-secondary {
+  @extend .btn-secondary;
+  background: transparent;
+  color: var(--minimal-text);
+  border: 1px solid var(--minimal-border);
+}
+
+.minimal-theme .btn-secondary:hover {
+  background: var(--minimal-accent);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .minimal-theme .home-hero__title {
+    font-size: 2.5rem;
+  }
+
+  .minimal-theme .home-hero__subtitle {
+    font-size: 1.5rem;
+  }
+
+  .minimal-theme .home-hero__lead {
+    font-size: 1rem;
+  }
+
+  .minimal-theme .home-hero__actions {
+    flex-direction: column;
+  }
+
+  .minimal-theme .home-products .featured-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+
+  .minimal-theme .home-features__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .minimal-theme .blog-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .minimal-theme .home-hero {
+    padding: 4rem 0;
+  }
+
+  .minimal-theme .home-hero__title {
+    font-size: 2rem;
+  }
+
+  .minimal-theme .home-hero__actions {
+    width: 100%;
+  }
+
+  .minimal-theme .home-hero__btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .minimal-theme .home-products .featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .minimal-theme .cats-grid {
+    grid-template-columns: 1fr;
+  }
+}

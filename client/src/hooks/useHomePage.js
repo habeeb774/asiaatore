@@ -55,7 +55,7 @@ export const useMotion = (deferRender, prefersReducedMotion) => {
         .then((m) => {
           if (cancelled) return;
           const MotionObj = m.m || m.motion;
-          if (MotionObj && typeof MotionObj === 'object' && 'div' in MotionObj) {
+          if (MotionObj && typeof MotionObj === 'object' && MotionObj.div) {
             setMotion(MotionObj);
           } else {
             setMotion(null);

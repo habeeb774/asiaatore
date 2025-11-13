@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLanguage } from '../../stores/LanguageContext';
 
 // Enhanced SEO Component with structured data and advanced meta tags
 const SEO = ({
@@ -21,6 +22,7 @@ const SEO = ({
   article,
   ...props
 }) => {
+  const { locale } = useLanguage();
   // Generate full title
   const fullTitle = title ? `${title} | My Store` : 'My Store';
 
@@ -65,11 +67,24 @@ const SEO = ({
 
     // Product structured data
     if (type === 'product' && product) {
+      // Handle multilingual product data
+      const productName = typeof product.name === 'object' && product.name[locale]
+        ? product.name[locale]
+        : typeof product.name === 'string'
+        ? product.name
+        : 'Product';
+
+      const productDescription = typeof product.description === 'object' && product.description[locale]
+        ? product.description[locale]
+        : typeof product.description === 'string'
+        ? product.description
+        : 'Product description';
+
       return {
         ...baseData,
         '@type': 'Product',
-        name: product.name,
-        description: product.description,
+        name: productName,
+        description: productDescription,
         image: product.images?.map(img => `${window.location.origin}${img}`) || [imageUrl],
         brand: {
           '@type': 'Brand',

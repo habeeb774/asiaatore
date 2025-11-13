@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import adminApi from '../../../services/api/admin';
 import { useToast } from '../../../stores/ToastContext';
 import { Button } from '../../ui/Button';
-import { Input } from '../../common/Input';
-import { Select } from '../../common/Select';
+import { Input } from '../../ui/input';
+import { Select } from '../../ui/select';
 
 const AddUserForm = ({ onUserAdded, onCancel }) => {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', role: 'user', phone: '', sendInvite: true, showPassword: false });
@@ -90,7 +90,13 @@ const AddUserForm = ({ onUserAdded, onCancel }) => {
         {!form.sendInvite && (
           <Input label="تأكيد كلمة المرور" type={form.showPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={e => handleChange('confirmPassword', e.target.value)} minLength={6} />
         )}
-        <Select label="الدور" value={form.role} onChange={e => handleChange('role', e.target.value)} options={roleOptions} />
+        <Select label="الدور" value={form.role} onChange={e => handleChange('role', e.target.value)}>
+          {roleOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
         <Input label="الجوال" type="tel" value={form.phone} onChange={e => handleChange('phone', e.target.value)} placeholder="اختياري" />
       </div>
       <div className="flex items-center gap-2">

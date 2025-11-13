@@ -1,0 +1,347 @@
+/* HomePage Components Styles - Reusable component styles */
+@use '../_variables' as *;
+@use '../_mixins' as *;
+@use './_shared-components' as shared;
+
+/* Loading states */
+.loading-skeleton {
+  @extend .loading-skeleton;
+}
+
+/* Product card skeleton - now uses shared styles */
+.product-card-skeleton {
+  @extend .product-card-skeleton;
+}
+
+/* Error states - now uses shared styles */
+.error-state {
+  @extend .error-state;
+}
+
+.error-state__icon {
+  @extend .error-state-icon;
+}
+
+.error-state__title {
+  @extend .error-state-title;
+}
+
+.error-state__message {
+  @extend .error-state-message;
+}
+
+.error-state__action {
+  @extend .error-state-action;
+}
+
+/* Empty states - now uses shared styles */
+.empty-state {
+  @extend .empty-state;
+}
+
+.empty-state__icon {
+  @extend .empty-state-icon;
+}
+
+.empty-state__title {
+  @extend .empty-state-title;
+}
+
+.empty-state__message {
+  @extend .empty-state-message;
+}
+
+.empty-state__action {
+  @extend .empty-state-action;
+}
+
+/* Badge components - now uses shared styles */
+.badge {
+  @extend .badge-base;
+}
+
+.badge--primary {
+  @extend .badge-primary;
+}
+
+.badge--secondary {
+  @extend .badge-secondary;
+}
+
+.badge--success {
+  @extend .badge-success;
+}
+
+.badge--warning {
+  @extend .badge-warning;
+}
+
+.badge--danger {
+  @extend .badge-danger;
+}
+
+/* Status indicators - now uses shared styles */
+.status-indicator {
+  @extend .status-indicator;
+}
+
+.status-indicator--online::before {
+  @include shared.status-online;
+}
+
+.status-indicator--offline::before {
+  @include shared.status-offline;
+}
+
+.status-indicator--busy::before {
+  @include shared.status-busy;
+}
+
+.status-indicator--away::before {
+  @include shared.status-away;
+}
+
+/* Card components - now uses shared styles */
+.card {
+  @extend .card-base;
+}
+
+.card__header {
+  @extend .card-header;
+}
+
+.card__title {
+  @extend .card__title;
+}
+
+.card__subtitle {
+  @extend .card__subtitle;
+}
+
+.card__body {
+  @extend .card-body;
+}
+
+.card__footer {
+  @extend .card-footer;
+}
+
+/* Button components - now uses shared styles */
+.btn {
+  @extend .btn-base;
+}
+
+.btn:disabled {
+  @include shared.btn-disabled;
+}
+
+.btn--primary {
+  @extend .btn-primary;
+}
+
+.btn--primary:hover:not(:disabled) {
+  @include shared.btn-primary-hover;
+}
+
+.btn--secondary {
+  @extend .btn-secondary;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  @include shared.btn-secondary-hover;
+}
+
+.btn--outline {
+  @extend .btn-outline;
+}
+
+.btn--outline:hover:not(:disabled) {
+  @include shared.btn-outline-hover;
+}
+
+.btn--ghost {
+  @extend .btn-ghost;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  @include shared.btn-ghost-hover;
+}
+
+.btn--sm {
+  @extend .btn-sm;
+}
+
+.btn--lg {
+  @extend .btn-lg;
+}
+
+.btn--full {
+  @extend .btn-full;
+}
+
+/* Form components - now uses shared styles */
+.form-group {
+  @extend .form-group;
+}
+
+.form-label {
+  @extend .form-label;
+}
+
+.form-input {
+  @extend .form-input;
+}
+
+.form-input:focus {
+  @include shared.form-input-focus;
+}
+
+.form-input::placeholder {
+  @include shared.form-input-placeholder;
+}
+
+.form-error {
+  @extend .form-error;
+}
+
+.form-help {
+  @extend .form-help;
+}
+
+/* Modal components - keeping specific styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal__header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+}
+
+.modal__close {
+  background: none;
+  border: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  transition: background-color 0.2s ease;
+}
+
+.modal__close:hover {
+  background: #f3f4f6;
+}
+
+.modal__body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal__footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+/* Tooltip components - keeping specific styles */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip__trigger {
+  cursor: help;
+}
+
+.tooltip__content {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.tooltip__content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1f2937;
+}
+
+.tooltip:hover .tooltip__content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Responsive utilities - keeping specific styles */
+@media (max-width: 640px) {
+  .card__header,
+  .card__body,
+  .card__footer {
+    padding: 1rem;
+  }
+
+  .modal {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .modal__header,
+  .modal__body,
+  .modal__footer {
+    padding: 1rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1.25rem;
+  }
+}

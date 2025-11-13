@@ -86,8 +86,8 @@ VITE_API_TIMEOUT_MS=12000
 
 #### Application Info
 ```bash
-VITE_APP_NAME=متجرنا الحديث
-VITE_APP_SHORT_NAME=المتجر
+VITE_APP_NAME=متجر منفذ آسيا
+VITE_APP_SHORT_NAME=متجر منفذ آسيا
 VITE_APP_DESC=متجر إلكتروني حديث للمنتجات والعروض اليومية
 VITE_APP_VERSION=1.0.0
 ```

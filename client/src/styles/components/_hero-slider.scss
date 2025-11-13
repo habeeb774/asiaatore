@@ -1,0 +1,274 @@
+/**
+ * أنماط مكون HeroSlider الموحد
+ * يجمع جميع أنماط الهيرو في ملف واحد
+ */
+
+// أنماط Swiper المخصصة
+.hero-slider-container {
+  @apply relative overflow-hidden;
+
+  // تخصيص نقاط التنقل
+  .hero-pagination-bullet {
+    width: 12px;
+    height: 12px;
+    @apply rounded-full bg-white/60 transition-all duration-200;
+  }
+
+  .hero-pagination-bullet-active {
+    @apply bg-white scale-125 shadow-lg;
+  }
+
+  // تخصيص أزرار التنقل
+  .hero-nav-prev,
+  .hero-nav-next {
+    @apply absolute top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white rounded-full w-12 h-12 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50;
+  }
+
+  .hero-nav-prev {
+    @apply left-4;
+  }
+
+  .hero-nav-next {
+    @apply right-4;
+  }
+
+  // تخصيص Swiper
+  .hero-swiper {
+    @apply w-full h-full;
+
+    .swiper-pagination {
+      @apply bottom-4;
+    }
+
+    .swiper-pagination-bullet {
+      @apply bg-white/60 hover:bg-white/80;
+    }
+
+    .swiper-pagination-bullet-active {
+      @apply bg-white scale-125 shadow-lg;
+    }
+
+    .swiper-button-prev,
+    .swiper-button-next {
+      @apply text-white bg-black/40 hover:bg-black/70 rounded-full w-12 h-12 transition-all duration-200;
+
+      &::after {
+        @apply text-lg font-bold;
+      }
+    }
+
+    .swiper-button-prev {
+      @apply left-4;
+    }
+
+    .swiper-button-next {
+      @apply right-4;
+    }
+  }
+}
+
+// أنماط حالة التحميل
+.hero-slider-loading {
+  @apply relative overflow-hidden;
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+// أنماط الشريحة الفردية
+.hero-slide {
+  @apply relative w-full h-full cursor-pointer overflow-hidden;
+
+  // تأثيرات التحويم
+  &:hover {
+    .hero-image-container img {
+      @apply scale-105;
+    }
+  }
+
+  // انتقال سلس للصور
+  .hero-image-container {
+    @apply relative overflow-hidden;
+
+    img {
+      @apply transition-transform duration-700 ease-out;
+    }
+  }
+}
+
+// أنماط المحتوى النصي
+.hero-content {
+  @apply absolute inset-0 flex flex-col justify-center items-center text-center px-6;
+
+  // تأثيرات النص
+  h1 {
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4;
+
+    span {
+      @apply block text-white drop-shadow-2xl;
+    }
+  }
+
+  p {
+    @apply text-lg sm:text-2xl md:text-3xl text-white/95 font-medium max-w-3xl mx-auto leading-snug drop-shadow-lg mb-6;
+  }
+
+  // زر الدعوة للعمل
+  .hero-cta {
+    @apply bg-white text-gray-900 hover:bg-gray-100 px-8 py-4 rounded-full font-semibold shadow-xl transition-all duration-200;
+  }
+}
+
+// أنماط البانر
+.hero-banner-content {
+  @apply absolute inset-0 flex flex-col items-center justify-center text-center px-4;
+
+  .banner-overlay {
+    @apply bg-black/50 rounded-xl px-4 py-3 inline-block max-w-2xl mx-auto shadow-lg;
+
+    h2 {
+      @apply text-2xl md:text-4xl font-bold mb-2 drop-shadow-lg text-white;
+    }
+
+    p {
+      @apply text-sm md:text-lg max-w-xl text-white/90;
+    }
+  }
+}
+
+// أنماط نقاط التنقل المخصصة
+.hero-custom-pagination {
+  @apply absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10;
+
+  button {
+    width: 12px;
+    height: 12px;
+    @apply rounded-full transition-all duration-200;
+
+    &.active {
+      @apply bg-white scale-125 shadow-lg;
+    }
+
+    &:not(.active) {
+      @apply bg-white/60 hover:bg-white/80;
+    }
+  }
+}
+
+// أنماط زر التشغيل/الإيقاف
+.hero-play-pause {
+  @apply absolute top-4 right-4 z-10 bg-black/40 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50;
+}
+
+// أنماط متجاوبة
+@media (max-width: 768px) {
+  .hero-slider-container {
+    .hero-nav-prev,
+    .hero-nav-next {
+      @apply w-10 h-10;
+    }
+
+    .hero-nav-prev {
+      @apply left-2;
+    }
+
+    .hero-nav-next {
+      @apply right-2;
+    }
+
+    .hero-swiper {
+      .swiper-button-prev,
+      .swiper-button-next {
+        @apply w-10 h-10;
+      }
+
+      .swiper-button-prev {
+        @apply left-2;
+      }
+
+      .swiper-button-next {
+        @apply right-2;
+      }
+    }
+  }
+
+  .hero-content {
+    @apply px-4;
+
+    h1 {
+      @apply text-3xl sm:text-4xl md:text-5xl;
+    }
+
+    p {
+      @apply text-base sm:text-xl md:text-2xl;
+    }
+
+    .hero-cta {
+      @apply px-6 py-3 text-sm;
+    }
+  }
+
+  .hero-banner-content {
+    .banner-overlay {
+      @apply px-3 py-2 max-w-sm;
+
+      h2 {
+        @apply text-xl md:text-2xl;
+      }
+
+      p {
+        @apply text-xs md:text-sm;
+      }
+    }
+  }
+}
+
+// أنماط الوضع المظلم
+@media (prefers-color-scheme: dark) {
+  .hero-slider-loading {
+    @apply bg-gradient-to-br from-gray-700 to-gray-800;
+  }
+
+  .hero-slide .hero-image-container {
+    @apply bg-gradient-to-br from-gray-700 to-gray-800;
+  }
+}
+
+// أنماط الطباعة
+@media print {
+  .hero-slider-container {
+    @apply hidden;
+  }
+}
+
+// أنماط الوصولية
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide .hero-image-container img {
+    @apply transition-none;
+  }
+
+  .hero-slider-container * {
+    @apply transition-none;
+  }
+}
+
+// أنماط التركيز للوصولية
+.hero-nav-prev:focus-visible,
+.hero-nav-next:focus-visible,
+.hero-play-pause:focus-visible {
+  @apply ring-2 ring-white/50 ring-offset-2 ring-offset-transparent;
+}
+
+.hero-slide:focus-visible {
+  @apply outline-2 outline-white/50 outline-offset-2;
+}

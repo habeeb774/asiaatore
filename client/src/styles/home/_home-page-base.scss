@@ -1,0 +1,93 @@
+/* HomePage Base Styles - Core page layout and basic components */
+@use '../_variables' as *;
+@use '../_mixins' as *;
+@use './_shared-components' as shared;
+
+/* Home Page Layout */
+.home-page {
+  min-height: 100vh;
+  background: var(--grad-primary);
+  font-family: var(--font-sans);
+  width: 100%;
+  direction: rtl;
+}
+
+/* Main Content */
+.main-content {
+  padding: 2rem 0;
+
+  .page-title {
+    color: var(--color-surface);
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    @include flex-center(row, flex-start, center);
+
+    .page-title-icon {
+      background: rgba(255,255,255,0.2);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-inline-start: 1rem;
+    }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+
+    .stat-card {
+      @extend .card-base;
+      @include shared.card-hover;
+      background: rgba(255,255,255,0.95);
+      padding: 1.5rem;
+      border-radius: 16px;
+      @include flex-center(row, flex-start, center);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+
+      .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        @include flex-center;
+        margin-inline-start: 1rem;
+        font-size: 1.5rem;
+
+        &.primary { background: $primary-gradient; color: $white; }
+        &.success { background: $success-gradient; color: $white; }
+        &.warning { background: $warning-gradient; color: $white; }
+        &.danger { background: $danger-gradient; color: $white; }
+      }
+
+      .stat-content {
+        flex: 1;
+
+        .stat-number { font-size: 2rem; font-weight: 700; color: var(--color-text); }
+        .stat-title { color: var(--color-text-soft); margin-bottom: 0.5rem; }
+        .stat-trend {
+          font-size: 0.875rem;
+          color: var(--color-success);
+
+          &.down { color: var(--color-danger); }
+        }
+      }
+    }
+  }
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+  .nav-links { flex-direction: column; gap: 0.5rem; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .stores-grid { grid-template-columns: 1fr; }
+  .notification-sidebar { width: 100%; }
+}
+
+/* Dark Mode */
+.dark-mode {
+  background: var(--grad-soft);
+
+  .card, .stat-card { background: var(--color-surface); color: var(--color-text); }
+  .stat-number, .store-name, .card-header span { color: var(--color-text); }
+  .stat-title, .store-address, .store-description { color: var(--color-text-soft); }
+}

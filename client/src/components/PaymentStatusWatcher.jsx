@@ -30,7 +30,7 @@ export default function PaymentStatusWatcher({
     tick();
     timerRef.current = setInterval(tick, intervalMs);
     return () => clearInterval(timerRef.current);
-  }, [intervalMs, onRefresh, autoStart]);
+  }, [intervalMs, onRefresh, autoStart, toast]);
 
   return null;
 }

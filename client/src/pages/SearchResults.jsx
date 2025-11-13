@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import Breadcrumbs from '../components/common/Breadcrumbs'
 import api from '../services/api/client'
 import { useLanguage } from '../stores/LanguageContext'
-import ProductCard from '../components/products/ProductCard'
+import ProductCard from '../components/shared/ProductCard'
 
 const SearchResults = () => {
   const { search } = useLocation()

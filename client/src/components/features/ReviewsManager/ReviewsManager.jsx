@@ -3,7 +3,8 @@ import { useLanguage, LocalizedText, DateDisplay } from '../../contexts/Language
 import { useNotifications } from '../../components/Notification/Notification';
 import { LazyImage } from '../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';
-import { Modal, ConfirmModal } from '../Modal';
+import Modal from '../../ui/Modal';
+import ConfirmModal from '../admin/ConfirmModal';
 
 const ReviewsManager = ({ productId, className = '' }) => {
   const { t, language } = useLanguage();

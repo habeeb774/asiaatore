@@ -3,7 +3,7 @@ import { useLanguage, LocalizedText } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../components/Notification/Notification';
 import { LazyImage } from '../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';
-import { Modal } from '../Modal';
+import Modal from '../../ui/Modal';
 
 const AdvancedSearch = ({
   className = '',

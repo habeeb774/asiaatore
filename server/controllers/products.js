@@ -100,6 +100,8 @@ router.get('/', async (req, res) => {
       if (minPrice) where.price.gte = Number(minPrice);
       if (maxPrice) where.price.lte = Number(maxPrice);
     }
+    // Hide out-of-stock products for regular users (stock <= 0)
+    where.stock = { gt: 0 };
     // Pagination (optional)
     const pg = page ? Math.max(1, parseInt(page, 10)) : null;
     const ps = pageSize ? Math.min(100, Math.max(1, parseInt(pageSize, 10))) : 20;
@@ -187,7 +189,7 @@ router.get('/_debug', async (req, res) => {
 
 router.get('/offers', async (req, res) => {
   try {
-    const list = await productService.list({ ...whereWithDeletedAt({}), oldPrice: { not: null } }, { orderBy: { createdAt: 'desc' } });
+    const list = await productService.list({ ...whereWithDeletedAt({}), oldPrice: { not: null }, stock: { gt: 0 } }, { orderBy: { createdAt: 'desc' } });
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
@@ -229,7 +231,7 @@ router.get('/offers', async (req, res) => {
 router.get('/featured', async (req, res) => {
   try {
     // Return most recently created active products (featured products)
-    const list = await productService.list(whereWithDeletedAt({ status: 'active' }), { orderBy: { createdAt: 'desc' }, take: 12 });
+    const list = await productService.list(whereWithDeletedAt({ status: 'active', stock: { gt: 0 } }), { orderBy: { createdAt: 'desc' }, take: 12 });
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
@@ -358,10 +360,10 @@ router.post('/batch/clear-discount', requireAdmin, async (req, res) => {
 router.get('/catalog/summary', async (req, res) => {
   try {
     // Fetch categories that have at least one product
-  const byCategory = await prisma.product.groupBy({ by: ['category'], where: whereWithDeletedAt({}), _count: { category: true } });
+  const byCategory = await prisma.product.groupBy({ by: ['category'], where: whereWithDeletedAt({ stock: { gt: 0 } }), _count: { category: true } });
     // For each category, get a few recent products (limit 8)
     const categories = await Promise.all(byCategory.map(async c => {
-      const items = await productService.list({ category: c.category }, { orderBy: { createdAt: 'desc' }, take: 8 });
+      const items = await productService.list({ category: c.category, stock: { gt: 0 } }, { orderBy: { createdAt: 'desc' }, take: 8 });
       return {
         category: c.category,
         count: c._count.category,
@@ -393,7 +395,8 @@ router.get('/:id/similar', async (req, res) => {
         {
           category: currentProduct.category,
           status: 'active',
-          id: { not: productId }
+          id: { not: productId },
+          stock: { gt: 0 }
         },
         {
           orderBy: { createdAt: 'desc' },
@@ -416,7 +419,8 @@ router.get('/:id/similar', async (req, res) => {
         {
           brandId: currentProduct.brandId,
           status: 'active',
-          id: { not: productId }
+          id: { not: productId },
+          stock: { gt: 0 }
         },
         {
           orderBy: { createdAt: 'desc' },
@@ -442,7 +446,8 @@ router.get('/:id/similar', async (req, res) => {
         {
           price: { gte: priceMin, lte: priceMax },
           status: 'active',
-          id: { not: productId }
+          id: { not: productId },
+          stock: { gt: 0 }
         },
         {
           orderBy: { createdAt: 'desc' },
@@ -464,7 +469,8 @@ router.get('/:id/similar', async (req, res) => {
       const recentProducts = await productService.list(
         {
           status: 'active',
-          id: { not: productId }
+          id: { not: productId },
+          stock: { gt: 0 }
         },
         {
           orderBy: { createdAt: 'desc' },

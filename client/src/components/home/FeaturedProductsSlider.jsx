@@ -1,5 +1,5 @@
 import React from 'react';
-import ProductCard from '../shared/ProductCard/ProductCard';
+import ProductCard from '../shared/ProductCard';
 import Carousel from '../ui/Carousel';
 
 const FeaturedProductsSlider = ({ products = [], title, autoplay = true, interval = 4000 }) => {

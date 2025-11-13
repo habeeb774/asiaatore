@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api/client';
 import { useAuth } from '../stores/AuthContext';
@@ -16,16 +16,16 @@ export default function ProductReviews({ productId }) {
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!productId) return;
     setLoading(true); setError(null);
     try {
       const data = await api.reviewsListForProduct(productId);
       setReviews(Array.isArray(data) ? data : (data.reviews || []));
     } catch (e) { setError(e.message); } finally { setLoading(false); }
-  };
+  }, [productId]);
 
-  useEffect(() => { load(); }, [productId]);
+  useEffect(() => { load(); }, [productId, load]);
 
   const submit = async (e) => {
     e.preventDefault();

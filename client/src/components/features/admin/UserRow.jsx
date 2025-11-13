@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import adminApi from '../../../services/api/admin';
 import { useToast } from '../../../stores/ToastContext';
 import { Button } from '../../ui/Button';
-import { Select } from '../../common/Select';
+import { Select } from '../../ui/select';
 import { MoreVertical, Trash2, UserX, UserCheck } from 'lucide-react';
 
 const UserRow = ({ user, onUserUpdated, onUserDeleted }) => {
@@ -70,7 +70,13 @@ const UserRow = ({ user, onUserUpdated, onUserDeleted }) => {
       <td className="p-3">
         {isEditing ? (
           <div className="flex items-center gap-2">
-            <Select value={newRole} onChange={e => setNewRole(e.target.value)} options={roleOptions} className="h-8" />
+            <Select value={newRole} onChange={e => setNewRole(e.target.value)} className="h-8">
+              {roleOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
             <Button size="sm" onClick={handleRoleUpdate}>حفظ</Button>
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>إلغاء</Button>
           </div>

@@ -6,7 +6,7 @@ import { resolveLocalized } from '../utils/locale';
 import Seo from '../components/Seo';
 import { useSettings } from '../stores/SettingsContext';
 import api from '../services/api/client';
-
+import CategoriesSection from '../components/home/CategoriesSection';
 const CatalogPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,6 +72,7 @@ const CatalogPage = () => {
               <Skeleton className="h-8 w-56 mx-auto mb-2" />
               <Skeleton className="h-4 w-80 mx-auto" />
             </div>
+      
             <div className="featured-grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))'}}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i}>

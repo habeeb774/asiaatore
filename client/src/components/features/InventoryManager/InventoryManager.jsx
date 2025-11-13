@@ -3,7 +3,8 @@ import { useLanguage, LocalizedText, CurrencyDisplay, DateDisplay } from '../../
 import { useNotifications } from '../../components/Notification/Notification';
 import { LazyImage } from '../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';
-import { Modal, ConfirmModal } from '../Modal';
+import Modal from '../../ui/Modal';
+import ConfirmModal from '../admin/ConfirmModal';
 
 const InventoryManager = ({ className = '' }) => {
   const { t, language } = useLanguage();

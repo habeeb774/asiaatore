@@ -23,7 +23,7 @@ const TOKEN_FALLBACKS = {
   'brand.primaryAlt': '#276749',
   'brand.primaryRgb': '47,133,90',
   'brand.secondary': '#276749',
-  'brand.gradient.primary': 'linear-gradient(180deg, #2F855A, #276749)',
+  'brand.gradient.primary': 'linear-gradient(180deg, #2F855A, #00b561ff)',
   'brand.accent': '#3A5A79',
   'brand.accentRgb': '58,90,121',
   'brand.ring': '#C8A96A',

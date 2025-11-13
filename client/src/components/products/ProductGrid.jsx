@@ -1,5 +1,5 @@
 import React from 'react';
-import ProductCard from './ProductCard';
+import ProductCard from '../shared/ProductCard';
 
 const ProductGrid = ({ products, wide, showImageBadge = true, showPriceBadge = true }) => {
   // Use Tailwind grid utility to enforce two-column layout on small+ screens.

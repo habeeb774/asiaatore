@@ -33,4 +33,5 @@
 /* Notes:
  - Route-specific styles like HomePage.scss, Hero.scss, product-details.scss remain imported by their pages for code-splitting.
  - Header rules originate from _design-system.scss which includes _header.scss; Header.scss (legacy) is not included to avoid duplication.
+ - Product.css and HomeHero.css have been merged into _product-card.scss and Hero.scss respectively.
 */

@@ -3,7 +3,7 @@ import { useLanguage, LocalizedText, DateDisplay } from '../../contexts/Language
 import { useNotifications } from '../../components/Notification/Notification';
 import { LazyImage } from '../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';
-import { Modal } from '../Modal/Modal';
+import Modal from '../ui/Modal';
 
 const CustomerReviews = ({
   productId,

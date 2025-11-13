@@ -3,7 +3,7 @@
 */
 
 :root{
-  --ui-bg-gradient: linear-gradient(180deg,#ffffff 0%, #fbfbfd 100%);
+  --ui-bg-gradient: linear-gradient(180deg,#d7d6d6 0%, #fbfbfd 100%);
   --muted-1: #6b7280; /* gray-500 */
   --accent-1: #0ea5a4; /* teal-500 */
   --accent-2: #6366f1; /* indigo-500 */

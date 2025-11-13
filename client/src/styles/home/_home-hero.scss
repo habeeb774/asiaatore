@@ -1,0 +1,102 @@
+/* HomePage Hero Styles - Hero section and related components */
+@use '../_variables' as *;
+@use '../_mixins' as *;
+@use './_shared-components' as shared;
+
+/* Target the hero section rendered in src/pages/Home.jsx (uses utility-like classes) */
+.bg-gradient-to-l.from-primary-red.to-primary-gold {
+  /* Use accessible red→gold gradient that ensures white text contrast ≥ 4.5 */
+  background: var(--grad-hero);
+  color: #9f9898;
+  padding: 1.5rem 0;
+  margin: 0;
+  width: 100%;
+}
+
+.bg-gradient-to-l.from-primary-red.to-primary-gold .container-custom {
+  display: flex;
+  align-items: center;
+  max-width: none;
+  width: 100%;
+  padding-inline: clamp(16px, 2vw, 56px);
+  border-radius: 5px 0 0 5px;
+}
+
+@media (max-width: 640px) {
+  .bg-gradient-to-l.from-primary-red.to-primary-gold .container-custom {
+    padding: 0 !important;
+    border-radius: 5px 0 0 5px;
+  }
+}
+
+.bg-gradient-to-l.from-primary-red.to-primary-gold h1 {
+  line-height: 1.05;
+}
+
+.bg-gradient-to-l.from-primary-red.to-primary-gold .btn-secondary {
+  @extend .btn-secondary;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 12px 20px;
+  border-radius: 10px;
+}
+
+.bg-gradient-to-l.from-primary-red.to-primary-gold .btn-secondary:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.bg-gradient-to-l .shadow-2xl { box-shadow: 0 25px 60px rgba(0,0,0,0.28); }
+.bg-gradient-to-l img:not(.home-hero__brand) { max-width: 100%; height: auto; display: block; border-radius: 14px; }
+.home-hero__brand { height: .75rem; width: auto; display: inline-block; object-fit: contain; vertical-align: middle; }
+@media (min-width: 768px) { .home-hero__brand { height: 5.25rem; } }
+
+.hero-slider__frame { aspect-ratio: 16/9; max-height: clamp(180px, 38vh, 340px); }
+@media (max-width: 640px) {
+  .hero-slider__frame { aspect-ratio: 16/9; max-height: clamp(160px, 36vh, 260px); }
+}
+
+.section-padding.bg-white .text-center h3 { color: #111827; }
+.section-padding.bg-white .text-center p { color: #6b7280; }
+
+.section-padding .grid > div { background: transparent; }
+
+.home-products.section-padding.bg-gray-50 { background: #f3f4f6; }
+.home-products.section-padding.bg-white { background: #ffffff; }
+
+/* Featured products grid */
+.featured-grid {
+  @extend .grid-base;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 700px) {
+  .featured-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+.cats-grid {
+  @extend .grid-base;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 700px) {
+  .cats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* Generic product-card styles are centralized in _product-card.scss and imported via product-card.scss
+   to avoid duplication across pages. Page-specific overrides remain under .home-products .product-card. */
+
+/* Responsive tweaks */
+@media (max-width: 1200px) {
+  .bg-gradient-to-l.from-primary-red.to-primary-gold { padding: 0rem 0; }
+  .bg-gradient-to-l .container-custom { flex-direction: column-reverse; gap: 1.5rem; }
+  .product-card .product-image img { height: clamp(160px, 26vw, 240px); }
+}

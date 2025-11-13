@@ -1,0 +1,180 @@
+/* HomePage Layout Styles - Professional layout, sidebar, and responsive design */
+@use '../_variables' as *;
+@use '../_mixins' as *;
+@use './_shared-components' as shared;
+
+/* Unified Page Width (Match Cart Page Width) */
+:root {
+  --page-max-width: 1200px; /* عدل القيمة إذا كان عرض عربة التسوق مختلفاً */
+}
+
+/* حصر عرض حاوية الهيرو مع بقاء الخلفية ممتدة */
+.bg-gradient-to-l.from-primary-red.to-primary-gold .container-custom {
+  /* كانت max-width: none سابقاً */
+  border-radius: 5px 0 0 5px;
+  max-width: var(--page-max-width) !important;
+  margin-inline: auto;
+  width: 100%;
+}
+
+/* المحتوى الرئيسي في الصفحة الرئيسية */
+.home-page .main-content {
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 2vw, 2.25rem);
+}
+
+/* شبكات الإحصائيات والمنتجات بنفس العرض */
+.home-page .stats-grid,
+.home-page .featured-grid {
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/* تأكيد عدم تجاوز الصور العرض المحدد داخل الصفحة الرئيسية */
+.home-page img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Professional Layout & Sidebar Overhaul */
+:root {
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 68px;
+  --sidebar-bg: #1f2933;
+  --sidebar-bg-alt: #253241;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: #fff;
+  --sidebar-muted: #b4bfca;
+  --transition-fast: .25s cubic-bezier(.4,.0,.2,1);
+}
+
+.app-layout.professional-layout {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  /* Lock the outer shell to viewport height so columns can scroll independently */
+  height: 100vh;
+  background: #ffffff;
+  overflow: hidden; /* prevent body scroll; delegate to inner columns */
+}
+
+.content-with-sidebar {
+  flex: 1;
+  /* FIX: كان min-width: 100 (بدون وحدة) */
+  min-width: 0; /* يسمح بالتمدد داخل flex بدون تجاوز */
+  padding: clamp(0.5rem,0vw,0rem) clamp(0.6rem,0vw,0rem) 0rem;
+  /* Make main column an independent scroll container */
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* avoid bubbling scroll to body */
+  /* Scrollbar aesthetics to match sidebar */
+  @supports (scrollbar-width: thin) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--color-primary-rgb, 34,197,94), .22) transparent;
+  }
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(var(--color-primary-rgb, 34,197,94), .24); border-radius: 30px; }
+  &::-webkit-scrollbar-thumb:hover { background: rgba(var(--color-primary-rgb, 34,197,94), .32); }
+}
+
+/* Prevent BottomNav overlap on mobile: add breathing room at bottom */
+@media (max-width: 768px) {
+  .content-with-sidebar {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Ensure hero reserves space and CTAs are above fixed bottom nav */
+.home-hero {
+  /* increase bottom padding (important to override utility classes like pb-12 if loaded later) */
+  padding-bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+}
+
+/* Raise stacking context for hero content so CTAs float above any fixed BottomNav */
+.home-hero .container,
+.home-hero .container-custom {
+  position: relative;
+  z-index: 60; /* above most overlays but below global toasts if any */
+}
+
+.home-hero .home-hero__content,
+.home-hero .phone-mockup-img,
+.home-hero a[aria-label],
+.home-hero .btn-primary,
+.home-hero .btn-secondary {
+  position: relative;
+  z-index: 70; /* ensure CTAs and hero content are above phone mockup and nav */
+}
+
+/* Tighten mobile-specific padding if needed (small screens) */
+@media (max-width: 420px) {
+  .home-hero { padding-bottom: calc(128px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* Background image helper to ensure proper layout and no reflow */
+.hero-bg-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Phone mockup image explicit sizing to avoid layout shifts */
+.phone-mockup-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Tighten mobile typography for very small screens */
+@media (max-width: 400px) {
+  .home-hero__title { font-size: calc(var(--text-xl) * .82); }
+  .home-hero__subtitle { font-size: calc(var(--text-md) * .9); }
+}
+
+/* Ensure touch target sizes on mobile */
+@media (max-width: 768px) {
+  .btn-primary,
+  .btn-secondary,
+  .home-products .product-card .actions button,
+  .home-products .product-card .actions a {
+    @include shared.btn-base;
+    min-height: 44px;
+  }
+}
+
+/* Light and dark tuning for content scrollbars */
+@supports (scrollbar-width: thin) {
+  [data-theme='dark'] .content-with-sidebar { scrollbar-color: rgba(var(--color-primary-rgb, 34,197,94), .28) transparent; }
+}
+[data-theme='dark'] .content-with-sidebar::-webkit-scrollbar-thumb { background: rgba(var(--color-primary-rgb, 34,197,94), .28); }
+[data-theme='dark'] .content-with-sidebar::-webkit-scrollbar-thumb:hover { background: rgba(var(--color-primary-rgb, 34,197,94), .36); }
+
+/* Mobile: hide vertical scrollbar on the main scroll container while keeping scroll functional */
+@media (max-width: 768px) {
+  .content-with-sidebar {
+    -ms-overflow-style: none; /* IE/old Edge */
+    scrollbar-width: none;    /* Firefox */
+  }
+  .content-with-sidebar::-webkit-scrollbar { display: none; }
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 0;
+  top: -60px;
+  background: #111;
+  color: #fff;
+  padding: .75rem 1.25rem;
+  z-index: 2000;
+  font-size: .95rem;
+  border-radius: 0 0 6px 0;
+  text-decoration: none;
+  transition: top var(--transition-fast);
+}
+.skip-link:focus { top: 0; }

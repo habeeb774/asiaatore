@@ -9,7 +9,7 @@ import { useCart } from '../stores/CartContext';
 import LazyImage from '../components/common/LazyImage';
 
 const Cart = () => {
-  const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart, maxPerItem, addToCart } = useCart() || {};
+  const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart, clearOldCartData, loadOldCartData, hasOldCartData, maxPerItem, addToCart } = useCart() || {};
   const lang = useLanguage();
   const locale = lang?.locale ?? 'ar';
   // Safe localization wrapper for names/titles/alt
@@ -382,6 +382,44 @@ const Cart = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* تحذير البيانات القديمة */}
+          {hasOldCartData && cartItems.length === 0 && (
+            <div className="lg:col-span-3 mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-blue-800">
+                      {locale === 'ar' ? 'بيانات سلة محفوظة' : 'Saved Cart Data'}
+                    </h3>
+                    <p className="text-sm text-blue-700 mt-1">
+                      {locale === 'ar' 
+                        ? 'لديك منتجات محفوظة من جلسة سابقة. هل تريد تحميلها أم البدء بسلة جديدة؟'
+                        : 'You have products saved from a previous session. Would you like to load them or start with a fresh cart?'
+                      }
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={loadOldCartData}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {locale === 'ar' ? 'تحميل المنتجات' : 'Load Products'}
+                    </button>
+                    <button
+                      onClick={clearOldCartData}
+                      className="px-4 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      {locale === 'ar' ? 'تجاهل' : 'Ignore'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* عناصر السلة */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">

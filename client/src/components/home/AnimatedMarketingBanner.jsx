@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from '../../lib/framerLazy.jsx';
+import { motion, AnimatePresence } from '../../lib/framerLazy.js';
 import { useLanguage } from '../../stores/LanguageContext';
 import { ButtonLink } from '../ui';
 import { X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
