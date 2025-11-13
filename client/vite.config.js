@@ -104,6 +104,8 @@ export default defineConfig(async ({ mode }) => {
           navigateFallbackDenylist: [/^\/api\//],
           cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,ico}'],
+          // Exclude server files from PWA analysis
+          globIgnores: ['**/server/**', '**/node_modules/**'],
           runtimeCaching: [
             {
               // Do NOT cache SSE; stream directly

@@ -1,8 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui';
 
-// Lazy API import helper (not a React hook - avoid naming starting with `use`)
-const loadApi = async () => (await import('../../../../server/db/client')).default;
+// API helper functions
+const apiCall = async (method, path, body) => {
+  const baseUrl = import.meta.env.VITE_API_URL || '/api';
+  const url = `${baseUrl}${path}`;
+  const options = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include'
+  };
+  if (body) options.body = JSON.stringify(body);
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw { ...error, status: res.status };
+  }
+  return res.json();
+};
+
+const envGet = () => apiCall('GET', '/env');
+const envUpdate = (scope, entries) => apiCall('PATCH', '/env', { scope, entries });
+const envDbTest = (payload) => apiCall('POST', '/env/db/test', payload);
 
 export default function EnvEditor() {
   const [loading, setLoading] = useState(true);
@@ -27,8 +46,7 @@ export default function EnvEditor() {
   useEffect(() => {
     (async () => {
       try {
-  const api = await loadApi();
-        const res = await api.envGet();
+        const res = await envGet();
         setFiles(res?.files || {});
         setProd(!!res?.prod);
         const client = res?.env?.client || {};
@@ -62,12 +80,11 @@ export default function EnvEditor() {
   const onSaveClient = async () => {
     setSavingClient(true); setMsg('');
     try {
-  const api = await loadApi();
       const entries = {};
       if (viteProxyTarget !== undefined) entries.VITE_PROXY_TARGET = viteProxyTarget;
       if (viteApiUrl !== undefined) entries.VITE_API_URL = viteApiUrl;
       if (viteTimeout !== undefined) entries.VITE_API_TIMEOUT_MS = String(viteTimeout || '');
-      const res = await api.envUpdate('client', entries);
+      const res = await envUpdate('client', entries);
       setMsg(`تم حفظ إعدادات الواجهة (${res.updatedKeys.length} مفتاح) في ${res.file}`);
     } catch (e) {
       const is404 = e?.status === 404 || /\(PATCH \/env\)/.test(String(e?.message || ''));
@@ -79,9 +96,8 @@ export default function EnvEditor() {
   const onTestDb = async () => {
     setTesting(true); setMsg('');
     try {
-  const api = await loadApi();
       const payload = dbUrl ? { databaseUrl: dbUrl } : { host: dbHost, port: dbPort, user: dbUser, pass: dbPass, name: dbName };
-      const res = await api.envDbTest(payload);
+      const res = await envDbTest(payload);
       setMsg(`نجح الاتصال بقاعدة البيانات. الإصدار: ${res.version || 'غير معروف'}`);
     } catch (e) {
       const is404 = e?.status === 404 || /\(POST \/env\/db\/test\)/.test(String(e?.message || ''));
@@ -93,7 +109,6 @@ export default function EnvEditor() {
   const onSaveServer = async () => {
     setSavingServer(true); setMsg('');
     try {
-  const api = await loadApi();
       const entries = {};
       if (dbUrl) {
         entries.DATABASE_URL = dbUrl;
@@ -104,7 +119,7 @@ export default function EnvEditor() {
         if (dbPass) entries.DB_PASS = dbPass;
         if (dbName !== undefined) entries.DB_NAME = dbName;
       }
-      const res = await api.envUpdate('server', entries);
+      const res = await envUpdate('server', entries);
       setMsg(`تم حفظ إعدادات الخادم (${res.updatedKeys.length} مفتاح) في ${res.file}. قد يتطلب الأمر إعادة تشغيل الخادم ليتم تطبيق التغييرات.`);
     } catch (e) {
       const is404 = e?.status === 404 || /\(PATCH \/env\)/.test(String(e?.message || ''));
