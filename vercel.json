@@ -4,6 +4,11 @@
   "installCommand": "PUPPETEER_SKIP_DOWNLOAD=1 npm install --include=dev",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
