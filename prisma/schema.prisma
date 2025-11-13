@@ -13,7 +13,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -117,7 +117,7 @@ model Product {
   brandId    String?
   cart       CartItem[]
   orderItems OrderItem[]
-  brand      Brand?             @relation(fields: [brandId], references: [id])
+  brand      Brand?             @relation(fields: [brandId], references: [id], map: "Product_brand_fkey")
   images     ProductImage[]
   tierPrices ProductTierPrice[]
   reviews    Review[]
@@ -168,7 +168,7 @@ model Order {
   deliveryLocation    Json?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  user          User        @relation(fields: [userId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], map: "Order_user_fkey")
   items         OrderItem[]
 
   shipments     Shipment[]
@@ -199,8 +199,8 @@ model OrderItem {
   price     Float
   quantity  Int     @default(1)
   oldPrice  Float?
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], map: "OrderItem_order_fkey")
+  product   Product @relation(fields: [productId], references: [id], map: "OrderItem_product_fkey")
 
   @@index([orderId], map: "OrderItem_orderId_fkey")
   @@index([productId], map: "OrderItem_productId_fkey")
@@ -216,7 +216,7 @@ model Shipment {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id], map: "Shipment_order_fkey")
 
   @@index([orderId], map: "Shipment_orderId_fkey")
 }
@@ -238,8 +238,8 @@ model Review {
   images    ReviewImage[]
   responses ReviewResponse[]
   helpfulVotes ReviewHelpful[]
-  product   Product      @relation(fields: [productId], references: [id])
-  user      User         @relation(fields: [userId], references: [id])
+  product   Product      @relation(fields: [productId], references: [id], map: "Review_product_fkey")
+  user      User         @relation(fields: [userId], references: [id], map: "Review_user_fkey")
 
   @@index([productId], map: "Review_productId_fkey")
   @@index([userId], map: "Review_userId_fkey")
@@ -255,8 +255,8 @@ model WishlistItem {
   productId String
   deletedAt DateTime?
   createdAt DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], map: "WishlistItem_product_fkey")
+  user      User     @relation(fields: [userId], references: [id], map: "WishlistItem_user_fkey")
 
   @@unique([userId, productId])
   @@index([productId], map: "WishlistItem_productId_fkey")
@@ -270,8 +270,8 @@ model CartItem {
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  product   Product  @relation(fields: [productId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], map: "CartItem_product_fkey")
+  user      User     @relation(fields: [userId], references: [id], map: "CartItem_user_fkey")
 
   @@unique([userId, productId])
   @@index([productId], map: "CartItem_productId_fkey")
@@ -286,7 +286,7 @@ model ProductImage {
   sort      Int      @default(0)
   deletedAt DateTime?
   createdAt DateTime @default(now())
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], map: "ProductImage_product_fkey")
 
   @@index([productId], map: "ProductImage_productId_fkey")
 }

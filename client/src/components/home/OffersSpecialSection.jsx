@@ -18,6 +18,7 @@ const OffersSpecialSection = ({
   t,
   locale
 }) => {
+  const MotionDiv = Motion?.div || 'div';
   // Fetch special offers using React Query
   const {
     data: specialOffers = [],
@@ -297,8 +298,6 @@ const OffersSpecialSection = ({
       </section>
     );
   }
-
-  const MotionDiv = Motion?.div || 'div';
 
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden">

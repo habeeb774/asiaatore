@@ -44,16 +44,16 @@ async function ensureSettingsTable() {
         ui_sidebar_collapsed_default TINYINT(1) NULL,
         ui_spacing_scale VARCHAR(32) NULL,
         ui_theme_default VARCHAR(32) NULL,
-        createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-        updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        createdAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updatedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
     `);
     // Column creation is now handled by Prisma migrations/db push.
     // Older MySQL versions don't support "ADD COLUMN IF NOT EXISTS" and would spam errors here.
     // We intentionally skip best-effort ALTERs to keep logs clean; the Prisma schema defines all columns.
     // Ensure singleton row
     await prisma.$executeRawUnsafe(`
-      INSERT IGNORE INTO StoreSetting (id, siteNameAr, siteNameEn) VALUES ('singleton','شركة منفذ اسيا التجارية','My Store');
+      INSERT INTO StoreSetting (id, siteNameAr, siteNameEn) VALUES ('singleton','شركة منفذ اسيا التجارية','My Store')
+      ON CONFLICT (id) DO NOTHING;
     `);
     SETTINGS_TABLE_ENSURED = true;
   } catch (e) {

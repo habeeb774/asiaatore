@@ -485,28 +485,36 @@ app.use((err, req, res, _next) => {
     res.status(err.status || 500).json({ error: 'INTERNAL_ERROR', message: 'Internal Server Error', requestId });
 });
 
-// Start server (auto-increment port if busy)
-function start(port, attempt = 0) {
-    const server = app.listen(port, async () => {
-        await pingDb();
-        appLogger.info(`API listening on http://localhost:${port}`);
-    });
-    server.on('error', (e) => {
-        if (e.code === 'EADDRINUSE' && attempt < 5) {
-            appLogger.warn(`[PORT] ${port} in use, retrying on ${port + 1} ...`);
-            start(port + 1, attempt + 1);
-        } else {
-            appLogger.error(e, 'Server failed to start');
-            process.exit(1);
-        }
-    });
+// Export app for Vercel serverless functions
+export function createServer() {
+    return app;
 }
 
-start(PORT);
+// Start server only when not in Vercel environment
+if (!process.env.VERCEL) {
+    // Start server (auto-increment port if busy)
+    function start(port, attempt = 0) {
+        const server = app.listen(port, async () => {
+            await pingDb();
+            appLogger.info(`API listening on http://localhost:${port}`);
+        });
+        server.on('error', (e) => {
+            if (e.code === 'EADDRINUSE' && attempt < 5) {
+                appLogger.warn(`[PORT] ${port} in use, retrying on ${port + 1} ...`);
+                start(port + 1, attempt + 1);
+            } else {
+                appLogger.error(e, 'Server failed to start');
+                process.exit(1);
+            }
+        });
+    }
 
-// Graceful shutdown
-function shutdown(sig) {
-    appLogger.warn(`[APP] Signal ${sig} received — shutting down.`);
-    process.exit(0);
+    start(PORT);
+
+    // Graceful shutdown
+    function shutdown(sig) {
+        appLogger.warn(`[APP] Signal ${sig} received — shutting down.`);
+        process.exit(0);
+    }
+    ['SIGINT','SIGTERM'].forEach(s => process.on(s, () => shutdown(s)));
 }
-['SIGINT','SIGTERM'].forEach(s => process.on(s, () => shutdown(s)));
