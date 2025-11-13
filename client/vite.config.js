@@ -76,8 +76,8 @@ export default defineConfig(async ({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
         manifest: {
-          name: env.VITE_APP_NAME || 'متجرنا الحديث',
-          short_name: env.VITE_APP_SHORT_NAME || 'المتجر',
+          name: env.VITE_APP_NAME || "جر منفذ آسيا",
+          short_name: env.VITE_APP_SHORT_NAME || "منفذ آسيا",
           description: env.VITE_APP_DESC || 'متجر إلكتروني حديث للمنتجات والعروض اليومية',
           theme_color: '#69be3c',
           background_color: '#ffffff',

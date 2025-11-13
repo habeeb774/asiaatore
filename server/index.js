@@ -15,7 +15,7 @@ import fs from 'fs';
 
 // IMPORTANT: Prepare DB env (DATABASE_URL) BEFORE importing prisma or any route that imports prisma
 const isProd = process.env.NODE_ENV === 'production';
-const allowDegraded = process.env.ALLOW_INVALID_DB === 'true';
+const allowDegraded = process.env.ALLOW_INVALID_DB === 'true' || (isProd && !process.env.DATABASE_URL);
 if (!process.env.DATABASE_URL) {
     const fallback = 'mysql://root:AlvYFhUfDYXSCykrgHpncurIFgwffLmF@yamabiko.proxy.rlwy.net:23471/railway';
     const shouldQuickStart = process.env.QUICK_START_DB === '1' || (!isProd && process.env.QUICK_START_DB !== '0');

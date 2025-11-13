@@ -9,8 +9,8 @@ async function main() {
   if (!url) {
     throw new Error('DATABASE_URL is not set. Aborting seed.');
   }
-  if (!/^mysql:\/\//i.test(url)) {
-    throw new Error(`DATABASE_URL protocol mismatch. Expected mysql:// got: ${url}`);
+  if (!/^mysql:\/\//i.test(url) && !/^postgres:\/\//i.test(url)) {
+    throw new Error(`DATABASE_URL protocol mismatch. Expected mysql:// or postgres:// got: ${url}`);
   }
   // Ensure admin user exists
   const adminEmail = 'admin@example.com';
