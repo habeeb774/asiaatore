@@ -50,26 +50,27 @@ const AdvancedNotifications = ({
         return updated;
       });
     }
-  }, [notifications, maxNotifications]);
+  }, [notifications, maxNotifications, visibleNotifications]);
 
   // Auto-close notifications
   useEffect(() => {
     if (!autoClose) return;
 
+    const timeoutMap = timeoutsRef.current;
+
     visibleNotifications.forEach(notification => {
-      if (!timeoutsRef.current.has(notification.id)) {
+      if (!timeoutMap.has(notification.id)) {
         const timeout = setTimeout(() => {
           removeNotification(notification.id);
         }, autoCloseDelay);
 
-        timeoutsRef.current.set(notification.id, timeout);
+        timeoutMap.set(notification.id, timeout);
       }
     });
 
     return () => {
-      const currentTimeouts = timeoutsRef.current;
-      currentTimeouts.forEach(timeout => clearTimeout(timeout));
-      currentTimeouts.clear();
+      timeoutMap.forEach(timeout => clearTimeout(timeout));
+      timeoutMap.clear();
     };
   }, [visibleNotifications, autoClose, autoCloseDelay]);
 

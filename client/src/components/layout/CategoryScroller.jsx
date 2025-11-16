@@ -58,8 +58,6 @@ const CategoryScroller = () => {
     return idx >= 0 ? parts[idx+1] : null;
   }, [pathname, search]);
 
-  const baseCatalogPath = (locale === 'en') ? '/en/catalog' : '/catalog';
-
   const scrollBy = (dir) => {
     const el = trackRef.current;
     if (!el) return;

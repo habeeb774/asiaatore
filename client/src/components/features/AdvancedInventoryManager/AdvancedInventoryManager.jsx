@@ -125,6 +125,7 @@ const AdvancedInventoryManager = ({ className = '' }) => {
         error(t(`${action}Failed`));
       }
     } catch (err) {
+      console.error('[AdvancedInventoryManager] item action failed', err);
       error(t('networkError'));
     }
   };
@@ -155,6 +156,7 @@ const AdvancedInventoryManager = ({ className = '' }) => {
         error(t('bulkActionFailed'));
       }
     } catch (err) {
+      console.error('[AdvancedInventoryManager] bulk action failed', err);
       error(t('networkError'));
     }
   };
@@ -182,6 +184,7 @@ const AdvancedInventoryManager = ({ className = '' }) => {
         error(t('transferFailed'));
       }
     } catch (err) {
+      console.error('[AdvancedInventoryManager] transfer failed', err);
       error(t('networkError'));
     }
   };
@@ -206,6 +209,7 @@ const AdvancedInventoryManager = ({ className = '' }) => {
         error(t('updateFailed'));
       }
     } catch (err) {
+      console.error('[AdvancedInventoryManager] edit failed', err);
       error(t('networkError'));
     }
   };

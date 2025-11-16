@@ -66,6 +66,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
 
       setImages(prev => [...prev, ...uploadedImages]);
     } catch (error) {
+      console.error('[ReviewForm] image upload error', error);
       toast.error(t('review.imageUploadError'));
     } finally {
       setUploading(false);

@@ -8,7 +8,6 @@ import { useLanguage } from '../../stores/LanguageContext';
 import { useLocation } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
 import { ToastContainer } from 'react-toastify';
-import { useTheme } from '../../stores/ThemeContext';
 import SiteFooter from './SiteFooter';
 import { FloatingCart } from '../ui';
 import { SidebarProvider } from '../../stores/SidebarContext';

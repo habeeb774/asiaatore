@@ -16,7 +16,7 @@
 .nav .nav-item { position: relative; }
 
 .nav .nav-link {
-  @extend .btn-base;
+  @include shared.btn-base();
   display: inline-flex;
   align-items: center;
   padding: .55rem .9rem;
@@ -111,7 +111,7 @@
 }
 
 .nav .nav-dropdown .dropdown-link {
-  @extend .btn-base;
+  @include shared.btn-base();
   display: flex;
   align-items: center;
   width: 100%;

@@ -43,6 +43,20 @@
   --motion-duration-base: 240ms;
   --motion-duration-slow: 400ms;
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /*
+    Backwards-compatible aliases for legacy styles
+    Older components used `--main_color`, `--p_color`, `--bg_color`, etc.
+    Keep these aliases here to avoid inline :root declarations across many
+    files; they should be preferred via `design-tokens.css`.
+  */
+  --main_color: var(--brand-primary);
+  --p_color: #bbb8b8; /* paragraph / muted color (legacy) */
+  --bg_color: #e1d2d2; /* legacy background used by hero components */
+  --white_color: #b0a7a7;
+  --color_heading: #f7ae1b; /* legacy heading tint */
+  --border_color: rgba(229,229,229,0.84); /* legacy border fallback */
+  --Sale_color: #E51A1A; /* legacy 'sale' color */
 }
 
 [data-theme="dark"] {

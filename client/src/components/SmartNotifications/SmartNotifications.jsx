@@ -252,7 +252,6 @@ export const NotificationsProvider = ({ children }) => {
 
 const SmartNotifications = () => {
   const { notifications, removeNotification, markAsRead } = useNotifications();
-  const { language } = useLanguage();
 
   const visibleNotifications = notifications.slice(0, 5); // Show max 5
 
@@ -275,9 +274,9 @@ const SmartNotifications = () => {
 };
 
 const NotificationToast = ({ notification, onClose, onRead, style }) => {
-  const { language } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const { language } = useLanguage();
 
   useEffect(() => {
     // Animate in

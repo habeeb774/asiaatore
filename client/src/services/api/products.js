@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { get, post, patch, del } from './http';
+import { get, post, patch, del, getBinary } from './http';
 
 // Create a stable query key for lists based on filters/sort/pagination
 const listKey = (params) => ['products', { ...params }];
@@ -105,4 +105,19 @@ export async function deleteProductImage(imageId) {
 
 export async function updateProductImage(imageId, body) {
   return patch(`/products/images/${imageId}`, body);
+}
+
+export async function importProductsFromExcel(file) {
+  if (!file) throw new Error('FILE_REQUIRED');
+  const fd = new FormData();
+  fd.append('file', file);
+  return post('/products/import/excel', fd, { json: false });
+}
+
+export async function exportProductsToExcel(params = {}) {
+  return getBinary(
+    '/products/export/excel',
+    params,
+    { accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+  );
 }

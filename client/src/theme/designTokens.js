@@ -20,7 +20,7 @@ const TOKEN_REGISTRY = {
 
 const TOKEN_FALLBACKS = {
   'brand.primary': '#2F855A',
-  'brand.primaryAlt': '#276749',
+  'brand.primaryAlt': '#c52404ff',
   'brand.primaryRgb': '47,133,90',
   'brand.secondary': '#276749',
   'brand.gradient.primary': 'linear-gradient(180deg, #2F855A, #00b561ff)',
@@ -29,7 +29,7 @@ const TOKEN_FALLBACKS = {
   'brand.ring': '#C8A96A',
   'surface.background': '#FAFAF8',
   'surface.alt': '#F5F5F2',
-  'surface.card': '#FFFFFF',
+  'surface.card': '#a09999ff',
   'border.hairline': 'rgba(12,18,28,0.08)',
   'border.soft': 'rgba(12,18,28,0.06)',
   'radius.button': '10px',

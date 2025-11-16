@@ -5,6 +5,7 @@ import { useAdmin } from '../../stores/AdminContext';
 import { useOrders } from '../../stores/OrdersContext';
 import api from '../../services/api/client';
 import { adminApi } from '../../services/api/admin';
+import { importProductsFromExcel, exportProductsToExcel } from '../../services/api/products';
 import { Edit3, Trash2, Save, X } from 'lucide-react';
 import { useAuth } from '../../stores/AuthContext';
 
@@ -37,6 +38,9 @@ const AdminDashboard = () => {
   const [apiBacked, setApiBacked] = useState(false); // true if API fetch succeeded (even if empty)
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [prodError, setProdError] = useState(null);
+  const importExcelInputRef = useRef(null);
+  const [importingExcel, setImportingExcel] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   const effectiveProducts = apiBacked ? apiProducts : adminProducts;
 
@@ -74,6 +78,9 @@ const AdminDashboard = () => {
   const [orderForm, setOrderForm] = useState({ id: null, total: '', status: 'pending', customer: '', items: 1 });
   const [filter, setFilter] = useState('');
   const f = filter.toLowerCase();
+  const emitToast = (type, title, description) => {
+    try { window.dispatchEvent(new CustomEvent('toast:show', { detail: { type, title, description } })); } catch {}
+  };
 
   const filteredProducts = useMemo(() => {
     let list = effectiveProducts.map(p => ({
@@ -813,6 +820,66 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleExcelImportChange = async (event) => {
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      emitToast('warn', 'حجم ملف كبير', 'يجب ألا يتجاوز ملف Excel ‎5 ميجابايت.');
+      input.value = '';
+      return;
+    }
+    setImportingExcel(true);
+    setProdError(null);
+    try {
+      const summary = await importProductsFromExcel(file);
+      const created = summary?.created ?? 0;
+      const updated = summary?.updated ?? 0;
+      const skipped = summary?.skipped ?? 0;
+      emitToast('success', 'تم استيراد المنتجات', `أضيف ${created} وتم تحديث ${updated} ${skipped ? `· تم تخطي ${skipped}` : ''}`.trim());
+      if (summary?.errors?.length) {
+        console.warn('[AdminDashboard] Excel import warnings', summary.errors);
+      }
+      try {
+        const refreshed = await api.listProducts();
+        if (Array.isArray(refreshed)) {
+          setApiProducts(refreshed);
+          setApiBacked(true);
+        }
+      } catch (refreshErr) {
+        console.error('Failed refreshing products after Excel import', refreshErr);
+      }
+    } catch (err) {
+      const apiMessage = err?.data?.message || err?.message || 'فشل استيراد الملف';
+      emitToast('error', 'فشل الاستيراد', apiMessage);
+      setProdError(apiMessage);
+    } finally {
+      setImportingExcel(false);
+      input.value = '';
+    }
+  };
+
+  const handleExcelExport = async () => {
+    setExportingExcel(true);
+    try {
+      const blob = await exportProductsToExcel({ q: filter || undefined, category: categoryFilter || undefined });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      emitToast('success', 'تم التصدير', 'تم تنزيل ملف Excel للمنتجات.');
+    } catch (err) {
+      const apiMessage = err?.body?.message || err?.message || 'فشل تصدير المنتجات.';
+      emitToast('error', 'فشل التصدير', apiMessage);
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   const submitUser = e => {
     e.preventDefault();
     if (userForm.id) {
@@ -1056,8 +1123,39 @@ const AdminDashboard = () => {
             cats: 'التصنيفات'
           }[view] || 'لوحة التحكم'}
         </div>
+        <div className="admin-subbar-actions">
+          {view === 'products' && (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleExcelExport}
+                disabled={exportingExcel}
+              >
+                {exportingExcel ? 'جاري التصدير...' : 'تصدير المنتجات إلى Excel'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={() => importExcelInputRef.current?.click()}
+                disabled={importingExcel}
+              >
+                {importingExcel ? 'جاري الاستيراد...' : 'استيراد المنتجات من Excel'}
+              </Button>
+              <span className="admin-subbar-hint">صيغة ‎.xlsx حتى ‎5MB</span>
+              <input
+                ref={importExcelInputRef}
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={handleExcelImportChange}
+                style={{ display: 'none' }}
+              />
+            </>
+          )}
+        </div>
         {/* Optional meta slot: counts or quick tips */}
-        {/* <div className="admin-subbar-meta">نصيحة سريعة: استخدم البحث لتصفية العناصر</div> */}
       </div>
 
       {/* Navigation moved to AdminSideNav; in-page tab buttons removed */}
@@ -1292,7 +1390,7 @@ const AdminDashboard = () => {
               )}
             </div>
           </form>
-          <div style={{display:'flex',gap:'.75rem',flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:'.75rem',flexWrap:'wrap',alignItems:'center'}}>
             <Select value={sort} onChange={e=>setSort(e.target.value)} size="sm" style={searchInput}>
               <option value="created_desc">الأحدث</option>
               <option value="created_asc">الأقدم</option>
@@ -1309,6 +1407,24 @@ const AdminDashboard = () => {
             </Select>
             {catLoading && <span style={{fontSize:'.65rem',color:'#64748b'}}>...تحميل التصنيفات</span>}
             {catError && <span style={{fontSize:'.65rem',color:'#b91c1c'}}>خطأ: {catError}</span>}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={()=>importExcelInputRef.current?.click()}
+              disabled={importingExcel}
+            >
+              {importingExcel ? 'جاري الاستيراد...' : 'استيراد المنتجات من Excel'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleExcelExport}
+              disabled={exportingExcel}
+            >
+              {exportingExcel ? 'جاري التصدير...' : 'تصدير المنتجات إلى Excel'}
+            </Button>
           </div>
           <table style={table}>
             <thead>

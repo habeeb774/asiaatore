@@ -52,6 +52,20 @@
 .ui-btn--lg { --btn-h: 46px; --btn-px: var(--space-5, 1.25rem); font-size: var(--text-md, .95rem); }
 .ui-btn--icon { --btn-h: 40px; padding: 0; width: var(--btn-h); }
 
+/* Backwards-compat: map legacy `.btn` names to the modern UI primitives */
+.btn { @extend .ui-btn; }
+.btn-primary { @extend .ui-btn--primary; }
+.btn-secondary { @extend .ui-btn--secondary; }
+.btn-accent { @extend .ui-btn--accent; }
+.btn-danger { @extend .ui-btn--danger; }
+.btn-outline { @extend .ui-btn--outline; }
+.btn-ghost { @extend .ui-btn--ghost; }
+.btn-soft { @extend .ui-btn--soft; }
+.btn-sm { @extend .ui-btn--sm; }
+.btn-md { @extend .ui-btn--md; }
+.btn-lg { @extend .ui-btn--lg; }
+.btn-icon { @extend .ui-btn--icon; }
+
 /* Loading state */
 .ui-btn.is-loading { position: relative; pointer-events: none; }
 .ui-btn.is-loading .ui-spinner { inline-size: 1em; block-size: 1em; border-radius: 50%; border: 2px solid currentColor; border-inline-start-color: transparent; animation: ui-spin .9s linear infinite; }
@@ -139,6 +153,17 @@
   --cols-2: 1fr;
   --cols-3: 1fr;
   --cols-4-min: 1fr;
+}
+
+/* Theme styling override: ensure Salla add-to-cart buttons in full-image cards are readable */
+.s-product-card-full-image salla-add-product-button,
+.s-product-card-full-image salla-add-product-button button,
+.s-product-card-full-image salla-add-product-button .s-button-text {
+  background: #fff !important;
+  color: var(--color-text, #111827) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
 }
 
 /* ≥640px (sm) */

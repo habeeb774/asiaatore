@@ -197,7 +197,6 @@ const AdminRedirect = ({ prefix = '' }) => {
 
 const AppRoutes = () => {
   const { user } = useAuth() || {};
-  const isAdmin = user?.role === 'admin';
   const userRole = user?.role;
   return (
   <ChatProvider>

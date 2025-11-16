@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+/* Minimal theme-level resets and utilities moved from legacy rede theme */
+* { padding: 0; margin: 0; box-sizing: border-box; list-style: none; text-decoration: none; }
+html, body, #root { height: 100%; }
+body { padding-top: 1px; }
+
+span { color: var(--main_color); }
+p { color: var(--p_color); }
+h1,h2,h3,h4,h5,h6 { color: var(--color_heading); font-family: 'DM Sans', sans-serif; }
+img { width: 100%; }
+input,select,button { border: none; outline: none; }
+
+.btns { display:flex; align-items:center; gap:20px; }
+/* Use the modern UI primitives as a base for theme buttons. */
+.btn i { color: var(--white_color); }
+.btn:hover { transform: scale(1.1); }
+
+.container { width: 100%; margin: auto; max-width: 1350px; }
+@media (max-width:1350px){ .container { width: 100%; } }

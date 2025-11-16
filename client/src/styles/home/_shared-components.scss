@@ -99,19 +99,11 @@
 
 /* Base button styles */
 .btn-base {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  /* home module-specific overrides */
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   border-radius: 6px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  gap: 0.5rem;
-  line-height: 1;
 }
 
 .btn-base:disabled {
@@ -196,10 +188,7 @@
   width: 100%;
 }
 
-/* Alias for backward compatibility */
-.btn {
-  @extend .btn-base;
-}
+/* No global .btn alias here; `.btn` is centrally aliased in _ui.scss. Use `.btn-base` mixin via includes when needed. */
 
 /* Button mixins for complex selectors */
 @mixin btn-disabled {

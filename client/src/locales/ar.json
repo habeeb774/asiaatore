@@ -1,6 +1,8 @@
 {
   "home": "الرئيسية",
+  
   "nav": {
+    
     "home": "الرئيسية",
     "about": "من نحن",
     "products": "المنتجات",
@@ -72,6 +74,7 @@
   "heroCtaAbout": "تعرف علينا",
   "shop_now": "تسوق الآن",
   "view_offers": "تصفح العروض",
+  "home.browseByCategory": "تصفح حسب الفئة",
   "featureFreeShippingTitle": "شحن مجاني",
   "featureFreeShippingDesc": "لطلبات فوق 500 ريال",
   "featureQualityTitle": "ضمان الجودة",
@@ -88,7 +91,7 @@
   "fromBlog": "من المدونة",
   "readMore": "اقرأ المزيد",
   "loading": "جار التحميل...",
-  "brandsTitle": "العلامات التجارية",
+  "Popular Brands": "العلامات التجارية",
   "searchBrand": "ابحث عن علامة",
   "mostProducts": "الأكثر منتجات",
   "fewestProducts": "الأقل منتجات",
@@ -113,7 +116,7 @@
     "cancel": "إلغاء الاشتراك",
     "currentPlan": "الخطة الحالية",
     "validUntil": "صالح حتى",
-    "Popular Brands":"العلامات التجارية الشهيرة",
+    "Popular Brands": "العلامات التجارية الشهيرة",
     "planBenefits": "مزايا الخطة",
     "alreadySubscribed": "مشترك بالفعل",
     "questions": "لديك أسئلة حول خطط الاشتراك؟",

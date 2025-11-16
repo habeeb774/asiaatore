@@ -143,12 +143,12 @@
 
 .sidebar-modern__nav::-webkit-scrollbar-track { 
   background: var(--sb-scroll-track); 
-  border-radius: 10px;
+  border-radius: var(--sb-radius-sm, 10px);
 }
 
 .sidebar-modern__nav::-webkit-scrollbar-thumb { 
   background: var(--sb-scroll-thumb); 
-  border-radius: 10px; 
+  border-radius: var(--sb-radius-sm, 10px);
   transition: all 0.3s ease;
 }
 
@@ -246,7 +246,7 @@
   justify-content: center; 
   background: rgba(255, 255, 255, 0.08); 
   color: var(--sb-text); 
-  border-radius: 10px; 
+  border-radius: var(--sb-radius-sm, 10px);
   font-size: 1.2rem; 
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -337,7 +337,7 @@
   min-width: 44px;
   height: 44px;
   padding: 0; /* icon centered; desktop uses padding via media query */
-  border-radius: 10px;
+  border-radius: var(--sb-radius-sm, 10px);
   border: 1px solid rgba(255,255,255,0.04);
   background: rgba(255,255,255,0.03);
   color: var(--sb-text);
@@ -676,7 +676,7 @@
 /* Collapsed (mini) state - premium styling */
 .sidebar-modern[data-collapsed='true'] {
   width: var(--sb-collapsed-width);
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  background: var(--sb-bg-alt, linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)));
   border-inline-end: 1px solid rgba(255,255,255,0.04);
   box-shadow: 0 8px 30px -12px rgba(2,6,23,0.6);
 }
@@ -687,6 +687,7 @@
 .sidebar-modern[data-collapsed='true'] .nav-label {
   /* hide labels completely when collapsed; rely on tooltip for label */
   opacity: 0;
+}
 
 /* Linear/gold icon style for all states ---------------------------------- */
 /* central variable so themes can override */
@@ -730,13 +731,11 @@
   background: radial-gradient(circle at 30% 20%, rgba(212,175,55,0.18), transparent 30%), radial-gradient(circle at 70% 80%, rgba(212,175,55,0.12), transparent 40%);
 }
 
-}
-
 .sidebar-modern[data-collapsed='true'] .nav-icon {
   width: 40px;
   height: 40px;
   flex: 0 0 40px;
-  border-radius: 10px;
+  border-radius: var(--sb-radius-sm, 10px);
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   box-shadow: 0 4px 12px rgba(2,6,23,0.35);
   /* collapsed icon color (green) */

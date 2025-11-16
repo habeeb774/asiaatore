@@ -16,6 +16,7 @@ const ReviewCard = ({ review, onVote, onRespond, isAdmin }) => {
       onVote(review.id, helpful);
       toast.success(t('review.voteRecorded'));
     } catch (error) {
+      console.error('[ReviewCard] vote error', error);
       toast.error(t('review.voteError'));
     }
   };
@@ -30,6 +31,7 @@ const ReviewCard = ({ review, onVote, onRespond, isAdmin }) => {
       onRespond(review.id);
       toast.success(t('review.responseAdded'));
     } catch (error) {
+      console.error('[ReviewCard] response error', error);
       toast.error(t('review.responseError'));
     }
   };

@@ -1,0 +1,20 @@
+/* Slider / Slide styles extracted from redo theme */
+.slider { position: relative; }
+.slider .container { display:flex; justify-content:space-between; }
+.slider .banner_2 { width:100%; height:100%; object-fit:cover; }
+.slider .banner_2 a { height:100%; width:100%; }
+.slider .container .slide-swp { width:100%; overflow:hidden; position:relative; }
+.swiper-wrapper { height: auto !important; }
+.slider .container .slide-swp .swiper-pagination span { background: #fff; opacity:1; }
+.swiper-pagination-bullet-active { background: var(--main_color) !important; width: 34px !important; height:8px !important; border-radius:30px !important; }
+
+.slide { margin-bottom: 70px; }
+.top_slide { position: relative; margin-bottom: 20px; border-bottom: 3px solid var(--main_color); }
+.top_slide h2 { position: relative; text-transform:uppercase; background: var(--main_color); color: var(--white_color); font-size: 18px; padding:10px 40px; display:flex; align-items:center; gap:10px; width:max-content; }
+.top_slide h2::before { content:''; position:absolute; width:0; height:0; top:0; z-index:9; border-left:20px solid transparent; background:#fff; left:0; border-bottom:20px solid #e26e02; }
+.top_slide h2 i { color: var(--white_color); }
+.slide .container { position: relative; }
+.slide .container .mySwiper { padding: 10px 0; }
+.slide .container .mySwiper .btn_Swip { position:absolute; top:30px; right:0; background:var(--bg_color); color:var(--color_heading); font-weight:bold; border-radius:5px; height:35px; width:35px; border: 1px solid var(--border_color); }
+.slide .container .mySwiper .btn_Swip::after { font-size: 12px; }
+.slide .container .mySwiper .btn_Swip.swiper-button-prev { left: calc(100% - 80px); }

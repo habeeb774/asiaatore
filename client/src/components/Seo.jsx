@@ -5,7 +5,6 @@ import useSiteName from '../hooks/useSiteName';
 const setMeta = (nameOrProp, value, attr = 'name') => {
   try {
     if (!value) return;
-    const selector = `${attr}="${nameOrProp}"`;
     let el = document.head.querySelector(`[${attr}="${nameOrProp}"]`);
     if (!el) {
       el = document.createElement('meta');

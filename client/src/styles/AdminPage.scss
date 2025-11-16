@@ -145,3 +145,14 @@
 }
 .admin-subbar-title { font-weight: 700; letter-spacing: .3px; }
 .admin-subbar-meta { font-size: .7rem; color: var(--color-text-faint); }
+.admin-subbar-actions {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  flex-wrap: wrap;
+  font-size: .72rem;
+}
+.admin-subbar-hint {
+  font-size: .6rem;
+  color: var(--color-text-faint);
+}

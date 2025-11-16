@@ -253,7 +253,9 @@ const Products = () => {
           {isLoading && <ProductGridSkeleton count={pageSize} />}
           {error && <p className="text-red-600 text-sm">{locale==='ar'?'فشل التحميل':'Failed to load products.'}</p>}
           {!isLoading && !error && pageSlice.length === 0 && <p>{locale==='ar'?'لا توجد نتائج':'No results'}</p>}
-          {!isLoading && !error && pageSlice.length > 0 && <ProductGrid products={pageSlice} />}
+          {!isLoading && !error && pageSlice.length > 0 && (
+            <ProductGrid products={pageSlice} layout="catalog" />
+          )}
 
           {/* Load more / incremental pagination */}
           {currentPage < totalPages && (

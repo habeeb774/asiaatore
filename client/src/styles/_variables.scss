@@ -26,6 +26,8 @@ $space-2: var(--space-2);
 $space-3: var(--space-3);
 $space-4: var(--space-4);
 $space-6: var(--space-6);
+$space-7: var(--space-7);
+$space-8: var(--space-8);
 
 /* Z-index layers (reserve ranges) */
 $z-header: 1200;
@@ -41,3 +43,19 @@ $radius-sm: var(--radius-sm);
 $radius-md: var(--radius-md);
 $radius-lg: var(--radius-lg);
 $radius-xl: var(--radius-xl);
+$radius-card: var(--radius-card);
+
+/* Legacy brand aliases */
+$brand-primary: var(--brand-primary);
+$brand-primary-alt: var(--brand-primary-alt);
+$brand-secondary: var(--brand-secondary);
+$brand-accent: var(--brand-accent);
+
+/* Motion durations */
+$motion-duration-fast: var(--motion-duration-fast);
+$motion-duration-base: var(--motion-duration-base);
+$motion-duration-slow: var(--motion-duration-slow);
+
+/* Common shadows */
+$shadow-focus: var(--shadow-focus);
+$shadow-card: var(--shadow-card);

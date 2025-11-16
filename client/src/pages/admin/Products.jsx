@@ -6,7 +6,7 @@ import ConfirmModal from '../../components/features/admin/ConfirmModal';
 import Drawer from '../../components/ui/Drawer';
 import ImageUploader from '../../components/features/admin/ImageUploader';
 import { useProduct } from '../../services/api/products';
-import { addProductImage, addProductImages, deleteProductImage, updateProductImage } from '../../services/api/products';
+import { addProductImage, addProductImages, deleteProductImage, updateProductImage, importProductsFromExcel, exportProductsToExcel } from '../../services/api/products';
 import { useProducts, updateProduct, deleteProduct, batchDiscount, batchClearDiscount } from '../../services/api/products';
 import { useToast } from '../../stores/ToastContext';
 
@@ -26,7 +26,10 @@ export default function AdminProducts() {
 		const [selectedIds, setSelectedIds] = useState(new Set());
 		const [confirmModal, setConfirmModal] = useState(null);
 		const uploadInputRef = React.useRef(null);
+		const importInputRef = React.useRef(null);
 		const [uploadProductId, setUploadProductId] = useState(null);
+		const [importingExcel, setImportingExcel] = useState(false);
+		const [exportingExcel, setExportingExcel] = useState(false);
 
 	const rows = useMemo(() => {
 		const term = q.trim().toLowerCase();
@@ -80,12 +83,47 @@ export default function AdminProducts() {
 		) }
 	];
 
-	  const topbar = (
+	const handleExportExcel = async () => {
+		setExportingExcel(true);
+		try {
+			const blob = await exportProductsToExcel({ q: q.trim() || undefined });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			URL.revokeObjectURL(url);
+			toast?.success?.('تم تصدير المنتجات إلى Excel');
+		} catch (err) {
+			const apiMessage = err?.body?.message || err?.message || 'فشل التصدير';
+			toast?.error?.(apiMessage);
+		} finally {
+			setExportingExcel(false);
+		}
+	};
+
+	const topbar = (
 		<div className="flex items-center gap-2">
 			<input className="border rounded px-3 py-1 text-sm" placeholder="بحث بالاسم/الرقم" value={q} onChange={(e)=> setQ(e.target.value)} />
 			<button className="btn-outline" onClick={()=> refetch()}>تحديث</button>
 			<button className="btn-primary" onClick={()=> setConfirmModal({ action:'bulkEdit' })}>Bulk editor</button>
 			<button className="btn-outline" onClick={()=> navigate('/admin?view=products&create=1')} title="New product" aria-label="New product">New product</button>
+			<button
+				className="btn-outline"
+				onClick={()=> importInputRef.current?.click()}
+				disabled={importingExcel}
+			>
+				{importingExcel ? 'جاري الاستيراد...' : 'استيراد من Excel'}
+			</button>
+			<button
+				className="btn-outline"
+				onClick={handleExportExcel}
+				disabled={exportingExcel}
+			>
+				{exportingExcel ? 'جاري التصدير...' : 'تصدير إلى Excel'}
+			</button>
 			{selectedIds.size > 0 && (
 				<>
 					<button className="btn-outline" onClick={async ()=>{
@@ -145,6 +183,38 @@ export default function AdminProducts() {
 				setUploadProductId(null);
 			}
 		}} />
+
+		<input
+			ref={importInputRef}
+			type="file"
+			accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+			className="hidden"
+			onChange={async (e) => {
+				const file = e.target.files?.[0];
+				if (!file) return;
+				if (file.size > 5 * 1024 * 1024) {
+					toast?.error?.('الملف أكبر من 5 ميجابايت. الرجاء اختيار ملف أصغر.');
+					e.target.value = null;
+					return;
+				}
+				setImportingExcel(true);
+				try {
+					const summary = await importProductsFromExcel(file);
+					toast?.success?.(`تم إنشاء ${summary.created || 0} وتحديث ${summary.updated || 0}. تخطي ${summary.skipped || 0}.`);
+					if (summary.errors?.length) {
+						console.warn('Excel import warnings', summary.errors);
+					}
+					refetch();
+				} catch (err) {
+					console.error('Excel import failed', err);
+					const apiError = err?.response?.data?.message || err?.message || 'فشل الاستيراد';
+					toast?.error?.(apiError);
+				} finally {
+					setImportingExcel(false);
+					e.target.value = null;
+				}
+			}}
+		/>
 
 		<Drawer open={!!drawerProduct} onClose={()=> setDrawerProduct(null)} title={drawerProduct ? `Product #${drawerProduct.id}` : ''}>
 				{drawerProduct && (

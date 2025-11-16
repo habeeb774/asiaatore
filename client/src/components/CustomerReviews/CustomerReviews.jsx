@@ -339,7 +339,7 @@ const CustomerReviews = ({
                 type="checkbox"
                 id="verifiedOnly"
                 checked={filters.verifiedOnly}
-                onChange={(e) => setFilters(prev => ({ ...prev, verifiedOnly: !prev.verifiedOnly }))}
+                onChange={() => setFilters(prev => ({ ...prev, verifiedOnly: !prev.verifiedOnly }))}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="verifiedOnly" className="mr-2 text-sm text-gray-700 dark:text-gray-300">

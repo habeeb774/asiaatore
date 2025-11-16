@@ -14,7 +14,7 @@ export default function HeroUnified(){
   const [loading, setLoading] = useState(true);
 
   // استخدام useAds hook إذا كان متوفراً
-  const { data: adsData = [], isLoading: adsLoading } = useAds({
+  const { data: adsData = [] } = useAds({
     enabled: true
   });
 
@@ -111,7 +111,9 @@ export default function HeroUnified(){
                       </h2>
                     </div>
                   )}
+                  <button className="shop-now-btn btn justify-center " onClick={()=>{ navigate('/products'); }} aria-label="Shop Now">تسوق الآن</button>
                 </a>
+                
             </div>
 
         </div>

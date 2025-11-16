@@ -6,7 +6,7 @@ function deriveCount(wide) {
   if (typeof window === 'undefined') return 12;
   const w = window.innerWidth || 1200;
   // approximate columns for our grid breakpoints
-  const cols = w >= 1280 ? (wide ? 5 : 4) : w >= 1024 ? (wide ? 4 : 3) : w >= 640 ? 2 : 1;
+  const cols = w >= 1280 ? (wide ? 6 : 5) : w >= 1024 ? (wide ? 5 : 4) : w >= 640 ? 3 : 2;
   const rows = 3; // show ~3 rows as placeholder
   return cols * rows;
 }

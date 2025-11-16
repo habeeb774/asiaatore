@@ -41,7 +41,7 @@ export const LazyWrapper = ({
   className = '',
   ...props
 }) => {
-  const [hasError, setHasError] = useState(false);
+  const [hasError] = useState(false);
 
   useEffect(() => {
     if (hasError && onError) {
@@ -70,14 +70,12 @@ export const LazyWrapper = ({
  * LazySection Component - Specialized for page sections
  */
 export const LazySection = ({
-  component: Component,
   importFunc,
   title,
   isVisible = true,
   rootMargin = '200px',
   ...props
 }) => {
-  const [isInView, setIsInView] = useState(false);
   const [LazyComponent, setLazyComponent] = useState(null);
 
   useEffect(() => {

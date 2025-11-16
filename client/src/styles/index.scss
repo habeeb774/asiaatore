@@ -1,23 +1,36 @@
 /* Consolidated global styles entry to avoid duplicates and control load order */
-/* Core tokens and utilities first */
+
+/* Foundation: tokens + helpers */
+@use './_design-system';
 @use './_variables' as vars;
 @use './core/_variables' as cvars;
 @use './_mixins' as mixins;
 @use './core/_mixins' as cmixins;
 
-/* Design system and base */
-@use './_design-system';
+/* Base + utilities */
 @use './core/_base';
 @use './core/_components';
-
-/* Theme and utilities */
-@use './theme';
 @use './_utilities-modern';
 @use './_ui';
 @use './top-strips';
 
-/* Feature modules */
+/* Theme + shared components */
+@use './theme';
 @use './product-card';
+@use './legacy/legacy-product-block';
+
+/* Rede theme partials (migrated from reda-store-theme.css) */
+@use './components/rede-core';
+@use './components/rede-header';
+@use './components/rede-slider';
+@use './components/rede-banners';
+@use './components/rede-product';
+@use './components/rede-footer';
+@use './components/rede-cart';
+@use './components/rede-checkout';
+@use './components/rede-responsive';
+
+/* Feature modules */
 @use './pages';
 @use './enhancements';
 @use './sidebar-modern';
@@ -34,4 +47,5 @@
  - Route-specific styles like HomePage.scss, Hero.scss, product-details.scss remain imported by their pages for code-splitting.
  - Header rules originate from _design-system.scss which includes _header.scss; Header.scss (legacy) is not included to avoid duplication.
  - Product.css and HomeHero.css have been merged into _product-card.scss and Hero.scss respectively.
+ - `design-tokens.css` was removed; all CSS variables now live in _design-system.scss.
 */

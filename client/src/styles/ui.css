@@ -5,8 +5,8 @@
 :root{
   --ui-bg-gradient: linear-gradient(180deg,#d7d6d6 0%, #fbfbfd 100%);
   --muted-1: #6b7280; /* gray-500 */
-  --accent-1: #0ea5a4; /* teal-500 */
-  --accent-2: #6366f1; /* indigo-500 */
+  --accent-1: #edefef; /* teal-500 */
+  --accent-2: #ffffff; /* indigo-500 */
   --soft-shadow: 0 6px 18px rgba(15,23,42,0.06);
   --soft-shadow-2: 0 4px 12px rgba(2,6,23,0.06);
   --radius-md: 12px;
@@ -19,7 +19,7 @@
 .ui-sub{ color:var(--muted-1); }
 
 /* Buttons */
-.btn{ display:inline-flex; align-items:center; gap:0.5rem; padding:0.6rem 1rem; border-radius:var(--radius-md); font-weight:600; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, background-color .15s ease; }
+.btn{ display:inline-flex; align-items:center; gap:var(--btn-gap, 0.5rem); height:var(--btn-h, 40px); padding-inline:var(--btn-px, 1rem); border-radius:var(--btn-radius, var(--radius-md)); font-weight:600; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, background-color .15s ease; }
 .btn:active{ transform:translateY(1px); }
 .btn-primary{ background: linear-gradient(90deg,var(--accent-2), var(--accent-1)); color:white; box-shadow:var(--soft-shadow); }
 .btn-outline{ background:transparent; border:1px solid rgba(15,23,42,0.06); color:rgb(17,24,39); }

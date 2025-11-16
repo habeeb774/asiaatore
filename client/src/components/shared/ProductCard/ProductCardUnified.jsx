@@ -18,6 +18,14 @@ import {
   X
 } from 'lucide-react';
 
+const VARIANT_CLASS_MAP = {
+  default: 'grid',
+  grid: 'grid',
+  featured: 'featured',
+  compact: 'compact',
+  list: 'list'
+};
+
 /**
  * مكون ProductCard الموحد - يجمع أفضل الميزات من جميع مكونات ProductCard المختلفة
  *
@@ -50,6 +58,7 @@ const ProductCard = ({
   const { addToCart, updateQuantity, cartItems, maxPerItem } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
+  const normalizedVariant = VARIANT_CLASS_MAP[variant] || 'grid';
 
   // حالات المكون
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -104,6 +113,24 @@ const ProductCard = ({
     };
   }, [product]);
 
+  const cardBaseClasses = useMemo(() => {
+    const classes = [
+      'product-card',
+      `product-card--${normalizedVariant}`,
+      'group'
+    ];
+
+    if (processedProduct?.isOutOfStock) {
+      classes.push('is-out-of-stock');
+    }
+
+    if (className) {
+      classes.push(className);
+    }
+
+    return classes.join(' ').trim();
+  }, [className, normalizedVariant, processedProduct?.isOutOfStock]);
+
   // عنصر العربة الحالي
   const cartItem = useMemo(() =>
     cartItems?.find(item => item.id === product?.id),
@@ -114,14 +141,14 @@ const ProductCard = ({
 
   // تدوير الصور تلقائياً عند التمرير
   useEffect(() => {
-    if (!isHovered || !processedProduct?.hasMultipleImages || variant !== 'featured') return;
+    if (!isHovered || !processedProduct?.hasMultipleImages || normalizedVariant !== 'featured') return;
 
     const interval = setInterval(() => {
       setCurrentImageIndex(prev => (prev + 1) % processedProduct.images.length);
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isHovered, processedProduct, variant]);
+  }, [isHovered, processedProduct, normalizedVariant]);
 
   // معالج إضافة إلى العربة
   const handleAddToCart = useCallback(async () => {
@@ -272,64 +299,57 @@ const ProductCard = ({
 
     const isAtMax = currentQty >= (maxPerItem || 10);
     const canAddMore = !processedProduct.isOutOfStock && !isAtMax;
+    if (currentQty > 0) {
+      return (
+        <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => handleUpdateQuantity(currentQty - 1)}
+            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            disabled={currentQty <= 1}
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="px-3 py-2 text-sm font-medium min-w-[3rem] text-center">
+            {currentQty}
+          </span>
+          <button
+            onClick={() => handleUpdateQuantity(currentQty + 1)}
+            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            disabled={!canAddMore}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      );
+    }
 
     return (
-      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-        {currentQty > 0 ? (
-          // أدوات التحكم في الكمية
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button
-              onClick={() => handleUpdateQuantity(currentQty - 1)}
-              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              disabled={currentQty <= 1}
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="px-3 py-2 text-sm font-medium min-w-[3rem] text-center">
-              {currentQty}
-            </span>
-            <button
-              onClick={() => handleUpdateQuantity(currentQty + 1)}
-              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              disabled={!canAddMore}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+      <motion.button
+        whileHover={{ scale: canAddMore ? 1.03 : 1 }}
+        whileTap={{ scale: canAddMore ? 0.97 : 1 }}
+        onClick={handleAddToCart}
+        disabled={!canAddMore || isAddingToCart}
+        className={`add-to-cart-btn ${(!canAddMore || isAddingToCart) ? 'is-disabled' : ''}`}
+      >
+        {isAddingToCart ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>{locale === 'ar' ? 'جاري الإضافة...' : 'Adding...'}</span>
+          </>
         ) : (
-          // زر إضافة إلى العربة
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddToCart}
-            disabled={!canAddMore || isAddingToCart}
-            className={`flex items-center space-x-2 rtl:space-x-reverse px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              canAddMore
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
-                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {isAddingToCart ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>{locale === 'ar' ? 'جاري الإضافة...' : 'Adding...'}</span>
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="w-4 h-4" />
-                <span>
-                  {processedProduct.isOutOfStock
-                    ? (locale === 'ar' ? 'غير متوفر' : 'Out of Stock')
-                    : isAtMax
-                    ? (locale === 'ar' ? 'الحد الأقصى' : 'Max Reached')
-                    : (locale === 'ar' ? 'إضافة للعربة' : 'Add to Cart')
-                  }
-                </span>
-              </>
-            )}
-          </motion.button>
+          <>
+            <ShoppingCart className="w-4 h-4" />
+            <span>
+              {processedProduct.isOutOfStock
+                ? (locale === 'ar' ? 'غير متوفر' : 'Out of Stock')
+                : isAtMax
+                ? (locale === 'ar' ? 'الحد الأقصى' : 'Max Reached')
+                : (locale === 'ar' ? 'إضافة للعربة' : 'Add to Cart')
+              }
+            </span>
+          </>
         )}
-      </div>
+      </motion.button>
     );
   });
 
@@ -381,18 +401,14 @@ const ProductCard = ({
 
   // تصيير حسب النوع
   const renderCard = () => {
-    const baseClasses = `relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 ${className}`;
-
-    switch (variant) {
+    switch (normalizedVariant) {
       case 'compact':
         return (
           <motion.div
-            className={`${baseClasses} flex`}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
+            className={cardBaseClasses}
             whileHover={{ y: -2 }}
           >
-            <div className="w-24 h-24 flex-shrink-0">
+            <div className="product-image">
               <LazyImage
                 src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
                 alt={processedProduct.name}
@@ -400,14 +416,18 @@ const ProductCard = ({
                 width={96}
                 height={96}
               />
+              <ProductBadges />
             </div>
 
-            <div className="flex-1 p-3">
-              <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
+            <div className="product-info">
+              <h3 className="product-name text-sm line-clamp-2">
                 {processedProduct.name}
               </h3>
-              <PriceDisplay />
-              <div className="mt-2">
+
+              <div className="product-footer">
+                <div className="price">
+                  <PriceDisplay />
+                </div>
                 <AddToCartButton />
               </div>
             </div>
@@ -417,22 +437,21 @@ const ProductCard = ({
       case 'list':
         return (
           <motion.div
-            className={`${baseClasses} flex`}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
+            className={cardBaseClasses}
             whileHover={{ y: -2 }}
           >
-            <div className="w-32 h-32 flex-shrink-0">
+            <div className="product-image">
               <LazyImage
                 src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
                 alt={processedProduct.name}
-                className="w-full h-full object-cover rounded-l-lg"
+                className="w-full h-full object-cover"
                 width={128}
                 height={128}
               />
+              <ProductBadges />
             </div>
 
-            <div className="flex-1 p-4">
+            <div className="product-info">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
                   {processedProduct.name}
@@ -444,8 +463,10 @@ const ProductCard = ({
                 {processedProduct.description}
               </p>
 
-              <div className="flex justify-between items-center">
-                <PriceDisplay />
+              <div className="product-footer">
+                <div className="price">
+                  <PriceDisplay />
+                </div>
                 <AddToCartButton />
               </div>
             </div>
@@ -455,12 +476,12 @@ const ProductCard = ({
       case 'featured':
         return (
           <motion.div
-            className={`${baseClasses} group`}
+            className={cardBaseClasses}
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
             whileHover={{ y: -4, scale: 1.02 }}
           >
-            <div className="relative h-[150px] overflow-hidden">
+            <div className="product-image">
               <LazyImage
                 src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
                 alt={processedProduct.name}
@@ -473,7 +494,6 @@ const ProductCard = ({
               <ProductBadges />
               <InteractiveOverlay />
 
-              {/* مؤشر الصور المتعددة */}
               {processedProduct.hasMultipleImages && (
                 <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1 rtl:space-x-reverse">
                   {processedProduct.images.map((_, index) => (
@@ -489,22 +509,29 @@ const ProductCard = ({
               )}
             </div>
 
-            <div className="p-6">
-              <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-2 line-clamp-2">
+            <div className="product-info">
+              <h3 className="font-bold text-gray-900 dark:text-white text-xl line-clamp-2">
                 {processedProduct.name}
               </h3>
 
               {showRating && (
-                <div className="mb-3">
+                <div>
                   <RatingStars rating={processedProduct.rating} reviews={processedProduct.reviews} size="md" />
                 </div>
               )}
 
-              <div className="mb-4">
-                <PriceDisplay />
-              </div>
+              {processedProduct.description && (
+                <p className="product-description line-clamp-3">
+                  {processedProduct.description}
+                </p>
+              )}
 
-              <AddToCartButton />
+              <div className="product-footer">
+                <div className="price">
+                  <PriceDisplay />
+                </div>
+                <AddToCartButton />
+              </div>
             </div>
           </motion.div>
         );
@@ -513,12 +540,12 @@ const ProductCard = ({
       default:
         return (
           <motion.div
-            className={`${baseClasses} group`}
+            className={cardBaseClasses}
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
             whileHover={{ y: -4 }}
           >
-            <div className="relative h-[200px] overflow-hidden">
+            <div className="product-image">
               <LazyImage
                 src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
                 alt={processedProduct.name}
@@ -532,22 +559,23 @@ const ProductCard = ({
               <InteractiveOverlay />
             </div>
 
-            <div className="p-4">
-              <h3 className="font-medium text-gray-900 dark:text-white text-base mb-2 line-clamp-2">
+            <div className="product-info">
+              <h3 className="font-medium text-gray-900 dark:text-white text-base line-clamp-2">
                 {processedProduct.name}
               </h3>
 
               {showRating && (
-                <div className="mb-2">
+                <div>
                   <RatingStars rating={processedProduct.rating} reviews={processedProduct.reviews} />
                 </div>
               )}
 
-              <div className="mb-3">
-                <PriceDisplay />
+              <div className="product-footer">
+                <div className="price">
+                  <PriceDisplay />
+                </div>
+                <AddToCartButton />
               </div>
-
-              <AddToCartButton />
             </div>
           </motion.div>
         );

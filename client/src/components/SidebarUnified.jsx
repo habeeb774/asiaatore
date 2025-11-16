@@ -18,6 +18,7 @@ import {
 import SafeImage from './common/SafeImage';
 import { useLanguage } from '../stores/LanguageContext';
 import { useCart } from '../stores/CartContext';
+import { useAuth } from '../stores/AuthContext';
 
 /**
  * مكون Sidebar الموحد - يجمع أفضل الميزات من مكونات Sidebar المختلفة
@@ -48,14 +49,13 @@ const Sidebar = ({
 }) => {
   const { locale } = useLanguage();
   const { cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const { user } = useAuth() || {};
   const location = useLocation();
   const sidebarRef = useRef(null);
   const previousFocusRef = useRef(null);
 
   // حالات المكون
   const [favorites, setFavorites] = useState(initialFavorites || []);
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   // نصوص الواجهة حسب اللغة
   const texts = {

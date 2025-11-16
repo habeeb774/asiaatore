@@ -11,6 +11,7 @@ import sharp from 'sharp';
 import prisma from '../db/client.js';
 import { whereWithDeletedAt } from '../utils/deletedAt.js';
 import InventoryService from '../services/inventoryService.js';
+import ExcelJS from 'exceljs';
 
 const router = Router();
 
@@ -112,6 +113,145 @@ function productImageMiddleware(req, res, next) {
     });
   } else { next(); }
 }
+
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB Excel cap
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (allowed.includes(file.mimetype) || ['.xlsx', '.xls'].includes(ext)) return cb(null, true);
+    cb(new Error('INVALID_EXCEL_FILE'));
+  }
+});
+
+function excelFileMiddleware(req, res, next) {
+  excelUpload.single('file')(req, res, function(err) {
+    if (err) {
+      if (err.message === 'INVALID_EXCEL_FILE') {
+        return res.status(400).json({ error: 'INVALID_EXCEL_FILE', message: 'Only .xlsx Excel files are supported.' });
+      }
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'FILE_TOO_LARGE', message: 'Excel file must be under 5MB.' });
+      }
+      return res.status(400).json({ error: 'EXCEL_UPLOAD_FAILED', message: err.message });
+    }
+    next();
+  });
+}
+
+const EXCEL_HEADER_ALIASES = {
+  nameAr: ['namear', 'arabicname', 'namearabic'],
+  nameEn: ['nameen', 'englishname', 'productname', 'name'],
+  price: ['price', 'unitprice', 'sellingprice', 'cost'],
+  stock: ['stock', 'qty', 'quantity', 'inventory'],
+  slug: ['slug', 'handle'],
+  sku: ['sku', 'productcode', 'code', 'barcode'],
+  category: ['category', 'cat', 'section'],
+  image: ['image', 'imageurl', 'photo'],
+  oldPrice: ['oldprice', 'compareprice', 'compareatprice'],
+  shortAr: ['shortar', 'descriptionar', 'descar'],
+  shortEn: ['shorten', 'descriptionen', 'descen', 'description'],
+  brandSlug: ['brandslug', 'brand'],
+  brandId: ['brandid', 'brandidnum']
+};
+
+const MAX_EXCEL_ROWS = 500;
+
+const canonicalHeader = (value) => String(value ?? '')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, '');
+
+const readCellValue = (cell) => {
+  if (!cell) return undefined;
+  const value = cell.value;
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'object') {
+    if (value.text) return String(value.text).trim();
+    if (Array.isArray(value.richText)) return value.richText.map((piece) => piece.text).join('').trim();
+    if (value.result != null) return value.result;
+  }
+  if (typeof value === 'string') return value.trim();
+  return value;
+};
+
+const parseNumericValue = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const normalized = String(value)
+    .replace(/[^0-9,.-]/g, '')
+    .replace(',', '.');
+  if (!normalized) return null;
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+};
+
+const slugifyValue = (value) => String(value ?? '')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+  .slice(0, 190);
+
+const fallbackSlug = (value, rowNumber) => {
+  const base = slugifyValue(value);
+  if (base) return base;
+  return `excel-product-${Date.now()}-${rowNumber}-${Math.random().toString(36).slice(2,6)}`;
+};
+
+const getRowValue = (row, headerMap, key) => {
+  const aliases = EXCEL_HEADER_ALIASES[key] || [key];
+  for (const alias of aliases) {
+    const idx = headerMap[alias];
+    if (!idx) continue;
+    const raw = readCellValue(row.getCell(idx));
+    if (raw === undefined || raw === null || raw === '') continue;
+    return raw;
+  }
+  return undefined;
+};
+
+const extractExcelRow = (row, headerMap, rowNumber) => {
+  const rawNameAr = getRowValue(row, headerMap, 'nameAr');
+  const rawNameEn = getRowValue(row, headerMap, 'nameEn');
+  const rawPrice = getRowValue(row, headerMap, 'price');
+  const rawStock = getRowValue(row, headerMap, 'stock');
+  const payload = {
+    rowNumber,
+    nameAr: rawNameAr ? String(rawNameAr).trim() : undefined,
+    nameEn: rawNameEn ? String(rawNameEn).trim() : undefined,
+    price: parseNumericValue(rawPrice),
+    stock: parseNumericValue(rawStock),
+    slug: getRowValue(row, headerMap, 'slug')?.toString().trim(),
+    sku: getRowValue(row, headerMap, 'sku')?.toString().trim(),
+    category: getRowValue(row, headerMap, 'category')?.toString().trim(),
+    image: getRowValue(row, headerMap, 'image')?.toString().trim(),
+    oldPrice: parseNumericValue(getRowValue(row, headerMap, 'oldPrice')),
+    shortAr: getRowValue(row, headerMap, 'shortAr')?.toString().trim(),
+    shortEn: getRowValue(row, headerMap, 'shortEn')?.toString().trim(),
+    brandSlug: getRowValue(row, headerMap, 'brandSlug')?.toString().trim().toLowerCase(),
+    brandId: getRowValue(row, headerMap, 'brandId')?.toString().trim()
+  };
+  const hasData = [payload.nameAr, payload.nameEn, payload.price, payload.slug, payload.sku]
+    .some((val) => val !== undefined && val !== null && val !== '');
+  return hasData ? payload : null;
+};
+
+const ensureUniqueValue = (value, usedSet) => {
+  if (!value) return null;
+  let candidate = value;
+  let counter = 1;
+  while (usedSet.has(candidate)) {
+    counter += 1;
+    candidate = `${value}-${counter}`;
+  }
+  usedSet.add(candidate);
+  return candidate;
+};
 
 const { mapProduct } = productService;
 
@@ -878,6 +1018,335 @@ router.post('/batch/stock-price', requireAdmin, async (req, res) => {
     res.json({ ok:true, results });
   } catch (e) {
     res.status(400).json({ error:'BATCH_STOCK_PRICE_FAILED', message: e.message });
+  }
+});
+
+router.get('/export/excel', requireAdmin, async (req, res) => {
+  try {
+    const { category, status, q, limit, includeInactive } = req.query || {};
+    const where = whereWithDeletedAt({});
+    if (category) where.category = String(category);
+    if (status) where.status = String(status);
+    if (!includeInactive) {
+      where.deletedAt = null;
+    }
+    if (q) {
+      const needle = String(q).trim();
+      if (needle) {
+        where.OR = [
+          { nameAr: { contains: needle, mode: 'insensitive' } },
+          { nameEn: { contains: needle, mode: 'insensitive' } },
+          { slug: { contains: needle, mode: 'insensitive' } },
+          { sku: { contains: needle, mode: 'insensitive' } }
+        ];
+      }
+    }
+    const maxRows = Math.min(Math.max(parseInt(limit, 10) || 2000, 50), 20000);
+    const products = await prisma.product.findMany({
+      where,
+      include: {
+        brand: { select: { id: true, slug: true, nameAr: true, nameEn: true } },
+        tierPrices: {
+          where: whereWithDeletedAt({}),
+          select: { id: true, minQty: true, price: true, packagingType: true, noteAr: true, noteEn: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: maxRows
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'My Store Admin';
+    workbook.created = new Date();
+    const worksheet = workbook.addWorksheet('Products');
+
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 34 },
+      { header: 'Slug', key: 'slug', width: 28 },
+      { header: 'SKU', key: 'sku', width: 18 },
+      { header: 'Name (AR)', key: 'nameAr', width: 32 },
+      { header: 'Name (EN)', key: 'nameEn', width: 32 },
+      { header: 'Category', key: 'category', width: 18 },
+      { header: 'Price', key: 'price', width: 12 },
+      { header: 'Old Price', key: 'oldPrice', width: 12 },
+      { header: 'Stock', key: 'stock', width: 10 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Brand ID', key: 'brandId', width: 30 },
+      { header: 'Brand Slug', key: 'brandSlug', width: 24 },
+      { header: 'Image', key: 'image', width: 48 },
+      { header: 'Short (AR)', key: 'shortAr', width: 42 },
+      { header: 'Short (EN)', key: 'shortEn', width: 42 },
+      { header: 'Tier Prices', key: 'tierPrices', width: 40 },
+      { header: 'Created At', key: 'createdAt', width: 24 },
+      { header: 'Updated At', key: 'updatedAt', width: 24 }
+    ];
+
+    products.forEach((product) => {
+      const tierSummary = (product.tierPrices || [])
+        .sort((a, b) => a.minQty - b.minQty)
+        .map((tier) => `${tier.minQty}+ @ ${tier.price}${tier.packagingType ? ` (${tier.packagingType})` : ''}`)
+        .join('\n');
+      worksheet.addRow({
+        id: product.id,
+        slug: product.slug,
+        sku: product.sku || '',
+        nameAr: product.nameAr,
+        nameEn: product.nameEn,
+        category: product.category,
+        price: product.price,
+        oldPrice: product.oldPrice ?? '',
+        stock: product.stock,
+        status: product.status,
+        brandId: product.brand?.id || '',
+        brandSlug: product.brand?.slug || '',
+        image: product.image || '',
+        shortAr: product.shortAr || '',
+        shortEn: product.shortEn || '',
+        tierPrices: tierSummary,
+        createdAt: product.createdAt?.toISOString?.() || product.createdAt,
+        updatedAt: product.updatedAt?.toISOString?.() || product.updatedAt
+      });
+    });
+    worksheet.getRow(1).font = { bold: true };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    const filename = `products-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+
+    try {
+      await audit({
+        action: 'product.export.excel',
+        entity: 'Product',
+        entityId: null,
+        userId: req.user?.id,
+        meta: { count: products.length, filters: { category, status, q } }
+      });
+    } catch (auditErr) {
+      console.warn('[PRODUCTS] Failed to audit export', auditErr);
+    }
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (e) {
+    console.error('[PRODUCTS] Excel export failed', e);
+    res.status(500).json({ error: 'PRODUCT_EXPORT_FAILED', message: e.message });
+  }
+});
+
+router.post('/import/excel', requireAdmin, excelFileMiddleware, async (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: 'NO_FILE', message: 'Excel (.xlsx) file is required.' });
+    }
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const worksheet = workbook.worksheets?.[0];
+    if (!worksheet) {
+      return res.status(400).json({ error: 'NO_SHEET', message: 'Workbook must contain at least one sheet.' });
+    }
+    const headerRow = worksheet.getRow(1);
+    if (!headerRow || headerRow.actualCellCount === 0) {
+      return res.status(400).json({ error: 'INVALID_HEADER', message: 'First row must contain column headers.' });
+    }
+    const headerMap = {};
+    headerRow.eachCell((cell, colNumber) => {
+      const key = canonicalHeader(readCellValue(cell));
+      if (key) headerMap[key] = colNumber;
+    });
+    if (!Object.keys(headerMap).length) {
+      return res.status(400).json({ error: 'INVALID_HEADER', message: 'Could not detect any supported headers.' });
+    }
+
+    const parsedRows = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1 || parsedRows.length >= MAX_EXCEL_ROWS) return;
+      if (!row.hasValues) return;
+      const parsed = extractExcelRow(row, headerMap, rowNumber);
+      if (parsed) parsedRows.push(parsed);
+    });
+    if (!parsedRows.length) {
+      return res.status(400).json({ error: 'EMPTY_SHEET', message: 'No valid rows found to import.' });
+    }
+    const trimmedSkus = parsedRows
+      .map((row) => (row.sku ? String(row.sku).trim() : null))
+      .filter(Boolean);
+    const trimmedSlugs = parsedRows
+      .map((row) => {
+        const candidate = slugifyValue(row.slug || row.nameEn || row.nameAr);
+        return candidate || null;
+      })
+      .filter(Boolean);
+    const existingMatches = (trimmedSkus.length || trimmedSlugs.length)
+      ? await prisma.product.findMany({
+          where: {
+            OR: [
+              trimmedSkus.length ? { sku: { in: trimmedSkus } } : undefined,
+              trimmedSlugs.length ? { slug: { in: trimmedSlugs } } : undefined,
+            ].filter(Boolean),
+          },
+          select: { id: true, slug: true, sku: true },
+        })
+      : [];
+    const existingBySlug = new Map();
+    const existingBySku = new Map();
+    for (const product of existingMatches) {
+      if (product.slug) existingBySlug.set(product.slug, product);
+      if (product.sku) existingBySku.set(product.sku, product);
+    }
+    const usedSlugs = new Set(existingBySlug.keys());
+    const usedSkus = new Set(existingBySku.keys());
+    const fileSkuSet = new Set();
+    const fileSlugSet = new Set();
+
+    const brandSlugValues = Array.from(new Set(parsedRows.map((row) => row.brandSlug).filter(Boolean)));
+    const brandIdValues = Array.from(new Set(parsedRows.map((row) => row.brandId).filter(Boolean)));
+    const brandSlugMap = new Map();
+    const brandIdSet = new Set();
+    if (brandSlugValues.length) {
+      const brandRecords = await prisma.brand.findMany({
+        where: { slug: { in: brandSlugValues } },
+        select: { id: true, slug: true },
+      });
+      brandRecords.forEach((brand) => brandSlugMap.set(brand.slug.toLowerCase(), brand.id));
+    }
+    if (brandIdValues.length) {
+      const brandRecordsById = await prisma.brand.findMany({
+        where: { id: { in: brandIdValues } },
+        select: { id: true },
+      });
+      brandRecordsById.forEach((brand) => brandIdSet.add(brand.id));
+    }
+
+    const summary = { created: 0, updated: 0, skipped: 0, errors: [], processed: parsedRows.length };
+
+    for (const row of parsedRows) {
+      const rowNumber = row.rowNumber;
+      const rawSku = row.sku ? String(row.sku).trim() : null;
+      const price = row.price != null ? Number(row.price) : null;
+      if (!(price > 0)) {
+        summary.skipped += 1;
+        summary.errors.push({ row: rowNumber, code: 'INVALID_PRICE', message: 'Price must be a positive number.' });
+        continue;
+      }
+      const nameEn = row.nameEn?.trim();
+      const nameAr = row.nameAr?.trim();
+      if (!nameEn && !nameAr) {
+        summary.skipped += 1;
+        summary.errors.push({ row: rowNumber, code: 'MISSING_NAME', message: 'Name (Arabic or English) is required.' });
+        continue;
+      }
+      if (rawSku) {
+        if (fileSkuSet.has(rawSku)) {
+          summary.skipped += 1;
+          summary.errors.push({ row: rowNumber, code: 'DUPLICATE_SKU_IN_FILE', message: `SKU ${rawSku} is repeated in the sheet.` });
+          continue;
+        }
+        fileSkuSet.add(rawSku);
+      }
+      let slugCandidate = slugifyValue(row.slug || nameEn || nameAr);
+      if (!slugCandidate) slugCandidate = fallbackSlug(nameEn || nameAr || 'product', rowNumber);
+      if (!row.sku) {
+        if (fileSlugSet.has(slugCandidate)) {
+          summary.skipped += 1;
+          summary.errors.push({ row: rowNumber, code: 'DUPLICATE_SLUG_IN_FILE', message: `Slug ${slugCandidate} is repeated in the sheet.` });
+          continue;
+        }
+        fileSlugSet.add(slugCandidate);
+      }
+
+      const existingBySkuMatch = rawSku ? existingBySku.get(rawSku) : null;
+      const existingBySlugMatch = !existingBySkuMatch && slugCandidate ? existingBySlug.get(slugCandidate) : null;
+      const existing = existingBySkuMatch || existingBySlugMatch || null;
+
+      if (!existing) {
+        slugCandidate = ensureUniqueValue(slugCandidate, usedSlugs) || slugCandidate;
+        if (rawSku) {
+          if (usedSkus.has(rawSku)) {
+            summary.skipped += 1;
+            summary.errors.push({ row: rowNumber, code: 'SKU_IN_USE', message: `SKU ${rawSku} already exists.` });
+            continue;
+          }
+          usedSkus.add(rawSku);
+        }
+      } else {
+        if (rawSku) {
+          const owner = existingBySku.get(rawSku);
+          if (owner && owner.id !== existing.id) {
+            summary.skipped += 1;
+            summary.errors.push({ row: rowNumber, code: 'SKU_IN_USE', message: `SKU ${rawSku} belongs to another product.` });
+            continue;
+          }
+        }
+        if (slugCandidate) {
+          const slugOwner = existingBySlug.get(slugCandidate);
+          if (slugOwner && slugOwner.id !== existing.id) {
+            summary.skipped += 1;
+            summary.errors.push({ row: rowNumber, code: 'SLUG_IN_USE', message: `Slug ${slugCandidate} belongs to another product.` });
+            continue;
+          }
+        }
+      }
+
+      const resolvedBrandId = row.brandId && brandIdSet.has(row.brandId)
+        ? row.brandId
+        : (row.brandSlug ? brandSlugMap.get(row.brandSlug.toLowerCase()) : null);
+
+      const stockValue = row.stock != null && Number.isFinite(Number(row.stock))
+        ? Math.max(0, Math.round(Number(row.stock)))
+        : 0;
+      const baseData = {
+        slug: slugCandidate,
+        nameAr: nameAr || nameEn || 'منتج',
+        nameEn: nameEn || nameAr || 'Product',
+        shortAr: row.shortAr || null,
+        shortEn: row.shortEn || null,
+        category: row.category || 'general',
+        price,
+        oldPrice: row.oldPrice != null && Number.isFinite(Number(row.oldPrice)) ? Number(row.oldPrice) : null,
+        image: row.image || null,
+        stock: stockValue,
+        brandId: resolvedBrandId || null,
+      };
+      if (rawSku) baseData.sku = rawSku;
+
+      try {
+        let productRecord = null;
+        if (existing) {
+          productRecord = await prisma.product.update({ where: { id: existing.id }, data: baseData });
+          summary.updated += 1;
+        } else {
+          productRecord = await prisma.product.create({ data: baseData });
+          summary.created += 1;
+        }
+        if (stockValue != null) {
+          await InventoryService.updateStock(productRecord.id, stockValue).catch(() => {});
+        }
+        usedSlugs.add(baseData.slug);
+        if (rawSku) usedSkus.add(rawSku);
+        if (productRecord.slug) {
+          existingBySlug.set(productRecord.slug, { id: productRecord.id, slug: productRecord.slug, sku: productRecord.sku });
+        }
+        if (productRecord.sku) {
+          existingBySku.set(productRecord.sku, { id: productRecord.id, slug: productRecord.slug, sku: productRecord.sku });
+        }
+        audit({
+          action: 'product.import.excel',
+          entity: 'Product',
+          entityId: productRecord.id,
+          userId: req.user?.id,
+          meta: { row: rowNumber, sku: rawSku || null, slug: baseData.slug },
+        });
+      } catch (err) {
+        summary.skipped += 1;
+        summary.errors.push({ row: rowNumber, code: err.code || 'IMPORT_ROW_FAILED', message: err.message || 'Failed to save product.' });
+      }
+    }
+
+    await invalidateCache('products:list:*');
+    res.json({ ok: true, ...summary, errors: summary.errors.slice(0, 50) });
+  } catch (e) {
+    res.status(400).json({ error: 'PRODUCT_IMPORT_FAILED', message: e.message });
   }
 });
 

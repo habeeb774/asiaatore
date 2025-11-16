@@ -1,7 +1,7 @@
 // ✅ Fixed version of HeaderNav.jsx (missing closing tags issue)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from '../../lib/framerLazy';
+import { AnimatePresence } from '../../lib/framerLazy';
 import { createPortal } from 'react-dom';
 import { User as UserIcon } from 'lucide-react';
 import CartPanel from '../cart/CartPanel';

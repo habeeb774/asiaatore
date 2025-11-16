@@ -108,7 +108,6 @@ function FooterAppBadges({ t, appStoreUrl, playStoreUrl, taxNumber, isAr }) {
         playStoreUrl={playStoreUrl}
         playBadgeAlt={t.playBadgeAlt}
         appStoreBadgeAlt={t.appStoreBadgeAlt}
-        isRtl={isAr}
       />
       <div className="mt-4 text-sm text-slate-700">
         <p className="font-medium">{isAr ? 'الرقم الضريبي' : 'Tax number'}</p>
@@ -118,7 +117,7 @@ function FooterAppBadges({ t, appStoreUrl, playStoreUrl, taxNumber, isAr }) {
   );
 }
 
-function AppBadges({ appStoreUrl, playStoreUrl, playBadgeAlt, appStoreBadgeAlt, isRtl }) {
+function AppBadges({ appStoreUrl, playStoreUrl, playBadgeAlt, appStoreBadgeAlt }) {
   const [gpOk, setGpOk] = React.useState(true);
   const [asOk, setAsOk] = React.useState(true);
   return (

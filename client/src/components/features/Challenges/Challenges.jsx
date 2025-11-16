@@ -6,6 +6,69 @@ import { Skeleton } from '../../shared/SkeletonLoader/SkeletonLoader';
 
 const ChallengesContext = createContext();
 
+const CHALLENGE_TEMPLATES = [
+  {
+    id: 'daily_login',
+    type: 'daily',
+    title: 'تسجيل الدخول اليومي',
+    titleEn: 'Daily Login',
+    description: 'سجل دخولك كل يوم لمدة أسبوع',
+    descriptionEn: 'Log in every day for a week',
+    icon: '📅',
+    duration: 7,
+    reward: { xp: 50, points: 10 },
+    requirements: { logins: 7 }
+  },
+  {
+    id: 'shopping_spree',
+    type: 'seasonal',
+    title: 'جولة تسوق مجنونة',
+    titleEn: 'Shopping Spree',
+    description: 'اشترِ 5 منتجات مختلفة في أسبوع واحد',
+    descriptionEn: 'Buy 5 different products in one week',
+    icon: '🛍️',
+    duration: 7,
+    reward: { xp: 100, points: 25 },
+    requirements: { purchases: 5, uniqueProducts: true }
+  },
+  {
+    id: 'review_champion',
+    type: 'achievement',
+    title: 'بطل المراجعات',
+    titleEn: 'Review Champion',
+    description: 'اكتب مراجعات مفصلة لـ3 منتجات',
+    descriptionEn: 'Write detailed reviews for 3 products',
+    icon: '✍️',
+    duration: null,
+    reward: { xp: 75, points: 15 },
+    requirements: { reviews: 3, detailed: true }
+  },
+  {
+    id: 'social_sharer',
+    type: 'social',
+    title: 'المشارك الاجتماعي',
+    titleEn: 'Social Sharer',
+    description: 'شارك 3 منتجات على وسائل التواصل',
+    descriptionEn: 'Share 3 products on social media',
+    icon: '📱',
+    duration: null,
+    reward: { xp: 60, points: 12 },
+    requirements: { shares: 3 }
+  },
+  {
+    id: 'loyalty_milestone',
+    type: 'milestone',
+    title: 'معلم الولاء',
+    titleEn: 'Loyalty Milestone',
+    description: 'أكمل 10 عمليات شراء',
+    descriptionEn: 'Complete 10 purchases',
+    icon: '🎯',
+    duration: null,
+    reward: { xp: 200, points: 50 },
+    requirements: { purchases: 10 }
+  }
+];
+
 export const useChallenges = () => {
   const context = useContext(ChallengesContext);
   if (!context) {
@@ -16,77 +79,12 @@ export const useChallenges = () => {
 
 export const ChallengesProvider = ({ children }) => {
   const [challenges, setChallenges] = useState([]);
-  const [userProgress, setUserProgress] = useState({});
   const [activeChallenges, setActiveChallenges] = useState([]);
-
-  // Challenge definitions
-  const challengeTemplates = [
-    {
-      id: 'daily_login',
-      type: 'daily',
-      title: 'تسجيل الدخول اليومي',
-      titleEn: 'Daily Login',
-      description: 'سجل دخولك كل يوم لمدة أسبوع',
-      descriptionEn: 'Log in every day for a week',
-      icon: '📅',
-      duration: 7,
-      reward: { xp: 50, points: 10 },
-      requirements: { logins: 7 }
-    },
-    {
-      id: 'shopping_spree',
-      type: 'seasonal',
-      title: 'جولة تسوق مجنونة',
-      titleEn: 'Shopping Spree',
-      description: 'اشترِ 5 منتجات مختلفة في أسبوع واحد',
-      descriptionEn: 'Buy 5 different products in one week',
-      icon: '🛍️',
-      duration: 7,
-      reward: { xp: 100, points: 25 },
-      requirements: { purchases: 5, uniqueProducts: true }
-    },
-    {
-      id: 'review_champion',
-      type: 'achievement',
-      title: 'بطل المراجعات',
-      titleEn: 'Review Champion',
-      description: 'اكتب مراجعات مفصلة لـ3 منتجات',
-      descriptionEn: 'Write detailed reviews for 3 products',
-      icon: '✍️',
-      duration: null,
-      reward: { xp: 75, points: 15 },
-      requirements: { reviews: 3, detailed: true }
-    },
-    {
-      id: 'social_sharer',
-      type: 'social',
-      title: 'المشارك الاجتماعي',
-      titleEn: 'Social Sharer',
-      description: 'شارك 3 منتجات على وسائل التواصل',
-      descriptionEn: 'Share 3 products on social media',
-      icon: '📱',
-      duration: null,
-      reward: { xp: 60, points: 12 },
-      requirements: { shares: 3 }
-    },
-    {
-      id: 'loyalty_milestone',
-      type: 'milestone',
-      title: 'معلم الولاء',
-      titleEn: 'Loyalty Milestone',
-      description: 'أكمل 10 عمليات شراء',
-      descriptionEn: 'Complete 10 purchases',
-      icon: '🎯',
-      duration: null,
-      reward: { xp: 200, points: 50 },
-      requirements: { purchases: 10 }
-    }
-  ];
 
   // Initialize challenges
   useEffect(() => {
     const now = new Date();
-    const initializedChallenges = challengeTemplates.map(template => ({
+  const initializedChallenges = CHALLENGE_TEMPLATES.map(template => ({
       ...template,
       id: `${template.id}_${now.getTime()}`,
       startDate: now,
@@ -98,7 +96,7 @@ export const ChallengesProvider = ({ children }) => {
 
     setChallenges(initializedChallenges);
     setActiveChallenges(initializedChallenges.filter(c => !c.completed));
-  }, [challengeTemplates]);
+  }, []);
 
   // Update challenge progress
   const updateProgress = (challengeId, action, data = {}) => {

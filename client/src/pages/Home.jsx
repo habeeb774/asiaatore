@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { motion } from '../lib/framerLazy';
 import { useProducts } from '../stores/ProductsContext';
 import { useHomeProducts, useMotionVariants } from '../hooks/useHomeProducts';
@@ -15,7 +15,7 @@ const OffersSpecialSection = lazy(() => import('../components/home/OffersSpecial
 const BrandsStrip = lazy(() => import('../components/home/BrandsStrip'));
 
 const Home = () => {
-  const { products, loading } = useProducts();
+  const { products } = useProducts();
   const { featuredProducts } = useHomeProducts(products);
   const { containerVariants, itemVariants } = useMotionVariants();
   const { locale } = useLanguage();

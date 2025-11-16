@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage, LocalizedText } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../components/Notification/Notification';
 import { LazyImage } from '../shared/LazyImage/LazyImage';

@@ -1,4 +1,4 @@
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api';
+export const API_BASE = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || '/api';
 
 const toQuery = (params = {}) =>
   Object.entries(params)
@@ -79,4 +79,24 @@ export async function del(path, { signal } = {}) {
     throw err;
   }
   return res.json();
+}
+
+export async function getBinary(path, params, { signal, accept = '*/*', responseType = 'blob' } = {}) {
+  const qs = params ? `?${toQuery(params)}` : '';
+  const res = await fetch(`${API_BASE}${path}${qs}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { 'Accept': accept },
+    signal,
+  });
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    const err = new Error(errBody.message || `Request failed: ${res.status}`);
+    err.status = res.status;
+    err.body = errBody;
+    throw err;
+  }
+  if (responseType === 'arrayBuffer') return res.arrayBuffer();
+  if (responseType === 'text') return res.text();
+  return res.blob();
 }

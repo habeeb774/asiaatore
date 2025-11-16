@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import reactPlugin from 'eslint-plugin-react'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import importPlugin from 'eslint-plugin-import'
 import { defineConfig, globalIgnores } from 'eslint/config'
@@ -88,6 +89,7 @@ export default defineConfig([
     plugins: {
       'jsx-a11y': jsxA11y,
       'import': importPlugin,
+      'react': reactPlugin,
     },
     languageOptions: {
       ecmaVersion: 2020,
@@ -98,6 +100,9 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
+    settings: {
+      react: { version: 'detect' },
+    },
     rules: {
       // basic JSX a11y rule enabled; plugin is registered above
       'jsx-a11y/alt-text': 'warn',
@@ -105,6 +110,8 @@ export default defineConfig([
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'react-refresh/only-export-components': 'off',
       'import/no-unresolved': 'off', // Disabled due to path resolution issues with Vite
+      'react/jsx-uses-vars': 'warn',
+      'react/jsx-uses-react': 'off',
     },
   },
   // Node/Server overrides

@@ -198,7 +198,7 @@
 .btn-outline,
 .btn-danger,
 .btn-chip {
-  @extend .btn-base;
+  @include shared.btn-base();
   font-size: .72rem;
   font-weight: 600;
   border-radius: 10px;
@@ -237,7 +237,8 @@
 }
 
 .btn-danger {
-  @extend .btn-base;
+  @extend .btn-danger;
+  @include shared.btn-base();
   background: #dc2626;
   color: #fff;
 }
@@ -247,7 +248,7 @@
 }
 
 .btn-chip {
-  @extend .btn-base;
+  @include shared.btn-base();
   background: #f1f5f9;
   color: #334155;
   padding: .5rem .75rem;

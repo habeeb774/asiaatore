@@ -59,7 +59,7 @@ const ARProductViewer = ({
 
       if ('xr' in navigator) {
         // WebXR AR session
-        const session = await navigator.xr.requestSession('immersive-ar', {
+        await navigator.xr.requestSession('immersive-ar', {
           requiredFeatures: ['hit-test', 'dom-overlay'],
           domOverlay: { root: document.body }
         });

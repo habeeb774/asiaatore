@@ -25,10 +25,34 @@
 /* Product grid layouts */
 .products-grid {
   display: grid;
-  gap: 1.25rem;
+  gap: 0.1rem;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 
   &.wide {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+.products-grid.catalog-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .products-grid.catalog-layout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .products-grid.catalog-layout {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .products-grid.catalog-layout {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.1rem;
   }
 }

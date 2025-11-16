@@ -142,7 +142,7 @@
   .btn-secondary,
   .home-products .product-card .actions button,
   .home-products .product-card .actions a {
-    @include shared.btn-base;
+  @include shared.btn-base();
     min-height: 44px;
   }
 }
