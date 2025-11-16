@@ -33,6 +33,46 @@ async function setCached(key, data, ttl = 300) {
 }
 
 async function invalidateCache(pattern) {
+
+  // Admin update product by id
+  router.patch('/:id', requireAdmin, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { nameAr, nameEn, price, stock, category, categoryId, image, shortAr, shortEn, oldPrice, active } = req.body || {};
+      let catId = categoryId;
+      if (!catId && category) {
+        const c = await prisma.category.findFirst({ where: { slug: String(category) }, select: { id: true } });
+        catId = c?.id || null;
+      }
+      const updated = await productService.update(id, {
+        nameAr, nameEn,
+        shortAr, shortEn,
+        price: price !== undefined ? Number(price) : undefined,
+        oldPrice: oldPrice !== undefined ? Number(oldPrice) : undefined,
+        stock: stock !== undefined ? Number(stock) : undefined,
+        category: category || undefined,
+        categoryId: catId,
+        image: image || undefined,
+        active: active !== undefined ? !!active : undefined
+      });
+      await audit({ action: 'product.update', entity: 'Product', entityId: id, userId: req.user?.id });
+      res.json(mapProduct(updated));
+    } catch (e) {
+      res.status(400).json({ error: 'FAILED_UPDATE_PRODUCT', message: e.message });
+    }
+  });
+
+  // Admin delete product
+  router.delete('/:id', requireAdmin, async (req, res) => {
+    try {
+      const id = req.params.id;
+      await productService.remove(id);
+      await audit({ action: 'product.delete', entity: 'Product', entityId: id, userId: req.user?.id });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ error: 'FAILED_DELETE_PRODUCT', message: e.message });
+    }
+  });
   if (!global.redisClient) return;
   try {
     const keys = await global.redisClient.keys(pattern);

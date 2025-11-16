@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { get } from './http';
+import { get, post, patch, del } from './http';
 
 // Create a stable query key for lists based on filters/sort/pagination
 const listKey = (params) => ['products', { ...params }];
@@ -62,4 +62,47 @@ export function useNextPagePrefetch(params, hasNext) {
 // Invalidate all product lists (e.g., after admin updates)
 export function invalidateProducts(qc) {
   return qc.invalidateQueries({ queryKey: ['products'] });
+}
+
+// Admin helpers
+export async function updateProduct(id, body) {
+  return patch(`/products/${id}`, body);
+}
+
+export async function deleteProduct(id) {
+  return del(`/products/${id}`);
+}
+
+export async function batchDiscount(body) {
+  return post('/products/batch/discount', body);
+}
+
+export async function batchClearDiscount(body) {
+  return post('/products/batch/clear-discount', body);
+}
+
+// Gallery image helpers
+export async function addProductImage(productId, file) {
+  const fd = new FormData();
+  fd.append('image', file);
+  return post(`/products/${productId}/images`, fd, { json: false });
+}
+
+// Upload multiple images sequentially (or in parallel) and aggregate responses. Returns array of product responses per upload.
+export async function addProductImages(productId, files = []) {
+  // Upload in serial to preserve ordering (sort values are determined server-side)
+  const results = [];
+  for (const f of files) {
+    const res = await addProductImage(productId, f);
+    results.push(res);
+  }
+  return results;
+}
+
+export async function deleteProductImage(imageId) {
+  return del(`/products/images/${imageId}`);
+}
+
+export async function updateProductImage(imageId, body) {
+  return patch(`/products/images/${imageId}`, body);
 }

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import useSiteName from '../hooks/useSiteName';
 
 /**
  * مكون لإدارة عناصر head في الصفحة لتحسين SEO
@@ -105,10 +106,13 @@ export const useSEO = ({
  * مكون لتحسين SEO للصفحة الرئيسية
  */
 export const HomeSEO = ({ locale, siteName }) => {
+  // If siteName wasn't passed, try to read it from SettingsContext via useSiteName
+  const computedName = useSiteName({ locale });
+  const finalSiteName = siteName || computedName;
   const seoData = {
     title: locale === 'ar'
-      ? `${siteName || 'متجرنا'} - تسوق عبر الإنترنت بأفضل الأسعار`
-      : `${siteName || 'Our Store'} - Online Shopping at Best Prices`,
+      ? `${finalSiteName} - تسوق عبر الإنترنت بأفضل الأسعار`
+      : `${finalSiteName} - Online Shopping at Best Prices`,
     description: locale === 'ar'
       ? 'اكتشف مجموعة واسعة من المنتجات عالية الجودة في متجرنا الإلكتروني. تسوق بأمان واستمتع بتجربة تسوق مميزة مع شحن مجاني.'
       : 'Discover a wide range of high-quality products in our online store. Shop safely and enjoy a premium shopping experience with free shipping.',
@@ -119,7 +123,7 @@ export const HomeSEO = ({ locale, siteName }) => {
     url: typeof window !== 'undefined' ? window.location.href : '/',
     type: 'website',
     locale: locale === 'ar' ? 'ar_SA' : 'en_US',
-    siteName: siteName || (locale === 'ar' ? 'متجرنا' : 'Our Store')
+    siteName: finalSiteName
   };
 
   useSEO(seoData);

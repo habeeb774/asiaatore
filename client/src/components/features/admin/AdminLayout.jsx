@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AdminSideNav from './AdminSideNav.jsx';
+import AdminDrawer from './AdminDrawer.jsx';
 
 /**
  * AdminLayout
@@ -8,20 +9,67 @@ import AdminSideNav from './AdminSideNav.jsx';
  *   - title?: string — optional page title shown above content.
  *   - children: React.ReactNode — page content.
  */
-export default function AdminLayout({ title, children }) {
+export default function AdminLayout({ title, children, topbar }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); // collapsed state for desktop
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [pinned, setPinned] = useState(false); // user pin preference persisted
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = (e) => setIsDesktop(!!e.matches);
+    setIsDesktop(!!mq.matches);
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+
+  // initialize pinned preference from localStorage or default to desktop layout
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('admin.drawer.pinned');
+      if (stored !== null) {
+        setPinned(stored === '1');
+      } else {
+        setPinned(isDesktop);
+      }
+    } catch (err) {}
+  }, [isDesktop]);
+
+  // persist pinned preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('admin.drawer.pinned', pinned ? '1' : '0');
+    } catch (err) {}
+  }, [pinned]);
+  const menuBtnRef = useRef(null);
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50 text-slate-800">
-      {/* Sticky top admin nav */}
-      <AdminSideNav />
+  {/* Sticky top admin nav */}
+  <AdminSideNav drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} collapsed={collapsed} setCollapsed={setCollapsed} pinned={pinned} setPinned={setPinned} menuBtnRef={menuBtnRef} />
 
       {/* Page content container */}
-      <main className="max-w-[1400px] mx-auto px-4 py-6">
+  <main id="main" className={`max-w-[1400px] mx-auto px-4 py-6 relative ${(isDesktop && pinned && !collapsed) ? 'lg:pr-72' : ''}`}>
         {title ? (
           <header className="mb-4">
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
           </header>
         ) : null}
+        {topbar ? (
+          <div className="mb-4">{topbar}</div>
+        ) : null}
         {children}
+        <AdminDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          pinned={isDesktop && pinned}
+          collapsed={collapsed}
+          triggerRef={menuBtnRef}
+        />
       </main>
     </div>
   );

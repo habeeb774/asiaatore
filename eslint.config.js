@@ -147,4 +147,26 @@ export default defineConfig([
       parserOptions: { sourceType: 'module' },
     },
   },
+  // General client-side tests: vitest/jest globals
+  {
+    files: [
+      'client/src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+      'client/src/tests/**/*.{js,jsx,ts,tsx}'
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.browser,
+        ...globals.jest,
+        vi: 'readonly',
+        describe: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+      },
+      parserOptions: { sourceType: 'module' },
+    },
+    rules: {
+      'no-undef': 'off',
+    },
+  },
 ])

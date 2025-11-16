@@ -321,6 +321,57 @@ const Settings = () => {
     } catch {}
   };
 
+  // SEO preview: set document title and OG/Twitter meta tags based on form values (without saving)
+  const applySeoPreviewToApp = () => {
+    try {
+      const title = form.siteNameEn || form.siteNameAr || '';
+      if (title) document.title = title;
+      const setMeta = (nameOrProp, content, prop = false) => {
+        try {
+          const attribute = prop ? 'property' : 'name';
+          let el = document.head.querySelector(`meta[${attribute}="${nameOrProp}"]`);
+          if (!el) {
+            el = document.createElement('meta');
+            el.setAttribute(attribute, nameOrProp);
+            document.head.appendChild(el);
+          }
+          el.setAttribute('content', content);
+        } catch {}
+      };
+      if (title) {
+        setMeta('og:site_name', title, true);
+        setMeta('twitter:title', title);
+        setMeta('og:title', title, true);
+      }
+      setMsg('تم تطبيق معاينة SEO');
+    } catch {}
+  };
+
+  const resetSeoPreviewFromSetting = () => {
+    try {
+      const siteName = setting?.siteNameEn || setting?.siteNameAr || setting?.siteName || '';
+      if (siteName) document.title = siteName;
+      const setMeta = (nameOrProp, content, prop = false) => {
+        try {
+          const attribute = prop ? 'property' : 'name';
+          let el = document.head.querySelector(`meta[${attribute}="${nameOrProp}"]`);
+          if (!el) {
+            el = document.createElement('meta');
+            el.setAttribute(attribute, nameOrProp);
+            document.head.appendChild(el);
+          }
+          el.setAttribute('content', content);
+        } catch {}
+      };
+      if (siteName) {
+        setMeta('og:site_name', siteName, true);
+        setMeta('twitter:title', siteName);
+        setMeta('og:title', siteName, true);
+      }
+      setMsg('تمت إعادة معاينة SEO إلى القيم الحالية');
+    } catch {}
+  };
+
   // Import / Export helpers for theme JSON
   const exportSettings = () => {
     try {
@@ -534,6 +585,18 @@ const Settings = () => {
           <Input id="siteNameEn" value={form.siteNameEn} onChange={e=>onChange('siteNameEn', e.target.value)} placeholder="e.g., Elite Store" />
                 {errors.siteNameEn && <small style={{color:'#dc2626'}}>{errors.siteNameEn}</small>}
               </label>
+            </div>
+            {/* SEO Preview */}
+            <div style={{marginTop:8, borderTop:'1px dashed #e2e8f0', paddingTop:8, display:'flex', gap:8, alignItems:'center', justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontSize:'.9rem', fontWeight:700}}>معاينة SEO</div>
+                <div style={{fontSize:'.85rem', color:'#374151'}}>العنوان: <strong>{form.siteNameEn || form.siteNameAr || '—'}</strong></div>
+                <div style={{fontSize:'.8rem', color:'#6b7280'}}>og:site_name: <strong>{form.siteNameEn || form.siteNameAr || '—'}</strong></div>
+              </div>
+              <div style={{display:'flex', gap:8}}>
+                <Button type="button" variant="success" size="sm" onClick={applySeoPreviewToApp}>تطبيق معاينة SEO</Button>
+                <Button type="button" variant="secondary" size="sm" onClick={resetSeoPreviewFromSetting}>إعادة معاينة SEO</Button>
+              </div>
             </div>
           </fieldset>
           </section>

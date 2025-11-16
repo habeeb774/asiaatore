@@ -112,22 +112,22 @@ export default function HeaderControls({ t, locale, setLocale, cartItems, user }
       {/* ✅ ملف المستخدم أو زر تسجيل الدخول */}
       <div className="flex items-center gap-2 sm:gap-3">
         {!user ? (
-          <Link
+            <Link
             to="/login"
             className="border rounded bg-white/90 dark:bg-slate-950/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 flex items-center justify-center"
             style={{ minWidth: 0, minHeight: 0, padding: 0 }}
           >
-            <User size={18} className="block sm:hidden" />
+            <User size={14} className="block sm:hidden" />
             <span className="hidden sm:inline-block text-sm px-3 py-1">
               {t('login') || 'تسجيل الدخول'}
             </span>
           </Link>
         ) : (
-          <Link
+            <Link
             to="/account/profile"
             className="flex items-center gap-2 px-3 py-1 border rounded text-sm bg-white/90 dark:bg-slate-950/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300"
           >
-            <User size={16} />
+            <User size={12} />
             <span className="hidden sm:inline-block">
               {user.name || (user.email || '').split('@')[0]}
             </span>

@@ -111,7 +111,7 @@ const Header = React.memo(({ onToggleCart }) => {
           </div>
           <div className="icon">
             <a href="/profile" aria-label="User profile">
-              <i className="fas fa-user"></i>
+              <i className="fas fa-user text-sm"></i>
             </a>
           </div>
         </div>

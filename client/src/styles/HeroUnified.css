@@ -59,7 +59,7 @@ input,select,button{
     color: var(--white_color);
 }
 .btn:hover{
-    scale: 1.1;
+    transform: scale(1.1);
 }
 
 .container{
@@ -116,6 +116,36 @@ input,select,button{
 .ad-image:hover {
   transform: scale(1.05);
 }
+
+/* Overlay content on hero slides */
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; /* allow click-through to link */
+}
+.hero-overlay__content {
+    pointer-events: auto; /* allow clicking within overlay (CTA) */
+    text-align: center;
+    color: var(--white_color);
+    max-width: 60%;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.24) 0%, rgba(0,0,0,0.4) 100%);
+    border-radius: 12px;
+}
+.hero-cta {
+    margin-top: 10px;
+    display: inline-block;
+    padding: 8px 14px;
+    background: var(--main_color);
+    color: var(--white_color);
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.hero-cta:hover { opacity: 0.95 }
 
 /* Enhanced floating animations for hero text */
 @keyframes float-text {
@@ -286,7 +316,7 @@ input,select,button{
     transition: 0.3s;
 }
 .banners_4 .container .box:hover img{
-    scale: 1.05;
+    transform: scale(1.05);
 }
 .banners_4 .container .box h5{
     font-size: 16px;
@@ -416,7 +446,7 @@ input,select,button{
     transition: 0.3s;
 }
 .product:hover .img_product{
-    scale: 1.1;
+    transform: scale(1.1);
 }
 .product .name_product{
     margin-bottom: 10px;
@@ -424,6 +454,7 @@ input,select,button{
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
@@ -504,7 +535,7 @@ input,select,button{
     color: var(--main_color);
 }
 .product .icons  .btn_add_cart:Hover{
-    scale: 1.05;
+    transform: scale(1.05);
     background: #f47600;
 }
 
@@ -653,7 +684,7 @@ input,select,button{
 }
 @media (max-width:800px){
     .slider .container {
-        flex-direction: ;
+        flex-direction: column;
         gap: 15px;
         flex-wrap: wrap;
         justify-content: center;
@@ -896,6 +927,7 @@ input,select,button{
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
@@ -907,7 +939,7 @@ input,select,button{
 }
 .checkout .ordersummary  .delete_item i:hover{
     color: #E51A1A;
-    scale: 1.1;
+    transform: scale(1.1);
 }
 
 .checkout .ordersummary .quantity_control{

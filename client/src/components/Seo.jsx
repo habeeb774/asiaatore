@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useSettings } from "../stores/SettingsContext";
+import useSiteName from '../hooks/useSiteName';
 
 // Small SEO helper for single-page app to update title and common meta tags
 const setMeta = (nameOrProp, value, attr = 'name') => {
@@ -17,10 +17,10 @@ const setMeta = (nameOrProp, value, attr = 'name') => {
 };
 
 const Seo = ({ title, description, image, url }) => {
-  const { setting } = useSettings() || {};
+  const siteNameFromSettings = useSiteName();
   useEffect(() => {
-    const siteName = setting?.siteNameAr || setting?.siteNameEn || 'شركة منفذ اسيا التجارية';
-    const finalTitle = title || siteName;
+  const siteName = siteNameFromSettings || 'شركة منفذ اسيا التجارية';
+  const finalTitle = title || siteName;
     if (finalTitle) document.title = finalTitle;
     setMeta('description', description, 'name');
     setMeta('og:title', finalTitle, 'property');
@@ -36,7 +36,7 @@ const Seo = ({ title, description, image, url }) => {
     if (description) setMeta('twitter:description', description, 'name');
     // Ensure og:site_name reflects settings
     setMeta('og:site_name', siteName, 'property');
-  }, [title, description, image, url, setting?.siteNameAr, setting?.siteNameEn]);
+  }, [title, description, image, url, siteNameFromSettings]);
 
   return null;
 };

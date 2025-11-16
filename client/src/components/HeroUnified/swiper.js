@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Swiper from 'swiper';
-import { Pagination, Autoplay } from 'swiper/modules';
+import { Pagination, Autoplay, Keyboard, A11y } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/autoplay';
@@ -11,7 +11,7 @@ export const useHeroSwiper = () => {
     // تأخير إنشاء الـ swiper قليلاً للتأكد من تحميل DOM
     const timer = setTimeout(() => {
       const swiper = new Swiper('.slide-swp', {
-        modules: [Pagination, Autoplay],
+        modules: [Pagination, Autoplay, Keyboard, A11y],
         pagination: {
           el: '.swiper-pagination',
           dynamicBullets: true,
@@ -21,6 +21,17 @@ export const useHeroSwiper = () => {
           delay: 3000,
           disableOnInteraction: false, // الحفاظ على التحريك حتى بعد التفاعل
           pauseOnMouseEnter: true, // إيقاف التحريك عند التمرير بالفأرة
+        },
+        keyboard: {
+          enabled: true,
+          onlyInViewport: true,
+        },
+        a11y: {
+          enabled: true,
+          prevSlideMessage: t?.('hero.prevSlide') || 'Previous slide',
+          nextSlideMessage: t?.('hero.nextSlide') || 'Next slide',
+          firstSlideMessage: t?.('hero.firstSlide') || 'This is the first slide',
+          lastSlideMessage: t?.('hero.lastSlide') || 'This is the last slide',
         },
         loop: true,
         effect: 'slide',

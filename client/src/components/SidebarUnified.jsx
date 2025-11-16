@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ChevronLeft
 } from 'lucide-react';
+import SafeImage from './common/SafeImage';
 import { useLanguage } from '../stores/LanguageContext';
 import { useCart } from '../stores/CartContext';
 
@@ -38,6 +39,7 @@ const Sidebar = ({
   type = 'cart', // cart, menu, user, favorites
   position = 'right', // left, right
   size = 'md', // sm, md, lg
+  initialFavorites = undefined,
   showOverlay = true,
   closeOnOverlayClick = true,
   closeOnEscape = true,
@@ -51,7 +53,7 @@ const Sidebar = ({
   const previousFocusRef = useRef(null);
 
   // حالات المكون
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState(initialFavorites || []);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -289,13 +291,13 @@ const Sidebar = ({
                       exit={{ opacity: 0, x: position === 'right' ? 20 : -20 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <img
+                      <SafeImage
                         src={item.image || '/placeholder-product.png'}
                         alt={item.name}
                         className="w-16 h-16 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.target.src = '/placeholder-product.png';
-                        }}
+                        loading="lazy"
+                        sizes="(max-width: 640px) 64px, 80px"
+                        onError={(e) => { e.target.src = '/placeholder-product.png'; }}
                       />
 
                       <div className="flex-1 min-w-0">
@@ -395,13 +397,13 @@ const Sidebar = ({
                       exit={{ opacity: 0, x: position === 'right' ? 20 : -20 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <img
+                      <SafeImage
                         src={item.image || '/placeholder-product.png'}
                         alt={item.name}
                         className="w-16 h-16 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.target.src = '/placeholder-product.png';
-                        }}
+                        loading="lazy"
+                        sizes="(max-width: 640px) 64px, 80px"
+                        onError={(e) => { e.target.src = '/placeholder-product.png'; }}
                       />
 
                       <div className="flex-1 min-w-0">
@@ -413,13 +415,22 @@ const Sidebar = ({
                         </p>
                       </div>
 
-                      <div className="flex space-x-2 rtl:space-x-reverse">
+                      <div className="flex space-x-2 rtl:space-x-reverse items-center">
                         <Link
                           to={`/products/${item.id}`}
                           onClick={handleClose}
                           className="p-2 text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+                          aria-label={`Open ${item.name}`}
                         >
                           <ChevronRight className="w-4 h-4" />
+                        </Link>
+                        <Link
+                          to={`/products/${item.id}`}
+                          onClick={handleClose}
+                          className="btn btn-ghost btn-sm p-2 text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+                          aria-label={`View ${item.name}`}
+                        >
+                          {locale === 'ar' ? 'عرض' : 'View'}
                         </Link>
                         <button
                           onClick={() => handleRemoveFromFavorites(item.id)}

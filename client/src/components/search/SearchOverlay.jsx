@@ -197,7 +197,7 @@ export default function SearchOverlay() {
   }, []);
 
   const performTypeahead = useCallback(async (q) => {
-    if (!q || q.trim().length < 2) { setResults({ products: [], categories: [] }); return; }
+  if (!q || q.trim().length < 2) { setResults({ products: [], categories: [], brands: [] }); return; }
 
     const cacheKey = `typeahead_${q.trim()}`;
     const cached = getCachedResult(cacheKey);

@@ -67,7 +67,7 @@ input,select,button{
     color: var(--white_color);
 }
 .btn:hover{
-    scale: 1.1;
+    transform: scale(1.1);
 }
 
 .container{
@@ -356,7 +356,7 @@ header .bottom_header .nav_links li.active a{
     transition: 0.3s;
 }
 .banners_4 .container .box:hover img{
-    scale: 1.05;
+    transform: scale(1.05);
 }
 .banners_4 .container .box h5{
     font-size: 16px;
@@ -486,7 +486,7 @@ header .bottom_header .nav_links li.active a{
     transition: 0.3s;
 }
 .product:hover .img_product{
-    scale: 1.1;
+    transform: scale(1.1);
 }
 .product .name_product{
     margin-bottom: 10px;
@@ -494,6 +494,7 @@ header .bottom_header .nav_links li.active a{
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
@@ -574,7 +575,7 @@ header .bottom_header .nav_links li.active a{
     color: var(--main_color);
 }
 .product .icons  .btn_add_cart:Hover{
-    scale: 1.05;
+    transform: scale(1.05);
     background: #f47600;
 }
 
@@ -767,6 +768,7 @@ footer  .bottom_footer .payment_img{
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical
 }
@@ -1151,6 +1153,7 @@ color: var(--color_heading);
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
@@ -1162,7 +1165,7 @@ color: var(--color_heading);
 }
 .checkout .ordersummary  .delete_item i:hover{
     color: #E51A1A;
-    scale: 1.1;
+    transform: scale(1.1);
 }
 
 .checkout .ordersummary .quantity_control{

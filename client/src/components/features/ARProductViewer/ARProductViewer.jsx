@@ -8,6 +8,7 @@ const ARProductViewer = ({
   onClose,
   className = ''
 }) => {
+  const { t, locale, language } = useLanguage();
     // Get localized product name
   const getProductName = () => {
     if (typeof product.name === 'object' && product.name[locale]) {

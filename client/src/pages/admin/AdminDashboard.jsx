@@ -44,6 +44,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const view = params.get('view') || 'overview';
+  const createParam = params.get('create');
   // New: remote data for admin specifics
   const [remoteUsers, setRemoteUsers] = useState([]);
   const [remoteAudit, setRemoteAudit] = useState([]);
@@ -58,6 +59,7 @@ const AdminDashboard = () => {
   const [productImageFile, setProductImageFile] = useState(null);
   const [imageMode, setImageMode] = useState('file'); // 'file' | 'url'
   const fileInputRef = useRef(null);
+  const nameInputRef = useRef(null);
   // New stats
   const [stats, setStats] = useState({ todayOrders: 0, todayRevenue: 0, avgOrderValueToday: 0, pendingBankCount: 0 });
   const [finDays, setFinDays] = useState(14);
@@ -651,6 +653,13 @@ const AdminDashboard = () => {
     setOrderForm({ id: null, total: '', status: 'pending', customer: '', items: 1 });
   };
 
+  useEffect(() => {
+    if (view === 'products' && createParam === '1') {
+      resetForms();
+      setTimeout(() => { try { nameInputRef.current?.focus(); } catch {} }, 80);
+    }
+  }, [view, createParam]);
+
   // ------- Store Settings Handlers -------
   const loadSettings = async () => {
     if (settingsCtx?.setting) { setStoreSettings(settingsCtx.setting); return; }
@@ -1178,7 +1187,7 @@ const AdminDashboard = () => {
             <h3 style={subTitle}>{productForm.id ? 'تعديل منتج' : 'إضافة منتج'}</h3>
             <div style={formGrid}>
               <Label htmlFor="nameAr">الاسم (AR)</Label>
-              <Input id="nameAr" placeholder="الاسم (AR)" value={productForm.nameAr} onChange={e=>setProductForm(f=>({...f,nameAr:e.target.value}))} />
+              <Input id="nameAr" ref={nameInputRef} placeholder="الاسم (AR)" value={productForm.nameAr} onChange={e=>setProductForm(f=>({...f,nameAr:e.target.value}))} />
               <Label htmlFor="nameEn">Name (EN)</Label>
               <Input id="nameEn" placeholder="Name (EN)" value={productForm.nameEn} onChange={e=>setProductForm(f=>({...f,nameEn:e.target.value}))} />
               <Label htmlFor="price">السعر</Label>
