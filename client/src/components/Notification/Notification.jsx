@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../stores/LanguageContext';
 
 // Notification Context
 const NotificationContext = createContext();

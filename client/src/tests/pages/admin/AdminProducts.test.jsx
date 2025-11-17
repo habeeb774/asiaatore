@@ -152,6 +152,6 @@ describe('AdminProducts', () => {
     );
     const newBtn = await screen.findByRole('button', { name: /New product/i });
     fireEvent.click(newBtn);
-  expect(navigateMock).toHaveBeenCalledWith('/admin?view=products&create=1');
+  expect(navigateMock).toHaveBeenCalledWith('/admin/products?create=1');
   });
   });

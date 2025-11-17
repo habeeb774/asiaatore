@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // Enhanced LazyImage component with advanced caching and optimization
-const LazyImage = ({
+const LazyImageComponent = ({
   src,
   alt = '',
   className = '',
@@ -196,4 +196,6 @@ const LazyImage = ({
   );
 };
 
-export default React.memo(LazyImage);
+// Export a memoized component as both named and default to avoid import mismatches
+export const LazyImage = React.memo(LazyImageComponent);
+export default LazyImage;

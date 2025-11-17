@@ -11,6 +11,9 @@ import BankTransfers from './pages/admin/BankTransfers';
 import Analytics from './pages/admin/Analytics';
 import Customers from './pages/admin/Customers';
 import Settings from './pages/admin/Settings';
+import AuditAdmin from './pages/admin/AuditAdmin';
+import ReviewsAdmin from './pages/admin/ReviewsAdmin';
+import BrandsAdmin from './pages/admin/BrandsAdmin';
 import AccountSecurity from './pages/AccountSecurity';
 import DeveloperSettings from './pages/admin/DeveloperSettings.jsx';
 import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
@@ -34,8 +37,10 @@ const AdminOrders = React.lazy(() => import(/* webpackChunkName: "admin-core" */
 const AdminProductsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Products.jsx'));
 const AdminInvoices = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Invoices.jsx'));
 const AdminMarketing = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Marketing.jsx'));
+const AdminCategories = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/CategoriesAdmin.jsx'));
 const AdminApps = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Apps.jsx'));
 const AdminIntegrations = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Integrations.jsx'));
+const AdminAds = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/AdsAdmin.jsx'));
 const SellerDashboard = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerDashboard.jsx'));
 const DeliveryDashboard = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliveryDashboard.jsx'));
 import Canonical from './components/Canonical';
@@ -58,6 +63,7 @@ const OrderTracker = React.lazy(() => import(/* webpackChunkName: "orders" */ '.
 const AddressesPage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Addresses.jsx'));
 const SellerKyc = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerKyc.jsx'));
 const AdminKycReview = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/AdminKycReview.jsx'));
+const AdminSellersList = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/SellersList.jsx'));
 const DeliveryMap = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Map.jsx'));
 const DeliveryHistory = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/History.jsx'));
 const DeliveryAvailability = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Availability.jsx'));
@@ -184,6 +190,18 @@ const AdminRedirect = ({ prefix = '' }) => {
   const view = params.get('view');
   if (view === 'users') return <Navigate to={`${prefix}/admin/users`} replace />;
   if (view === 'customers') return <Navigate to={`${prefix}/admin/customers`} replace />;
+  if (view === 'products') return <Navigate to={`${prefix}/admin/products`} replace />;
+  if (view === 'orders') return <Navigate to={`${prefix}/admin/orders`} replace />;
+  if (view === 'marketing') return <Navigate to={`${prefix}/admin/marketing`} replace />;
+  if (view === 'ads') return <Navigate to={`${prefix}/admin/ads`} replace />;
+  if (view === 'settings') return <Navigate to={`${prefix}/admin/settings`} replace />;
+  if (view === 'invoices') return <Navigate to={`${prefix}/admin/invoices`} replace />;
+  if (view === 'audit') return <Navigate to={`${prefix}/admin/audit`} replace />;
+  if (view === 'reviews') return <Navigate to={`${prefix}/admin/reviews`} replace />;
+  if (view === 'brands') return <Navigate to={`${prefix}/admin/brands`} replace />;
+  if (view === 'cats') return <Navigate to={`${prefix}/admin/categories`} replace />;
+  if (view === 'sellers') return <Navigate to={`${prefix}/admin/sellers`} replace />;
+  if (view === 'sellers_kyc') return <Navigate to={`${prefix}/admin/sellers/kyc`} replace />;
   return (
     <ProtectedRoute
       isAuthed={!!user}
@@ -335,11 +353,15 @@ const AppRoutes = () => {
   {/* Protected admin route (Arabic default) */}
   <Route path="/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/login" />} />
   {/* Dedicated Admin Categories page -> redirects to AdminDashboard cats view */}
-  <Route path="/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Navigate to="/admin?view=cats" replace />} redirectTo="/login" />} />
+  <Route path="/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/login" />} />
   <Route path="/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/login" />} />
+  <Route path="/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/login" />} />
+  <Route path="/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/login" />} />
+  <Route path="/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/login" />} />
   <Route path="/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/login" />} />
   <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
   <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
+  <Route path="/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminSellersList />} redirectTo="/login" />} />
   <Route path="/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/login" />} />
   <Route path="/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/login" />} />
   <Route path="/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['developer']} element={<DeveloperSettings />} redirectTo="/login" />} />
@@ -349,6 +371,7 @@ const AppRoutes = () => {
   <Route path="/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/login" />} />
   <Route path="/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/login" />} />
   <Route path="/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/login" />} />
+  <Route path="/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminAds />} redirectTo="/login" />} />
   <Route path="/login" element={<LoginPage />} />
   <Route path="/register" element={<RegisterPage />} />
   <Route path="/forgot" element={<ForgotPasswordPage />} />
@@ -487,7 +510,10 @@ const AppRoutes = () => {
   {/* Legacy en redirect to users if query has view=users will be handled client-side (optional) */}
   <Route path="/en/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/en/login" />} />
   {/* EN: Admin Categories */}
-  <Route path="/en/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Navigate to="/en/admin?view=cats" replace />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/en/login" />} />
   <Route path="/en/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/en/login" />} />
   <Route path="/en/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/en/login" />} />
   <Route path="/en/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/en/login" />} />
@@ -636,7 +662,10 @@ const AppRoutes = () => {
   <Route path="/fr/admin" element={<AdminRedirect prefix="/fr" />} />
   <Route path="/fr/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/fr/login" />} />
   {/* FR: Admin Categories */}
-  <Route path="/fr/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Navigate to="/fr/admin?view=cats" replace />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/fr/login" />} />

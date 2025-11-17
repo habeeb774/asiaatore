@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLanguage, LocalizedText, DateDisplay } from '../../contexts/LanguageContext';
-import { useNotifications } from '../../components/Notification/Notification';
-import { LazyImage } from '../shared/LazyImage/LazyImage';
-import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';
+import { useLanguage, LocalizedText, DateDisplay } from '../../../stores/LanguageContext';
+import { useNotifications } from '../../../components/Notification/Notification';
+import { LazyImage } from '../../shared/LazyImage/LazyImage';
+import { SkeletonLoader } from '../../shared/SkeletonLoader/SkeletonLoader';
 import Modal from '../../ui/Modal';
 import ConfirmModal from '../admin/ConfirmModal';
 

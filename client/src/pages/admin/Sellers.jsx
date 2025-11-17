@@ -5,5 +5,6 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 export default function LegacyAdminDashboardRedirect() {
-  return <Navigate to="/admin?view=sellers" replace />;
+  // Redirect to the admin seller KYC review page (canonical)
+  return <Navigate to="/admin/sellers/kyc" replace />;
 }

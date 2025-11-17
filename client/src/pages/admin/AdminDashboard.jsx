@@ -47,7 +47,26 @@ const AdminDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
-  const view = params.get('view') || 'overview';
+  // Derive view from either the query param (legacy) OR the pathname (canonical routes like /admin/audit)
+  const pathnameParts = location.pathname.split('/').filter(Boolean);
+  const withoutLocale = (pathnameParts[0] && ['en','fr'].includes(pathnameParts[0])) ? pathnameParts.slice(1) : pathnameParts;
+  const pathRoot = '/' + withoutLocale.join('/');
+  const pathToView = {
+    '/admin/audit': 'audit',
+    '/admin/reviews': 'reviews',
+    '/admin/brands': 'brands',
+    '/admin/categories': 'cats',
+    '/admin/sellers': 'sellers',
+    '/admin/orders': 'orders',
+    '/admin/products': 'products',
+    '/admin/marketing': 'marketing',
+    '/admin/settings': 'settings',
+    '/admin/invoices': 'invoices',
+    '/admin/ads': 'ads',
+    '/admin/users': 'users',
+    '/admin/customers': 'customers',
+  };
+  const view = params.get('view') || pathToView[pathRoot] || 'overview';
   const createParam = params.get('create');
   // New: remote data for admin specifics
   const [remoteUsers, setRemoteUsers] = useState([]);
@@ -661,6 +680,32 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
+    // If a query view maps to a dedicated admin page, navigate to the canonical route
+    const viewToRouteMap = {
+      products: '/admin/products',
+      users: '/admin/users',
+      customers: '/admin/customers',
+      orders: '/admin/orders',
+      marketing: '/admin/marketing',
+      settings: '/admin/settings',
+      invoices: '/admin/invoices',
+      ads: '/admin/ads'
+      ,
+      cats: '/admin/categories',
+      audit: '/admin/audit',
+      reviews: '/admin/reviews',
+      brands: '/admin/brands',
+      sellers: '/admin/sellers',
+      sellers_kyc: '/admin/sellers/kyc'
+    };
+    if (view && viewToRouteMap[view]) {
+      // Avoid infinite redirect when already on canonical route
+      const target = viewToRouteMap[view];
+      if (location.pathname !== target) {
+        navigate(target, { replace: true });
+        return;
+      }
+    }
     if (view === 'products' && createParam === '1') {
       resetForms();
       setTimeout(() => { try { nameInputRef.current?.focus(); } catch {} }, 80);
@@ -1849,61 +1894,9 @@ const AdminDashboard = () => {
         <CategoriesAdmin />
       )}
 
-      {/* Audit Logs */}
-      {view === 'audit' && (
-        <div style={sectionWrap}>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
-            <h3 style={subTitle}>سجلات التدقيق</h3>
-            <Button type="button" variant="primary" onClick={()=>refreshAudit()}>تحديث</Button>
-            <span style={{fontSize:'.6rem',color:'#475569'}}>{loadingRemote? '...تحميل' : ''}</span>
-          </div>
-          <div style={{overflowX:'auto'}}>
-            <table style={table}>
-              <thead>
-                <tr>
-                  {finLoading && (
-                    <tr>
-                      <td colSpan={6}>
-                        <div className="skeleton" style={{height: 36, marginBottom: 8}} />
-                        <div className="skeleton" style={{height: 36, marginBottom: 8}} />
-                        <div className="skeleton" style={{height: 36}} />
-                      </td>
-                    </tr>
-                  )}
-                  <th>الوقت</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th><th>المستخدم</th>
-                </tr>
-              </thead>
-              <tbody>
-                {remoteAudit.map(l => (
-                  <tr key={l.id}>
-                    <td>{new Date(l.createdAt).toLocaleTimeString()}</td>
-                    <td>{l.action}</td>
-                    <td>{l.entity}</td>
-                    <td>{l.entityId}</td>
-                    <td>{l.userId || '—'}</td>
-                  </tr>
-                ))}
-                {!remoteAudit.length && !loadingRemote && (
-                  <tr><td colSpan={5} style={emptyCell}>لا توجد سجلات</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {auditTotalPages > 1 && (
-            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-              <Button disabled={auditPage===1} variant={auditPage===1? 'ghost':'primary'} onClick={()=>setAuditPage(p=>Math.max(1,p-1))}>السابق</Button>
-              <span style={{alignSelf:'center',fontSize:'.65rem'}}>صفحة {auditPage} / {auditTotalPages}</span>
-              <Button disabled={auditPage===auditTotalPages} variant={auditPage===auditTotalPages? 'ghost':'primary'} onClick={()=>setAuditPage(p=>Math.min(auditTotalPages,p+1))}>التالي</Button>
-            </div>
-          )}
-          {errorRemote && <div style={{fontSize:'.65rem',color:'#b91c1c'}}>خطأ: {errorRemote}</div>}
-        </div>
-      )}
+      {/* ...Audit view removed: now handled by AuditAdmin.jsx... */}
 
-      {/* Reviews Moderation */}
-      {view === 'reviews' && (
-        <ReviewsModeration />
-      )}
+      {/* ...Reviews view removed: now handled by ReviewsAdmin.jsx... */}
 
 
       {/* Settings */}
@@ -2176,8 +2169,8 @@ const AdminDashboard = () => {
             )}
           </div>
           {/* Features */}
-            <form onSubmit={submitFeature} style={formRow}>
-              <h4 style={{margin:0,fontSize:'.85rem'}}>ميزات ({marketingFeatures.length})</h4>
+          <form onSubmit={submitFeature} style={formRow}>
+            <h4 style={{margin:0,fontSize:'.85rem'}}>ميزات ({marketingFeatures.length})</h4>
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 <input placeholder="بحث" value={featureFilter} onChange={e=>setFeatureFilter(e.target.value)} style={searchInput} />
                 <select value={featureSort} onChange={e=>setFeatureSort(e.target.value)} style={searchInput}>
@@ -2275,10 +2268,9 @@ const AdminDashboard = () => {
             </form>
         </div>
       )}
-      </div>
-    </AdminLayout>
-  );
-};
+    </div>
+  </AdminLayout>
+);
 
 // Styles (inline objects لسهولة النقل)
 const searchInput = { padding: '.55rem .75rem', border: '1px solid #e2e8f0', borderRadius: 10, minWidth: 160, fontSize: '.8rem', background: '#fff' };
@@ -2304,251 +2296,4 @@ const mutedP = { fontSize: '.75rem', color: 'var(--color-text-soft)', margin: '.
 const ulClean = { margin: 0, padding: '0 1rem', listStyle: 'disc', lineHeight: 1.9 };
 // Tier pricing sub-table styles
 const tierLabel = { fontSize: '.55rem', fontWeight: 600, color: 'var(--color-text-soft)' };
-const tierInput = { ...searchInput, minWidth: 90, fontSize: '.65rem', padding: '.4rem .5rem' };
-
-// Status chip style helper
-function chip(status) {
-  const base = { display:'inline-block', padding:'.15rem .45rem', borderRadius:999, fontSize:'.65rem', fontWeight:700 };
-  const themed = {
-    success: {
-      background: 'rgba(var(--color-primary-rgb),0.12)',
-      color: 'var(--color-primary)',
-      border: '1px solid rgba(var(--color-primary-rgb),0.28)'
-    },
-    info: {
-      background: 'rgba(var(--color-accent-rgb,58,90,121),0.10)',
-      color: 'var(--color-accent)',
-      border: '1px solid rgba(var(--color-accent-rgb,58,90,121),0.25)'
-    },
-    warning: {
-      background: 'rgba(217,119,6,0.10)',
-      color: 'var(--color-warning)',
-      border: '1px solid rgba(217,119,6,0.28)'
-    },
-    danger: {
-      background: 'rgba(220,38,38,0.10)',
-      color: 'var(--color-danger)',
-      border: '1px solid rgba(220,38,38,0.25)'
-    },
-    neutral: {
-      background: 'var(--color-bg-alt)',
-      color: 'var(--color-text)',
-      border: '1px solid var(--color-border)'
-    }
-  };
-  const map = {
-    pending: themed.warning,
-    processing: themed.info,
-    paid: themed.success,
-    shipped: themed.info,
-    completed: themed.success,
-    cancelled: themed.danger,
-    pending_bank_review: themed.warning
-  };
-  return { ...base, ...(map[status] || themed.neutral) };
-}
-
-export default AdminDashboard;
-
-// -------- Helper Functions & Effects for Brands / Marketing (placed after export to avoid clutter above) --------
-// NOTE: These rely on closure over React imports & api object already in file scope.
-
-// We'll augment component prototype by monkey patching inside module scope: Not ideal, but simpler than large refactor.
-// Instead we'll re-open the component via prototype? Simpler: move helper funcs above usage. For minimal diff, attach to window if needed.
-// Safer: Do nothing here – helpers will be defined inside component via inline functions above? For clarity, we keep them here as comments.
-
-
-// Lazy inline component for reviews moderation (kept here for simplicity)
-import { useState as _useState, useEffect as _useEffect } from 'react';
-import _rawApi from '../../services/api/client';
-
-// Inline Categories Admin manager
-const CategoriesAdmin = () => {
-  const { locale } = useLanguage();
-  const [cats, setCats] = _useState([]);
-  const [loading, setLoading] = _useState(false);
-  const [error, setError] = _useState(null);
-  const [form, setForm] = _useState({ id:null, slug:'', nameAr:'', nameEn:'', descriptionAr:'', descriptionEn:'', image:'', icon:'' });
-  const [file, setFile] = _useState(null);
-  const [useFile, setUseFile] = _useState(false);
-  const load = async () => {
-    setLoading(true); setError(null);
-    try {
-      const res = await _rawApi.listCategories({ withCounts: 1 });
-      setCats(res.categories || []);
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
-  };
-  _useEffect(()=>{ load(); }, []);
-  const reset = () => { setForm({ id:null, slug:'', nameAr:'', nameEn:'', descriptionAr:'', descriptionEn:'', image:'', icon:'' }); setFile(null); setUseFile(false); };
-  const submit = async (e) => {
-    e.preventDefault(); setLoading(true); setError(null);
-    try {
-      if (form.id) {
-        if (useFile && file) {
-          const fd = new FormData();
-          if (form.slug) fd.append('slug', form.slug);
-          if (form.nameAr) fd.append('nameAr', form.nameAr);
-          if (form.nameEn) fd.append('nameEn', form.nameEn);
-          if (form.descriptionAr) fd.append('descriptionAr', form.descriptionAr);
-          if (form.descriptionEn) fd.append('descriptionEn', form.descriptionEn);
-          if (form.icon !== undefined) fd.append('icon', form.icon || '');
-          fd.append('image', file);
-          const updated = await _rawApi.updateCategoryForm(form.id, fd);
-          setCats(cs => cs.map(c => c.id===updated.category?.id || c.id===updated.id ? (updated.category||updated) : c));
-        } else {
-          const updated = await _rawApi.updateCategory(form.id, {
-            slug: form.slug || undefined,
-            nameAr: form.nameAr || undefined,
-            nameEn: form.nameEn || undefined,
-            descriptionAr: form.descriptionAr || null,
-            descriptionEn: form.descriptionEn || null,
-            image: form.image || null,
-            icon: form.icon || null
-          });
-          setCats(cs => cs.map(c => c.id===updated.category?.id || c.id===updated.id ? (updated.category||updated) : c));
-        }
-      } else {
-        if (useFile && file) {
-          const fd = new FormData();
-          fd.append('slug', form.slug);
-          fd.append('nameAr', form.nameAr);
-          fd.append('nameEn', form.nameEn);
-          if (form.descriptionAr) fd.append('descriptionAr', form.descriptionAr);
-          if (form.descriptionEn) fd.append('descriptionEn', form.descriptionEn);
-          if (form.icon) fd.append('icon', form.icon);
-          fd.append('image', file);
-          const created = await _rawApi.createCategoryForm(fd);
-          const cat = created.category || created;
-          setCats(cs => [cat, ...cs]);
-        } else {
-          const created = await _rawApi.createCategory({
-            slug: form.slug,
-            nameAr: form.nameAr,
-            nameEn: form.nameEn,
-            descriptionAr: form.descriptionAr || null,
-            descriptionEn: form.descriptionEn || null,
-            image: form.image || null,
-            icon: form.icon || null
-          });
-          const cat = created.category || created;
-          setCats(cs => [cat, ...cs]);
-        }
-      }
-      reset();
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
-  };
-  const del = async (id) => {
-    if (!window.confirm('حذف التصنيف؟')) return;
-    try { await _rawApi.deleteCategory(id); setCats(cs=>cs.filter(c=>c.id!==id)); } catch (e) { alert('فشل الحذف: '+e.message); }
-  };
-  return (
-    <div style={sectionWrap}>
-      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-        <h3 style={subTitle}>إدارة التصنيفات</h3>
-  <Button type="button" variant="primary" onClick={load}>تحديث</Button>
-        {loading && <span style={{fontSize:'.65rem',color:'#64748b'}}>...تحميل</span>}
-        {error && <span style={{fontSize:'.65rem',color:'#b91c1c'}}>خطأ: {error}</span>}
-      </div>
-      <form onSubmit={submit} style={formRow}>
-        <h4 style={{margin:0,fontSize:'.9rem'}}>{form.id? 'تعديل تصنيف' : 'إضافة تصنيف'}</h4>
-        <div style={formGrid}>
-          <input placeholder="Slug" value={form.slug} onChange={e=>setForm(f=>({...f,slug:e.target.value}))} required={!form.id} />
-          <input placeholder="الاسم AR" value={form.nameAr} onChange={e=>setForm(f=>({...f,nameAr:e.target.value}))} required={!form.id} />
-          <input placeholder="Name EN" value={form.nameEn} onChange={e=>setForm(f=>({...f,nameEn:e.target.value}))} required={!form.id} />
-          <input placeholder="وصف AR" value={form.descriptionAr} onChange={e=>setForm(f=>({...f,descriptionAr:e.target.value}))} />
-          <input placeholder="Description EN" value={form.descriptionEn} onChange={e=>setForm(f=>({...f,descriptionEn:e.target.value}))} />
-          <input placeholder="Icon key (مثل: coffee, cup-soda, cookie, store, tag)" value={form.icon} onChange={e=>setForm(f=>({...f,icon:e.target.value}))} />
-          <label style={{display:'flex',alignItems:'center',gap:8,fontSize:'.8rem'}}>
-            <input type="checkbox" checked={useFile} onChange={e=>setUseFile(e.target.checked)} /> رفع صورة
-          </label>
-          {!useFile && (
-            <input placeholder="رابط صورة (اختياري)" value={form.image} onChange={e=>setForm(f=>({...f,image:e.target.value}))} />
-          )}
-          {useFile && (
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=> setFile(e.target.files?.[0]||null)} />
-          )}
-        </div>
-        <div style={actionsRow}>
-          <Button type="submit" variant="primary">حفظ</Button>
-          {form.id && <Button type="button" variant="ghost" onClick={reset}>إلغاء</Button>}
-        </div>
-      </form>
-      <div style={{overflowX:'auto'}}>
-        <table style={table}>
-          <thead>
-            <tr><th>الاسم</th><th>Slug</th><th>الأيقونة</th><th>الصورة</th><th>المنتجات</th><th>إجراءات</th></tr>
-          </thead>
-          <tbody>
-            {cats.map(c => (
-              <tr key={c.id}>
-                <td>{resolveLocalized(c.name, locale) || c.name?.ar || c.name?.en || c.slug}</td>
-                <td style={{fontSize:'.6rem'}}>{c.slug}</td>
-                <td style={{fontSize:'.7rem'}}>{c.icon || '—'}</td>
-                <td>{c.image ? <img src={c.image} alt="cat" style={{width:38,height:38,objectFit:'cover',borderRadius:6}} /> : '—'}</td>
-                <td>{c.productCount||0}</td>
-                <td style={tdActions}>
-                  <Button variant="ghost" size="sm" title="تعديل" onClick={()=> setForm({ id:c.id, slug:c.slug, nameAr:c.name?.ar||'', nameEn:c.name?.en||'', descriptionAr:c.description?.ar||'', descriptionEn:c.description?.en||'', image:c.image||'', icon:c.icon||'' })}>✎</Button>
-                  <Button variant="danger" size="sm" title="حذف" onClick={()=> del(c.id)}>🗑</Button>
-                </td>
-              </tr>
-            ))}
-            {!cats.length && !loading && <tr><td colSpan={6} style={emptyCell}>لا توجد تصنيفات</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-const ReviewsModeration = () => {
-  const { user } = useAuth() || {};
-  const [pending, setPending] = _useState([]);
-  const [loading, setLoading] = _useState(false);
-  const [error, setError] = _useState(null);
-  const load = async () => {
-    setLoading(true); setError(null);
-    try {
-      const list = await _rawApi.reviewsModerationList();
-      setPending(Array.isArray(list) ? list : (list.reviews || []));
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
-  };
-  _useEffect(() => { if (user?.role==='admin') load(); }, [user]);
-  const act = async (id, action) => {
-    try { await _rawApi.reviewModerate(id, action); await load(); } catch (e) { alert('فشل: '+e.message); }
-  };
-  if (user?.role !== 'admin') return null;
-  return (
-    <div style={sectionWrap}>
-      <h3 style={subTitle}>مراجعات بإنتظار الموافقة</h3>
-      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-        <Button type="button" variant="primary" onClick={load}>تحديث</Button>
-        {loading && <span style={{fontSize:'.6rem',color:'#64748b'}}>...تحميل</span>}
-        {error && <span style={{fontSize:'.6rem',color:'#b91c1c'}}>خطأ: {error}</span>}
-      </div>
-      <table style={table}>
-        <thead>
-          <tr>
-            <th>التاريخ</th><th>المنتج</th><th>التقييم</th><th>العنوان</th><th>المراجعة</th><th>إجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pending.map(r => (
-            <tr key={r.id}>
-              <td>{new Date(r.createdAt).toLocaleDateString()}</td>
-              <td style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis'}}>{r.productId}</td>
-              <td>{r.rating}</td>
-              <td>{r.title || '—'}</td>
-              <td style={{fontSize:'.65rem'}}>{r.body?.slice(0,140)}</td>
-              <td style={tdActions}>
-                <Button onClick={()=>act(r.id,'approve')} size="sm" variant="primary" title="موافقة">✔</Button>
-                <Button onClick={()=>act(r.id,'reject')} size="sm" variant="danger" title="رفض">✖</Button>
-              </td>
-            </tr>
-          ))}
-          {!pending.length && !loading && (
-            <tr><td colSpan={6} style={emptyCell}>لا توجد مراجعات معلّقة</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+const tierInput = { ...searchInput, minWidth: 90, fontSize: '.65rem', padding: '.4rem .5rem' }};

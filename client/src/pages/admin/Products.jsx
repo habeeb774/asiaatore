@@ -109,7 +109,7 @@ export default function AdminProducts() {
 			<input className="border rounded px-3 py-1 text-sm" placeholder="بحث بالاسم/الرقم" value={q} onChange={(e)=> setQ(e.target.value)} />
 			<button className="btn-outline" onClick={()=> refetch()}>تحديث</button>
 			<button className="btn-primary" onClick={()=> setConfirmModal({ action:'bulkEdit' })}>Bulk editor</button>
-			<button className="btn-outline" onClick={()=> navigate('/admin?view=products&create=1')} title="New product" aria-label="New product">New product</button>
+			<button className="btn-outline" onClick={()=> navigate('/admin/products?create=1')} title="New product" aria-label="New product">New product</button>
 			<button
 				className="btn-outline"
 				onClick={()=> importInputRef.current?.click()}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLanguage, LocalizedText } from '../../contexts/LanguageContext';
+import { useLanguage, LocalizedText } from '../../stores/LanguageContext';
 import { createPortal } from 'react-dom';
 
 const AdvancedNotifications = ({
