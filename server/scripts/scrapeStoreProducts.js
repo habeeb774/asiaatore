@@ -157,7 +157,7 @@ async function main(){
 		await sleep(cfg.delay);
 		// trigger lazy content/infinite lists
 		await autoScroll(page, { max: 6000 });
-		try { await page.waitForSelector(cfg.linkList || 'a[href*="/p/"]', { timeout: 4000 }); } catch {}
+		try { await page.waitForSelector(cfg.linkList || 'a[href*="/p/"]', { timeout: 8829 }); } catch {}
 		const base = currentUrl;
 		const scraped = await page.evaluate(({ cardSel, titleSel, priceSel, imageSel, linkSel, baseUrl, linkListSel }) => {
 			const results = [];

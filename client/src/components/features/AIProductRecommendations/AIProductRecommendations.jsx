@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLanguage } from '../../../stores/LanguageContext';
+import { useLanguage } from '../../../context/LanguageContext';
 import LazyImage from '../../common/LazyImage';
 import { Skeleton } from '../../shared/SkeletonLoader/SkeletonLoader';
 

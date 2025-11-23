@@ -1,13 +1,13 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api/client';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
+import { Button, Input } from '../../components/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '../../stores/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
+import AuthShell from '../../components/features/auth/AuthShell.jsx';
+import AuthFormField from '../../components/features/auth/AuthFormField.jsx';
 
 const registerSchema = z.object({
   name: z.string().trim().optional(),
@@ -31,6 +31,8 @@ const RegisterPage = () => {
     mode: 'onSubmit'
   });
   React.useEffect(() => { setFocus('email'); }, [setFocus]);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirm, setShowConfirm] = React.useState(false);
 
   const onSubmit = async (data) => {
     try {
@@ -69,67 +71,149 @@ const RegisterPage = () => {
     }
   };
 
+  const highlights = [
+    'إنشاء حساب إداري لإدارة المنتجات والطلبات بسهولة.',
+    'متابعة مؤشرات الأداء لحظيًا مع تنبيهات ذكية.',
+    'تجربة عربية متكاملة مع إعدادات قابلة للتخصيص لكل فريق.'
+  ];
+
   return (
-    <div className="min-h-[calc(100vh-120px)] w-full grid place-items-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>إنشاء حساب</CardTitle>
-          <CardDescription>أدخل بياناتك لإنشاء حساب جديد.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3" aria-describedby={errors.root ? 'register-error' : undefined}>
-            <Input
-              id="name"
-              label="الاسم"
-              placeholder="الاسم"
-              error={errors.name?.message}
-              {...register('name')}
-            />
-            <Input
-              id="email"
-              type="email"
-              label="البريد الإلكتروني (اختياري)"
-              autoComplete="email"
-              placeholder="example@mail.com"
-              error={errors.email?.message}
-              {...register('email')}
-            />
-            <Input
-              id="phone"
-              type="tel"
-              label="رقم الجوال (اختياري)"
-              autoComplete="tel"
-              placeholder="05xxxxxxxx"
-              error={errors.phone?.message}
-              {...register('phone')}
-            />
-            <Input
-              id="password"
-              type="password"
-              label="كلمة المرور"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register('password')}
-            />
-            <Input
-              id="confirm"
-              type="password"
-              label="تأكيد كلمة المرور"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              error={errors.confirm?.message}
-              {...register('confirm')}
-            />
-            {errors.root && (
-              <div id="register-error" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{errors.root.message}</div>
-            )}
-            <Button type="submit" disabled={isSubmitting} className="w-full">{isSubmitting? '...جاري' : 'تسجيل'}</Button>
-            <p className="mt-1 text-[0.72rem]">لديك حساب؟ <Link to="/login" className="underline">دخول</Link></p>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell
+      title="حساب إدارة جديد"
+      subtitle="إملأ البيانات التالية لبدء رحلتك مع منصة منفذ آسيا وإدارة متجرك بكفاءة."
+      highlights={highlights}
+      dir="rtl"
+      footer={
+        <span>
+          بالحصول على حساب توافق على شروط الاستخدام وسياسة الخصوصية وتؤكد امتلاكك لصلاحية إدارة المتجر.
+        </span>
+      }
+    >
+      <header className="text-right">
+        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-3 py-1 text-[0.75rem] text-emerald-200">
+          <span className="h-2 w-2 rounded-full bg-emerald-300" />
+          إنشاء حساب إداري
+        </span>
+        <h2 className="mt-4 text-2xl font-bold text-white">ابدأ التسجيل</h2>
+        <p className="mt-2 text-sm text-slate-300">
+          أدخل بيانات التواصل الأساسية لتفعيل الحساب والوصول إلى لوحة التحكم الموحدة.
+        </p>
+      </header>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="mt-8 space-y-6"
+        aria-describedby={errors.root ? 'register-error' : undefined}
+      >
+        <AuthFormField id="name" label="الاسم" hint="اختياري - يساعد الفريق على التعرف عليك" error={errors.name?.message}>
+          <Input
+            id="name"
+            type="text"
+            dir="rtl"
+            className="w-full text-right"
+            placeholder="الاسم الكامل"
+            {...register('name')}
+          />
+        </AuthFormField>
+
+        <AuthFormField id="email" label="البريد الإلكتروني" hint="يمكن استخدام البريد أو رقم الجوال لتسجيل الدخول" error={errors.email?.message}>
+          <Input
+            id="email"
+            type="email"
+            dir="rtl"
+            className="w-full text-right"
+            autoComplete="email"
+            placeholder="example@mail.com"
+            aria-invalid={Boolean(errors.email)}
+            {...register('email')}
+          />
+        </AuthFormField>
+
+        <AuthFormField id="phone" label="رقم الجوال" hint="صيغة سعودية مثل 05xxxxxxxx" error={errors.phone?.message}>
+          <Input
+            id="phone"
+            type="tel"
+            dir="rtl"
+            className="w-full text-right"
+            autoComplete="tel"
+            placeholder="05xxxxxxxx"
+            aria-invalid={Boolean(errors.phone)}
+            {...register('phone')}
+          />
+        </AuthFormField>
+
+        <AuthFormField id="password" label="كلمة المرور" error={errors.password?.message}>
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            dir="rtl"
+            className="w-full text-right pr-20"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            aria-invalid={Boolean(errors.password)}
+            {...register('password')}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-slate-200 hover:text-white"
+            onClick={() => setShowPassword((value) => !value)}
+            title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+          >
+            {showPassword ? 'إخفاء' : 'إظهار'}
+          </Button>
+        </AuthFormField>
+
+        <AuthFormField id="confirm" label="تأكيد كلمة المرور" error={errors.confirm?.message}>
+          <Input
+            id="confirm"
+            type={showConfirm ? 'text' : 'password'}
+            dir="rtl"
+            className="w-full text-right pr-20"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            aria-invalid={Boolean(errors.confirm)}
+            {...register('confirm')}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-slate-200 hover:text-white"
+            onClick={() => setShowConfirm((value) => !value)}
+            title={showConfirm ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+          >
+            {showConfirm ? 'إخفاء' : 'إظهار'}
+          </Button>
+        </AuthFormField>
+
+        {errors.root ? (
+          <div
+            id="register-error"
+            role="alert"
+            className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs leading-5 text-red-100"
+          >
+            {errors.root.message}
+          </div>
+        ) : null}
+
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="ui-btn--lg w-full border-emerald-400/60 bg-emerald-500 text-white hover:bg-emerald-400"
+        >
+          {isSubmitting ? '...جاري إنشاء الحساب' : 'إنشاء الحساب'}
+        </Button>
+      </form>
+
+      <div className="mt-6 text-center text-xs text-slate-300">
+        لديك حساب مسبقًا؟
+        <Link to="/login" className="mr-2 font-medium text-emerald-300 hover:text-emerald-200">
+          تسجيل الدخول
+        </Link>
+      </div>
+    </AuthShell>
   );
 };
 

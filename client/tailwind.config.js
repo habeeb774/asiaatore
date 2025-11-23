@@ -1,7 +1,7 @@
 const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
-	darkMode: 'class',
+	darkMode: ['class', '[data-theme="dark"]'], // More explicit dark mode selector
 	content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
 	theme: {
 		extend: {
@@ -34,5 +34,3 @@ module.exports = {
 	},
 	plugins: [require('tailwindcss-animate')],
 }
-
-

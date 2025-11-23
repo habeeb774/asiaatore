@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Star, Camera, X, Upload, Loader } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '../stores/ToastContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../services/api/client';
 
 const ReviewForm = ({ productId, onSuccess }) => {

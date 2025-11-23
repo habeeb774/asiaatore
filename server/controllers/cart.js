@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import prisma from '../db/client.js';
 import { attachUser } from '../middleware/auth.js';
+import { mapProduct } from '../services/productService.js';
+import { safeProductInclude } from '../db/prismaHelpers.js';
+import { whereWithDeletedAt } from '../utils/deletedAt.js';
 
 const router = Router();
 router.use(attachUser);
@@ -8,6 +11,50 @@ router.use(attachUser);
 // In degraded mode (ALLOW_INVALID_DB=true), Prisma calls will throw; provide safe fallbacks
 const ALLOW_DEGRADED = process.env.ALLOW_INVALID_DB === 'true';
 const isDbDisabled = (e) => ALLOW_DEGRADED || (e && (e.code === 'DB_DISABLED' || /Degraded mode: DB disabled/i.test(e.message || '')));
+
+const buildCartInclude = () => {
+  const productInclude = safeProductInclude();
+  if (productInclude?.images) {
+    productInclude.images.where = whereWithDeletedAt(productInclude.images.where || {});
+  }
+  return {
+    product: {
+      include: productInclude,
+    },
+  };
+};
+
+function formatCartItem(row) {
+  const product = row.product ? mapProduct(row.product) : null;
+  const basePrice = Number(
+    (product && typeof product.price !== 'undefined' ? product.price : undefined) ??
+      row.price ??
+      row.salePrice ??
+      0
+  ) || 0;
+  const nameAr = product?.name?.ar ?? row.product?.nameAr ?? null;
+  const nameEn = product?.name?.en ?? row.product?.nameEn ?? null;
+
+  return {
+    id: row.productId,
+    productId: row.productId,
+    quantity: Number(row.quantity) || 0,
+    price: basePrice,
+    salePrice: basePrice,
+    name: nameAr || nameEn || null,
+    nameAr,
+    nameEn,
+    image: product?.image ?? row.product?.image ?? null,
+    product,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function fetchCartItems(userId) {
+  const rows = await prisma.cartItem.findMany({ where: { userId }, include: buildCartInclude() });
+  return rows.map(formatCartItem);
+}
 
 // In development (or when ALLOW_DEV_HEADERS=true), if requests use dev headers with a user id
 // that doesn't exist in DB yet, auto-provision a minimal user to avoid FK violations on CartItem
@@ -29,7 +76,7 @@ async function ensureDbUserIfDev(req) {
       }
     });
   } catch (_) {
-    // ignore – best-effort; if it still fails, handlers will return clear FK_CONSTRAINT
+    // ignore – best-effort; if it still fails, handlers will return clear FK_CONSTRAINT. Use req.log for debugging.
   }
 }
 
@@ -44,9 +91,8 @@ function requireUser(req, res, next) {
 // Get cart
 router.get('/', requireUser, async (req, res) => {
   try {
-    const items = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
-    // Normalize shape for clients expecting productId/id
-    res.json({ ok: true, items: items.map(i => ({ ...i, id: i.productId })) });
+    const items = await fetchCartItems(req.user.id);
+    res.json({ ok: true, items });
   } catch (e) {
     if (isDbDisabled(e)) return res.json({ ok: true, items: [] });
     res.status(500).json({ ok:false, error:'LIST_FAILED', message: e.message });
@@ -58,8 +104,8 @@ router.post('/merge', requireUser, async (req, res) => {
   try {
     const localItems = Array.isArray(req.body?.items) ? req.body.items : [];
     if (!localItems.length) {
-      const items = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
-      return res.json({ ok: true, items: items.map(i => ({ ...i, id: i.productId })) });
+      const items = await fetchCartItems(req.user.id);
+      return res.json({ ok: true, items });
     }
 
     // 1) Normalize: sum quantities per productId and clamp per-item inputs to [1..99]
@@ -72,8 +118,8 @@ router.post('/merge', requireUser, async (req, res) => {
       incomingMap.set(pid, (incomingMap.get(pid) || 0) + qty);
     }
     if (!incomingMap.size) {
-      const items = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
-      return res.json({ ok: true, items: items.map(i => ({ ...i, id: i.productId })) });
+      const items = await fetchCartItems(req.user.id);
+      return res.json({ ok: true, items });
     }
 
     const productIds = Array.from(incomingMap.keys());
@@ -85,8 +131,8 @@ router.post('/merge', requireUser, async (req, res) => {
       if (!validSet.has(pid)) incomingMap.delete(pid);
     }
     if (!incomingMap.size) {
-      const items = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
-      return res.json({ ok: true, items: items.map(i => ({ ...i, id: i.productId })) });
+      const items = await fetchCartItems(req.user.id);
+      return res.json({ ok: true, items });
     }
 
     // 3) Load existing cart rows for the user for just these productIds
@@ -128,8 +174,8 @@ router.post('/merge', requireUser, async (req, res) => {
     }
     if (upserts.length || stockUpdates.length) await prisma.$transaction([...upserts, ...stockUpdates]);
 
-  const merged = await prisma.cartItem.findMany({ where: { userId: req.user.id } });
-  res.json({ ok: true, items: merged.map(i => ({ ...i, id: i.productId })), skipped });
+    const merged = await fetchCartItems(req.user.id);
+    res.json({ ok: true, items: merged, skipped });
   } catch (e) {
     // Surface Prisma codes more readably
     if (e && e.code) {
@@ -168,22 +214,28 @@ router.post('/set', requireUser, async (req, res) => {
     if (delta > 0) {
       // Increasing quantity: require sufficient stock
       if ((product.stock || 0) < delta) return res.status(400).json({ ok:false, error:'INSUFFICIENT_STOCK', available: Number(product.stock) || 0 });
-      const [updated] = await prisma.$transaction([
+      await prisma.$transaction([
         prisma.cartItem.upsert({ where: { userId_productId: { userId: req.user.id, productId: String(productId) } }, update: { quantity: qty }, create: { userId: req.user.id, productId: String(productId), quantity: qty } }),
         prisma.product.update({ where: { id: String(productId) }, data: { stock: { decrement: delta } } })
       ]);
-      return res.json({ ok: true, item: updated });
+      const items = await fetchCartItems(req.user.id);
+      const item = items.find(it => it.productId === String(productId)) || null;
+      return res.json({ ok: true, item });
     } else if (delta < 0) {
       // Decreasing quantity: return stock
       const restore = Math.abs(delta);
-      const [updated] = await prisma.$transaction([
+      await prisma.$transaction([
         prisma.cartItem.update({ where: { userId_productId: { userId: req.user.id, productId: String(productId) } }, data: { quantity: qty } }),
         prisma.product.update({ where: { id: String(productId) }, data: { stock: { increment: restore } } })
       ]);
-      return res.json({ ok: true, item: updated });
+      const items = await fetchCartItems(req.user.id);
+      const item = items.find(it => it.productId === String(productId)) || null;
+      return res.json({ ok: true, item });
     } else {
       // No change
-      return res.json({ ok: true, item: existing || { userId: req.user.id, productId: String(productId), quantity: qty } });
+      const items = await fetchCartItems(req.user.id);
+      const item = items.find(it => it.productId === String(productId)) || null;
+      return res.json({ ok: true, item: item || { userId: req.user.id, productId: String(productId), quantity: qty } });
     }
   } catch (e) {
     if (isDbDisabled(e)) return res.status(503).json({ ok: false, error: 'DB_DISABLED', message: 'Cart is unavailable in degraded mode' });

@@ -43,7 +43,7 @@ async function request(path, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
 
   // Dev headers for testing without login
-  if (DEV && !token && !path.startsWith('/auth')) {
+  if (DEV && !token && (!path.startsWith('/auth') || path === '/auth/me')) {
     let devUser = null;
     try { const raw = localStorage.getItem('my_store_user'); if (raw) devUser = JSON.parse(raw); } catch {}
     headers['x-user-id'] = devUser?.id || 'dev-admin';
@@ -53,7 +53,8 @@ async function request(path, options = {}) {
   // Abort/timeout guard to prevent UI freezing on hanging requests
   const controller = new AbortController();
   const signal = controller.signal;
-  const needCreds = path.startsWith('/auth');
+  // Always include credentials for auth endpoints and ensure cookies are sent
+  const needCreds = path.startsWith('/auth') || path === '/events' || path === '/api/events';
   const isSse = path === '/events' || path === '/api/events' || url.endsWith('/api/events');
   const timeoutMs = typeof options.timeout === 'number' ? options.timeout : DEFAULT_TIMEOUT;
   let timeoutId = null;
@@ -61,7 +62,7 @@ async function request(path, options = {}) {
     timeoutId = setTimeout(() => { try { controller.abort('timeout'); } catch {} }, timeoutMs);
   }
   try {
-    res = await fetch(url, { headers, signal, ...options, ...(needCreds ? { credentials: 'include' } : {}) });
+    res = await fetch(url, { headers, signal, ...options, credentials: 'include' });
   } catch (e) {
     const reason = (e && (e.name === 'AbortError' || e === 'timeout')) ? `Timeout after ${timeoutMs}ms` : e?.message || 'Unknown error';
     throw Object.assign(new Error('Network error: ' + reason), { code: 'NETWORK', reason });
@@ -78,7 +79,7 @@ async function request(path, options = {}) {
         if (body?.accessToken) {
           try { localStorage.setItem('my_store_token', body.accessToken); } catch {}
           const retryHeaders = { ...headers, Authorization: `Bearer ${body.accessToken}` };
-          const retryRes = await fetch(url, { headers: retryHeaders, ...options, _retry: true });
+          const retryRes = await fetch(url, { headers: retryHeaders, ...options, _retry: true, credentials: 'include' });
           if (!retryRes.ok) throw new Error(`API Error ${retryRes.status} after refresh`);
           return retryRes.json();
         }
@@ -87,7 +88,7 @@ async function request(path, options = {}) {
   }
 
   // Dev convenience: if still 401 and in dev, retry once with dev headers even if a stale token exists
-  if (DEV && res.status === 401 && !options._retryDev && !path.startsWith('/auth')) {
+  if (DEV && res.status === 401 && !options._retryDev && (!path.startsWith('/auth') || path === '/auth/me')) {
     try {
       let devUser = null;
       try { const raw = localStorage.getItem('my_store_user'); if (raw) devUser = JSON.parse(raw); } catch {}
@@ -165,9 +166,28 @@ const api = {
     return request('/orders' + (qs.toString() ? `?${qs.toString()}` : ''));
   },
   // Auth
-  authLogin: (identifier,password,mfaCode=null) => request('/auth/login', { method:'POST', body: JSON.stringify({identifier,password,mfaCode:mfaCode||undefined}), credentials:'include' }),
-  authRegister: (email,password,name,phone) => request('/auth/register', { method:'POST', body: JSON.stringify({email,password,name,phone}), credentials:'include' }),
-  authLogout: () => request('/auth/logout', { method:'POST', credentials:'include' }),
+  authLogin: async (identifier, password, mfaCode = null) => {
+    try {
+      const body = { identifier, password };
+      if (mfaCode) body.mfaCode = mfaCode;
+      
+      console.log('Auth login request:', { endpoint: '/auth/login', identifier });
+      const response = await request('/auth/login', { 
+        method: 'POST', 
+        body: JSON.stringify(body) 
+      });
+      
+      console.log('Auth login response:', response);
+      return response;
+    } catch (error) {
+      console.error('Auth login error:', error);
+      // If the error has a response with status 401, it will be caught by the error handler
+      throw error;
+    }
+  },
+  authRegister: (email,password,name,phone) => request('/auth/register', { method:'POST', body: JSON.stringify({email,password,name,phone}) }),
+  authLogout: () => request('/auth/logout', { method:'POST' }),
+  // Use relative '/auth/me' here — `request()` will prefix with `API_BASE` so using '/api/auth/me' produced '/api/api/auth/me' in dev.
   me: () => request('/auth/me'),
   meUpdate: patch => request('/auth/me', { method:'PATCH', body: JSON.stringify(patch||{}) }),
   // Wishlist
@@ -246,6 +266,8 @@ const api = {
   marketingBannerCreate: (data) => request('/marketing/banners', { method:'POST', body: JSON.stringify(data||{}) }),
   marketingBannerUpdate: (id,data) => request(`/marketing/banners/${encodeURIComponent(id)}`, { method:'PATCH', body: JSON.stringify(data||{}) }),
   marketingBannerDelete: (id) => request(`/marketing/banners/${encodeURIComponent(id)}`, { method:'DELETE' }),
+  marketingBannerCreateForm: (formData) => request('/marketing/banners', { method:'POST', body: formData }),
+  marketingBannerUpdateForm: (id, formData) => request(`/marketing/banners/${encodeURIComponent(id)}`, { method:'PATCH', body: formData }),
   marketingAppLinkCreate: (data) => request('/marketing/app-links', { method:'POST', body: JSON.stringify(data||{}) }),
   marketingAppLinkUpdate: (id,data) => request(`/marketing/app-links/${encodeURIComponent(id)}`, { method:'PATCH', body: JSON.stringify(data||{}) }),
   marketingAppLinkDelete: (id) => request(`/marketing/app-links/${encodeURIComponent(id)}`, { method:'DELETE' }),
@@ -301,7 +323,24 @@ const api = {
     return request('/delivery/orders/history' + (qs.toString() ? `?${qs.toString()}` : ''));
   },
   // Shipping
-  shippingQuote: (payload) => request('/shipping/quote', { method:'POST', body: JSON.stringify({ address: payload || {} }) }),
+  shippingQuote: async (payload) => {
+    const res = await request('/shipping/quote', { method:'POST', body: JSON.stringify({ address: payload || {} }) });
+    if (res && typeof res === 'object' && 'quote' in res && res.quote) {
+      const quote = res.quote || {};
+      return {
+        ok: res.ok !== false,
+        shipping: quote.shipping,
+        method: quote.method,
+        distanceKm: quote.distanceKm,
+        cityMatched: quote.cityMatched,
+        etaHoursMin: quote.etaHoursMin,
+        etaHoursMax: quote.etaHoursMax,
+        etaDaysMin: quote.etaDaysMin,
+        etaDaysMax: quote.etaDaysMax
+      };
+    }
+    return res;
+  },
   orderShipments: (orderId, opts={}) => request(`/orders/${encodeURIComponent(orderId)}/ship` + (opts.refresh ? `?refresh=1` : '')),
   // Instance setup
   setupStatus: () => request('/setup/status'),

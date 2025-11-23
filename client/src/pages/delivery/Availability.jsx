@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../../stores/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api/client';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';

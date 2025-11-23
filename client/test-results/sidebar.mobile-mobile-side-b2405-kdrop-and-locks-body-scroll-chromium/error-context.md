@@ -1,0 +1,529 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - button "Close menu" [ref=e4] [cursor=pointer]
+    - dialog "شركة منفذ اسيا التجارية" [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e8]: شركة منفذ اسيا التجارية
+          - button "إغلاق القائمة" [expanded] [active] [ref=e9] [cursor=pointer]:
+            - img [ref=e10]
+        - list "Main navigation" [ref=e13]:
+          - listitem [ref=e14]: التصفح
+          - menuitem "الرئيسية" [ref=e15] [cursor=pointer]:
+            - img [ref=e17]
+            - generic [ref=e20]: الرئيسية
+          - menuitem "المنتجات" [ref=e21] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e27]: المنتجات
+          - menuitem "الكتالوج" [ref=e28] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: الكتالوج
+          - menuitem "العروض" [ref=e33] [cursor=pointer]:
+            - img [ref=e35]
+            - generic [ref=e38]: العروض
+          - menuitem "السلة" [ref=e39] [cursor=pointer]:
+            - img [ref=e41]
+            - generic [ref=e45]: السلة
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - img [ref=e49]
+            - generic [ref=e54]:
+              - generic [ref=e55]: ضيف
+              - generic [ref=e56]: غير مسجل
+          - generic [ref=e57]:
+            - button "تبديل ثيم" [ref=e58] [cursor=pointer]:
+              - img [ref=e59]
+            - button "تبديل اللغة" [ref=e65] [cursor=pointer]:
+              - img [ref=e66]
+    - generic [ref=e69]:
+      - note [ref=e70]:
+        - generic [ref=e72]: شحن سريع وخيارات دفع متعددة
+      - generic "Top promotions" [ref=e75]:
+        - link [ref=e76] [cursor=pointer]:
+          - /url: "#"
+      - banner [ref=e77]:
+        - link "Skip to content" [ref=e78] [cursor=pointer]:
+          - /url: "#main"
+        - generic [ref=e79]:
+          - button "إغلاق القائمة" [expanded] [ref=e81] [cursor=pointer]:
+            - img [ref=e82]
+          - link "Logo شركة منفذ آسيا التجارية" [ref=e85] [cursor=pointer]:
+            - /url: /
+            - img "Logo" [ref=e86]
+            - generic [ref=e87]: شركة منفذ آسيا التجارية
+          - generic [ref=e88]:
+            - button [ref=e89] [cursor=pointer]:
+              - img [ref=e90]
+            - link [ref=e95] [cursor=pointer]:
+              - /url: /login
+              - img [ref=e96]
+      - navigation "الأقسام" [ref=e99]:
+        - generic [ref=e100]:
+          - button "الألبان والبيض 6" [ref=e101] [cursor=pointer]:
+            - generic [ref=e102]: الألبان والبيض
+            - generic [ref=e103]: "6"
+          - button "الزيوت والسمن 4" [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]: الزيوت والسمن
+            - generic [ref=e106]: "4"
+          - button "السكر والشاي والقهوة 4" [ref=e107] [cursor=pointer]:
+            - img [ref=e108]
+            - generic [ref=e110]: السكر والشاي والقهوة
+            - generic [ref=e111]: "4"
+          - button "الطفل 4" [ref=e112] [cursor=pointer]:
+            - img [ref=e113]
+            - generic [ref=e115]: الطفل
+            - generic [ref=e116]: "4"
+          - button "الماء والمشروبات 4" [ref=e117] [cursor=pointer]:
+            - img [ref=e118]
+            - generic [ref=e122]: الماء والمشروبات
+            - generic [ref=e123]: "4"
+          - button "المعكرونة والأرز 4" [ref=e124] [cursor=pointer]:
+            - img [ref=e125]
+            - generic [ref=e128]: المعكرونة والأرز
+            - generic [ref=e129]: "4"
+          - button "التنظيف 2" [ref=e130] [cursor=pointer]:
+            - img [ref=e131]
+            - generic [ref=e134]: التنظيف
+            - generic [ref=e135]: "2"
+          - button "الحلويات والبسكويت 2" [ref=e136] [cursor=pointer]:
+            - img [ref=e137]
+            - generic [ref=e139]: الحلويات والبسكويت
+            - generic [ref=e140]: "2"
+          - button "السوبرماركت 2" [ref=e141] [cursor=pointer]:
+            - img [ref=e142]
+            - generic [ref=e146]: السوبرماركت
+            - generic [ref=e147]: "2"
+          - button "الصلصات والمخللات 2" [ref=e148] [cursor=pointer]:
+            - img [ref=e149]
+            - generic [ref=e152]: الصلصات والمخللات
+            - generic [ref=e153]: "2"
+          - button "العناية الشخصية 2" [ref=e154] [cursor=pointer]:
+            - img [ref=e155]
+            - generic [ref=e157]: العناية الشخصية
+            - generic [ref=e158]: "2"
+          - button "الفواكه والخضروات 2" [ref=e159] [cursor=pointer]:
+            - img [ref=e160]
+            - generic [ref=e163]: الفواكه والخضروات
+            - generic [ref=e164]: "2"
+          - button "عرض المزيد" [ref=e165] [cursor=pointer]
+      - main [ref=e166]:
+        - generic [ref=e167]:
+          - region "Hero banner" [ref=e168]:
+            - group "1 / 1" [ref=e172]:
+              - link "جديدنا - View" [ref=e173] [cursor=pointer]:
+                - /url: "#"
+                - img "جديدنا" [ref=e175]
+                - generic [ref=e176]:
+                  - heading "جديدنا" [level=2] [ref=e177]
+                  - paragraph [ref=e178]: منتجات مضافة حديثاً
+          - list "Store value highlights" [ref=e179]:
+            - listitem [ref=e180]:
+              - img [ref=e182]
+              - generic [ref=e187]:
+                - paragraph [ref=e188]: توصيل سريع
+                - paragraph [ref=e189]: شحن خلال يومين
+            - listitem [ref=e190]:
+              - img [ref=e192]
+              - generic [ref=e195]:
+                - paragraph [ref=e196]: دفع آمن
+                - paragraph [ref=e197]: بوابات موثوقة
+            - listitem [ref=e198]:
+              - img [ref=e200]
+              - generic [ref=e203]:
+                - paragraph [ref=e204]: خصومات كمية
+                - paragraph [ref=e205]: وفر في الشراء بالجملة
+          - region "تصفح حسب الفئة" [ref=e206]:
+            - generic [ref=e207]:
+              - heading "تصفح حسب الفئة" [level=3] [ref=e209]
+              - generic [ref=e212]:
+                - button "سيارات سيارات" [ref=e215] [cursor=pointer]:
+                  - img "سيارات" [ref=e217]
+                  - generic [ref=e220]: سيارات
+                - button "ألعاب ألعاب" [ref=e223] [cursor=pointer]:
+                  - img "ألعاب" [ref=e225]
+                  - generic [ref=e228]: ألعاب
+                - button "عناية وجمال عناية وجمال" [ref=e231] [cursor=pointer]:
+                  - img "عناية وجمال" [ref=e233]
+                  - generic [ref=e236]: عناية وجمال
+                - button "رياضة رياضة" [ref=e239] [cursor=pointer]:
+                  - img "رياضة" [ref=e241]
+                  - generic [ref=e244]: رياضة
+                - button "منزل ومطبخ منزل ومطبخ" [ref=e247] [cursor=pointer]:
+                  - img "منزل ومطبخ" [ref=e249]
+                  - generic [ref=e252]: منزل ومطبخ
+                - button "كتب كتب" [ref=e255] [cursor=pointer]:
+                  - img "كتب" [ref=e257]
+                  - generic [ref=e260]: كتب
+                - button "ملابس ملابس" [ref=e263] [cursor=pointer]:
+                  - img "ملابس" [ref=e265]
+                  - generic [ref=e268]: ملابس
+                - button "إلكترونيات إلكترونيات" [ref=e271] [cursor=pointer]:
+                  - img "إلكترونيات" [ref=e273]
+                  - generic [ref=e276]: إلكترونيات
+                - button "المعلبات المعلبات" [ref=e279] [cursor=pointer]:
+                  - img "المعلبات" [ref=e281]
+                  - generic [ref=e284]: المعلبات
+                - button "الصلصات والمخللات الصلصات والمخللات" [ref=e287] [cursor=pointer]:
+                  - img "الصلصات والمخللات" [ref=e289]
+                  - generic [ref=e292]: الصلصات والمخللات
+                - button "السكر والشاي والقهوة السكر والشاي والقهوة" [ref=e295] [cursor=pointer]:
+                  - img "السكر والشاي والقهوة" [ref=e297]
+                  - generic [ref=e300]: السكر والشاي والقهوة
+                - button "الزيوت والسمن الزيوت والسمن" [ref=e303] [cursor=pointer]:
+                  - img "الزيوت والسمن" [ref=e305]
+                  - generic [ref=e308]: الزيوت والسمن
+                - button "الطفل الطفل" [ref=e311] [cursor=pointer]:
+                  - img "الطفل" [ref=e313]
+                  - generic [ref=e316]: الطفل
+                - button "الماء والمشروبات الماء والمشروبات" [ref=e319] [cursor=pointer]:
+                  - img "الماء والمشروبات" [ref=e321]
+                  - generic [ref=e324]: الماء والمشروبات
+                - button "السوبرماركت السوبرماركت" [ref=e327] [cursor=pointer]:
+                  - img "السوبرماركت" [ref=e329]
+                  - generic [ref=e332]: السوبرماركت
+                - button "العروض العروض" [ref=e335] [cursor=pointer]:
+                  - img "العروض" [ref=e337]
+                  - generic [ref=e340]: العروض
+                - button "الحلويات والبسكويت الحلويات والبسكويت" [ref=e343] [cursor=pointer]:
+                  - img "الحلويات والبسكويت" [ref=e345]
+                  - generic [ref=e348]: الحلويات والبسكويت
+                - button "المعكرونة والأرز المعكرونة والأرز" [ref=e351] [cursor=pointer]:
+                  - img "المعكرونة والأرز" [ref=e353]
+                  - generic [ref=e356]: المعكرونة والأرز
+                - button "العناية الشخصية العناية الشخصية" [ref=e359] [cursor=pointer]:
+                  - img "العناية الشخصية" [ref=e361]
+                  - generic [ref=e364]: العناية الشخصية
+                - button "التنظيف التنظيف" [ref=e367] [cursor=pointer]:
+                  - img "التنظيف" [ref=e369]
+                  - generic [ref=e372]: التنظيف
+                - button "الزيوت والتوابل الزيوت والتوابل" [ref=e375] [cursor=pointer]:
+                  - img "الزيوت والتوابل" [ref=e377]
+                  - generic [ref=e380]: الزيوت والتوابل
+                - button "الحبوب والأرز الحبوب والأرز" [ref=e383] [cursor=pointer]:
+                  - img "الحبوب والأرز" [ref=e385]
+                  - generic [ref=e388]: الحبوب والأرز
+                - button "الوجبات الخفيفة الوجبات الخفيفة" [ref=e391] [cursor=pointer]:
+                  - img "الوجبات الخفيفة" [ref=e393]
+                  - generic [ref=e396]: الوجبات الخفيفة
+                - button "المشروبات المشروبات" [ref=e399] [cursor=pointer]:
+                  - img "المشروبات" [ref=e401]
+                  - generic [ref=e404]: المشروبات
+                - button "المخابز المخابز" [ref=e407] [cursor=pointer]:
+                  - img "المخابز" [ref=e409]
+                  - generic [ref=e412]: المخابز
+                - button "اللحوم والدواجن اللحوم والدواجن" [ref=e415] [cursor=pointer]:
+                  - img "اللحوم والدواجن" [ref=e417]
+                  - generic [ref=e420]: اللحوم والدواجن
+                - button "الفواكه والخضروات الفواكه والخضروات" [ref=e423] [cursor=pointer]:
+                  - img "الفواكه والخضروات" [ref=e425]
+                  - generic [ref=e428]: الفواكه والخضروات
+                - button "الألبان والبيض الألبان والبيض" [ref=e431] [cursor=pointer]:
+                  - img "الألبان والبيض" [ref=e433]
+                  - generic [ref=e436]: الألبان والبيض
+          - generic [ref=e439]:
+            - generic [ref=e440]:
+              - heading "منتجاتنا المميزة" [level=2] [ref=e441]
+              - paragraph [ref=e442]: اكتشف منتجاتنا الأكثر شعبية ومبيعاً
+            - generic [ref=e445]:
+              - link "منتج 20 77 ر.س إضافة للعربة" [ref=e449] [cursor=pointer]:
+                - /url: /product/04924341-b3f7-4108-9f40-a91a60bc63ca
+                - generic [ref=e450]:
+                  - img [ref=e453]
+                  - generic [ref=e454]:
+                    - heading "منتج 20" [level=3] [ref=e455]
+                    - generic [ref=e456]:
+                      - generic [ref=e459]: 77 ر.س
+                      - button "إضافة للعربة" [ref=e460]:
+                        - img [ref=e461]
+                        - generic [ref=e465]: إضافة للعربة
+              - link "منتج 12 53 ر.س إضافة للعربة" [ref=e469] [cursor=pointer]:
+                - /url: /product/549b869c-edb2-4048-918c-9bed7adb3310
+                - generic [ref=e470]:
+                  - img [ref=e473]
+                  - generic [ref=e474]:
+                    - heading "منتج 12" [level=3] [ref=e475]
+                    - generic [ref=e476]:
+                      - generic [ref=e479]: 53 ر.س
+                      - button "إضافة للعربة" [ref=e480]:
+                        - img [ref=e481]
+                        - generic [ref=e485]: إضافة للعربة
+              - link "منتج جديد 100 ر.س إضافة للعربة" [ref=e489] [cursor=pointer]:
+                - /url: /product/de31bce1-8fbd-43db-a3b3-7591480d7db7
+                - generic [ref=e490]:
+                  - img [ref=e493]
+                  - generic [ref=e494]:
+                    - heading "منتج جديد" [level=3] [ref=e495]
+                    - generic [ref=e496]:
+                      - generic [ref=e499]: 100 ر.س
+                      - button "إضافة للعربة" [ref=e500]:
+                        - img [ref=e501]
+                        - generic [ref=e505]: إضافة للعربة
+              - link "منتج 24 89 ر.س إضافة للعربة" [ref=e509] [cursor=pointer]:
+                - /url: /product/3fe99c86-9d48-4bfd-92b7-96e46ccaaed7
+                - generic [ref=e510]:
+                  - img [ref=e513]
+                  - generic [ref=e514]:
+                    - heading "منتج 24" [level=3] [ref=e515]
+                    - generic [ref=e516]:
+                      - generic [ref=e519]: 89 ر.س
+                      - button "إضافة للعربة" [ref=e520]:
+                        - img [ref=e521]
+                        - generic [ref=e525]: إضافة للعربة
+              - link "منتج 23 86 ر.س إضافة للعربة" [ref=e529] [cursor=pointer]:
+                - /url: /product/ec3856bb-9543-4a36-83e4-bd70772af72c
+                - generic [ref=e530]:
+                  - img [ref=e533]
+                  - generic [ref=e534]:
+                    - heading "منتج 23" [level=3] [ref=e535]
+                    - generic [ref=e536]:
+                      - generic [ref=e539]: 86 ر.س
+                      - button "إضافة للعربة" [ref=e540]:
+                        - img [ref=e541]
+                        - generic [ref=e545]: إضافة للعربة
+              - link "-11% منتج 21 80 ر.س 90 ر.س وفرت 10 ر.س إضافة للعربة" [ref=e549] [cursor=pointer]:
+                - /url: /product/72d51d85-7fb9-428d-898c-09674b455855
+                - generic [ref=e550]:
+                  - generic [ref=e551]:
+                    - img [ref=e553]
+                    - generic [ref=e555]: "-11%"
+                  - generic [ref=e556]:
+                    - heading "منتج 21" [level=3] [ref=e557]
+                    - generic [ref=e558]:
+                      - generic [ref=e560]:
+                        - generic [ref=e561]: 80 ر.س
+                        - generic [ref=e562]: 90 ر.س
+                        - generic [ref=e563]: وفرت 10 ر.س
+                      - button "إضافة للعربة" [ref=e564]:
+                        - img [ref=e565]
+                        - generic [ref=e569]: إضافة للعربة
+              - link "منتج 19 74 ر.س إضافة للعربة" [ref=e573] [cursor=pointer]:
+                - /url: /product/8d2121f8-a025-46f8-8598-dcef26e0d2c1
+                - generic [ref=e574]:
+                  - img [ref=e577]
+                  - generic [ref=e578]:
+                    - heading "منتج 19" [level=3] [ref=e579]
+                    - generic [ref=e580]:
+                      - generic [ref=e583]: 74 ر.س
+                      - button "إضافة للعربة" [ref=e584]:
+                        - img [ref=e585]
+                        - generic [ref=e589]: إضافة للعربة
+              - link "منتج 18 71 ر.س إضافة للعربة" [ref=e593] [cursor=pointer]:
+                - /url: /product/b20e4389-3187-4fbb-9535-c8196d019069
+                - generic [ref=e594]:
+                  - img [ref=e597]
+                  - generic [ref=e598]:
+                    - heading "منتج 18" [level=3] [ref=e599]
+                    - generic [ref=e600]:
+                      - generic [ref=e603]: 71 ر.س
+                      - button "إضافة للعربة" [ref=e604]:
+                        - img [ref=e605]
+                        - generic [ref=e609]: إضافة للعربة
+              - link "-13% منتج 17 68 ر.س 78 ر.س وفرت 10 ر.س إضافة للعربة" [ref=e613] [cursor=pointer]:
+                - /url: /product/05f19eb8-e0d9-4142-aec6-bab8343fc89c
+                - generic [ref=e614]:
+                  - generic [ref=e615]:
+                    - img [ref=e617]
+                    - generic [ref=e619]: "-13%"
+                  - generic [ref=e620]:
+                    - heading "منتج 17" [level=3] [ref=e621]
+                    - generic [ref=e622]:
+                      - generic [ref=e624]:
+                        - generic [ref=e625]: 68 ر.س
+                        - generic [ref=e626]: 78 ر.س
+                        - generic [ref=e627]: وفرت 10 ر.س
+                      - button "إضافة للعربة" [ref=e628]:
+                        - img [ref=e629]
+                        - generic [ref=e633]: إضافة للعربة
+              - link "منتج 16 65 ر.س إضافة للعربة" [ref=e637] [cursor=pointer]:
+                - /url: /product/be7dc6e9-e751-4ea4-819d-fa50130eaf7a
+                - generic [ref=e638]:
+                  - img [ref=e641]
+                  - generic [ref=e642]:
+                    - heading "منتج 16" [level=3] [ref=e643]
+                    - generic [ref=e644]:
+                      - generic [ref=e647]: 65 ر.س
+                      - button "إضافة للعربة" [ref=e648]:
+                        - img [ref=e649]
+                        - generic [ref=e653]: إضافة للعربة
+              - link "منتج 14 59 ر.س إضافة للعربة" [ref=e657] [cursor=pointer]:
+                - /url: /product/e93c4440-6a2c-4c4f-a502-d4f494db7ee5
+                - generic [ref=e658]:
+                  - img [ref=e661]
+                  - generic [ref=e662]:
+                    - heading "منتج 14" [level=3] [ref=e663]
+                    - generic [ref=e664]:
+                      - generic [ref=e667]: 59 ر.س
+                      - button "إضافة للعربة" [ref=e668]:
+                        - img [ref=e669]
+                        - generic [ref=e673]: إضافة للعربة
+              - link "منتج 7 38 ر.س إضافة للعربة" [ref=e677] [cursor=pointer]:
+                - /url: /product/01cc68b5-5e02-4444-9e59-3b53e77ab7c7
+                - generic [ref=e678]:
+                  - img [ref=e681]
+                  - generic [ref=e682]:
+                    - heading "منتج 7" [level=3] [ref=e683]
+                    - generic [ref=e684]:
+                      - generic [ref=e687]: 38 ر.س
+                      - button "إضافة للعربة" [ref=e688]:
+                        - img [ref=e689]
+                        - generic [ref=e693]: إضافة للعربة
+          - generic [ref=e695]:
+            - generic [ref=e696]:
+              - img [ref=e698]
+              - img [ref=e701]
+              - img [ref=e705]
+            - generic [ref=e707]:
+              - generic [ref=e708]:
+                - generic [ref=e709]:
+                  - img [ref=e711]
+                  - heading "عروض فاخرة" [level=2] [ref=e713]
+                  - img [ref=e715]
+                - paragraph [ref=e718]: اكتشف أفضل العروض والخصومات الفاخرة
+              - button "عرض جميع العروض الفاخرة" [ref=e720] [cursor=pointer]:
+                - img [ref=e721]
+                - text: عرض جميع العروض الفاخرة
+                - img [ref=e723]
+          - region "Popular Brands" [ref=e726]:
+            - generic [ref=e727]:
+              - generic [ref=e728]:
+                - heading "Popular Brands" [level=2] [ref=e729]
+                - paragraph [ref=e730]: Trusted partners and labels
+              - list [ref=e732]:
+                - listitem [ref=e733]:
+                  - link "دانون" [ref=e734] [cursor=pointer]:
+                    - /url: /brands/slug/danone
+                    - generic "دانون" [ref=e735]
+                - listitem [ref=e736]:
+                  - link "كوكا كولا" [ref=e737] [cursor=pointer]:
+                    - /url: /brands/slug/coca-cola
+                    - generic "كوكا كولا" [ref=e738]
+                - listitem [ref=e739]:
+                  - link "لايز" [ref=e740] [cursor=pointer]:
+                    - /url: /brands/slug/lays
+                    - generic "لايز" [ref=e741]
+                - listitem [ref=e742]:
+                  - link "نستله" [ref=e743] [cursor=pointer]:
+                    - /url: /brands/slug/nestle
+                    - generic "نستله" [ref=e744]
+                - listitem [ref=e745]:
+                  - link "المراعي" [ref=e746] [cursor=pointer]:
+                    - /url: /brands/slug/almarai
+                    - generic "المراعي" [ref=e747]
+      - contentinfo [ref=e748]:
+        - generic [ref=e749]:
+          - generic [ref=e750]:
+            - generic [ref=e751]:
+              - generic [ref=e752]:
+                - img "شركة منفذ اسيا التجارية" [ref=e753]
+                - generic [ref=e754]: شركة منفذ اسيا التجارية
+              - generic [ref=e755]:
+                - paragraph [ref=e756]: متخصصون في بيع المواد الغذائية بالجملة وبالحبة
+                - paragraph [ref=e757]: وجميع احتياجات المنزل من منظفات و كماليات
+                - paragraph [ref=e758]: أيضًا يوجد لدينا قسم السوبر ماركت وجميع
+                - paragraph [ref=e759]: احتياجات الأسرة السعودية وأسعارنا جملة وجودتنا
+                - paragraph [ref=e760]: أصلية
+            - generic [ref=e761]:
+              - heading "روابط تهمك" [level=3] [ref=e762]
+              - generic [ref=e763]:
+                - link "المدونة" [ref=e764] [cursor=pointer]:
+                  - /url: "#"
+                - link "مواقع التواصل الاجتماعي" [ref=e765] [cursor=pointer]:
+                  - /url: "#"
+                - link "سياسة الإستبدال والإسترجاع" [ref=e766] [cursor=pointer]:
+                  - /url: /legal/returns
+                - link "سياسة الاستخدام والخصوصية" [ref=e767] [cursor=pointer]:
+                  - /url: /legal/privacy
+            - generic [ref=e768]:
+              - heading "خدمة العملاء" [level=3] [ref=e769]
+              - generic [ref=e770]:
+                - link "WhatsApp" [ref=e771] [cursor=pointer]:
+                  - /url: https://wa.me/966500000000
+                  - img [ref=e773]
+                  - generic [ref=e775]: واتساب
+                - link "جوال" [ref=e776] [cursor=pointer]:
+                  - /url: tel:+966500000000
+                  - img [ref=e778]
+                  - generic [ref=e780]: جوال
+                - link "هاتف" [ref=e781] [cursor=pointer]:
+                  - /url: tel:920000000
+                  - img [ref=e783]
+                  - generic [ref=e785]: هاتف
+                - link "إيميل" [ref=e786] [cursor=pointer]:
+                  - /url: mailto:support@example.com
+                  - img [ref=e788]
+                  - generic [ref=e791]: إيميل
+            - generic [ref=e792]:
+              - heading "تطبيق شركة منفذ اسيا التجارية" [level=3] [ref=e793]
+              - generic [ref=e794]:
+                - link "احصل عليه من Google Play" [ref=e795] [cursor=pointer]:
+                  - /url: "#"
+                  - img "احصل عليه من Google Play" [ref=e796]
+                - link "حمّل من App Store" [ref=e797] [cursor=pointer]:
+                  - /url: "#"
+                  - img "حمّل من App Store" [ref=e798]
+              - generic [ref=e799]:
+                - paragraph [ref=e800]: الرقم الضريبي
+                - text: "311307460300003"
+          - generic [ref=e801]:
+            - generic [ref=e802]:
+              - link "شهادة موثوق" [ref=e803] [cursor=pointer]:
+                - /url: https://eauthenticate.saudibusiness.gov.sa/certificate-details/7029136350
+                - img "sbc certificate" [ref=e804]
+              - generic [ref=e805]: موثَّق في منصة الأعمال
+            - list [ref=e806]:
+              - listitem [ref=e807]:
+                - img "mada" [ref=e808]
+              - listitem [ref=e809]:
+                - img "mastercard" [ref=e810]
+              - listitem [ref=e811]:
+                - img "visa" [ref=e812]
+              - listitem [ref=e813]:
+                - img "bank transfer" [ref=e814]
+              - listitem [ref=e815]:
+                - img "apple pay" [ref=e816]
+              - listitem [ref=e817]:
+                - img "tabby" [ref=e818]
+              - listitem [ref=e819]:
+                - img "tamara" [ref=e820]
+              - listitem [ref=e821]:
+                - img "cash on delivery" [ref=e822]
+            - paragraph [ref=e823]: صنع بإتقان على منصة سلة | 2025
+    - navigation "mobileNavigation":
+      - generic [ref=e824]:
+        - generic [ref=e825]:
+          - button "nav.home" [ref=e826] [cursor=pointer]:
+            - img [ref=e827]
+            - generic [ref=e830]: nav.home
+          - button "التصنيفات" [ref=e831] [cursor=pointer]:
+            - img [ref=e832]
+            - generic [ref=e834]: التصنيفات
+          - button "المنتجات" [ref=e835] [cursor=pointer]:
+            - img [ref=e836]
+            - generic [ref=e840]: المنتجات
+          - button "nav.offers" [ref=e841] [cursor=pointer]:
+            - img [ref=e842]
+            - generic [ref=e845]: nav.offers
+          - button "nav.account" [ref=e846] [cursor=pointer]:
+            - img [ref=e847]
+            - generic [ref=e850]: nav.account
+        - button "cart" [ref=e851] [cursor=pointer]:
+          - img [ref=e852]
+    - dialog "سلة التسوق":
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - paragraph: مقتنياتك
+              - heading "سلة التسوق" [level=2]
+            - button "إغلاق سلة التسوق":
+              - img
+          - generic:
+            - generic:
+              - img
+              - paragraph: سلتك فارغة حالياً
+              - paragraph: استكشف مجموعتنا الفاخرة من المنتجات وأضف ما تحبه بنقرة واحدة.
+  - region "Notifications Alt+T"
+```

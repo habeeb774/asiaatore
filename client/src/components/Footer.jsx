@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useMarketing } from '../stores/MarketingContext';
-import { useSettings } from '../stores/SettingsContext';
-import { useLanguage } from '../stores/LanguageContext';
+import { useMarketing } from '../contexts/MarketingContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../context/LanguageContext';
 import { resolveLocalized } from '../utils/locale';
 import api from '../services/api/client';
 

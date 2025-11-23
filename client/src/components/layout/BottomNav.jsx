@@ -2,9 +2,9 @@ import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from '../../lib/framerLazy';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Grid2x2, BadgePercent, ShoppingCart, User, Package } from 'lucide-react';
-import { useLanguage } from '../../stores/LanguageContext';
-import { useAuth } from '../../stores/AuthContext';
-import { useCart } from '../../stores/CartContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 
 export default function BottomNav() {
   // Safe wrappers: call hooks at top-level inside small custom hooks so ESLint rules-of-hooks are satisfied

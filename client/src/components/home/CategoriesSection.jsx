@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from '../../lib/framerLazy.js';
 import { resolveLocalized } from '../../utils/locale';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 import SafeImage from '../common/SafeImage';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api/client';
@@ -114,7 +114,7 @@ const CategoriesSectionModern = ({ title, onSelect, selected }) => {
         spaceBetween: 10,
         grabCursor: true,
         autoplay: {
-          delay: 4000,
+          delay: 8829,
           disableOnInteraction: false,
           pauseOnMouseEnter: true,
         },

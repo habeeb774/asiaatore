@@ -12,6 +12,7 @@ router.post('/quote', (req, res) => {
     const q = quoteShipping(address, cfg);
     return res.json({ ok: true, quote: q });
   } catch (e) {
+    req.log?.error({ err: e }, 'Shipping quote failed'); // Use req.log
     return res.status(500).json({ ok: false, error: 'QUOTE_FAILED', message: e.message });
   }
 });

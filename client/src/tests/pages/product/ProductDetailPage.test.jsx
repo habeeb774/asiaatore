@@ -1,12 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import ProductDetailPage from '../../../pages/ProductDetailPage';
-import * as ProductsContext from '../../../stores/ProductsContext';
-import * as CartContext from '../../../stores/CartContext';
-import * as WishlistContext from '../../../stores/WishlistContext';
-import * as AuthContext from '../../../stores/AuthContext';
-import * as ToastContext from '../../../stores/ToastContext';
+import ProductDetailPage from '../../../pages/products/ProductDetailPage';
+import * as ProductsContext from '../../../contexts/ProductsContext';
+import * as CartContext from '../../../contexts/CartContext';
+import * as WishlistContext from '../../../contexts/WishlistContext';
+import * as AuthContext from '../../../contexts/AuthContext';
+import * as ToastContext from '../../../contexts/ToastContext';
+import { ExperimentProvider } from '../../../contexts/ExperimentContext';
 
 describe('ProductDetailPage interactions', () => {
   const product = {
@@ -51,7 +52,7 @@ describe('ProductDetailPage interactions', () => {
     render(
       <MemoryRouter initialEntries={[`/products/${product.id}`]}>
         <Routes>
-          <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/products/:id" element={<ExperimentProvider><ProductDetailPage /></ExperimentProvider>} />
         </Routes>
       </MemoryRouter>
     );
@@ -65,7 +66,7 @@ describe('ProductDetailPage interactions', () => {
     fireEvent.click(inc);
     fireEvent.click(inc);
 
-    const addBtn = screen.getByRole('button', { name: /Add to cart|أضف للسلة/i });
+    const addBtn = screen.getByRole('button', { name: /Add to cart|أضف للسلة|إضافة للسلة|أضف للسلة الآن/i });
     fireEvent.click(addBtn);
 
     await waitFor(() => {
@@ -88,7 +89,7 @@ describe('ProductDetailPage interactions', () => {
     render(
       <MemoryRouter initialEntries={[`/products/${product.id}`]}>
         <Routes>
-          <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/products/:id" element={<ExperimentProvider><ProductDetailPage /></ExperimentProvider>} />
         </Routes>
       </MemoryRouter>
     );
@@ -111,7 +112,7 @@ describe('ProductDetailPage interactions', () => {
     render(
       <MemoryRouter initialEntries={[`/products/${product.id}`]}>
         <Routes>
-          <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/products/:id" element={<ExperimentProvider><ProductDetailPage /></ExperimentProvider>} />
         </Routes>
       </MemoryRouter>
     );

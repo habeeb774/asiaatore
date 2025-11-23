@@ -14,7 +14,8 @@ function registerSse(res, user) {
     sseClients.add(client);
     res.on('close', () => sseClients.delete(client));
     return client;
-  } catch (e) {
+  } catch (e) { // Use global.appLogger for consistency
+    if (global.appLogger) global.appLogger.warn({ err: e }, '[Realtime] registerSse failed');
     // Defensive: ensure caller cannot crash the server when registering SSE clients
     try { console.warn('[Realtime] registerSse failed', e && e.message); } catch (__) {}
     try { res.end(); } catch (__) {}
@@ -77,7 +78,8 @@ async function setupWebSocket(httpServer) {
     }, 25000);
     console.log('[Realtime] WebSocket server mounted at /api/events');
   } catch (e) {
-    console.warn('[Realtime] WS setup skipped:', e.message);
+    // Use global.appLogger for consistency
+    if (global.appLogger) global.appLogger.warn({ err: e }, '[Realtime] WS setup skipped');
   }
 }
 

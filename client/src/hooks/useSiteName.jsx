@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useSettings } from '../stores/SettingsContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function useSiteName({ locale } = {}) {
   const { setting } = useSettings() || {};

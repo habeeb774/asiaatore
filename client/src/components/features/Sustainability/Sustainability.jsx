@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { useLanguage } from '../../../stores/LanguageContext';
+import { useLanguage } from '../../../context/LanguageContext';
 import Modal from '../../ui/Modal';
 import LazyImage from '../../common/LazyImage';
 import { Skeleton } from '../../shared/SkeletonLoader/SkeletonLoader';

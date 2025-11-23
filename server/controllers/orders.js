@@ -131,20 +131,20 @@ router.post('/', async (req, res) => {
       // content-type or a proxy trimming the body).
       if (process.env.DEBUG_ERRORS === 'true') {
         try {
-          console.debug('[ORDERS] request headers:', { 'content-type': req.headers['content-type'], 'content-length': req.headers['content-length'] });
+          console.debug('[ORDERS] request headers:', { 'content-type': req.headers?.['content-type'], 'content-length': req.headers?.['content-length'] });
         } catch {}
       }
       let raw = req.body || {};
       // If body arrived as a raw JSON string for any reason, try to parse it so we can read items
       if (typeof raw === 'string') {
         try { raw = JSON.parse(raw); } catch (e) {
-          if (process.env.DEBUG_ERRORS === 'true') console.debug('[ORDERS] Raw body is string but failed JSON.parse', e.message, 'content-type=', req.headers['content-type']);
+          if (process.env.DEBUG_ERRORS === 'true') console.debug('[ORDERS] Raw body is string but failed JSON.parse', e.message, 'content-type=', req.headers?.['content-type']);
         }
       }
       const items = Array.isArray(raw.items) ? raw.items : [];
       if (!items.length) {
         const debugInfo = {
-          contentType: req.headers['content-type'] || null,
+          contentType: req.headers?.['content-type'] || null,
           bodyType: typeof req.body,
           bodyKeys: req.body && typeof req.body === 'object' ? Object.keys(req.body) : null,
         };
@@ -209,11 +209,13 @@ router.patch('/:id', async (req, res) => {
     if (!parsed.success) {
       return res.status(400).json({ ok:false, error:'INVALID_INPUT', fields: parsed.error.flatten() });
     }
-    const updated = await OrdersService.update(req.params.id, parsed.data, { isAdmin, userId: req.user?.id || 'guest' });
+    const existingOrder = await OrdersService.getById(req.params.id); // Fetch existing order to compare status
+    if (!existingOrder) return res.status(404).json({ ok: false, error: 'NOT_FOUND', message: 'Order not found' });
+    const updated = await OrdersService.update(req.params.id, parsed.data, { isAdmin, userId: req.user?.id || existingOrder.userId || 'guest' });
     // audit({ action: 'order.update', entity: 'Order', entityId: updated.id, userId: req.user?.id, meta: { status: updated.status } });
     emitOrderEvent('order.updated', updated);
-    // Send notification if status changed
-    if (parsed.data.status && parsed.data.status !== existing.status) {
+    // Send notification if status changed (compare with existingOrder.status)
+    if (parsed.data.status && parsed.data.status !== existingOrder.status) {
       try {
         await sendOrderStatusNotification(updated, parsed.data.status);
       } catch (e) {
@@ -544,10 +546,10 @@ router.get('/:id/invoice', async (req, res) => {
           const mime = ext === '.webp' ? 'image/webp' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'application/octet-stream';
           logoSrc = `data:${mime};base64,${buf.toString('base64')}`;
         } else {
-          logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req.protocol}://${req.headers.host}${setting.logo}`;
+          logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}${setting.logo}`;
         }
       } catch {
-        logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req.protocol}://${req.headers.host}${setting.logo}`;
+        logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}${setting.logo}`;
       }
     }
     // If no explicit accent color, try to derive a dominant color from logo
@@ -576,17 +578,17 @@ router.get('/:id/invoice', async (req, res) => {
     const pdfParamsThermal = new URLSearchParams();
     if (token) { pdfParamsA4.set('token', token); pdfParamsThermal.set('token', token); }
     // A4 link
-    const pdfUrlA4 = `${req.protocol}://${req.headers.host}/api/orders/${order.id}/invoice.pdf${pdfParamsA4.toString() ? `?${pdfParamsA4}` : ''}`;
+    const pdfUrlA4 = `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}/api/orders/${order.id}/invoice.pdf${pdfParamsA4.toString() ? `?${pdfParamsA4}` : ''}`;
     // Thermal 80mm link
     pdfParamsThermal.set('paper', 'thermal80');
-    const pdfUrlThermal = `${req.protocol}://${req.headers.host}/api/orders/${order.id}/invoice.pdf?${pdfParamsThermal}`;
+    const pdfUrlThermal = `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}/api/orders/${order.id}/invoice.pdf?${pdfParamsThermal}`;
     // Try to load an invoice row to get the official invoice number
     let invoiceRow = null;
     try { invoiceRow = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }); } catch {}
     // Generate QR (ZATCA TLV if taxNumber available; otherwise URL QR)
     let qrDataUrl = null;
     try {
-      const baseUrl = `${req.protocol}://${req.headers.host}`;
+      const baseUrl = `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}`;
       const inv = invoiceRow; // reuse if available
       const verifyUrl = inv ? `${baseUrl}/api/invoices/${inv.id}` : `${baseUrl}/api/orders/${order.id}/invoice`;
       const sellerName = siteName;
@@ -631,10 +633,10 @@ router.get('/:id/invoice.pdf', async (req, res) => {
         const mime = ext === '.webp' ? 'image/webp' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'application/octet-stream';
         logoSrc = `data:${mime};base64,${buf.toString('base64')}`;
       } else {
-        logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req.protocol}://${req.headers.host}${setting.logo}`;
+        logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}${setting.logo}`;
       }
     } catch {
-      logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req.protocol}://${req.headers.host}${setting.logo}`;
+      logoSrc = setting.logo.startsWith('http') ? setting.logo : `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}${setting.logo}`;
     }
   }
   // Try derive accent from inlined logo if not explicitly set
@@ -657,7 +659,7 @@ router.get('/:id/invoice.pdf', async (req, res) => {
   // QR for PDF (ZATCA if possible)
   let qrDataUrl = null;
   try {
-    const baseUrl = `${req.protocol}://${req.headers.host}`;
+    const baseUrl = `${req.protocol}://${req.headers?.host || 'localhost:8829'}`;
     const inv = await prisma.invoice.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: 'desc' } }).catch(() => null);
     const verifyUrl = inv ? `${baseUrl}/api/invoices/${inv.id}` : `${baseUrl}/api/orders/${order.id}/invoice`;
     const sellerName = siteName;
@@ -751,4 +753,3 @@ router.post('/bulk/status', requireAdmin, async (req, res) => {
 });
 
 export default router;
-

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { cn } from '../../utils/cn'
+import { cn } from '../../lib/utils.js'
 import Button from './Button'
 
 export default function Modal({ open, onClose, title, children, footer, size = 'md', closeOnOutside = true, className }) {
@@ -16,7 +16,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleBackdrop} />
+      <div data-app-backdrop className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleBackdrop} />
       <div className={cn('relative w-full mx-4 rounded-xl shadow-modal bg-white dark:bg-[#0f1525] border border-black/10 dark:border-white/10', sizes[size], className)}>
         {(title || onClose) && (
           <div className="px-5 py-3 border-b border-black/5 dark:border-white/10 flex items-center justify-between">

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import api from '../../services/api/client';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
 
@@ -84,18 +84,18 @@ const CategoryScroller = () => {
     dragState.current.down = false; setDragging(false);
   };
   const handleMouseDown = (e) => { if (e.button !== 0) return; onDragStart(e.clientX); };
-  const handleMouseMove = (e) => { if (!dragState.current.down) return; e.preventDefault(); onDragMove(e.clientX); };
+  const handleMouseMove = (e) => { if (!dragState.current.down) return; try { if (e.cancelable) e.preventDefault(); } catch {} onDragMove(e.clientX); };
   const handleMouseUp = () => onDragEnd();
   const handleMouseLeave = () => onDragEnd();
   const handleTouchStart = (e) => { const t = e.touches?.[0]; if (!t) return; onDragStart(t.clientX); };
   const handleTouchMove = (e) => { const t = e.touches?.[0]; if (!t) return; onDragMove(t.clientX); };
   const handleTouchEnd = () => onDragEnd();
-  const handleWheel = (e) => {
+    const handleWheel = (e) => {
     const el = trackRef.current; if (!el) return;
     // Convert vertical wheel to horizontal scroll for better UX
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
       el.scrollBy({ left: e.deltaY, behavior: 'auto' });
-      e.preventDefault();
+      try { if (e.cancelable) e.preventDefault(); } catch {}
     }
   };
 

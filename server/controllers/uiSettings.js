@@ -52,7 +52,7 @@ router.post('/', attachUser, async (req, res) => {
     }
   } catch (e) {
     // swallow and fallback
-    console.warn('[UI_SETTINGS] prisma upsert failed, falling back to file storage:', e?.message || e);
+    req.log?.warn({ err: e }, '[UI_SETTINGS] prisma upsert failed, falling back to file storage'); // Use req.log
   }
 
   // Fallback: write local file

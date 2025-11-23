@@ -14,8 +14,15 @@
   "categories": ["shopping", "lifestyle", "ecommerce"],
 
   "icons": [
+    { "src": "/icons/pwa-72.png", "sizes": "72x72", "type": "image/png" },
+    { "src": "/icons/pwa-96.png", "sizes": "96x96", "type": "image/png" },
+    { "src": "/icons/pwa-128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/pwa-144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "/icons/pwa-152.png", "sizes": "152x152", "type": "image/png" },
     { "src": "/icons/pwa-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/pwa-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icons/pwa-384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "/icons/pwa-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/pwa-1024.png", "sizes": "1024x1024", "type": "image/png" }
   ],
 
   "screenshots": [
@@ -27,11 +34,32 @@
       "label": "الصفحة الرئيسية (هاتف)"
     },
     {
+      "src": "/screenshots/home-tablet.png",
+      "sizes": "768x1024",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "الصفحة الرئيسية (تابلت)"
+    },
+    {
       "src": "/screenshots/home-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
       "label": "واجهة المتجر (كمبيوتر)"
+    },
+    {
+      "src": "/screenshots/delivery-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "صفحة التوصيل (هاتف)"
+    },
+    {
+      "src": "/screenshots/delivery-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "صفحة التوصيل (كمبيوتر)"
     }
   ],
 
@@ -57,6 +85,14 @@
       "short_name": "جديد",
       "description": "تصفح أحدث المنتجات المضافة",
       "url": "/new",
+      "icons": [{ "src": "/icons/pwa-192.png", "sizes": "192x192" }],
+      "dir": "rtl"
+    },
+    {
+      "name": "طلباتي",
+      "short_name": "الطلبات",
+      "description": "تتبع حالة طلباتك",
+      "url": "/my-orders",
       "icons": [{ "src": "/icons/pwa-192.png", "sizes": "192x192" }],
       "dir": "rtl"
     }

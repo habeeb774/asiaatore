@@ -2,16 +2,20 @@
 
 ## 📁 Environment Files Structure
 
-This project uses multiple environment files for different purposes:
+This project uses multiple environment files for different purposes and environments:
 
 ### Root Level (Server/API)
 - **`.env`** - Main environment file (development)
+- **`.env.development`** - Development-specific server variables
+- **`.env.staging`** - Staging environment variables
+- **`.env.production`** - Production environment variables
 - **`.env.example`** - Template with all available options
 - **`.vercel-build.env`** - Vercel build-specific variables
 
 ### Client Level (Frontend)
 - **`client/.env`** - Default client environment
 - **`client/.env.development`** - Development-specific overrides
+- **`client/.env.staging`** - Staging environment overrides
 - **`client/.env.production`** - Production-specific settings
 - **`client/.env.local`** - Local overrides (not committed)
 - **`client/.env.example`** - Client environment template
@@ -190,11 +194,40 @@ VITE_ENABLE_HTTPS_REDIRECT=true
 
 Environment variables are loaded in this order (later files override earlier ones):
 
+### Server-side (Node.js)
 1. **System environment variables**
 2. **`.env`** (root level)
 3. **`.env.local`** (root level, not committed)
-4. **`.env.development`** / `.env.production` (based on NODE_ENV)
-5. **Client-specific files** (`client/.env*`)
+4. **`.env.development`** / **`.env.staging`** / **`.env.production`** (based on NODE_ENV)
+
+### Client-side (Vite)
+1. **System environment variables** (with VITE_ prefix)
+2. **`client/.env`** (base client environment)
+3. **`client/.env.local`** (local overrides, not committed)
+4. **`client/.env.development`** / **`.env.staging`** / **`.env.production`** (based on NODE_ENV)
+
+## 🌍 Environment-Specific Values
+
+### Development Environment
+- **Database**: Local PostgreSQL/MySQL
+- **API URL**: http://localhost:8829/api
+- **Payment**: Sandbox/Test keys
+- **Logging**: Debug level enabled
+- **Features**: All features enabled for testing
+
+### Staging Environment
+- **Database**: Staging database server
+- **API URL**: https://staging.your-domain.com/api
+- **Payment**: Sandbox/Test keys
+- **Logging**: Info level
+- **Features**: Production-like configuration
+
+### Production Environment
+- **Database**: Production database server
+- **API URL**: https://your-domain.com/api
+- **Payment**: Live production keys
+- **Logging**: Error level only
+- **Features**: Optimized for performance
 
 ## 🚀 Deployment Checklist
 

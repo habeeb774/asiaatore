@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../stores/AuthContext';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { ProfileSkeleton } from '../../components/shared/PageSkeletons';
 import Seo from '../../components/Seo';
 import api from '../../services/api/client';
 import { Button, ButtonLink, Input } from '../../components/ui';
@@ -154,14 +155,7 @@ const Profile = () => {
             {activeTab === 'profile' && (
               <>
                 {loading ? (
-                  <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-gray-200/80 dark:bg-gray-700 rounded w-1/4 mb-3" />
-                        <div className="h-11 bg-gray-200/60 dark:bg-gray-700/80 rounded-xl" />
-                      </div>
-                    ))}
-                  </div>
+                  <ProfileSkeleton />
                 ) : (
                   <form onSubmit={onSubmit} className="space-y-4">
                     {error && (

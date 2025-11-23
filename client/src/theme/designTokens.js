@@ -13,28 +13,28 @@ const TOKEN_REGISTRY = {
   'border.hairline': '--color-border',
   'border.soft': '--color-border-soft',
   'radius.button': '--radius-md',
-  'radius.card': '--radius-lg',
-  'shadow.card': '--shadow-md',
+  'radius.card': '--radius-card',
+  'shadow.card': '--shadow-card',
   'shadow.popover': '--shadow-lg'
 };
 
 const TOKEN_FALLBACKS = {
   'brand.primary': '#2F855A',
-  'brand.primaryAlt': '#c52404ff',
+  'brand.primaryAlt': '#276749',
   'brand.primaryRgb': '47,133,90',
   'brand.secondary': '#276749',
-  'brand.gradient.primary': 'linear-gradient(180deg, #2F855A, #00b561ff)',
+  'brand.gradient.primary': 'linear-gradient(180deg, #2F855A, #276749)',
   'brand.accent': '#3A5A79',
   'brand.accentRgb': '58,90,121',
   'brand.ring': '#C8A96A',
   'surface.background': '#FAFAF8',
   'surface.alt': '#F5F5F2',
-  'surface.card': '#a09999ff',
+  'surface.card': '#FFFFFF',
   'border.hairline': 'rgba(12,18,28,0.08)',
   'border.soft': 'rgba(12,18,28,0.06)',
   'radius.button': '10px',
-  'radius.card': '16px',
-  'shadow.card': '0 6px 18px -6px rgba(0,0,0,0.18)',
+  'radius.card': '18px',
+  'shadow.card': '0 18px 44px -24px rgba(15,23,42,0.45), 0 10px 25px -18px rgba(15,23,42,0.35)',
   'shadow.popover': '0 18px 42px -14px rgba(0,0,0,0.22)'
 };
 

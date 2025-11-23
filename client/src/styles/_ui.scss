@@ -28,14 +28,39 @@
   /* allow admin to set a global font family for UI primitives */
   font-family: var(--ui-font-family, inherit);
   line-height: 1;
-  cursor: pointer;
+  cursor: pointer !important;
   transition: transform var(--transition-fast, .18s ease), box-shadow var(--transition-fast, .18s ease), opacity var(--transition-fast, .18s ease);
   box-shadow: var(--btn-shadow);
 }
-.ui-btn:hover { filter: brightness(0.98); }
-.ui-btn:active { transform: translateY(0.5px); }
-.ui-btn:focus-visible { outline: 2px solid var(--color-ring, #C8A96A); outline-offset: 2px; }
+.ui-btn:hover { filter: brightness(0.98); cursor: pointer !important; }
+.ui-btn:active { transform: translateY(0.5px); cursor: pointer !important; }
+.ui-btn:focus-visible { outline: 2px solid var(--color-ring, #C8A96A); outline-offset: 2px; cursor: pointer !important; }
 .ui-btn[disabled], .ui-btn.is-disabled { opacity: .6; cursor: not-allowed; }
+
+/* More specific rule for buttons inside tables */
+table .ui-btn:not([disabled]):not(.is-disabled) {
+  cursor: pointer !important;
+}
+
+/* Ultra-specific rules for admin product table buttons */
+table .ui-btn.ui-btn--sm:not([disabled]):not(.is-disabled) {
+  cursor: pointer !important;
+}
+
+/* Even more specific - targeting the exact structure */
+table tbody tr td div .ui-btn.ui-btn--sm:not([disabled]):not(.is-disabled),
+table tbody tr td div button.ui-btn.ui-btn--sm:not([disabled]):not(.is-disabled) {
+  cursor: pointer !important;
+}
+
+/* Admin dashboard specific button fixes */
+table tbody tr td[style*="tdActions"] .ui-btn:not([disabled]):not(.is-disabled),
+table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  z-index: 1 !important;
+  position: relative !important;
+}
 
 /* Button variants */
 .ui-btn--primary { --btn-bg: var(--color-primary); --btn-fg: #fff; --btn-border: transparent; }

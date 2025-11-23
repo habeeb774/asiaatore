@@ -12,8 +12,9 @@ export async function audit({ action, entity, entityId, userId, meta }) {
       }
     });
   } catch (e) {
-     
-    console.warn('Audit log failed:', e.message);
+    // Use a logger if available, otherwise console.warn
+    if (global.appLogger) global.appLogger.warn({ err: e }, 'Audit log failed');
+    else console.warn('Audit log failed:', e.message);
   }
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { useLanguage } from '../../../stores/LanguageContext';
+import PropTypes from 'prop-types';
+import { useLanguage } from '../../../context/LanguageContext';
 import Modal from '../../ui/Modal';
 import LazyImage from '../../common/LazyImage';
 import { Skeleton } from '../../shared/SkeletonLoader/SkeletonLoader';
@@ -81,68 +82,73 @@ export const ChallengesProvider = ({ children }) => {
   const [challenges, setChallenges] = useState([]);
   const [activeChallenges, setActiveChallenges] = useState([]);
 
-  // Initialize challenges
   useEffect(() => {
-    const now = new Date();
-  const initializedChallenges = CHALLENGE_TEMPLATES.map(template => ({
-      ...template,
-      id: `${template.id}_${now.getTime()}`,
-      startDate: now,
-      endDate: template.duration ? new Date(now.getTime() + template.duration * 24 * 60 * 60 * 1000) : null,
-      progress: 0,
-      completed: false,
-      claimed: false
-    }));
+    try {
+      const now = new Date();
+      const initializedChallenges = CHALLENGE_TEMPLATES.map(template => ({
+        ...template,
+        id: `${template.id}_${now.getTime()}`,
+        startDate: now,
+        endDate: template.duration ? new Date(now.getTime() + template.duration * 24 * 60 * 60 * 1000) : null,
+        progress: 0,
+        completed: false,
+        claimed: false
+      }));
 
-    setChallenges(initializedChallenges);
-    setActiveChallenges(initializedChallenges.filter(c => !c.completed));
+      setChallenges(initializedChallenges);
+      setActiveChallenges(initializedChallenges.filter(c => !c.completed));
+    } catch (error) {
+      console.error('Error initializing challenges:', error);
+    }
   }, []);
 
-  // Update challenge progress
   const updateProgress = (challengeId, action, data = {}) => {
-    setChallenges(prev => prev.map(challenge => {
-      if (challenge.id !== challengeId) return challenge;
+    try {
+      setChallenges(prev => prev.map(challenge => {
+        if (challenge.id !== challengeId) return challenge;
 
-      let newProgress = challenge.progress;
+        let newProgress = challenge.progress;
 
-      switch (action) {
-        case 'login':
-          if (challenge.id.includes('daily_login')) newProgress++;
-          break;
-        case 'purchase':
-          if (challenge.id.includes('shopping_spree') || challenge.id.includes('loyalty_milestone')) {
-            newProgress++;
-          }
-          break;
-        case 'review':
-          if (challenge.id.includes('review_champion')) newProgress++;
-          break;
-        case 'share':
-          if (challenge.id.includes('social_sharer')) newProgress++;
-          break;
-      }
+        switch (action) {
+          case 'login':
+            if (challenge.id.includes('daily_login')) newProgress++;
+            break;
+          case 'purchase':
+            if (challenge.id.includes('shopping_spree') || challenge.id.includes('loyalty_milestone')) {
+              newProgress++;
+            }
+            break;
+          case 'review':
+            if (challenge.id.includes('review_champion')) newProgress++;
+            break;
+          case 'share':
+            if (challenge.id.includes('social_sharer')) newProgress++;
+            break;
+          default:
+            break;
+        }
 
-      const completed = newProgress >= getRequiredCount(challenge);
-      const updatedChallenge = { ...challenge, progress: newProgress, completed };
+        const completed = newProgress >= getRequiredCount(challenge);
+        const updatedChallenge = { ...challenge, progress: newProgress, completed };
 
-      if (completed && !challenge.completed) {
-        // Trigger completion celebration
-        onChallengeCompleted(updatedChallenge);
-      }
+        if (completed && !challenge.completed) {
+          // Trigger completion celebration
+          onChallengeCompleted(updatedChallenge);
+        }
 
-      return updatedChallenge;
-    }));
+        return updatedChallenge;
+      }));
+    } catch (error) {
+      console.error('Error updating challenge progress:', error);
+    }
   };
 
   // Get required count for challenge
   const getRequiredCount = (challenge) => {
-    if (challenge.requirements) {
-      return challenge.requirements.logins ||
-             challenge.requirements.purchases ||
-             challenge.requirements.reviews ||
-             challenge.requirements.shares || 1;
-    }
-    return 1;
+    if (!challenge?.requirements) return 1;
+    
+    const { logins, purchases, reviews, shares } = challenge.requirements;
+    return logins || purchases || reviews || shares || 1;
   };
 
   // Handle challenge completion
@@ -198,6 +204,10 @@ export const ChallengesProvider = ({ children }) => {
       {children}
     </ChallengesContext.Provider>
   );
+};
+
+ChallengesProvider.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 const ChallengesModal = ({ isOpen, onClose }) => {
@@ -291,6 +301,11 @@ const ChallengesModal = ({ isOpen, onClose }) => {
       </div>
     </Modal>
   );
+};
+
+ChallengesModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired
 };
 
 const ChallengeCard = ({ challenge, onClaim, requiredCount }) => {
@@ -387,6 +402,27 @@ const ChallengeCard = ({ challenge, onClaim, requiredCount }) => {
   );
 };
 
+ChallengeCard.propTypes = {
+  challenge: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    titleEn: PropTypes.string,
+    description: PropTypes.string,
+    descriptionEn: PropTypes.string,
+    icon: PropTypes.node,
+    progress: PropTypes.number.isRequired,
+    completed: PropTypes.bool.isRequired,
+    claimed: PropTypes.bool.isRequired,
+    reward: PropTypes.shape({
+      xp: PropTypes.number,
+      points: PropTypes.number
+    }),
+    endDate: PropTypes.instanceOf(Date)
+  }).isRequired,
+  onClaim: PropTypes.func.isRequired,
+  requiredCount: PropTypes.number.isRequired
+};
+
 const ChallengesWidget = ({ className = '' }) => {
   const { activeChallenges, completedChallenges } = useChallenges();
   const [showModal, setShowModal] = useState(false);
@@ -427,6 +463,10 @@ const ChallengesWidget = ({ className = '' }) => {
       <ChallengesModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </>
   );
+};
+
+ChallengesWidget.propTypes = {
+  className: PropTypes.string
 };
 
 export { ChallengesModal, ChallengesWidget };

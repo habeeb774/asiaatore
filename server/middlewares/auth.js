@@ -5,7 +5,7 @@ import { verifyToken } from '../utils/jwt.js';
 
 export function attachUser(req, _res, next) {
   // Priority: Authorization Bearer token
-  const auth = req.headers.authorization || '';
+  const auth = req.headers?.authorization || '';
   if (auth.startsWith('Bearer ')) {
     const token = auth.slice(7);
     const payload = verifyToken(token);
@@ -33,8 +33,8 @@ export function attachUser(req, _res, next) {
   // Fallback legacy headers (dev mode only unless explicitly allowed)
   const allowDevHeaders = process.env.ALLOW_DEV_HEADERS === 'true' || process.env.NODE_ENV !== 'production';
   if (allowDevHeaders) {
-    const hdrId = req.headers['x-user-id'];
-    const hdrRole = req.headers['x-user-role'];
+    const hdrId = req.headers?.['x-user-id'];
+    const hdrRole = req.headers?.['x-user-role'];
     // Merge on top of any existing user (from token) to allow temporary role elevation in dev
     req.user = {
       id: hdrId || req.user?.id || 'guest',

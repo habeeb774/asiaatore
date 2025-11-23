@@ -3,7 +3,7 @@
   Requires API running locally with ALLOW_DEV_HEADERS=true on the specified PORT.
 */
 
-const PORT = Number(process.env.PORT || 8842);
+const PORT = Number(process.env.PORT || 8829);
 const BASE = `http://localhost:${PORT}`;
 
 async function getJson(url, opts = {}) {

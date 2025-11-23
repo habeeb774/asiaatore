@@ -502,7 +502,7 @@ router.patch('/me/profile', async (req, res) => {
         update: { online: (onlineFromStatus == null ? (online == null ? undefined : !!online) : !!onlineFromStatus), vehicleType, licensePlate, lastSeenAt: new Date() }
       });
     } else {
-      // Raw SQL fallback (MySQL): insert or update by unique userId
+      // Raw SQL fallback (MySQL): insert or update by unique userId. Ensure all fields are handled.
       try {
         const now = new Date();
         const onBool = onlineFromStatus == null ? (online == null ? null : (!!online)) : !!onlineFromStatus;

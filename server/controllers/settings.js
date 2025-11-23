@@ -57,8 +57,9 @@ async function ensureSettingsTable() {
     `);
     SETTINGS_TABLE_ENSURED = true;
   } catch (e) {
-     
-    console.warn('[SETTINGS] ensure table failed (may already exist):', e.message);
+    // Use a logger if available, otherwise console.warn
+    if (global.appLogger) global.appLogger.warn({ err: e }, '[SETTINGS] ensure table failed (may already exist)');
+    else console.warn('[SETTINGS] ensure table failed (may already exist):', e.message);
     SETTINGS_TABLE_ENSURED = true; // avoid spamming
   }
 }
@@ -405,7 +406,8 @@ router.post('/logo', attachUser, requireAdmin, (req, res) => {
         }
         return res.json({ ok:true, logo: rel, setting });
       } catch (dbErr) {
-        try { console.error('[SETTINGS] Failed to persist logo in DB:', dbErr); } catch {}
+        // Use a logger if available, otherwise console.error
+        if (global.appLogger) global.appLogger.error({ err: dbErr }, '[SETTINGS] Failed to persist logo in DB');
         // Graceful fallback: return success with warning so UI can continue
         return res.status(200).json({ ok: true, logo: rel, warning: 'DB_SAVE_FAILED', message: dbErr?.message || String(dbErr) });
       }

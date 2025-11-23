@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-/* Global resets and base tokens are applied from core/_base.scss and design-tokens.css */
-/* design-tokens.css provides all theme tokens and legacy aliases (for example --main_color). */
+/* Global resets and base tokens are applied from core/_base.scss and theme/_tokens.scss */
+/* theme/_tokens.scss provides all theme tokens and legacy aliases (for example --main_color). */
 /* Removed global reset and local :root variables. */
 
 

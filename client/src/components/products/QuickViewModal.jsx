@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useCart } from '../../stores/CartContext';
+import { useCart } from '../../contexts/CartContext';
 import LazyImage from '../common/LazyImage';
 import Button from '../ui/Button';
 import { resolveLocalized } from '../../utils/locale';

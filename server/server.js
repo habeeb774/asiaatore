@@ -48,13 +48,22 @@ app.use('/api/auth', authLimiter);
 
 // --- Logging ---
 const logger = pino({ level: isProd ? 'info' : 'debug' });
-app.use(pinoHttp({ logger }));
+app.use(pinoHttp({ 
+    logger,
+    serializers: {
+        req(req) {
+            const headers = req.headers ? { ...req.headers } : {};
+            if (headers?.authorization) headers.authorization = '[redacted]';
+            return { id: req.id, method: req.method, url: req.url, headers };
+        }
+    }
+}));
 
 // --- HTTPS Enforcement ---
 if (process.env.FORCE_HTTPS === 'true') {
   app.use((req, res, next) => {
-    if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
-    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+    if (req.secure || req.headers?.['x-forwarded-proto'] === 'https') return next();
+    return res.redirect(301, `https://${req.headers?.host || 'localhost:8829'}${req.originalUrl}`);
   });
 }
 

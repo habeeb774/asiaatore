@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from '../../lib/framerLazy';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
 import LazyImage from '../common/LazyImage';
 

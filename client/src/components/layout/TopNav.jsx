@@ -1,17 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Example navItems, adjust as needed for your app
 import { BookOpen, Package, BadgePercent, Store } from 'lucide-react';
 
-const navItems = [
-  { to: '/catalog', label: 'catalog', icon: BookOpen },
-  { to: '/products', label: 'products', icon: Package },
-  { to: '/offers', label: 'offers', icon: BadgePercent },
-  { to: '/stores', label: 'stores', icon: Store },
+const defaultNavItems = [
+  { to: '/admin/overview', label: 'nav.overview', icon: BookOpen },
+  { to: '/admin/products', label: 'nav.products', icon: Package },
+  { to: '/admin/offers', label: 'nav.offers', icon: BadgePercent },
+  { to: '/admin/storefront', label: 'nav.storefront', icon: Store }
 ];
 
-export default function TopNav({ t, isActive }) {
+export default function TopNav({ t = (key) => key, isActive = () => false, navItems = defaultNavItems }) {
   return (
     <div style={{width:'100vw',position:'relative',left:'50%',right:'50%',marginLeft:'-50vw',marginRight:'-50vw'}}>
       <nav className="top-nav flex items-center justify-center gap-2 sm:gap-4 md:gap-6 px-2 py-2 rounded-xl bg-white/80 dark:bg-slate-900/80 shadow-md border border-slate-200 dark:border-slate-800 transition-all duration-300" style={{width:'100%'}}>

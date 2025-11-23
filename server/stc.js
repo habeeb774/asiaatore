@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import prisma from './db/client.js';
 import { audit } from './utils/audit.js';
 import { ensureInvoiceForOrder } from './utils/invoice.js';
+import { deserializePaymentMeta, serializePaymentMeta } from './utils/paymentMeta.js';
 
 const router = express.Router();
 // Enforce enablement via settings (best-effort; if DB unavailable, allow in dev)
@@ -16,11 +17,6 @@ router.use(async (req, res, next) => {
   } catch {/* ignore and allow */}
   next();
 });
-
-// Helper to random session id
-function makeSession() {
-  return 'stc_' + crypto.randomBytes(8).toString('hex');
-}
 
 // ENV configuration (production creds)
 const STC_BASE = process.env.STC_API_BASE || 'https://api.stcpay.com.sa'; // production base
@@ -97,57 +93,70 @@ router.post('/create', async (req, res) => {
     const { orderId } = body;
     // Ensure order
     if (!orderId) return res.status(400).json({ ok: false, error: 'MISSING_ORDER_ID' });
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, userId: true, status: true, currency: true, grandTotal: true, shippingAddress: true, paymentMeta: true } });
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
 
+    const requesterId = req.user?.id || 'guest';
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && order.userId && order.userId !== requesterId) {
+      return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'Order does not belong to requester' });
+    }
+
+    if (!credsConfigured()) {
+      return res.status(503).json({ ok: false, error: 'STC_NOT_CONFIGURED', message: 'STC Pay credentials are missing' });
+    }
+
   // Basic idempotency: if the same idem key was used before, return the same session
-  const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
-  let sessionId = makeSession(); // fallback local id
-    let stcCreateResponse = null;
-    let externalReference = null;
-    if (credsConfigured()) {
-      try {
-        const token = await getStcToken();
-        // Real STC Pay API call - adjust based on actual API documentation
-        const payResp = await fetch(`${STC_BASE}/api/v1/payments/initiate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'X-Merchant-ID': STC_MERCHANT_ID
-          },
-          body: JSON.stringify({
-            amount: order.grandTotal,
-            currency: order.currency || 'SAR',
-            orderId: order.id,
-            customerMobile: order.shippingAddress?.phone || '',
-            callbackUrl: process.env.STC_CALLBACK_URL || `${process.env.BASE_URL || 'http://localhost:4000'}/api/pay/stc/webhook`,
-            successUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/order/${order.id}/success`,
-            failureUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/order/${order.id}/failed`
-          })
-        });
-        stcCreateResponse = await payResp.json();
-        if (payResp.ok && stcCreateResponse.success) {
-          sessionId = stcCreateResponse.data?.sessionId || stcCreateResponse.sessionId || sessionId;
-          externalReference = stcCreateResponse.data?.reference || stcCreateResponse.reference || null;
-        } else {
-          throw new Error(stcCreateResponse.message || 'STC API error');
-        }
-      } catch (ee) {
-        // Fallback to local session only
-        console.warn('[STC] Production API failed, falling back to local simulation:', ee.message);
-      }
+  const idemKey = String(req.headers?.['x-idempotency-key'] || '').slice(0,64) || null;
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
+    const storedAccessKey = existingMeta?.stc?.accessKey || null;
+    if ((idemKey && existingMeta?.stc?.idemCreate === idemKey && existingMeta?.stc?.sessionId) || existingMeta?.stc?.sessionId) {
+      return res.json({
+        ok: true,
+        sessionId: existingMeta.stc.sessionId,
+        externalReference: existingMeta.stc.externalReference ?? null,
+        accessKey: storedAccessKey,
+        idempotent: true
+      });
     }
-    const existingMeta = order.paymentMeta || {};
-    // Idempotent replay check
-    if (idemKey && existingMeta?.stc?.idemCreate === idemKey && existingMeta?.stc?.sessionId) {
-      return res.json({ ok: true, sessionId: existingMeta.stc.sessionId, externalReference: existingMeta.stc.externalReference ?? null, idempotent: true, simulated: !credsConfigured() });
+
+    const token = await getStcToken();
+    const payResp = await fetch(`${STC_BASE}/api/v1/payments/initiate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Merchant-ID': STC_MERCHANT_ID
+      },
+      body: JSON.stringify({
+        amount: order.grandTotal,
+        currency: order.currency || 'SAR',
+        orderId: order.id,
+        customerMobile: order.shippingAddress?.phone || '',
+        callbackUrl: process.env.STC_CALLBACK_URL || `${process.env.BASE_URL || 'http://localhost:8829'}/api/pay/stc/webhook`,
+        successUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/order/${order.id}/success`,
+        failureUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/order/${order.id}/failed`
+      })
+    });
+
+    const stcCreateResponse = await payResp.json().catch(() => ({}));
+    if (!payResp.ok || !stcCreateResponse || stcCreateResponse.success === false) {
+      const message = stcCreateResponse?.message || stcCreateResponse?.error || 'STC API error';
+      return res.status(502).json({ ok: false, error: 'STC_API_ERROR', message, detail: stcCreateResponse });
     }
-    const meta = { ...existingMeta, stage: 'stc:init', stc: { ...(existingMeta.stc||{}), sessionId, externalReference, create: stcCreateResponse, idemCreate: idemKey || undefined } };
-    await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'stc', paymentMeta: meta, status: 'pending' } });
+
+    const sessionId = stcCreateResponse.data?.sessionId || stcCreateResponse.sessionId;
+    const externalReference = stcCreateResponse.data?.reference || stcCreateResponse.reference || null;
+    if (!sessionId) {
+      return res.status(502).json({ ok: false, error: 'STC_SESSION_MISSING', message: 'STC response did not include a sessionId', detail: stcCreateResponse });
+    }
+    const accessKey = storedAccessKey || crypto.randomBytes(16).toString('hex');
+    const meta = { ...existingMeta, stage: 'stc:init', stc: { ...(existingMeta.stc||{}), sessionId, externalReference, create: stcCreateResponse, accessKey, idemCreate: idemKey || undefined } };
+    await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'stc', paymentMeta: serializePaymentMeta(meta), status: 'pending' } });
     audit({ action: 'order.stc.create', entity: 'Order', entityId: orderId, userId: order.userId, meta: { sessionId, externalReference } });
-    res.json({ ok: true, sessionId, externalReference, simulated: !credsConfigured() });
+    res.json({ ok: true, sessionId, externalReference, accessKey });
   } catch (e) {
+    console.error('[STC] create error', e);
     res.status(500).json({ ok: false, error: 'STC_INIT_FAILED', message: e.message });
   }
 });
@@ -156,20 +165,41 @@ router.post('/create', async (req, res) => {
 router.post('/confirm', async (req, res) => {
   try {
     const body = req.body || {};
-    const { orderId, sessionId, success = true } = body;
+    const { orderId, sessionId, accessKey } = body;
     if (!orderId) return res.status(400).json({ ok: false, error: 'MISSING_ORDER_ID' });
 
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, userId: true, status: true, paymentMeta: true } });
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
 
-    const existingMeta = order.paymentMeta || {};
+    if (!credsConfigured()) {
+      return res.status(503).json({ ok: false, error: 'STC_NOT_CONFIGURED', message: 'STC Pay credentials are missing' });
+    }
+
+    const requesterId = req.user?.id || 'guest';
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
     const storedSession = existingMeta?.stc?.sessionId;
+    const storedAccessKey = existingMeta?.stc?.accessKey;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!isAdmin && order.userId && order.userId !== requesterId) {
+      return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'Order does not belong to requester' });
+    }
+
+    if (!isAdmin) {
+      if (!storedAccessKey) {
+        return res.status(409).json({ ok: false, error: 'STC_ACCESSKEY_MISSING', message: 'Order missing STC access key; please re-initiate payment' });
+      }
+
+      if (!accessKey || accessKey !== storedAccessKey) {
+        return res.status(403).json({ ok: false, error: 'FORBIDDEN', message: 'STC access key mismatch' });
+      }
+    }
 
     if (sessionId && storedSession && storedSession !== sessionId) {
       return res.status(400).json({ ok: false, error: 'SESSION_MISMATCH' });
     }
 
-    const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
+    const idemKey = String(req.headers?.['x-idempotency-key'] || '').slice(0,64) || null;
 
     // If already finalized, return current status
     if (order.status === 'paid' || order.status === 'cancelled' || order.status === 'failed') {
@@ -182,64 +212,68 @@ router.post('/confirm', async (req, res) => {
       });
     }
 
-    // Try to check status from STC API if configured
-    let apiStatus = null;
-    if (credsConfigured() && storedSession) {
-      try {
-        const token = await getStcToken();
-        const statusResp = await fetch(`${STC_BASE}/api/v1/payments/status/${storedSession}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-Merchant-ID': STC_MERCHANT_ID
-          }
-        });
-
-        if (statusResp.ok) {
-          const statusData = await statusResp.json();
-          apiStatus = statusData.data?.status || statusData.status;
-        }
-      } catch (e) {
-        console.warn('[STC] Status check failed:', e.message);
-      }
+    if (!storedSession && !sessionId) {
+      return res.status(400).json({ ok: false, error: 'MISSING_SESSION_ID' });
     }
 
-    // Determine final status
+    const token = await getStcToken();
+    const statusResp = await fetch(`${STC_BASE}/api/v1/payments/status/${storedSession || sessionId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Merchant-ID': STC_MERCHANT_ID
+      }
+    });
+
+    if (!statusResp.ok) {
+      const txt = await statusResp.text().catch(() => '');
+      return res.status(502).json({ ok: false, error: 'STC_STATUS_FAILED', message: txt || 'Unable to retrieve STC payment status' });
+    }
+
+    const statusData = await statusResp.json().catch(() => ({}));
+    const apiStatus = statusData.data?.status || statusData.status || statusData.paymentStatus || null;
+
+    let normalized = 'unknown';
+    const raw = (apiStatus || '').toString().toLowerCase();
+    if (/paid|success|completed|approved|captured/.test(raw)) normalized = 'paid';
+    else if (/fail|cancel|cancelled|rejected|declined/.test(raw)) normalized = 'cancelled';
+    else if (/pending|processing|created|initiated|waiting/.test(raw)) normalized = 'processing';
+
     let newStatus = order.status;
+    let stage = existingMeta?.stage || 'stc:status';
     let shouldCreateInvoice = false;
 
-    if (apiStatus) {
-      // Use API status if available
-      if (/paid|success|completed|approved/i.test(apiStatus)) {
-        newStatus = 'paid';
-        shouldCreateInvoice = true;
-      } else if (/fail|cancel|cancelled|rejected/i.test(apiStatus)) {
-        newStatus = 'cancelled';
-      } else if (/pending|processing/i.test(apiStatus)) {
-        newStatus = 'processing';
-      }
+    if (normalized === 'paid') {
+      newStatus = 'paid';
+      stage = 'stc:paid';
+      shouldCreateInvoice = true;
+    } else if (normalized === 'cancelled') {
+      newStatus = 'cancelled';
+      stage = 'stc:failed';
+    } else if (normalized === 'processing') {
+      newStatus = order.status === 'paid' ? order.status : 'processing';
+      stage = 'stc:processing';
     } else {
-      // Fallback to provided success parameter (for testing/manual confirmation)
-      newStatus = success ? 'paid' : 'cancelled';
-      if (success) shouldCreateInvoice = true;
+      stage = 'stc:unknown';
     }
 
     const updatedMeta = {
       ...existingMeta,
-      stage: success ? 'stc:paid' : 'stc:failed',
+      stage,
       stc: {
         ...(existingMeta.stc || {}),
         sessionId: storedSession || sessionId,
-        success,
         apiStatus,
+        statusPayload: statusData,
         confirmedAt: new Date().toISOString(),
-        idemConfirm: idemKey || undefined
+        idemConfirm: idemKey || undefined,
+        lastStatusCheckAt: new Date().toISOString()
       }
     };
 
     await prisma.order.update({
       where: { id: orderId },
-      data: { status: newStatus, paymentMeta: updatedMeta }
+      data: { status: newStatus, paymentMeta: serializePaymentMeta(updatedMeta) }
     });
 
     audit({
@@ -247,7 +281,7 @@ router.post('/confirm', async (req, res) => {
       entity: 'Order',
       entityId: orderId,
       userId: order.userId,
-      meta: { success, sessionId, apiStatus }
+      meta: { sessionId: storedSession || sessionId, apiStatus, normalized }
     });
 
     if (shouldCreateInvoice) {
@@ -264,9 +298,10 @@ router.post('/confirm', async (req, res) => {
       status: newStatus,
       sessionId: storedSession || sessionId,
       apiStatus,
-      success
+      normalized
     });
   } catch (e) {
+    console.error('[STC] confirm error', e);
     res.status(500).json({ ok: false, error: 'STC_CONFIRM_FAILED', message: e.message });
   }
 });
@@ -278,7 +313,7 @@ router.post('/webhook', async (req, res) => {
     const event = req.body || {};
 
     // Verify signature using HMAC-SHA256 with STC_API_SECRET
-    const providedSig = String(req.headers['x-stc-signature'] || req.headers['signature'] || '').trim();
+    const providedSig = String(req.headers?.['x-stc-signature'] || req.headers?.['signature'] || '').trim();
     let verified = false;
     if (providedSig && STC_API_SECRET) {
       try {
@@ -301,20 +336,41 @@ router.post('/webhook', async (req, res) => {
     }
 
     // Find order by sessionId in paymentMeta
-    const order = await prisma.order.findFirst({
+    let order = await prisma.order.findFirst({
       where: {
         OR: [
+          { paymentMeta: { path: ['index', 'stc', 'sessionId'], equals: sessionId } },
+          { paymentMeta: { path: ['index', 'stc', 'externalReference'], equals: reference } },
           { paymentMeta: { path: ['stc', 'sessionId'], equals: sessionId } },
           { paymentMeta: { path: ['stc', 'externalReference'], equals: reference } }
         ]
       }
     });
 
+    if (!order && (sessionId || reference)) {
+      const candidates = await prisma.order.findMany({
+        where: { paymentMethod: 'stc' },
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+        select: { id: true, userId: true, status: true, paymentMeta: true }
+      }).catch(() => []);
+      for (const candidate of candidates) {
+        const meta = deserializePaymentMeta(candidate.paymentMeta);
+        if (!meta) continue;
+        const matchesSession = sessionId && meta?.stc?.sessionId === sessionId;
+        const matchesReference = reference && meta?.stc?.externalReference === reference;
+        if (matchesSession || matchesReference) {
+          order = candidate;
+          break;
+        }
+      }
+    }
+
     if (!order) {
       return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
     }
 
-    const existingMeta = order.paymentMeta || {};
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
     const stcMeta = {
       ...(existingMeta.stc || {}),
       webhook: event,
@@ -338,7 +394,7 @@ router.post('/webhook', async (req, res) => {
       where: { id: order.id },
       data: {
         status: newStatus,
-        paymentMeta: { ...existingMeta, stc: stcMeta }
+        paymentMeta: serializePaymentMeta({ ...existingMeta, stc: stcMeta })
       }
     });
 

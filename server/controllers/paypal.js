@@ -51,7 +51,7 @@ router.post('/create-order', async (req, res) => {
     const approval = orderData.links && orderData.links.find(l => l.rel === 'approve');
     return res.json({ approvalUrl: approval ? approval.href : null, order: orderData });
   } catch (err) {
-    console.error(err);
+    req.log?.error({ err }, 'PayPal create order failed'); // Use req.log
     return res.status(500).json({ error: 'server_error', message: err.message });
   }
 });
@@ -78,7 +78,7 @@ router.post('/capture/:orderId', async (req, res) => {
     const data = await captureRes.json();
     return res.json({ captured: true, data });
   } catch (err) {
-    console.error(err);
+    req.log?.error({ err }, 'PayPal capture order failed'); // Use req.log
     return res.status(500).json({ error: 'server_error', message: err.message });
   }
 });

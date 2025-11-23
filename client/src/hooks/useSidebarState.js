@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 /**
  * Custom hook for managing sidebar state and interactions
@@ -10,10 +10,15 @@ import { useState, useEffect, useCallback } from 'react';
 export const useSidebarState = (sidebarContext) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Memoize the context open value to prevent unnecessary re-renders
+  const contextOpen = useMemo(() => {
+    return sidebarContext && typeof sidebarContext.open === 'boolean' ? sidebarContext.open : null;
+  }, [sidebarContext?.open]);
+
   // Sync with context if available
   useEffect(() => {
-    if (sidebarContext && typeof sidebarContext.open === 'boolean') {
-      setIsMenuOpen(Boolean(sidebarContext.open));
+    if (contextOpen !== null) {
+      setIsMenuOpen(contextOpen);
       return;
     }
 
@@ -26,7 +31,7 @@ export const useSidebarState = (sidebarContext) => {
 
     window.addEventListener('sidebar:state', onState);
     return () => window.removeEventListener('sidebar:state', onState);
-  }, [sidebarContext]);
+  }, [contextOpen]);
 
   const toggleSidebar = useCallback(() => {
     if (sidebarContext && typeof sidebarContext.toggle === 'function') {
@@ -41,7 +46,7 @@ export const useSidebarState = (sidebarContext) => {
         console.warn('Failed to dispatch sidebar toggle event:', error);
       }
     }
-  }, [sidebarContext]);
+  }, [sidebarContext?.toggle]);
 
   return {
     isMenuOpen,

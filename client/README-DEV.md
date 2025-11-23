@@ -93,6 +93,17 @@ See `.env.example` for complete configuration options.
 - **Component**: `src/components/Sustainability/`
 - **Features**: Carbon footprint tracking, eco-friendly recommendations
 
+## 🧩 Admin Products Architecture
+
+- **Unified route**: `/admin/products` (and localized variants `/en/admin/products`, `/fr/admin/products`) now render the core `AdminDashboard` view which hosts `ProductsView`. Legacy wrappers under `pages/admin/products/Products.jsx` have been removed.
+- **Feature imports**: use the barrel at `src/components/features/admin/products/index.js`:
+   ```javascript
+   import { ProductForm, ProductsTable } from '@/components/features/admin/products';
+   ```
+   Avoid importing from `pages/admin/products/*`; those files served only as backward-compatible shims and no longer exist.
+- **Hooks**: admin product logic lives in `src/pages/admin/hooks/useAdminProducts.js` and `useCategories.js`. Controllers should remain thin and reuse these hooks.
+- **Redirects kept**: `ProductInventory.jsx` remains as a locale-aware redirect for the `/admin/inventory` legacy path. Remove it only after verifying no external bookmarks rely on it.
+
 ## 🔧 Development Tools
 
 ### Dev Headers (Server Authentication)

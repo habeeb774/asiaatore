@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     const data = await InventoryService.getInventory({ page, pageSize });
     res.json({ ok: true, ...data });
   } catch (e) {
-    res.status(500).json({ ok: false, error: 'FAILED_LIST', message: e.message });
+    req.log?.error({ err: e }, 'Failed to list inventory'); res.status(500).json({ ok: false, error: 'FAILED_LIST', message: e.message });
   }
 });
 
@@ -22,7 +22,7 @@ router.get('/low-stock', async (_req, res) => {
   try {
     const rows = await InventoryService.listLowStock();
     res.json({ ok: true, items: rows });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Failed to list low stock');
     res.status(500).json({ ok: false, error: 'FAILED_LOW_STOCK', message: e.message });
   }
 });
@@ -33,7 +33,7 @@ router.get('/:productId', async (req, res) => {
     const data = await InventoryService.getByProduct(req.params.productId);
     if (!data) return res.status(404).json({ ok: false, error: 'NOT_FOUND' });
     res.json({ ok: true, ...data });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Failed to get inventory by product');
     res.status(500).json({ ok: false, error: 'FAILED_GET', message: e.message });
   }
 });
@@ -53,7 +53,7 @@ router.post('/:productId/update', requireAdmin, async (req, res) => {
     const updated = await InventoryService.updateStock(req.params.productId, body.quantity, body.adjustment_type, { warehouseId: body.warehouse_id || null, reason: body.reason, userId: req.user?.id });
     await audit({ action: 'inventory.adjust', entity: 'Product', entityId: req.params.productId, userId: req.user?.id, meta: { quantity: body.quantity, action: body.adjustment_type } });
     res.json({ ok: true, inventory: updated });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Failed to update inventory');
     res.status(400).json({ ok: false, error: 'FAILED_UPDATE', message: e.message });
   }
 });
@@ -71,7 +71,7 @@ router.post('/reserve', async (req, res) => {
     const body = parsed.data;
     const result = await InventoryService.reserveStock(body.order_id, body.items, { warehouseId: body.warehouse_id || null, userId: req.user?.id });
     res.json({ ok: true, ...result });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Failed to reserve stock');
     const status = e?.code === 'INSUFFICIENT_STOCK' ? 409 : 400;
     res.status(status).json({ ok: false, error: e?.code || 'FAILED_RESERVE', message: e.message });
   }
@@ -86,7 +86,7 @@ router.post('/release', async (req, res) => {
     const body = parsed.data;
     const result = await InventoryService.releaseReserved(body.order_id, { userId: req.user?.id });
     res.json({ ok: true, ...result });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Failed to release reserved stock');
     res.status(400).json({ ok: false, error: 'FAILED_RELEASE', message: e.message });
   }
 });
@@ -110,7 +110,7 @@ router.post('/batch/update', requireAdmin, async (req, res) => {
     const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
     const errors = results.filter(r => r.status === 'rejected').map(r => r.reason?.message || String(r.reason));
     res.json({ ok: true, updated: ok.length, errors });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Batch inventory update failed');
     res.status(500).json({ error:'BATCH_UPDATE_FAILED', message: e.message });
   }
 });

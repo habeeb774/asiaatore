@@ -105,7 +105,7 @@ const upload = multer({
 // Create category (admin) - supports optional image upload (multipart/form-data)
 router.post('/', requireAdmin, (req, res, next) => {
   // detect multipart for image
-  const ct = req.headers['content-type'] || '';
+  const ct = req.headers?.['content-type'] || '';
   if (ct.startsWith('multipart/form-data')) {
     upload.single('image')(req, res, function(err){
       if (err) {
@@ -152,7 +152,7 @@ router.post('/', requireAdmin, (req, res, next) => {
 
 // Update category (admin)
 router.put('/:id', requireAdmin, (req, res, next) => {
-  const ct = req.headers['content-type'] || '';
+  const ct = req.headers?.['content-type'] || '';
   if (ct.startsWith('multipart/form-data')) {
     upload.single('image')(req,res,function(err){
       if (err) {

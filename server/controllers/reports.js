@@ -17,7 +17,7 @@ router.get('/inventory-movement', requireAdmin, async (req, res) => {
     }
     const list = await prisma.inventoryTransaction.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json({ ok: true, items: list });
-  } catch (e) {
+  } catch (e) { req.log?.error({ err: e }, 'Failed to generate inventory movement report');
     res.status(500).json({ ok: false, error: 'FAILED_REPORT', message: e.message });
   }
 });
@@ -41,7 +41,7 @@ router.get('/top-selling', requireAdmin, async (req, res) => {
       .map(g => ({ productId: g.productId, quantity: g._sum.quantity || 0, nameAr: byId.get(g.productId)?.nameAr || null, nameEn: byId.get(g.productId)?.nameEn || null }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, Math.min(100, Number(req.query?.limit) || 20));
-    res.json({ ok: true, items });
+    res.json({ ok: true, items }); // Return items
   } catch (e) {
     res.status(500).json({ ok: false, error: 'FAILED_REPORT', message: e.message });
   }
@@ -66,7 +66,7 @@ router.get('/stock-valuation', requireAdmin, async (_req, res) => {
       totalValuation += value;
       return { productId: p.id, nameAr: p.nameAr, nameEn: p.nameEn, qty, unitCost, value };
     });
-    res.json({ ok: true, totalValuation, items });
+    res.json({ ok: true, totalValuation, items }); // Return totalValuation and items
   } catch (e) {
     res.status(500).json({ ok: false, error: 'FAILED_REPORT', message: e.message });
   }

@@ -1,32 +1,342 @@
-/* Admin page layout improvements */
+// Variables
+$color-primary: #69be3c;
+$color-surface: #ffffff;
+$color-border: #e2e8f0;
+$color-text: #1f2937;
+$color-text-faint: #64748b;
+
+// Mixins
+@mixin card {
+  background: $color-surface;
+  padding: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px -6px rgba(0,0,0,.08);
+  border: 1px solid $color-border;
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Main Styles
+.admin-dashboard {
+  padding: 1rem;
+  direction: rtl;
+}
+
+.admin-access-denied {
+  max-width: 520px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid $color-border;
+  border-radius: 16px;
+  box-shadow: 0 6px 28px -8px rgba(0,0,0,.12);
+  text-align: center;
+
+  h2 {
+    margin-top: 0;
+    font-size: 1.1rem;
+  }
+
+  p {
+    font-size: .75rem;
+    line-height: 1.7;
+    color: #475569;
+  }
+}
+
+.debug-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: .7rem;
+  font-family: monospace;
+
+  h4 {
+    margin: 0 0 .5rem 0;
+    font-size: .8rem;
+  }
+}
+
+.back-home {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: .7rem;
+  font-weight: 600;
+  color: $color-primary;
+  text-decoration: none;
+}
+
+// Navigation
+.admin-navigation {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid $color-border;
+
+  .nav-items {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .nav-item {
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    color: $color-text-faint;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #f8fafc;
+      color: $color-text;
+    }
+
+    &.active {
+      background: $color-primary;
+      color: white;
+      font-weight: 600;
+    }
+  }
+}
+
+// Views
+.admin-view-container {
+  min-height: 400px;
+}
+
+.loading-view {
+  @include flex-center;
+  height: 200px;
+  font-size: 1rem;
+  color: $color-text-faint;
+}
+
+// Products View
+.products-view {
+  .view-header {
+    @include flex-center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+  }
+}
+
+// Overview View
+.overview-view {
+  .overview-section {
+    margin-bottom: 2rem;
+
+    .section-title {
+      margin: 0 0 1rem 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: $color-text;
+    }
+  }
+
+  .overview-loading,
+  .overview-error {
+    @include flex-center;
+    height: 200px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid $color-border;
+
+    .loading-message,
+    .error-message {
+      font-size: 1rem;
+      color: $color-text-faint;
+    }
+  }
+
+  .recent-orders {
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .order-card {
+      @include card;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .order-info {
+        .order-id {
+          font-weight: 600;
+          color: $color-text;
+        }
+
+        .order-customer {
+          font-size: 0.8rem;
+          color: $color-text-faint;
+        }
+      }
+
+      .order-details {
+        text-align: left;
+
+        .order-total {
+          font-weight: 600;
+          color: $color-text;
+        }
+
+        .order-status {
+          font-size: 0.8rem;
+          color: $color-text-faint;
+        }
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: $color-text-faint;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Stat Cards
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  .stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: $color-text;
+  }
+
+  .stat-label {
+    font-size: .7rem;
+    letter-spacing: .5px;
+    color: $color-text-faint;
+    font-weight: 600;
+  }
+}
+
+// Tables
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: $color-surface;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px -6px rgba(0,0,0,.06);
+  border: 1px solid $color-border;
+
+  th, td {
+    padding: 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid $color-border;
+  }
+
+  th {
+    background: #f8fafc;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+// Forms
+.admin-form {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .form-grid {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .admin-navigation .nav-items {
+    flex-direction: column;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-view .recent-orders .order-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+
+    .order-details {
+      text-align: right;
+    }
+  }
+}
+
+/* Legacy styles compatibility */
 .admin-two-col {
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 16px;
 }
 
-/* Ensure sidebar and content stack on small screens */
 @media (max-width: 900px) {
   .admin-two-col {
     grid-template-columns: 1fr;
   }
   .admin-two-col > *:first-child {
-    /* sidebar moves after main content on small screens for better UX */
     order: 2;
   }
 }
 
-/* Improve stat boxes spacing */
 .admin-stat-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 12px;
 }
+
 @media (max-width: 900px) {
-  .admin-stat-grid { grid-template-columns: 1fr; }
+  .admin-stat-grid { 
+    grid-template-columns: 1fr; 
+  }
 }
 
-/* Lightweight skeleton shimmer for loading states */
 .skeleton {
   position: relative;
   overflow: hidden;
@@ -40,6 +350,7 @@
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
+
 @media (prefers-color-scheme: dark) {
   .skeleton {
     background: linear-gradient(
@@ -50,30 +361,31 @@
     );
   }
 }
+
 @keyframes skeleton-shimmer {
   0% { background-position: 100% 0; }
   100% { background-position: 0 0; }
 }
 
-/* Subtle golden focus for tables inside admin */
 .admin-root table {
   transition: box-shadow .18s ease, border-color .18s ease;
 }
+
 .admin-root table:focus-within {
-  /* Gold accent ring + elevate slightly */
   border-color: rgba(200,169,106,0.55) !important;
   box-shadow: 0 0 0 2px rgba(200,169,106,0.35), 0 6px 18px -8px rgba(0,0,0,0.08);
 }
+
 .admin-root table tr:focus-within {
   outline: 1px solid rgba(200,169,106,0.35);
   outline-offset: -1px;
   background: rgba(200,169,106,0.03);
 }
 
-/* Subtle gold underline on table headers for affordance */
 .admin-root table thead th {
   position: relative;
 }
+
 .admin-root table thead th::after {
   content: '';
   position: absolute;
@@ -85,21 +397,23 @@
   transition: background-color .15s ease, opacity .15s ease;
   opacity: 0;
 }
+
 .admin-root table thead th:hover::after {
   background: rgba(200,169,106,0.65);
   opacity: 1;
 }
 
-/* Active sort state for headers (supports ARIA + class hook) */
 .admin-root table thead th[aria-sort],
 .admin-root table thead th.sort-active {
   color: var(--color-text);
 }
+
 .admin-root table thead th[aria-sort]::after,
 .admin-root table thead th.sort-active::after {
   background: rgba(200,169,106,0.85);
   opacity: 1;
 }
+
 .admin-root table thead th[aria-sort="asc"]::before,
 .admin-root table thead th[aria-sort="desc"]::before {
   content: '';
@@ -108,20 +422,19 @@
   inset-inline-start: 8px;
   width: 0; height: 0;
 }
+
 .admin-root table thead th[aria-sort="asc"]::before {
-  /* up caret */
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-bottom: 6px solid rgba(200,169,106,0.9);
 }
+
 .admin-root table thead th[aria-sort="desc"]::before {
-  /* down caret */
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 6px solid rgba(200,169,106,0.9);
 }
 
-/* Admin inner strip (sub bar) styling */
 .admin-subbar {
   position: relative;
   background: var(--color-surface);
@@ -134,6 +447,7 @@
   justify-content: space-between;
   color: var(--color-text);
 }
+
 .admin-subbar::after {
   content: '';
   position: absolute;
@@ -143,8 +457,17 @@
   border-radius: 2px;
   background: linear-gradient(90deg, rgba(200,169,106,0.0), rgba(200,169,106,0.85), rgba(200,169,106,0.0));
 }
-.admin-subbar-title { font-weight: 700; letter-spacing: .3px; }
-.admin-subbar-meta { font-size: .7rem; color: var(--color-text-faint); }
+
+.admin-subbar-title { 
+  font-weight: 700; 
+  letter-spacing: .3px; 
+}
+
+.admin-subbar-meta { 
+  font-size: .7rem; 
+  color: var(--color-text-faint); 
+}
+
 .admin-subbar-actions {
   display: flex;
   align-items: center;
@@ -152,6 +475,7 @@
   flex-wrap: wrap;
   font-size: .72rem;
 }
+
 .admin-subbar-hint {
   font-size: .6rem;
   color: var(--color-text-faint);

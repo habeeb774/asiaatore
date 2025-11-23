@@ -3,9 +3,9 @@ import dotenv from 'dotenv';
 import prisma from './db/client.js';
 import { computeTotals } from './utils/totals.js';
 import { audit } from './utils/audit.js';
-import crypto from 'crypto';
 import { ensureInvoiceForOrder } from './utils/invoice.js';
 import { sendInvoiceWhatsApp } from './services/whatsapp.js';
+import { serializePaymentMeta, deserializePaymentMeta, mergePaymentMeta } from './utils/paymentMeta.js';
 
 dotenv.config();
 
@@ -37,6 +37,40 @@ function isPlaceholder(v) {
 
 // Simple in-memory token cache
 let paypalTokenCache = { token: null, expiresAt: 0 };
+
+async function findOrderByPayPalOrderId(paypalOrderId, options = {}) {
+  if (!paypalOrderId) return null;
+  const { select, include } = options;
+  const where = {
+    OR: [
+      { paymentMeta: { path: ['index', 'paypal', 'paypalOrderId'], equals: paypalOrderId } },
+      { paymentMeta: { path: ['paypal', 'paypalOrderId'], equals: paypalOrderId } }
+    ]
+  };
+
+  let order = await prisma.order.findFirst({ where, select, include });
+  if (order) return order;
+
+  const candidates = await prisma.order.findMany({
+    where: { paymentMethod: 'paypal' },
+    orderBy: { updatedAt: 'desc' },
+    take: 50,
+    select: { id: true, paymentMeta: true }
+  }).catch(() => []);
+
+  for (const candidate of candidates) {
+    const meta = deserializePaymentMeta(candidate.paymentMeta);
+    if (!meta) continue;
+    const matches = meta?.paypal?.paypalOrderId === paypalOrderId
+      || meta?.paypalOrderId === paypalOrderId;
+    if (matches) {
+      order = await prisma.order.findUnique({ where: { id: candidate.id }, select, include });
+      if (order) return order;
+    }
+  }
+
+  return null;
+}
 
 async function getAccessToken() {
   const client = process.env.PAYPAL_CLIENT_ID;
@@ -93,11 +127,11 @@ async function verifyWebhook(rawBodyString, headers) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({
-        auth_algo: headers['paypal-auth-algo'],
-        cert_url: headers['paypal-cert-url'],
-        transmission_id: headers['paypal-transmission-id'],
-        transmission_sig: headers['paypal-transmission-sig'],
-        transmission_time: headers['paypal-transmission-time'],
+        auth_algo: headers?.['paypal-auth-algo'],
+        cert_url: headers?.['paypal-cert-url'],
+        transmission_id: headers?.['paypal-transmission-id'],
+        transmission_sig: headers?.['paypal-transmission-sig'],
+        transmission_time: headers?.['paypal-transmission-time'],
         webhook_id: PAYPAL_WEBHOOK_ID,
         webhook_event: JSON.parse(rawBodyString)
       })
@@ -171,6 +205,15 @@ router.post('/create-order', async (req, res) => {
     if (totals.grandTotal <= 0) return res.status(400).json({ ok: false, error: 'INVALID_TOTAL' });
 
     // Create order in DB first (status created)
+    const initialMeta = serializePaymentMeta({
+      stage: 'paypal:init',
+      paypal: {
+        requestedAt: new Date().toISOString(),
+        currency,
+        total: totals.grandTotal
+      }
+    });
+
     const order = await prisma.order.create({
       data: {
         userId,
@@ -181,7 +224,7 @@ router.post('/create-order', async (req, res) => {
         tax: totals.tax,
         grandTotal: totals.grandTotal,
         paymentMethod: 'paypal',
-  paymentMeta: { stage: 'init' },
+        paymentMeta: initialMeta,
         items: { create: normalized }
       },
       include: { items: true }
@@ -227,7 +270,7 @@ router.post('/create-order', async (req, res) => {
     const lineItems = order.items.map(i => ({ nameEn: i.nameEn, nameAr: i.nameAr, price: i.price, quantity: i.quantity }));
     let orderBody = buildOrderBody(workingCurrency, orderTotals, lineItems);
 
-    const idempotencyKey = String(req.headers['x-idempotency-key'] || `create-${order.id}`).slice(0,64);
+    const idempotencyKey = String(req.headers?.['x-idempotency-key'] || `create-${order.id}`).slice(0,64);
     let createRes = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': idempotencyKey },
@@ -269,10 +312,22 @@ router.post('/create-order', async (req, res) => {
     const approval = (createData.links || []).find(l => l.rel === 'approve');
 
     // Update order with PayPal info
+    const updatedMeta = mergePaymentMeta(order.paymentMeta, meta => {
+      const next = { ...meta };
+      next.stage = 'paypal:created';
+      next.paypal = {
+        ...(meta.paypal || {}),
+        create: createData,
+        paypalOrderId: createData.id,
+        currency: workingCurrency
+      };
+      return next;
+    }) || serializePaymentMeta({ stage: 'paypal:created', paypal: { create: createData, paypalOrderId: createData.id, currency: workingCurrency } });
+
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        paymentMeta: { stage: 'created', paypal: { create: createData, paypalOrderId: createData.id, currency: workingCurrency } },
+        paymentMeta: updatedMeta,
         status: 'pending'
       }
     });
@@ -298,7 +353,7 @@ router.post('/capture', async (req, res) => {
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
 
     const accessToken = await getAccessToken();
-  const idem = String(req.headers['x-idempotency-key'] || `capture-${localOrderId}`).slice(0,64);
+  const idem = String(req.headers?.['x-idempotency-key'] || `capture-${localOrderId}`).slice(0,64);
   const captureRes = await fetch(`${PAYPAL_API}/v2/checkout/orders/${paypalOrderId}/capture`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'PayPal-Request-Id': idem } });
     const captureData = await captureRes.json();
     if (!captureRes.ok) {
@@ -307,13 +362,18 @@ router.post('/capture', async (req, res) => {
 
   const paid = captureData.status === 'COMPLETED' || captureData.status === 'APPROVED';
     const newStatus = paid ? 'paid' : 'processing';
-  let existingMeta = order.paymentMeta || {};
-  const updatedMeta = { ...existingMeta, paypal: { ...(existingMeta.paypal||{}), capture: captureData, paypalOrderId } };
-    const updated = await prisma.order.update({
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
+    const mergedMeta = {
+      ...existingMeta,
+      stage: 'paypal:captured',
+      paypal: { ...(existingMeta.paypal || {}), capture: captureData, paypalOrderId }
+    };
+    const serializedMeta = serializePaymentMeta(mergedMeta);
+    await prisma.order.update({
       where: { id: order.id },
       data: {
         status: newStatus,
-        paymentMeta: updatedMeta
+        paymentMeta: serializedMeta
       }
     });
   audit({ action: 'order.paypal.capture', entity: 'Order', entityId: order.id, userId: order.userId, meta: { status: newStatus, paypalOrderId } });
@@ -334,12 +394,13 @@ router.post('/refund', async (req, res) => {
     if (!localOrderId) return res.status(400).json({ ok: false, error: 'MISSING_LOCAL_ORDER_ID' });
     const order = await prisma.order.findUnique({ where: { id: localOrderId } });
     if (!order) return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND' });
-    const cap = order?.paymentMeta?.paypal?.capture;
+    const meta = deserializePaymentMeta(order.paymentMeta) || {};
+    const cap = meta?.paypal?.capture;
     const captures = cap?.purchase_units?.[0]?.payments?.captures || cap?.captures || [];
     const captureId = Array.isArray(captures) && captures.length ? captures[0].id : null;
     if (!captureId) return res.status(400).json({ ok: false, error: 'NO_CAPTURE_ID' });
     const accessToken = await getAccessToken();
-    const idem = String(req.headers['x-idempotency-key'] || `refund-${localOrderId}`).slice(0,64);
+    const idem = String(req.headers?.['x-idempotency-key'] || `refund-${localOrderId}`).slice(0,64);
     const body = amount ? { amount: { value: Number(amount).toFixed(2), currency_code: (currency || order.currency || 'SAR') } } : {};
     const r = await fetch(`${PAYPAL_API}/v2/payments/captures/${captureId}/refund`, {
       method: 'POST',
@@ -350,9 +411,12 @@ router.post('/refund', async (req, res) => {
     if (!r.ok) return res.status(502).json({ ok: false, error: 'PAYPAL_REFUND_FAILED', detail: data });
     // Update order status
     const newStatus = amount && Number(amount) < Number(order.grandTotal) ? 'partially_refunded' : 'refunded';
-    const existingMeta = order.paymentMeta || {};
-    const updatedMeta = { ...existingMeta, paypal: { ...(existingMeta.paypal||{}), refund: data } };
-    await prisma.order.update({ where: { id: order.id }, data: { status: newStatus, paymentMeta: updatedMeta } });
+    const updatedMeta = {
+      ...meta,
+      stage: 'paypal:refunded',
+      paypal: { ...(meta.paypal || {}), refund: data }
+    };
+    await prisma.order.update({ where: { id: order.id }, data: { status: newStatus, paymentMeta: serializePaymentMeta(updatedMeta) } });
     audit({ action: 'order.paypal.refund', entity: 'Order', entityId: order.id, userId: order.userId, meta: { newStatus, captureId } });
     return res.json({ ok: true, status: newStatus, refund: data });
   } catch (e) {
@@ -365,31 +429,35 @@ router.post('/refund', async (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const raw = req.rawBody || JSON.stringify(req.body || {});
-    const headers = Object.fromEntries(Object.entries(req.headers).map(([k,v]) => [k.toLowerCase(), v]));
+    const headers = req.headers ? Object.fromEntries(Object.entries(req.headers).map(([k,v]) => [k.toLowerCase(), v])) : {};
     const verifyResult = await verifyWebhook(raw, headers);
     const event = req.body || {};
     const eventType = event.event_type;
     const paypalOrderId = event.resource?.id || event.resource?.supplementary_data?.related_ids?.order_id || null;
-    let linkedOrder = null;
-    if (paypalOrderId) {
-      // Find local order referencing this PayPal order
-      linkedOrder = await prisma.order.findFirst({ where: { paymentMeta: { path: ['paypal','paypalOrderId'], equals: paypalOrderId } } });
-      if (!linkedOrder) {
-        // fallback search by JSON contains (less efficient)
-        linkedOrder = await prisma.order.findFirst({ where: { paymentMeta: { contains: paypalOrderId } } });
-      }
-    }
+    const linkedOrder = paypalOrderId ? await findOrderByPayPalOrderId(paypalOrderId) : null;
     let updates = null;
     if (linkedOrder && eventType) {
-      const existingMeta = linkedOrder.paymentMeta || {};
-      const paypalMeta = { ...(existingMeta.paypal||{}), webhook: event };
+      const existingMeta = deserializePaymentMeta(linkedOrder.paymentMeta) || {};
+      const paypalMeta = {
+        ...(existingMeta.paypal || {}),
+        webhook: event,
+        webhookVerified: verifyResult.verified,
+        lastWebhookAt: new Date().toISOString(),
+        lastEventType: eventType
+      };
       let newStatus = linkedOrder.status;
       if (eventType === 'PAYMENT.CAPTURE.COMPLETED' || eventType === 'CHECKOUT.ORDER.APPROVED') {
         newStatus = 'paid';
       } else if (eventType === 'PAYMENT.CAPTURE.REFUNDED' || eventType === 'PAYMENT.CAPTURE.REVERSED') {
         newStatus = 'refunded';
       }
-  updates = await prisma.order.update({ where: { id: linkedOrder.id }, data: { status: newStatus, paymentMeta: { ...existingMeta, paypal: paypalMeta } } });
+      const stage = eventType ? `paypal:webhook:${eventType.toLowerCase().replace(/[^a-z0-9]+/g, '_')}` : 'paypal:webhook';
+      const serializedMeta = serializePaymentMeta({
+        ...existingMeta,
+        stage,
+        paypal: paypalMeta
+      });
+      updates = await prisma.order.update({ where: { id: linkedOrder.id }, data: { status: newStatus, paymentMeta: serializedMeta } });
       audit({ action: 'order.paypal.webhook', entity: 'Order', entityId: linkedOrder.id, userId: linkedOrder.userId, meta: { eventType, paypalOrderId, verified: verifyResult.verified } });
   if (newStatus === 'paid') { try { await ensureInvoiceForOrder(linkedOrder.id); } catch {} try { await sendInvoiceWhatsApp(linkedOrder.id).catch(() => null); } catch {} }
     }

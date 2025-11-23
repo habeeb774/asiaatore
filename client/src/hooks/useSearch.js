@@ -14,6 +14,8 @@ export const useSearch = ({ debounceMs = 600, onSearch } = {}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
+  const memoizedOnSearch = useCallback(onSearch, []);
+
   // Debounce search query
   useEffect(() => {
     if (!searchQuery) {
@@ -28,9 +30,9 @@ export const useSearch = ({ debounceMs = 600, onSearch } = {}) => {
       setIsLoading(false);
 
       // Execute search callback if provided
-      if (onSearch && typeof onSearch === 'function') {
+      if (memoizedOnSearch && typeof memoizedOnSearch === 'function') {
         try {
-          onSearch(searchQuery);
+          memoizedOnSearch(searchQuery);
         } catch (error) {
           console.error('Search callback error:', error);
         }
@@ -38,7 +40,7 @@ export const useSearch = ({ debounceMs = 600, onSearch } = {}) => {
     }, debounceMs);
 
     return () => clearTimeout(handler);
-  }, [searchQuery, debounceMs, onSearch]);
+  }, [searchQuery, debounceMs, memoizedOnSearch]);
 
   const updateSearchQuery = useCallback((query) => {
     setSearchQuery(query);
@@ -51,11 +53,11 @@ export const useSearch = ({ debounceMs = 600, onSearch } = {}) => {
   const triggerSearch = useCallback(() => {
     if (searchQuery.trim()) {
       setDebouncedQuery(searchQuery);
-      if (onSearch && typeof onSearch === 'function') {
-        onSearch(searchQuery);
+      if (memoizedOnSearch && typeof memoizedOnSearch === 'function') {
+        memoizedOnSearch(searchQuery);
       }
     }
-  }, [searchQuery, onSearch]);
+  }, [searchQuery, memoizedOnSearch]);
 
   return {
     searchQuery,

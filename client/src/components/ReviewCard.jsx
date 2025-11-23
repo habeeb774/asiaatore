@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Star, ThumbsUp, ThumbsDown, MessageCircle, Camera, X, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '../stores/ToastContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../services/api/client';
 
 const ReviewCard = ({ review, onVote, onRespond, isAdmin }) => {

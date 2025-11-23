@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactFullpage from '@fullpage/react-fullpage';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
 import { Link } from 'react-router-dom';
-import { useProducts } from '../../stores/ProductsContext';
+import { useProducts } from '../../contexts/ProductsContext';
 
 // Minimal FullLanding scaffold with three sections: Hero, Video, Featured Products
 export default function FullLanding() {

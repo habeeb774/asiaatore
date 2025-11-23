@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import adminApi from '../../../services/api/admin';
-import { useToast } from '../../../stores/ToastContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/input';
 import { Select } from '../../ui/select';

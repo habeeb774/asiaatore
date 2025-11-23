@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api/client';
-import { useAuth } from '../../stores/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/badge';
 import RoutePlanner from '../../components/RoutePlanner';

@@ -8,7 +8,7 @@ import { emitOrderEvent } from '../../utils/realtimeHub.js';
 import InventoryService from '../../services/inventoryService.js';
 import { ensureInvoiceForOrder } from '../../utils/invoice.js';
 import { sendInvoiceWhatsApp } from '../../services/whatsapp.js';
-import { encrypt, decrypt } from '../../utils/crypto.js';
+import { serializePaymentMeta, deserializePaymentMeta } from '../../utils/paymentMeta.js';
 
 function providerTrackingUrl(provider, trackingNumber) {
   try {
@@ -35,7 +35,7 @@ export function mapOrder(o) {
     grandTotal: o.grandTotal,
     total: o.grandTotal,
     paymentMethod: o.paymentMethod,
-    paymentMeta: o.paymentMeta ? JSON.parse(decrypt(JSON.parse(o.paymentMeta))) : null,
+    paymentMeta: deserializePaymentMeta(o.paymentMeta),
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
     items: (o.items || []).map(i => ({
@@ -255,7 +255,7 @@ export const OrdersService = {
         tax: totals.tax,
         grandTotal: totals.grandTotal,
         paymentMethod: input.paymentMethod || null,
-        paymentMeta: input.paymentMeta ? JSON.stringify(encrypt(JSON.stringify(input.paymentMeta))) : null,
+        paymentMeta: input.paymentMeta ? serializePaymentMeta(input.paymentMeta) : null,
         items: {
           create: items.map(i => ({
             productId: i.productId,
@@ -270,6 +270,10 @@ export const OrdersService = {
       include: { items: true },
     });
     // Best-effort: reserve inventory for items (skip 'custom')
+    const createdNormalized = {
+      ...created,
+      paymentMeta: deserializePaymentMeta(created.paymentMeta),
+    };
     try {
       const toReserve = (items || [])
         .filter(i => i.productId && i.productId !== 'custom')
@@ -345,7 +349,7 @@ export const OrdersService = {
       const canUserModify = !isAdmin && existing.status === 'pending' && existing.userId === requesterId;
       if (!isAdmin && !canUserModify) {
         const err = new Error('FORBIDDEN_ITEMS_MOD');
-        err.statusCode = 403; throw err;
+    return createdNormalized;
       }
       itemsData = await normalizeItems(body.items);
     }
@@ -356,7 +360,7 @@ export const OrdersService = {
     const updateData = {
       status: body.status || existing.status,
       paymentMethod: body.paymentMethod != null ? body.paymentMethod : existing.paymentMethod,
-      paymentMeta: body.paymentMeta != null ? (body.paymentMeta ? JSON.stringify(encrypt(JSON.stringify(body.paymentMeta))) : null) : existing.paymentMeta,
+      paymentMeta: body.paymentMeta != null ? (body.paymentMeta ? serializePaymentMeta(body.paymentMeta) : null) : existing.paymentMeta,
       subtotal: totals.subtotal,
       discount: totals.discount,
       tax: totals.tax,
@@ -372,6 +376,10 @@ export const OrdersService = {
       }
       return tx.order.update({ where: { id: existing.id }, data: updateData, include: { items: true } });
     });
+    const updatedNormalized = {
+      ...updated,
+      paymentMeta: deserializePaymentMeta(updated.paymentMeta),
+    };
     // Side-effects: inventory reservation lifecycle on status transitions
     try {
       if (existing.status !== updated.status) {
@@ -390,7 +398,7 @@ export const OrdersService = {
     } catch (e) {
       if (process.env.DEBUG_ERRORS === 'true') console.warn('[ORDERS] inventory side-effect failed:', e?.message);
     }
-    return updated;
+    return updatedNormalized;
   },
 };
 

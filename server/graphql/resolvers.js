@@ -1,4 +1,5 @@
 import prisma from '../db/client.js'
+import { serializePaymentMeta, deserializePaymentMeta } from '../utils/paymentMeta.js'
 
 function mapProduct(p) { return p }
 
@@ -40,14 +41,15 @@ const resolvers = {
         prisma.order.count({ where }),
         prisma.order.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, include: { items: true } })
       ])
-      return { items: list, page: page||1, pageSize: take, total, totalPages: Math.ceil(total / take) }
+      const items = list.map(o => ({ ...o, paymentMeta: deserializePaymentMeta(o.paymentMeta) }))
+      return { items, page: page||1, pageSize: take, total, totalPages: Math.ceil(total / take) }
     },
     order: async (_r, { id }, ctx) => {
       const o = await prisma.order.findUnique({ where: { id }, include: { items: true } })
       if (!o) return null
       const isAdmin = ctx.user?.role === 'admin'
       if (!isAdmin && o.userId !== (ctx.user?.id || 'guest')) return null
-      return o
+        return { ...o, paymentMeta: deserializePaymentMeta(o.paymentMeta) }
     }
   },
   Mutation: {
@@ -73,11 +75,11 @@ const resolvers = {
           currency: input.currency || 'SAR',
           subtotal, discount, tax, grandTotal,
           paymentMethod: input.paymentMethod || null,
-          paymentMeta: input.paymentMeta || null,
+          paymentMeta: input.paymentMeta ? serializePaymentMeta(input.paymentMeta) : null,
           items: { create: normalized }
         }, include: { items: true }
       })
-      return created
+      return { ...created, paymentMeta: deserializePaymentMeta(created.paymentMeta) }
     },
     updateOrder: async (_r, { id, input }, ctx) => {
       const existing = await prisma.order.findUnique({ where: { id }, include: { items: true } })
@@ -107,11 +109,13 @@ const resolvers = {
         return tx.order.update({ where: { id: existing.id }, data: {
           status: input.status || existing.status,
           paymentMethod: input.paymentMethod != null ? input.paymentMethod : existing.paymentMethod,
-          paymentMeta: input.paymentMeta != null ? input.paymentMeta : existing.paymentMeta,
+          paymentMeta: input.paymentMeta != null
+            ? (input.paymentMeta ? serializePaymentMeta(input.paymentMeta) : null)
+            : existing.paymentMeta,
           subtotal, discount, tax, grandTotal
         }, include: { items: true } })
       })
-      return updated
+      return { ...updated, paymentMeta: deserializePaymentMeta(updated.paymentMeta) }
     }
   }
 }

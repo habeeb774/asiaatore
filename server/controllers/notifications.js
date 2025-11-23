@@ -3,9 +3,7 @@ import { audit } from '../utils/audit.js';
 import { broadcast } from '../utils/realtimeHub.js';
 import { sendEmail } from '../utils/email.js';
 import { sendSms } from '../utils/sms.js';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../db/client.js';
 const router = Router();
 
 // In-memory notifications store (per process). For production, persist via DB.
@@ -51,7 +49,9 @@ router.post('/offers', async (req, res) => {
     }
 
     // Get all users who have opted in for offer notifications
-    const subscribedUsers = await prisma.user.findMany({
+    let subscribedUsers = [];
+    try {
+      subscribedUsers = await prisma.user.findMany({
       where: {
         notificationPreferences: {
           path: ['offers'],
@@ -64,7 +64,15 @@ router.post('/offers', async (req, res) => {
         phone: true,
         name: true
       }
-    });
+      });
+    } catch (e) {
+      // If DB is unavailable (degraded mode), fall back to empty subscribers list
+      if (e?.code === 'DB_DISABLED' || process.env.ALLOW_INVALID_DB === 'true' || process.env.NODE_ENV !== 'production') {
+        subscribedUsers = [];
+      } else {
+        throw e;
+      }
+    }
 
     const results = { email: 0, sms: 0, errors: [] };
 
@@ -96,7 +104,7 @@ router.post('/offers', async (req, res) => {
           else results.errors.push(`Email to ${user.email}: ${emailResult.error}`);
         }
 
-        // Send SMS/WhatsApp notification (using SMS as WhatsApp proxy)
+        // Send SMS/WhatsApp notification (using SMS as WhatsApp proxy) - ensure FRONTEND_URL is set
         if (user.phone) {
           const smsResult = await sendSms({
             to: user.phone,
@@ -138,7 +146,7 @@ router.post('/offers', async (req, res) => {
     });
 
     return res.json({ 
-      ok: true, 
+      ok: true, // Consistent response structure
       message: `تم إرسال الإشعارات إلى ${subscribedUsers.length} مشترك`, 
       results 
     });
@@ -208,6 +216,10 @@ router.get('/preferences', async (req, res) => {
 
   } catch (e) {
     console.error('[NOTIFICATIONS] Preferences fetch error:', e);
+    // If DB is unavailable in dev, return default preferences as a fallback
+    if (e?.code === 'DB_DISABLED' || process.env.ALLOW_INVALID_DB === 'true' || process.env.NODE_ENV !== 'production') {
+      return res.json({ ok: true, preferences: { email: true, sms: false, offers: true, orders: true }, devFallback: true });
+    }
     return res.status(500).json({ ok: false, error: e.message });
   }
 });

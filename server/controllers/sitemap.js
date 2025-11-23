@@ -46,6 +46,7 @@ router.get('/sitemap.xml', async (req, res) => {
 
     res.type('application/xml').send(xmlLines.join('\n'));
   } catch (err) {
+    req.log?.error({ err }, 'Sitemap generation failed'); // Use req.log
     // Return minimal sitemap fallback
     res.type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>/</loc></url></urlset>');
   }

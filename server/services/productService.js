@@ -32,6 +32,13 @@ function buildImageVariants(imagePath) {
 
 export function mapProduct(p) {
   if (!p) return null;
+  const toNumber = (value) => {
+    if (value === null || value === undefined) return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+  const price = toNumber(p.price);
+  const oldPrice = toNumber(p.oldPrice);
   const mainVariants = buildImageVariants(p.image);
   const gallery = Array.isArray(p.images)
     ? p.images
@@ -52,9 +59,9 @@ export function mapProduct(p) {
     name: { ar: p.nameAr, en: p.nameEn },
     short: { ar: p.shortAr, en: p.shortEn },
     category: p.category,
-    price: p.price,
-    oldPrice: p.oldPrice,
-    originalPrice: p.oldPrice,
+    price,
+    oldPrice,
+    originalPrice: oldPrice,
     image: p.image,
     images: imagesAll,
     imageVariants: mainVariants,
@@ -70,7 +77,13 @@ export function mapProduct(p) {
     tierPrices: Array.isArray(p.tierPrices)
       ? p.tierPrices
           .sort((a, b) => a.minQty - b.minQty)
-          .map((t) => ({ id: t.id, minQty: t.minQty, price: t.price, packagingType: t.packagingType, note: { ar: t.noteAr, en: t.noteEn } }))
+          .map((t) => ({
+            id: t.id,
+            minQty: t.minQty,
+            price: toNumber(t.price),
+            packagingType: t.packagingType,
+            note: { ar: t.noteAr, en: t.noteEn },
+          }))
       : [],
     rating: p.rating,
     stock: p.stock,

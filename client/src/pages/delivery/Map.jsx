@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAuth } from '../../stores/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api/client';
 import ReactLeafletCompat from '../../utils/reactLeafletCompat.jsx';
 import { Button } from '../../components/ui/Button';

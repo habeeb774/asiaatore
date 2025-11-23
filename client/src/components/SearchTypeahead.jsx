@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api/client';
 import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../stores/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
 
 /**
  * Accessible typeahead search component.

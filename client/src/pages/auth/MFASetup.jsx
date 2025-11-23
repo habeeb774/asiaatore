@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../stores/AuthContext';
-import { useToast } from '../../stores/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/input';
 import { FiShield, FiCheck } from 'react-icons/fi';

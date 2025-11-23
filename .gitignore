@@ -13,9 +13,18 @@ dev-dist/
 coverage/
 
 # Env files
+# Environment files
 .env
 .env.local
+.env.*.local
 server/.env
+server/.env.local
+server/.env.*.local
+
+# Client environment files (except .env.example)
+client/.env
+client/.env.local
+client/.env.*.local
 
 # Local databases
 prisma/dev.db

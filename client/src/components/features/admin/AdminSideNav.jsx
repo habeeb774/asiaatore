@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useLocation, NavLink } from "react-router-dom";
 import { Menu, X, ChevronLeft, ChevronRight, MapPin, MapPinOff } from "lucide-react";
+import { useLanguage } from "../../../context/LanguageContext";
+import { adminQuickLinks } from "./AdminLinks";
 
 // NOTE: previous mobile-specific hook removed; overlay/backdrop handles outside clicks
 
 export default function AdminSideNav({ drawerOpen, setDrawerOpen, collapsed, setCollapsed, pinned, setPinned, menuBtnRef }) {
   const location = useLocation();
+  const { locale } = useLanguage() || { locale: "ar" };
   
   // Close drawer if path changes
   useEffect(() => {
@@ -13,19 +16,18 @@ export default function AdminSideNav({ drawerOpen, setDrawerOpen, collapsed, set
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.search]);
 
-  const isAdminViewActive = (view) => {
-    const params = new URLSearchParams(location.search);
-    const currentView = params.get("view");
-    if (view === 'overview') {
-      return location.pathname.endsWith('/admin') && !currentView;
-    }
-    return currentView === view;
-  };
-
-  // Shared adminLinks available via adminLinks import if needed
-
   // Simplified check for any admin page
   const onAdminPage = location.pathname.startsWith('/admin');
+
+  const isLinkActive = (to, exact) => {
+    if (exact) return location.pathname === to;
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
+
+  const renderLabel = (link) => {
+    if (locale === 'ar') return link.labelAr;
+    return link.labelEn || link.labelAr;
+  };
 
   return (
     <header
@@ -92,6 +94,37 @@ export default function AdminSideNav({ drawerOpen, setDrawerOpen, collapsed, set
           />
         </div>
       </div>
+      {onAdminPage && adminQuickLinks.length > 0 && (
+        <div className="border-t border-slate-200 bg-slate-50/70">
+          <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-2 overflow-x-auto">
+            <nav
+              className="flex items-center gap-2 text-sm whitespace-nowrap"
+              aria-label="روابط لوحة الإدارة"
+            >
+              {adminQuickLinks.map((link) => {
+                const active = isLinkActive(link.to, link.exact);
+                const Icon = link.icon;
+                return (
+                  <NavLink
+                    key={link.key}
+                    to={link.to}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition-colors ${
+                      active
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:text-emerald-600 hover:border-emerald-300'
+                    }`}
+                    aria-current={active ? 'page' : undefined}
+                    end={link.exact}
+                  >
+                    {Icon ? <Icon size={16} aria-hidden /> : null}
+                    <span>{renderLabel(link)}</span>
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

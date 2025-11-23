@@ -101,7 +101,7 @@ const prodUpload = multer({
   }
 });
 function productImageMiddleware(req, res, next) {
-  const ct = req.headers['content-type'] || '';
+  const ct = req.headers?.['content-type'] || '';
   if (ct.startsWith('multipart/form-data')) {
     prodUpload.single('image')(req, res, function(err){
       if (err) {
@@ -313,8 +313,8 @@ router.get('/', async (req, res) => {
     }
     res.json(result);
   } catch (e) {
-    if (process.env.DEBUG_PRODUCTS === '1') {
-      console.error('[PRODUCTS] List failed:', e);  
+    if (process.env.DEBUG_PRODUCTS === '1') { // Use req.log for structured logging
+      req.log?.error({ err: e }, '[PRODUCTS] List failed');
     }
     // Degraded mode: if DB is unavailable, try serving a static sample as a minimal fallback
     if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true' || (e && e.message && /Database|DB|connect/i.test(e.message))) {
@@ -373,7 +373,7 @@ router.get('/offers', async (req, res) => {
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
-      console.error('[PRODUCTS] Offers failed:', e);  
+      req.log?.error({ err: e }, '[PRODUCTS] Offers failed'); // Use req.log
     }
     if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true' || (e && e.message && /Database|DB|connect/i.test(e.message))) {
       try {
@@ -415,7 +415,7 @@ router.get('/featured', async (req, res) => {
     res.json(list.map(mapProduct));
   } catch (e) {
     if (process.env.DEBUG_PRODUCTS === '1') {
-      console.error('[PRODUCTS] Featured failed:', e);  
+      req.log?.error({ err: e }, '[PRODUCTS] Featured failed'); // Use req.log
     }
     if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true' || (e && e.message && /Database|DB|connect/i.test(e.message))) {
       try {
@@ -1118,7 +1118,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       await audit({
         action: 'product.export.excel',
         entity: 'Product',
-        entityId: null,
+          entityId: 'N/A', // Use N/A or a meaningful placeholder for entityId when not applicable
         userId: req.user?.id,
         meta: { count: products.length, filters: { category, status, q } }
       });
@@ -1129,7 +1129,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (e) {
-    console.error('[PRODUCTS] Excel export failed', e);
+    req.log?.error({ err: e }, '[PRODUCTS] Excel export failed'); // Use req.log
     res.status(500).json({ error: 'PRODUCT_EXPORT_FAILED', message: e.message });
   }
 });

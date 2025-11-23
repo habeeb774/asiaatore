@@ -1,3 +1,65 @@
+// Safe console.error wrapper to avoid "Cannot convert object to primitive value"
+// errors thrown by dev tooling when formatting complex objects. This captures
+// arguments (safely stringified) to `window.__capturedConsoleErrors` for
+// later inspection and prevents the original formatter from throwing.
+(function () {
+  try {
+    if (typeof window !== "undefined" && typeof console !== "undefined") {
+      const origError = console.error.bind(console);
+      window.__capturedConsoleErrors = window.__capturedConsoleErrors || [];
+
+      const seen = new WeakSet();
+      function replacer(key, value) {
+        // Avoid circular refs
+        if (value && typeof value === "object") {
+          if (seen.has(value)) return "[Circular]";
+          seen.add(value);
+        }
+        // Replace symbols with description
+        if (typeof value === "symbol") return value.toString();
+        // Functions: show name
+        if (typeof value === "function")
+          return `[Function: ${value.name || "anonymous"}]`;
+        return value;
+      }
+
+      function safeStringify(obj) {
+        try {
+          if (typeof obj === "string") return obj;
+          return JSON.stringify(obj, replacer, 2);
+        } catch (err) {
+          try {
+            return String(obj);
+          } catch (e) {
+            return Object.prototype.toString.call(obj);
+          }
+        }
+      }
+
+      console.error = function (...args) {
+        try {
+          const safe = args.map((a) => safeStringify(a));
+          try {
+            window.__capturedConsoleErrors.push({ ts: Date.now(), args: safe });
+          } catch (e) {
+            /* ignore storage failures */
+          }
+          // Call original with original args so browser/devtools still show them
+          origError(...args);
+        } catch (e) {
+          try {
+            origError("console.error wrapper failed", e);
+          } catch (e2) {
+            /* swallow */
+          }
+        }
+      };
+    }
+  } catch (e) {
+    /* no-op */
+  }
+})();
+
 import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import {
@@ -8,7 +70,6 @@ import {
 import AppRoutes from "./AppRoutes";
 import "./index.css";
 import "./styles/ui.css";
-
 
 // Local Cairo font (self-hosted via package) - load only essential weights initially
 import "@fontsource/cairo/400.css";
@@ -30,16 +91,17 @@ const loadAdditionalFonts = () => {
 // SCSS bundles
 import "./styles/index.scss";
 // Route-specific styles are imported in their pages to allow CSS code-splitting
-import { LanguageProvider, useLanguage } from "./stores/LanguageContext";
-import { ProductsProvider } from "./stores/ProductsContext";
-import { CartProvider } from "./stores/CartContext";
-import { WishlistProvider } from "./stores/WishlistContext";
-import { AuthProvider } from "./stores/AuthContext";
-import { OrdersProvider } from "./stores/OrdersContext";
-import { AdminProvider } from "./stores/AdminContext";
-import { SettingsProvider } from "./stores/SettingsContext";
-import { ToastProvider } from "./stores/ToastContext";
-import { useToast } from "./stores/ToastContext";
+import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
+import { ProductsProvider } from "./contexts/ProductsContext";
+import { CartProvider } from "./contexts/CartContext";
+import { WishlistProvider } from "./contexts/WishlistContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { OrdersProvider } from "./contexts/OrdersContext";
+import { AdminProvider } from "./contexts/AdminContext";
+import { SettingsProvider } from "./contexts/SettingsContext";
+import { ToastProvider } from "./contexts/ToastContext";
+import { MarketingProvider } from "./contexts/MarketingContext";
+import { useToast } from "./contexts/ToastContext";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { queryClient } from "./lib/queryClient";
@@ -57,9 +119,9 @@ if (typeof window !== "undefined") {
     } catch {}
   }
 }
-import { DesignTokenProvider } from "./stores/DesignTokenContext";
-import { ThemeProvider } from "./stores/ThemeContext";
-import { ExperimentProvider } from "./stores/ExperimentContext";
+import { DesignTokenProvider } from "./contexts/DesignTokenContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { ExperimentProvider } from "./contexts/ExperimentContext";
 import ScrollTopButton from "./components/common/ScrollTopButton";
 // Leaflet CSS is imported by the map route to avoid bundling it into the main entry
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -137,6 +199,12 @@ const GlobalToastEvents = () => {
   return null;
 };
 
+// Payment constants
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+  : null;
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || null;
+
 const Providers = ({ children }) => {
   const location = useLocation();
   const pathname = location.pathname || "/";
@@ -152,9 +220,33 @@ const Providers = ({ children }) => {
     pathname.includes("/ar-viewer") ||
     pathname.includes("/voice-commerce");
 
-  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "test";
-  const stripePromise = loadStripe(
-    import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_..."
+  // Common content that's rendered regardless of payment providers
+  const commonContent = (
+    <>
+      <HtmlLanguageSync />
+      <GlobalToastEvents />
+      <PwaUpdatePrompt />
+      {/* Global haptics: vibrate briefly on add-to-cart if supported and not reduced-motion */}
+      <HapticsEvents />
+      <ScrollTopButton />
+      {needsAdvancedFeatures ? (
+        <Suspense fallback={null}>
+          <GamificationProvider>
+            <NFTLoyaltyProvider>
+              <SmartInventoryProvider>
+                <PersonalizationProvider>
+                  <SustainabilityProvider>
+                    <SocialCommerceProvider>{children}</SocialCommerceProvider>
+                  </SustainabilityProvider>
+                </PersonalizationProvider>
+              </SmartInventoryProvider>
+            </NFTLoyaltyProvider>
+          </GamificationProvider>
+        </Suspense>
+      ) : (
+        children
+      )}
+    </>
   );
 
   return (
@@ -170,42 +262,37 @@ const Providers = ({ children }) => {
                       <OrdersProvider>
                         <AdminProvider>
                           <SettingsProvider>
-                            <ToastProvider>
-                              <Elements stripe={stripePromise}>
+                            <MarketingProvider>
+                              <ToastProvider>
+                              {stripePromise && paypalClientId ? (
+                                <Elements stripe={stripePromise}>
+                                  <PayPalScriptProvider
+                                    options={{
+                                      "client-id": paypalClientId,
+                                      currency: "SAR",
+                                    }}
+                                  >
+                                    {commonContent}
+                                  </PayPalScriptProvider>
+                                </Elements>
+                              ) : stripePromise ? (
+                                <Elements stripe={stripePromise}>
+                                  {commonContent}
+                                </Elements>
+                              ) : paypalClientId ? (
                                 <PayPalScriptProvider
                                   options={{
                                     "client-id": paypalClientId,
                                     currency: "SAR",
                                   }}
                                 >
-                                  <HtmlLanguageSync />
-                                  <GlobalToastEvents />
-                                  <PwaUpdatePrompt />
-                                  {/* Global haptics: vibrate briefly on add-to-cart if supported and not reduced-motion */}
-                                  <HapticsEvents />
-                                  <ScrollTopButton />
-                                  {needsAdvancedFeatures ? (
-                                    <Suspense fallback={null}>
-                                      <GamificationProvider>
-                                        <NFTLoyaltyProvider>
-                                          <SmartInventoryProvider>
-                                            <PersonalizationProvider>
-                                              <SustainabilityProvider>
-                                                <SocialCommerceProvider>
-                                                  {children}
-                                                </SocialCommerceProvider>
-                                              </SustainabilityProvider>
-                                            </PersonalizationProvider>
-                                          </SmartInventoryProvider>
-                                        </NFTLoyaltyProvider>
-                                      </GamificationProvider>
-                                    </Suspense>
-                                  ) : (
-                                    children
-                                  )}
+                                  {commonContent}
                                 </PayPalScriptProvider>
-                              </Elements>
-                            </ToastProvider>
+                              ) : (
+                                commonContent
+                              )}
+                              </ToastProvider>
+                            </MarketingProvider>
                           </SettingsProvider>
                         </AdminProvider>
                       </OrdersProvider>
@@ -306,7 +393,7 @@ function PwaUpdatePrompt() {
       updateToastRef.current = id;
     },
     onOfflineReady() {
-      toast?.success?.('جاهز للعمل دون اتصال', 'يمكنك متابعة التصفح حتى بدون إنترنت', 4000);
+      toast?.success?.('جاهز للعمل دون اتصال', 'يمكنك متابعة التصفح حتى بدون إنترنت', 8829);
     },
     onRegisterError(err) {
       console.warn('[PWA] register error', err);

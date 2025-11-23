@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils.js';
 import Button from './Button';
 
 // Simple right-side drawer. Props: open, onClose, title, children, width
@@ -16,7 +16,7 @@ export default function Drawer({ open, onClose, title, children, width = 420, cl
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleBackdrop} />
+      <div data-app-backdrop className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleBackdrop} />
       <div
         className={cn(
           'absolute top-0 right-0 h-full bg-white dark:bg-[#0f1525] border-l border-black/10 dark:border-white/10 shadow-xl flex flex-col',

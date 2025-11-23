@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../../services/api/client';
-import { useToast } from '../../stores/ToastContext';
+import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../ui';
 import { Truck, PackageCheck, XCircle } from 'lucide-react';
 

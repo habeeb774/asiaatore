@@ -127,7 +127,8 @@ export default defineConfig([
       'ecosystem.config.cjs',
       'scripts/**/*.{js,jsx}',
       'client/src/components/features/NFTLoyalty/scripts/**/*.{js,jsx}',
-      'mobile/**/*.{js,jsx}'
+      'mobile/**/*.{js,jsx}',
+      'test-auth.js' // Add this line to include test-auth.js in Node.js environment
     ],
     languageOptions: {
       ecmaVersion: 2020,

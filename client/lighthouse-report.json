@@ -1,9 +1,9 @@
 {
   "lighthouseVersion": "13.0.1",
-  "requestedUrl": "http://localhost:5173/",
-  "mainDocumentUrl": "http://localhost:5173/",
-  "finalDisplayedUrl": "http://localhost:5173/",
-  "finalUrl": "http://localhost:5173/",
+  "requestedUrl": "http://localhost:5174/",
+  "mainDocumentUrl": "http://localhost:5174/",
+  "finalDisplayedUrl": "http://localhost:5174/",
+  "finalUrl": "http://localhost:5174/",
   "fetchTime": "2025-11-09T03:15:52.779Z",
   "gatherMode": "navigation",
   "runWarnings": [],
@@ -72,7 +72,7 @@
       "displayValue": "3.6 s",
       "scoringOptions": {
         "p10": 2500,
-        "median": 4000
+        "median": 8829
       }
     },
     "speed-index": {
@@ -825,7 +825,7 @@
             "url": "http://localhost:5173/@vite/client",
             "sessionTargetType": "page",
             "protocol": "http/1.1",
-            "rendererStartTime": 76.75400000065565,
+            "rendererStartTime": 76.75882900065565,
             "networkRequestTime": 79.50799999758601,
             "networkEndTime": 165.0269999988377,
             "finished": true,
@@ -1171,7 +1171,7 @@
             "sessionTargetType": "page",
             "protocol": "http/1.1",
             "rendererStartTime": 1417.269999999553,
-            "networkRequestTime": 1511.5240000002086,
+            "networkRequestTime": 1511.5288290002086,
             "networkEndTime": 1557.3299999982119,
             "finished": true,
             "transferSize": 38385,
@@ -1376,7 +1376,7 @@
             "protocol": "http/1.1",
             "rendererStartTime": 1428.4709999971092,
             "networkRequestTime": 1521.2889999970794,
-            "networkEndTime": 1727.3940000012517,
+            "networkEndTime": 1727.3988290012517,
             "finished": true,
             "transferSize": 15414,
             "resourceSize": 15122,
@@ -1476,7 +1476,7 @@
             "url": "http://localhost:5173/node_modules/.vite/deps/react-i18next.js?v=3388ecd7",
             "sessionTargetType": "page",
             "protocol": "http/1.1",
-            "rendererStartTime": 1435.1140000000596,
+            "rendererStartTime": 1435.1188290000596,
             "networkRequestTime": 1524.4719999991357,
             "networkEndTime": 1808.9030000008643,
             "finished": true,
@@ -1527,9 +1527,9 @@
             "url": "http://localhost:5173/src/context/ExperimentContext.jsx",
             "sessionTargetType": "page",
             "protocol": "http/1.1",
-            "rendererStartTime": 1439.9340000003576,
+            "rendererStartTime": 1439.9388290003576,
             "networkRequestTime": 1526.402999997139,
-            "networkEndTime": 1828.3240000009537,
+            "networkEndTime": 1828.3288290009537,
             "finished": true,
             "transferSize": 9039,
             "resourceSize": 8749,
@@ -3381,7 +3381,7 @@
             "sessionTargetType": "page",
             "protocol": "http/1.1",
             "rendererStartTime": 2685.054999999702,
-            "networkRequestTime": 2686.9340000003576,
+            "networkRequestTime": 2686.9388290003576,
             "networkEndTime": 2722.5060000009835,
             "finished": true,
             "transferSize": 4009,
@@ -3449,7 +3449,7 @@
             "sessionTargetType": "page",
             "protocol": "http/1.1",
             "rendererStartTime": 2770.200999997556,
-            "networkRequestTime": 2774.0340000018477,
+            "networkRequestTime": 2774.0388290018477,
             "networkEndTime": 2780.7109999991953,
             "finished": true,
             "transferSize": 17335,
@@ -6353,7 +6353,7 @@
         "type": "treemap-data",
         "nodes": [
           {
-            "name": "http://localhost:5173/",
+            "name": "http://localhost:5174/",
             "resourceBytes": 6115,
             "encodedBytes": 6115,
             "unusedBytes": 709,
@@ -17137,7 +17137,7 @@
             "url": "http://localhost:5173/src/lib/analytics.js",
             "totalBytes": 70504,
             "wastedBytes": 61962,
-            "wastedPercent": 87.88437535458982
+            "wastedPercent": 87.88297535458982
           },
           {
             "url": "http://localhost:5173/src/pages/admin/Reports.jsx",
@@ -17455,7 +17455,7 @@
             "url": "http://localhost:5173/src/pages/admin/SettingsLogo.jsx",
             "totalBytes": 14285,
             "wastedBytes": 8469,
-            "wastedPercent": 59.288426381662205
+            "wastedPercent": 59.288296381662205
           },
           {
             "url": "http://localhost:5173/src/store/cart.js",
@@ -21304,7 +21304,7 @@
                 },
                 {
                   "url": "https://cdn.salla.network/js/twilight/2.14.245/p-CojPHf7h.system.js",
-                  "mainThreadTime": 0.3440000005066395,
+                  "mainThreadTime": 0.3488290005066395,
                   "transferSize": 796
                 },
                 {

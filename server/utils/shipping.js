@@ -70,7 +70,7 @@ export function quoteShipping(address, cfg) {
   const cityCoords = findCityCoords(address?.city || '');
   if (!cityCoords) {
     // Unknown city: fall back to default flat rate
-    const fallback = Number((cfg && cfg.shippingFallback != null ? cfg.shippingFallback : process.env.SHIPPING_FALLBACK) || 25);
+    const fallback = Number((cfg && cfg.shippingFallback != null ? cfg.shippingFallback : process.env.SHIPPING_FALLBACK || 25)); // Ensure fallback is always a number
     return { method: 'fallback', shipping: fallback, distanceKm: null, cityMatched: null };
   }
   const distanceKm = haversineKm(origin, cityCoords);

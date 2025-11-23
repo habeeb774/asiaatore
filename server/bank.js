@@ -8,6 +8,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { sendEmail } from './utils/email.js';
 import { ensureInvoiceForOrder } from './utils/invoice.js';
+import { deserializePaymentMeta, serializePaymentMeta } from './utils/paymentMeta.js';
 
 // Ensure user context (JWT) is parsed before admin checks
 // (index.js already applies attachUser globally before /api/pay, but this is defensive)
@@ -48,16 +49,17 @@ router.post('/init', async (req, res) => {
     if (!order) {
       return res.status(404).json({ ok: false, error: 'ORDER_NOT_FOUND', message: 'Order not found for bank init' });
     }
-    const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
-    const existingMeta = order.paymentMeta || {};
+    const idemKey = String(req.headers?.['x-idempotency-key'] || '').slice(0,64) || null;
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
     // If idempotent repeat with same idemKey or reference already exists and status pending, return same reference
     if ((idemKey && existingMeta?.bank?.idemInit === idemKey) || (existingMeta?.bank?.reference && order.status === 'pending_bank_review')) {
       return res.json({ ok: true, bank: { ...BANK_ACCOUNT, reference: existingMeta.bank.reference }, idempotent: true });
     }
     const reference = makeReference(orderId);
     const newMeta = { ...existingMeta, bank: { ...existingMeta.bank, reference, idemInit: idemKey || undefined } };
+    const serializedMeta = serializePaymentMeta(newMeta);
     // Move order into pending_bank_review state awaiting receipt upload
-    order = await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'bank', paymentMeta: newMeta, status: 'pending_bank_review' } });
+    order = await prisma.order.update({ where: { id: orderId }, data: { paymentMethod: 'bank', paymentMeta: serializedMeta, status: 'pending_bank_review' } });
     audit({ action: 'order.bank.init', entity: 'Order', entityId: orderId, userId: order.userId, meta: { reference } });
     // Lightweight server log
      
@@ -117,10 +119,11 @@ router.post('/upload', attachUser, (req, res, next) => {
     if (req.user?.role !== 'admin' && order.userId !== (req.user?.id || 'guest')) {
       return res.status(403).json({ ok: false, error: 'FORBIDDEN' });
     }
-    const existingMeta = order.paymentMeta || {};
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
     const relPath = req.file ? `/uploads/bank-receipts/${req.file.filename}` : null;
     const newMeta = { ...existingMeta, bank: { ...(existingMeta.bank||{}), receiptUrl: relPath } };
-    await prisma.order.update({ where: { id: order.id }, data: { paymentMeta: newMeta, status: 'pending_bank_review' } });
+    const serializedMeta = serializePaymentMeta(newMeta);
+    await prisma.order.update({ where: { id: order.id }, data: { paymentMeta: serializedMeta, status: 'pending_bank_review' } });
     audit({ action: 'order.bank.receipt', entity: 'Order', entityId: order.id, userId: req.user?.id, meta: { receiptUrl: relPath } });
     res.json({ ok: true, receiptUrl: relPath });
   } catch (e) {
@@ -143,17 +146,18 @@ router.post('/confirm', attachUser, async (req, res) => {
     if (order.paymentMethod !== 'bank') {
       return res.status(400).json({ ok: false, error: 'NOT_BANK_METHOD', message: 'Order is not a bank transfer' });
     }
-    const existingMeta = order.paymentMeta || {};
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
     const storedRef = existingMeta?.bank?.reference;
     if (storedRef && reference && storedRef !== reference) {
       return res.status(400).json({ ok: false, error: 'REFERENCE_MISMATCH', message: 'Reference does not match stored one.' });
     }
-    const idemKey = String(req.headers['x-idempotency-key'] || '').slice(0,64) || null;
+    const idemKey = String(req.headers?.['x-idempotency-key'] || '').slice(0,64) || null;
     if (order.status === 'paid') {
       return res.json({ ok: true, message: 'Already paid', orderId, idempotent: true });
     }
     const updatedMeta = { ...existingMeta, bank: { ...(existingMeta.bank||{}), reference: storedRef || reference, confirmedAt: new Date().toISOString(), idemConfirm: idemKey || undefined } };
-  const updated = await prisma.order.update({ where: { id: order.id }, data: { status: 'paid', paymentMeta: updatedMeta } });
+    const serializedMeta = serializePaymentMeta(updatedMeta);
+    const updated = await prisma.order.update({ where: { id: order.id }, data: { status: 'paid', paymentMeta: serializedMeta } });
     audit({ action: 'order.bank.confirm', entity: 'Order', entityId: order.id, userId: req.user.id, meta: { reference: updatedMeta.bank.reference } });
     // Email placeholder
     try { await sendEmail({ to: updated.userId, subject: 'Bank Transfer Confirmed', text: `Order ${updated.id} marked as paid.` }); } catch {/* ignore */}
@@ -183,9 +187,10 @@ router.post('/reject', attachUser, async (req, res) => {
     if (order.status === 'cancelled' || order.status === 'canceled') {
       return res.json({ ok: true, message: 'Already cancelled', orderId });
     }
-    const existingMeta = order.paymentMeta || {};
+    const existingMeta = deserializePaymentMeta(order.paymentMeta) || {};
     const updatedMeta = { ...existingMeta, bank: { ...(existingMeta.bank||{}), rejectedAt: new Date().toISOString(), rejectReason: reason || null } };
-    const updated = await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled', paymentMeta: updatedMeta } });
+    const serializedMeta = serializePaymentMeta(updatedMeta);
+    const updated = await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled', paymentMeta: serializedMeta } });
     audit({ action: 'order.bank.reject', entity: 'Order', entityId: order.id, userId: req.user.id, meta: { reason: reason || null } });
     try { await sendEmail({ to: updated.userId, subject: 'Bank Transfer Rejected', text: `Order ${updated.id} was rejected. Reason: ${reason || 'N/A'}` }); } catch {/* ignore */}
     res.json({ ok: true, orderId: order.id, status: 'cancelled' });

@@ -2,6 +2,7 @@ import express from 'express';
 import Stripe from 'stripe';
 import prisma from './db/client.js';
 import { audit } from './utils/audit.js';
+import { serializePaymentMeta, mergePaymentMeta, deserializePaymentMeta } from './utils/paymentMeta.js';
 
 const router = express.Router();
 
@@ -13,6 +14,39 @@ if (!stripeSecretKey) {
 
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
+async function findOrderByStripeIntent(paymentIntentId, options = {}) {
+  if (!paymentIntentId) return null;
+  const { select, include } = options;
+  const where = {
+    OR: [
+      { paymentMeta: { path: ['index', 'stripe', 'paymentIntentId'], equals: paymentIntentId } },
+      { paymentMeta: { path: ['stripePaymentIntentId'], equals: paymentIntentId } }
+    ]
+  };
+
+  let order = await prisma.order.findFirst({ where, select, include });
+  if (order) return order;
+
+  const candidates = await prisma.order.findMany({
+    where: { paymentMethod: 'stripe' },
+    orderBy: { updatedAt: 'desc' },
+    take: 50,
+    select: { id: true, paymentMeta: true }
+  }).catch(() => []);
+
+  for (const candidate of candidates) {
+    const meta = deserializePaymentMeta(candidate.paymentMeta);
+    if (!meta) continue;
+    const matches = meta?.stripePaymentIntentId === paymentIntentId
+      || meta?.stripe?.paymentIntentId === paymentIntentId;
+    if (matches) {
+      order = await prisma.order.findUnique({ where: { id: candidate.id }, select, include });
+      if (order) return order;
+    }
+  }
+  return null;
+}
+
 // Create Payment Intent
 router.post('/create-intent', async (req, res) => {
   try {
@@ -22,14 +56,21 @@ router.post('/create-intent', async (req, res) => {
 
     const { amount, currency = 'SAR', orderId, items, userId } = req.body;
 
-    // Create or get order
-    let order;
+    let order = null;
     if (orderId) {
       order = await prisma.order.findUnique({ where: { id: orderId } });
     }
 
     if (!order) {
-      // Create order if not exists
+      const initialMeta = serializePaymentMeta({
+        stage: 'stripe:init',
+        stripe: {
+          requestedAt: new Date().toISOString(),
+          requestedAmount: amount,
+          requestedCurrency: currency
+        }
+      });
+
       order = await prisma.order.create({
         data: {
           id: orderId || `order_${Date.now()}`,
@@ -39,7 +80,7 @@ router.post('/create-intent', async (req, res) => {
           currency,
           items: items || [],
           total: amount,
-          paymentMeta: { stripeIntent: true }
+          paymentMeta: initialMeta
         }
       });
     }
@@ -55,13 +96,25 @@ router.post('/create-intent', async (req, res) => {
     });
 
     // Update order with payment intent ID
+    const updatedMeta = mergePaymentMeta(order.paymentMeta, meta => {
+      const next = { ...meta };
+      next.stripePaymentIntentId = paymentIntent.id;
+      next.paymentMethod = 'stripe';
+      next.stripe = {
+        ...(meta.stripe || {}),
+        paymentIntentId: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
+        lastStatus: paymentIntent.status
+      };
+      next.stage = 'stripe:intent';
+      return next;
+    }) || serializePaymentMeta({ stripePaymentIntentId: paymentIntent.id });
+
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        paymentMeta: {
-          ...order.paymentMeta,
-          stripePaymentIntentId: paymentIntent.id
-        }
+        paymentMeta: updatedMeta,
+        paymentMethod: 'stripe'
       }
     });
 
@@ -99,20 +152,25 @@ router.post('/confirm', async (req, res) => {
 
     if (paymentIntent.status === 'succeeded') {
       // Update order status
-      const order = await prisma.order.findFirst({
-        where: { paymentMeta: { path: ['stripePaymentIntentId'], equals: paymentIntentId } }
-      });
+      const order = await findOrderByStripeIntent(paymentIntentId);
 
       if (order) {
+        const nextMeta = mergePaymentMeta(order.paymentMeta, meta => {
+          const next = { ...meta };
+          next.stripeConfirmed = true;
+          if (paymentMethodId) {
+            next.stripePaymentMethodId = paymentMethodId;
+            next.stripe = { ...(meta.stripe || {}), paymentMethodId };
+          }
+          next.stage = 'stripe:confirmed';
+          return next;
+        }) || serializePaymentMeta({ stripeConfirmed: true, stripePaymentMethodId: paymentMethodId });
+
         await prisma.order.update({
           where: { id: order.id },
           data: {
             status: 'paid',
-            paymentMeta: {
-              ...order.paymentMeta,
-              stripeConfirmed: true,
-              stripePaymentMethodId: paymentMethodId
-            }
+            paymentMeta: nextMeta
           }
         });
 
@@ -138,7 +196,7 @@ router.post('/confirm', async (req, res) => {
 
 // Webhook handler for Stripe events
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
+  const sig = req.headers?.['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let event;
@@ -158,19 +216,20 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
-        const order = await prisma.order.findFirst({
-          where: { paymentMeta: { path: ['stripePaymentIntentId'], equals: paymentIntent.id } }
-        });
+        const order = await findOrderByStripeIntent(paymentIntent.id);
 
         if (order && order.status !== 'paid') {
+          const nextMeta = mergePaymentMeta(order.paymentMeta, meta => {
+            const next = { ...meta };
+            next.stripeWebhookConfirmed = true;
+            next.stage = 'stripe:webhook_confirmed';
+            return next;
+          }) || serializePaymentMeta({ stripeWebhookConfirmed: true });
           await prisma.order.update({
             where: { id: order.id },
             data: {
               status: 'paid',
-              paymentMeta: {
-                ...order.paymentMeta,
-                stripeWebhookConfirmed: true
-              }
+              paymentMeta: nextMeta
             }
           });
 
@@ -187,20 +246,24 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
       case 'payment_intent.payment_failed': {
         const failedIntent = event.data.object;
-        const failedOrder = await prisma.order.findFirst({
-          where: { paymentMeta: { path: ['stripePaymentIntentId'], equals: failedIntent.id } }
-        });
+        const failedOrder = await findOrderByStripeIntent(failedIntent.id);
 
         if (failedOrder) {
+          const nextMeta = mergePaymentMeta(failedOrder.paymentMeta, meta => {
+            const next = { ...meta };
+            next.stripeWebhookFailed = true;
+            next.stripeFailureReason = failedIntent.last_payment_error?.message;
+            next.stage = 'stripe:webhook_failed';
+            return next;
+          }) || serializePaymentMeta({
+            stripeWebhookFailed: true,
+            stripeFailureReason: failedIntent.last_payment_error?.message
+          });
           await prisma.order.update({
             where: { id: failedOrder.id },
             data: {
               status: 'payment_failed',
-              paymentMeta: {
-                ...failedOrder.paymentMeta,
-                stripeWebhookFailed: true,
-                stripeFailureReason: failedIntent.last_payment_error?.message
-              }
+              paymentMeta: nextMeta
             }
           });
 

@@ -2,10 +2,11 @@ import { Router } from 'express'
 import prisma from '../db/client.js'
 import { attachUser, requireAdmin } from '../middleware/auth.js'
 import PDFDocument from 'pdfkit'
-import { generateInvoiceQrPng } from '../utils/qr.js'
-import { signToken } from '../utils/jwt.js'
+import { generateInvoiceQrPng, generateZatcaQrPng } from '../utils/qr.js' // Ensure generateZatcaQrPng is imported
+import { signAccessToken } from '../utils/jwt.js'
 import { generateInvoiceNumber } from '../utils/invoice.js'
 import { sendInvoiceWhatsApp, getWhatsAppHealth } from '../services/whatsapp.js'
+import { deserializePaymentMeta } from '../utils/paymentMeta.js'
 
 const router = Router()
 
@@ -17,7 +18,7 @@ router.post('/', attachUser, async (req, res) => {
     const { orderId } = req.body || {}
     if (!orderId) return res.status(400).json({ ok:false, error:'MISSING_ORDER_ID' })
     const order = await prisma.order.findUnique({ where: { id: orderId } })
-    if (!order) return res.status(404).json({ ok:false, error:'ORDER_NOT_FOUND' })
+    if (!order) return res.status(404).json({ ok:false, error:'ORDER_NOT_FOUND', message: 'Order not found' })
     if (req.user?.role !== 'admin' && order.userId !== req.user?.id) return res.status(403).json({ ok:false, error:'FORBIDDEN' })
     const number = await generateInvoiceNumber()
     const inv = await prisma.invoice.create({ data: {
@@ -30,9 +31,9 @@ router.post('/', attachUser, async (req, res) => {
       tax: order.tax,
       total: order.grandTotal,
       paymentMethod: order.paymentMethod || null,
-      meta: order.paymentMeta || null
+      meta: deserializePaymentMeta(order.paymentMeta) || null
     }})
-    await prisma.invoiceLog.create({ data: { invoiceId: inv.id, userId: req.user?.id || null, action: 'invoice.created', meta: { orderId } } })
+    await prisma.invoiceLog.create({ data: { invoiceId: inv.id, userId: req.user?.id || null, action: 'invoice.created', meta: { orderId, invoiceNumber: inv.invoiceNumber } } })
     res.status(201).json({ ok:true, invoice: inv })
   } catch (e) { res.status(500).json({ ok:false, error:'INVOICE_CREATE_FAILED', message: e.message }) }
 })
@@ -43,7 +44,7 @@ router.get('/by-order/:orderId', attachUser, async (req, res) => {
     const { orderId } = req.params
     if (!orderId) return res.status(400).json({ ok:false, error:'MISSING_ORDER_ID' })
     const inv = await prisma.invoice.findFirst({ where: { orderId }, orderBy: { createdAt: 'desc' } })
-    if (!inv) return res.status(404).json({ ok:false, error:'NOT_FOUND' })
+    if (!inv) return res.status(404).json({ ok:false, error:'NOT_FOUND', message: 'Invoice not found for this order' })
     if (req.user?.role !== 'admin' && inv.userId !== req.user?.id) return res.status(403).json({ ok:false, error:'FORBIDDEN' })
     res.json({ ok:true, invoice: inv })
   } catch (e) { res.status(500).json({ ok:false, error:'INVOICE_GET_BY_ORDER_FAILED', message: e.message }) }
@@ -56,7 +57,7 @@ router.get('/', attachUser, requireAdmin, async (req, res) => {
     const where = {}
     if (userId) where.userId = String(userId)
     if (status) where.status = String(status)
-    const list = await prisma.invoice.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200 })
+    const list = await prisma.invoice.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200, include: { user: { select: { id: true, email: true, name: true } } } }) // Include user info
     res.json({ ok:true, invoices: list })
   } catch (e) { res.status(500).json({ ok:false, error:'INVOICE_LIST_FAILED', message: e.message }) }
 })
@@ -67,7 +68,8 @@ router.get('/_whatsapp', attachUser, requireAdmin, (req, res) => {
     const health = getWhatsAppHealth();
     res.json({ ok: true, health });
   } catch (e) {
-    res.status(500).json({ ok: false, error: 'WHATSAPP_HEALTH_FAILED', message: e.message });
+    req.log?.error({ err: e }, 'WhatsApp health check failed'); // Use req.log
+    res.status(500).json({ ok: false, error: 'WHATSAPP_HEALTH_FAILED', message: e.message }); // Return error message
   }
 });
 
@@ -169,7 +171,7 @@ router.get('/:id/pdf', attachUser, async (req, res) => {
         const baseUrl = req.protocol + '://' + req.get('host')
         // Generate a scoped access token so scanning QR can fetch the invoice in non-prod without a session.
         // Payload encodes the invoice owner id; attachUser restricts query-token usage to invoice endpoints only.
-        const qrToken = signToken({ id: inv.userId, role: 'user' }, { expiresIn: process.env.INVOICE_QR_TOKEN_TTL || '30d' })
+        const qrToken = signAccessToken({ id: inv.userId, role: 'user' }, { expiresIn: process.env.INVOICE_QR_TOKEN_TTL || '30d' })
         const qrUrl = `${baseUrl}/api/invoices/${inv.id}?token=${encodeURIComponent(qrToken)}`
         const qrPng = await generateInvoiceQrPng(qrUrl)
         doc.image(qrPng, width/2-45, doc.y+10, { width: 90, height: 90 })
@@ -219,7 +221,7 @@ router.get('/:id/pdf', attachUser, async (req, res) => {
     // QR code (official invoice verification)
     try {
       const baseUrl = req.protocol + '://' + req.get('host')
-      const qrToken = signToken({ id: inv.userId, role: 'user' }, { expiresIn: process.env.INVOICE_QR_TOKEN_TTL || '30d' })
+      const qrToken = signAccessToken({ id: inv.userId, role: 'user' }, { expiresIn: process.env.INVOICE_QR_TOKEN_TTL || '30d' })
       const qrUrl = `${baseUrl}/api/invoices/${inv.id}?token=${encodeURIComponent(qrToken)}`
       const qrPng = await generateInvoiceQrPng(qrUrl)
       doc.image(qrPng, doc.page.width-160, doc.y, { width: 90, height: 90 })

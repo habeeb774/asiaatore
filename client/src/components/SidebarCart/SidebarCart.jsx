@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useLanguage, LocalizedText, CurrencyDisplay } from '../../contexts/LanguageContext';
+import { useLanguage, LocalizedText, CurrencyDisplay } from '../../context/LanguageContext';
 import { useCart } from '../../contexts/CartContext';
 import { LazyImage } from '../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';

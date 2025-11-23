@@ -2,6 +2,7 @@
 export function connectSse(path = '/api/events', onEvent = () => {}, opts = {}) {
   let es;
   let reconnectTimer = null;
+  let retryCount = 0;
   const retryDelay = opts.retryDelay || 2000;
 
   function start() {
@@ -12,6 +13,7 @@ export function connectSse(path = '/api/events', onEvent = () => {}, opts = {}) 
       return;
     }
     es.onopen = () => {
+      retryCount = 0; // Reset retry count on successful connection
       if (opts.onOpen) opts.onOpen();
     };
     es.onmessage = (ev) => {
@@ -35,9 +37,22 @@ export function connectSse(path = '/api/events', onEvent = () => {}, opts = {}) 
   }
 
   function scheduleReconnect() {
-    if (es) try { es.close(); } catch {}
-    if (reconnectTimer) return;
-    reconnectTimer = setTimeout(() => { reconnectTimer = null; start(); }, retryDelay);
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (opts.maxRetries && retryCount >= opts.maxRetries) {
+      if (opts.onMaxRetries) opts.onMaxRetries();
+      return;
+    }
+    // Exponential backoff with jitter
+    const baseDelay = opts.retryDelay || 2000;
+    const maxDelay = 30000;
+    const exponentialDelay = Math.min(baseDelay * Math.pow(2, retryCount), maxDelay);
+    const jitter = Math.random() * 1000;
+    const delay = exponentialDelay + jitter;
+    
+    reconnectTimer = setTimeout(() => {
+      retryCount++;
+      start();
+    }, delay);
   }
 
   function close() {

@@ -28,7 +28,7 @@ async function smsaRequest(endpoint, method = 'POST', body = {}) {
         trackingNumber: tn,
         status: 'in_transit',
         history: [
-          { ts: new Date(Date.now()-86400000).toISOString(), status: 'created' },
+          { ts: new Date(Date.now()-86882900).toISOString(), status: 'created' },
           { ts: new Date(Date.now()-43200000).toISOString(), status: 'picked_up' },
           { ts: new Date().toISOString(), status: 'in_transit' }
         ]
@@ -64,7 +64,9 @@ async function smsaRequest(endpoint, method = 'POST', body = {}) {
     }
     return await response.json();
   } catch (error) {
-    console.error('SMSA API request error:', error);
+    // Use a logger if available, otherwise console.error
+    if (global.appLogger) global.appLogger.error({ err: error }, 'SMSA API request error');
+    else console.error('SMSA API request error:', error);
     throw new Error('Failed to communicate with SMSA API.');
   }
 }

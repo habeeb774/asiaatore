@@ -78,7 +78,7 @@ router.post('/users', requireAdmin, async (req, res) => {
         const hash = sha256(token);
         const expiresAt = new Date(Date.now() + 1000*60*60*24);
         await prisma.authToken.create({ data: { userId: created.id, type: 'password_reset', tokenHash: hash, expiresAt } });
-        const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.headers.host}`;
+        const baseUrl = process.env.APP_BASE_URL || `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}`;
         const url = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(created.email)}`;
         await sendEmail({ to: created.email, subject: 'Account created', text: `Set password: ${url}` });
         inviteSent = true;

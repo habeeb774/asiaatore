@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs'; // Import bcryptjs for password hashing
 import prisma from '../db/client.js';
 
 // Minimal setup routes. Intentionally unauthenticated but guarded to only allow when no users exist.
@@ -20,8 +21,9 @@ router.post('/create-admin', async (req, res) => {
   try {
     if (!(await noUsersExist())) return res.status(403).json({ ok: false, error: 'ALREADY_INITIALIZED' });
     const { email, password, name } = req.body || {};
-    if (!email || !password) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
-    const created = await prisma.user.create({ data: { email, passwordHash: password, role: 'admin', name: name || 'Administrator' } });
+    if (!email || !password) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS', message: 'Email and password are required' });
+    const hashedPassword = await bcrypt.hash(password, 12); // Hash the password
+    const created = await prisma.user.create({ data: { email, password: hashedPassword, role: 'admin', name: name || 'Administrator' } }); // Use 'password' field
     return res.json({ ok: true, userId: created.id });
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'SETUP_FAILED', message: e.message });

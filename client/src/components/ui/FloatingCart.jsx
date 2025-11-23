@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCartIcon } from 'lucide-react';
-import { useCart } from '../../stores/CartContext';
+import { useCart } from '../../contexts/CartContext';
 
 const FloatingCart = () => {
   const { cartItems = [] } = useCart();

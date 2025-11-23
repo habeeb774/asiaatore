@@ -27,7 +27,7 @@ router.get('/', requireAdmin, async (req, res) => {
         entity: l.entity,
         entityId: l.entityId,
         userId: l.userId,
-        meta: l.meta,
+        meta: typeof l.meta === 'string' ? JSON.parse(l.meta) : l.meta, // Ensure meta is parsed if stored as string
         createdAt: l.createdAt
       })),
       page: pg,

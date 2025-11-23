@@ -1,5 +1,5 @@
 import React, { useState, useContext, createContext } from 'react';
-import { useLanguage } from '../../../stores/LanguageContext';
+import { useLanguage } from '../../../context/LanguageContext';
 import Modal from '../../ui/Modal';
 
 const GamificationContext = createContext();

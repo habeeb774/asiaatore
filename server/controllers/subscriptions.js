@@ -38,7 +38,7 @@ router.get('/plans', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error fetching subscription plans:', error);
+    req.log?.error({ err: error }, 'Error fetching subscription plans'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في جلب خطط الاشتراك' : 'Error fetching subscription plans'
@@ -97,7 +97,7 @@ router.get('/current', requireAuth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching current subscription:', error);
+    req.log?.error({ err: error }, 'Error fetching current subscription'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في جلب الاشتراك الحالي' : 'Error fetching current subscription'
@@ -229,7 +229,7 @@ router.post('/subscribe/:planId', requireAuth, async (req, res) => {
       message: req.locale === 'ar' ? 'تم إنشاء الاشتراك بنجاح' : 'Subscription created successfully'
     });
   } catch (error) {
-    console.error('Error creating subscription:', error);
+    req.log?.error({ err: error }, 'Error creating subscription'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في إنشاء الاشتراك' : 'Error creating subscription'
@@ -275,7 +275,7 @@ router.post('/cancel', requireAuth, async (req, res) => {
       message: req.locale === 'ar' ? 'تم إلغاء الاشتراك بنجاح' : 'Subscription cancelled successfully'
     });
   } catch (error) {
-    console.error('Error cancelling subscription:', error);
+    req.log?.error({ err: error }, 'Error cancelling subscription'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في إلغاء الاشتراك' : 'Error cancelling subscription'
@@ -309,7 +309,7 @@ router.get('/benefits', requireAuth, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error fetching subscription benefits:', error);
+    req.log?.error({ err: error }, 'Error fetching subscription benefits'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في جلب فوائد الاشتراك' : 'Error fetching subscription benefits'
@@ -337,7 +337,7 @@ router.get('/admin/all', requireAdmin, async (req, res) => {
       data: subscriptions
     });
   } catch (error) {
-    console.error('Error fetching all subscriptions:', error);
+    req.log?.error({ err: error }, 'Error fetching all subscriptions'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error fetching subscriptions'
@@ -398,7 +398,7 @@ router.post('/admin/plans', requireAdmin, async (req, res) => {
       message: 'Subscription plan created successfully'
     });
   } catch (error) {
-    console.error('Error creating subscription plan:', error);
+    req.log?.error({ err: error }, 'Error creating subscription plan'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error creating subscription plan'

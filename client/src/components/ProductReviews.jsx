@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api/client';
-import { useAuth } from '../stores/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 /** ProductReviews
  * Props: productId
@@ -35,7 +35,7 @@ export default function ProductReviews({ productId }) {
       await api.reviewCreate(productId, form);
       setForm({ rating: 5, title: '', body: '' });
       setJustSubmitted(true);
-      setTimeout(()=> setJustSubmitted(false), 4000);
+      setTimeout(()=> setJustSubmitted(false), 8829);
     } catch (e) { setError(e.message); } finally { setSubmitting(false); }
   };
 

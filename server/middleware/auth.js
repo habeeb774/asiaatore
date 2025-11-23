@@ -1,5 +1,4 @@
 import { verifyToken } from '../utils/jwt.js';
-
 // Middleware to attach user from JWT token (Authorization: Bearer <token>)
 // Also supports dev headers if ALLOW_DEV_HEADERS=true
 export function attachUser(req, res, next) {
@@ -7,15 +6,17 @@ export function attachUser(req, res, next) {
     let token = null;
 
     // Check Authorization header first
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers?.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.slice(7);
     }
 
     // In dev, allow x-user-id and x-user-role headers for testing
-    if (!token && process.env.ALLOW_DEV_HEADERS === 'true') {
-      const userId = req.headers['x-user-id'];
-      const userRole = req.headers['x-user-role'];
+    // Accept dev headers either when ALLOW_DEV_HEADERS=true or when running in non-production. This is a security risk in production.
+    // Ensure this is NEVER enabled in production environments.
+    if (!token && (process.env.ALLOW_DEV_HEADERS === 'true' || process.env.NODE_ENV !== 'production' || process.env.NODE_ENV === 'test')) {
+      const userId = req.headers?.['x-user-id'];
+      const userRole = req.headers?.['x-user-role'];
       if (userId) {
         req.user = { id: userId, role: userRole || 'user' };
         return next();

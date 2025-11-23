@@ -1,9 +1,8 @@
-// ✅ Fixed version of HeaderNav.jsx (missing closing tags issue)
+// ✅ Updated HeaderNav.jsx with requested modifications
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence } from '../../lib/framerLazy';
 import { createPortal } from 'react-dom';
-import { User as UserIcon } from 'lucide-react';
 import CartPanel from '../cart/CartPanel';
 import HeaderControls from './HeaderControls';
 import TopStrip from './TopStrip';
@@ -11,11 +10,11 @@ import { MenuIcon, XIcon, SearchIcon } from './HeaderIcons';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { useSearch } from '../../hooks/useSearch';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import { useSidebar } from '../../stores/SidebarContext';
-import { useCart } from '../../stores/CartContext';
-import { useLanguage } from '../../stores/LanguageContext';
-import { useAuth } from '../../stores/AuthContext';
-import { useSettings } from '../../stores/SettingsContext';
+import { useSidebar } from '../../contexts/SidebarContext';
+import { useCart } from '../../contexts/CartContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const defaultLanguage = () => ({ t: (k) => k, locale: 'en', setLocale: () => {} });
 const defaultAuth = () => ({ user: null, logout: () => {} });
@@ -52,7 +51,9 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
 
   const { pathname } = location;
   const isHome = ['/', '/en', '/fr'].includes(pathname);
-  const headerHeight = isHome ? 'h-14 md:h-16' : 'h-16';
+
+  // زيادة ارتفاع الهيدر
+  const headerHeight = isHome ? 'h-24 md:h-28' : 'h-24';
 
   const triggerSearch = useCallback(() => {
     try {
@@ -83,57 +84,42 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
           {t('Skip to content')}
         </a>
 
-        <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-2 sm:px-4 md:px-6 lg:px-10 grid grid-cols-12 items-center gap-1 sm:gap-2 md:gap-4">
-          {/* يسار الهيدر */}
-          <div className="col-span-2 flex items-center gap-3 justify-start">
+        <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-4 grid grid-cols-12 items-center">
+
+          {/* زر القائمة — يظهر فقط على الشاشات الصغيرة */}
+          <div className="col-span-2 flex items-center sm:hidden">
             <button
               onClick={toggleSidebar}
               aria-expanded={isMenuOpen}
               aria-label={isMenuOpen ? t('إغلاق القائمة') : t('افتح القائمة')}
               aria-controls="app-sidebar"
-              className="p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30 focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-[36px] min-h-[36px] transition-all duration-300"
+              className="p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 border shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
             >
-              {isMenuOpen ? <XIcon size={18} /> : <MenuIcon size={18} />}
+              {isMenuOpen ? <XIcon size={20} /> : <MenuIcon size={20} />}
             </button>
-            <Link to="/" aria-label={setting?.siteName || 'Home'} className="flex items-center gap-2">
-              <img src={setting?.logoUrl || '/images/site-logo.svg'} alt={setting?.siteName || 'Logo'} className="h-10 w-auto block" />
-              <span className="hidden sm:inline-block font-semibold text-base text-slate-800 dark:text-slate-100">
-                {setting?.siteName || ''}
+          </div>
+
+          {/* الشعار في المنتصف مع اسم الشركة */}
+          <div className="col-span-8 flex flex-col items-center justify-center text-center select-none pointer-events-auto">
+            <Link to="/" className="flex flex-col items-center">
+              <img
+                src={setting?.logoUrl || '/images/site-logo.svg'}
+                alt={setting?.siteName || 'Logo'}
+                className="h-14 md:h-16 w-auto mb-1"
+              />
+              <span className="text-sm md:text-base font-semibold text-slate-800 dark:text-slate-100">
+                شركة منفذ آسيا التجارية
               </span>
             </Link>
           </div>
 
-          {/* يمين الهيدر */}
-          <div className="col-span-10 flex items-center justify-end gap-2">
-            <div className="hidden sm:flex items-center mr-3">
-              <div className="w-full max-w-xs sm:max-w-sm md:max-w-lg lg:max-w-xl">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/10 to-teal-400/10 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div
-                    className="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200/60 dark:border-slate-700/60 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
-                    onClick={triggerSearch}
-                  >
-                    <div className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5">
-                      <SearchIcon size={16} className="text-gray-400 dark:text-gray-500" />
-                      <span className="flex-1 text-gray-500 dark:text-gray-400 text-sm md:text-base truncate">
-                        {locale === 'ar' ? 'البحث عن المنتجات...' : 'Search products...'}
-                      </span>
-                      <div className="hidden md:flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">/</kbd>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile search */}
+          {/* عناصر التحكم — تبقى على اليمين */}
+          <div className="col-span-2 flex items-center justify-end gap-2">
             <button
               onClick={triggerSearch}
-              className="sm:hidden p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30 focus-visible:ring-2 focus-visible:ring-emerald-500 min-w-[36px] min-h-[36px] transition-all duration-300"
-              aria-label={locale === 'ar' ? 'البحث' : 'Search'}
+              className="sm:hidden p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 border shadow-sm"
             >
-              <SearchIcon size={16} className="text-gray-600 dark:text-gray-400" />
+              <SearchIcon size={18} />
             </button>
 
             <HeaderControls

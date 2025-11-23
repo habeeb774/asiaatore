@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLanguage, LocalizedText, DateDisplay } from '../../../stores/LanguageContext';
+import { useLanguage, LocalizedText, DateDisplay } from '../../../context/LanguageContext';
 import { useNotifications } from '../../../components/Notification/Notification';
 import { LazyImage } from '../../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../../shared/SkeletonLoader/SkeletonLoader';
@@ -182,6 +182,7 @@ const ReviewsManager = ({ productId, className = '' }) => {
   };
 
   const getStatusColor = (status) => {
+    if (typeof status !== 'string') return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     switch (status) {
       case 'approved':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
@@ -400,7 +401,7 @@ const ReviewsManager = ({ productId, className = '' }) => {
                     </h4>
                     {renderStars(review.rating)}
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(review.status)}`}>
-                      {t(review.status)}
+                      {t(typeof review.status === 'string' ? review.status : 'unknown')}
                     </span>
                   </div>
 

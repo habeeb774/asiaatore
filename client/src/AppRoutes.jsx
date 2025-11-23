@@ -1,85 +1,84 @@
 import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
-import { ChatProvider } from './stores/ChatContext.jsx';
+import { ChatProvider } from './contexts/ChatContext.jsx';
 import { RouteErrorBoundary, PageFallback } from './components/routing/RouteBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useAuth } from './stores/AuthContext';
-import AdminUsers from './pages/admin/AdminUsers';
-import Reports from './pages/admin/Reports';
-import BankTransfers from './pages/admin/BankTransfers';
-import Analytics from './pages/admin/Analytics';
-import Customers from './pages/admin/Customers';
-import Settings from './pages/admin/Settings';
-import AuditAdmin from './pages/admin/AuditAdmin';
-import ReviewsAdmin from './pages/admin/ReviewsAdmin';
-import BrandsAdmin from './pages/admin/BrandsAdmin';
-import AccountSecurity from './pages/AccountSecurity';
-import DeveloperSettings from './pages/admin/DeveloperSettings.jsx';
-import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
+import { useAuth } from './contexts/AuthContext';
+import AdminUsers from "./pages/admin/users/AdminUsers";
+import Reports from "./pages/admin/reports/Reports";
+import BankTransfers from "./pages/admin/orders/BankTransfers";
+import Analytics from "./pages/admin/analytics/Analytics";
+import Customers from "./pages/admin/users/Customers";
+import Settings from "./pages/admin/Settings";
+import AuditAdmin from "./pages/admin/reports/AuditAdmin";
+import ReviewsAdmin from "./pages/admin/products/ReviewsAdmin";
+import BrandsAdmin from "./pages/admin/products/BrandsAdmin";
+import AccountSecurity from "./pages/account/AccountSecurity.jsx";
+import DeveloperSettings from "./pages/admin/integrations/DeveloperSettings.jsx";
+import AnalyticsDashboard from "./pages/admin/analytics/AnalyticsDashboard";
 import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Lazy load heavy pages to split bundles per-route
-const Home = React.lazy(() => import('./pages/Home'));
-const Cart = React.lazy(() => import('./pages/Cart'));
-const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+const Home = React.lazy(() => import('./pages/misc/Home.jsx'));
+const Cart = React.lazy(() => import('./pages/checkout/Cart.jsx'));
+const CheckoutPage = React.lazy(() => import('./pages/checkout/CheckoutPage.jsx'));
 const LoginPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.LoginPage })));
 const RegisterPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPage.jsx'));
 const VerifyEmailPage = React.lazy(() => import('./pages/auth/VerifyEmailPage.jsx'));
-const Orders = React.lazy(() => import('./pages/Orders'));
-const MyOrders = React.lazy(() => import('./pages/MyOrders'));
-const OrderDetails = React.lazy(() => import('./pages/OrderDetails'));
-const AdminDashboard = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/AdminDashboard'));
-const ProductInventory = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/ProductInventory.jsx'));
-const AdminOrders = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Orders.jsx'));
-const AdminProductsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Products.jsx'));
-const AdminInvoices = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Invoices.jsx'));
-const AdminMarketing = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Marketing.jsx'));
-const AdminCategories = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/CategoriesAdmin.jsx'));
-const AdminApps = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Apps.jsx'));
-const AdminIntegrations = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/Integrations.jsx'));
-const AdminAds = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/AdsAdmin.jsx'));
+const Orders = React.lazy(() => import('./pages/orders/Orders.jsx'));
+const MyOrders = React.lazy(() => import('./pages/orders/MyOrders.jsx'));
+const OrderDetails = React.lazy(() => import('./pages/orders/OrderDetails.jsx'));
+const AdminDashboard = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/dashboard/AdminDashboard.jsx'));
+const ProductInventory = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/products/ProductInventory.jsx'));
+const AdminOrders = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/orders/Orders.jsx'));
+const AdminInvoices = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/orders/Invoices.jsx'));
+const AdminMarketing = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Marketing.jsx'));
+const AdminCategories = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/products/CategoriesAdmin.jsx'));
+const AdminApps = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Apps.jsx'));
+const AdminIntegrations = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Integrations.jsx'));
+const AdminAds = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/AdsAdmin.jsx'));
 const SellerDashboard = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerDashboard.jsx'));
 const DeliveryDashboard = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliveryDashboard.jsx'));
 import Canonical from './components/Canonical';
 import { AnimatePresence, motion } from './lib/framerLazy.js';
 // NOTE: useLanguage was imported but unused; removed to prevent lint warning.
-const ProductDetailPage = React.lazy(() => import(/* webpackChunkName: "product" */ './pages/ProductDetailPage'));
-const StoresPage = React.lazy(() => import(/* webpackChunkName: "stores" */ './pages/StoresPage'));
-const OffersPage = React.lazy(() => import(/* webpackChunkName: "offers" */ './pages/OffersPage'));
-const InvoiceViewer = React.lazy(() => import(/* webpackChunkName: "invoice" */ './pages/InvoiceViewer'));
-const CatalogPage = React.lazy(() => import(/* webpackChunkName: "catalog" */ './pages/CatalogPage'));
-const LegalPage = React.lazy(() => import(/* webpackChunkName: "legal" */ './pages/Legal.jsx'));
-const ProductsPage = React.lazy(() => import(/* webpackChunkName: "products" */ './pages/Products'));
-const ChatPage = React.lazy(() => import(/* webpackChunkName: "chat" */ './pages/Chat.jsx'));
-const ProductReviews = React.lazy(() => import(/* webpackChunkName: "reviews" */ './pages/ProductReviews'));
-const StyleGuide = React.lazy(() => import(/* webpackChunkName: "styleguide" */ './pages/StyleGuide'));
-const SubscriptionPlans = React.lazy(() => import(/* webpackChunkName: "subscriptions" */ './pages/SubscriptionPlans'));
+const ProductDetailPage = React.lazy(() => import(/* webpackChunkName: "product" */ './pages/products/ProductDetailPage.jsx'));
+const StoresPage = React.lazy(() => import(/* webpackChunkName: "stores" */ './pages/store/StoresPage.jsx'));
+const OffersPage = React.lazy(() => import(/* webpackChunkName: "offers" */ './pages/misc/OffersPage.jsx'));
+const InvoiceViewer = React.lazy(() => import(/* webpackChunkName: "invoice" */ './pages/orders/InvoiceViewer.jsx'));
+const CatalogPage = React.lazy(() => import(/* webpackChunkName: "catalog" */ './pages/products/CatalogPage.jsx'));
+const LegalPage = React.lazy(() => import(/* webpackChunkName: "legal" */ './pages/legal/Legal.jsx'));
+const ProductsPage = React.lazy(() => import(/* webpackChunkName: "products" */ './pages/products/Products.jsx'));
+const ChatPage = React.lazy(() => import(/* webpackChunkName: "chat" */ './pages/misc/Chat.jsx'));
+const ProductReviews = React.lazy(() => import(/* webpackChunkName: "reviews" */ './pages/products/ProductReviews.jsx'));
+const StyleGuide = React.lazy(() => import(/* webpackChunkName: "styleguide" */ './pages/dev/StyleGuide.jsx'));
+const SubscriptionPlans = React.lazy(() => import(/* webpackChunkName: "subscriptions" */ './pages/features/SubscriptionPlans.jsx'));
 const ProfilePage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Profile'));
 const ProductManager = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/ProductManager'));
 const OrderTracker = React.lazy(() => import(/* webpackChunkName: "orders" */ './pages/orders/OrderTracker.jsx'));
 const AddressesPage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Addresses.jsx'));
 const SellerKyc = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerKyc.jsx'));
-const AdminKycReview = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/AdminKycReview.jsx'));
-const AdminSellersList = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/SellersList.jsx'));
+const AdminKycReview = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/users/AdminKycReview.jsx'));
+const SellerAdminPage = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/users/SellerAdminPage.jsx'));
 const DeliveryMap = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Map.jsx'));
 const DeliveryHistory = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/History.jsx'));
 const DeliveryAvailability = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Availability.jsx'));
 const DeliverySummary = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliverySummary.jsx'));
-const UIPreview = React.lazy(() => import(/* webpackChunkName: "ui" */ './pages/UIPreview.jsx'));
-const SearchResults = React.lazy(() => import(/* webpackChunkName: "search" */ './pages/SearchResults'));
+const UIPreview = React.lazy(() => import(/* webpackChunkName: "ui" */ './pages/dev/UIPreview.jsx'));
+const SearchResults = React.lazy(() => import(/* webpackChunkName: "search" */ './pages/misc/SearchResults.jsx'));
 // Home page now fully implemented (replaces placeholder)
-const ToastTest = React.lazy(() => import('./pages/ToastTest.jsx'));
-const NFTLoyaltyPage = React.lazy(() => import(/* webpackChunkName: "nft" */ './pages/NFTLoyaltyPage'));
-const GamificationPage = React.lazy(() => import(/* webpackChunkName: "gamification" */ './pages/GamificationPage'));
-const ARViewerPage = React.lazy(() => import(/* webpackChunkName: "ar" */ './pages/ARViewerPage'));
-const VoiceCommercePage = React.lazy(() => import(/* webpackChunkName: "voice" */ './pages/VoiceCommercePage'));
-const SocialCommercePage = React.lazy(() => import(/* webpackChunkName: "social" */ './pages/SocialCommercePage'));
-const SmartInventoryPage = React.lazy(() => import(/* webpackChunkName: "inventory" */ './pages/SmartInventoryPage'));
-const PersonalizationPage = React.lazy(() => import(/* webpackChunkName: "personalization" */ './pages/PersonalizationPage'));
-const SustainabilityPage = React.lazy(() => import(/* webpackChunkName: "sustainability" */ './pages/SustainabilityPage'));
+const ToastTest = React.lazy(() => import('./pages/dev/ToastTest.jsx'));
+const NFTLoyaltyPage = React.lazy(() => import(/* webpackChunkName: "nft" */ './pages/features/NFTLoyaltyPage.jsx'));
+const GamificationPage = React.lazy(() => import(/* webpackChunkName: "gamification" */ './pages/features/GamificationPage.jsx'));
+const ARViewerPage = React.lazy(() => import(/* webpackChunkName: "ar" */ './pages/features/ARViewerPage.jsx'));
+const VoiceCommercePage = React.lazy(() => import(/* webpackChunkName: "voice" */ './pages/features/VoiceCommercePage.jsx'));
+const SocialCommercePage = React.lazy(() => import(/* webpackChunkName: "social" */ './pages/features/SocialCommercePage.jsx'));
+const SmartInventoryPage = React.lazy(() => import(/* webpackChunkName: "inventory" */ './pages/features/SmartInventoryPage.jsx'));
+const PersonalizationPage = React.lazy(() => import(/* webpackChunkName: "personalization" */ './pages/features/PersonalizationPage.jsx'));
+const SustainabilityPage = React.lazy(() => import(/* webpackChunkName: "sustainability" */ './pages/features/SustainabilityPage.jsx'));
 
 const RouteTracker = () => {
   const location = useLocation();
@@ -188,6 +187,7 @@ const AdminRedirect = ({ prefix = '' }) => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const view = params.get('view');
+  if (!view) return <Navigate to={`${prefix}/admin/overview`} replace />;
   if (view === 'users') return <Navigate to={`${prefix}/admin/users`} replace />;
   if (view === 'customers') return <Navigate to={`${prefix}/admin/customers`} replace />;
   if (view === 'products') return <Navigate to={`${prefix}/admin/products`} replace />;
@@ -213,11 +213,7 @@ const AdminRedirect = ({ prefix = '' }) => {
   );
 };
 
-const AppRoutes = () => {
-  const { user } = useAuth() || {};
-  const userRole = user?.role;
-  return (
-  <ChatProvider>
+const MainAppShell = ({ user, userRole }) => (
   <AppLayout>
     <Canonical />
     <LocaleGuard>
@@ -351,6 +347,7 @@ const AppRoutes = () => {
   <Route path="/account/security" element={<ProtectedRoute isAuthed={!!user} element={<AccountSecurity />} redirectTo="/login" />} />
   <Route path="/account/profile" element={<ProtectedRoute isAuthed={!!user} element={<ProfilePage />} redirectTo="/login" />} />
   {/* Protected admin route (Arabic default) */}
+  <Route path="/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/login" />} />
   <Route path="/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/login" />} />
   {/* Dedicated Admin Categories page -> redirects to AdminDashboard cats view */}
   <Route path="/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/login" />} />
@@ -361,12 +358,12 @@ const AppRoutes = () => {
   <Route path="/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/login" />} />
   <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
   <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
-  <Route path="/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminSellersList />} redirectTo="/login" />} />
+  <Route path="/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<SellerAdminPage />} redirectTo="/login" />} />
   <Route path="/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/login" />} />
   <Route path="/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/login" />} />
   <Route path="/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['developer']} element={<DeveloperSettings />} redirectTo="/login" />} />
   <Route path="/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/login" />} />
-  <Route path="/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/login" />} />
+  <Route path="/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/login" />} />
   <Route path="/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/login" />} />
   <Route path="/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/login" />} />
   <Route path="/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/login" />} />
@@ -391,6 +388,7 @@ const AppRoutes = () => {
 
         {/* English prefixed */}
   <Route path="/en" element={<Home />} />
+  <Route path="/en/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/en/login" />} />
   <Route path="/en/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/en/login" />} />
   <Route path="/en/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/en/login" />} />
   <Route path="/en/catalog" element={<CatalogPage />} />
@@ -521,11 +519,12 @@ const AppRoutes = () => {
   <Route path="/en/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/en/login" />} />
   <Route path="/en/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/en/login" />} />
   <Route path="/en/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/en/login" />} />
   <Route path="/en/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/en/login" />} />
   <Route path="/en/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/en/login" />} />
   <Route path="/en/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/en/login" />} />
   <Route path="/en/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/en/login" />} />
+  <Route path="/en/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminAds />} redirectTo="/en/login" />} />
   <Route path="/en/login" element={<LoginPage />} />
   <Route path="/en/register" element={<RegisterPage />} />
   <Route path="/en/forgot" element={<ForgotPasswordPage />} />
@@ -660,6 +659,7 @@ const AppRoutes = () => {
   <Route path="/fr/account/profile" element={<ProtectedRoute isAuthed={!!user} element={<ProfilePage />} redirectTo="/fr/login" />} />
   {/* Protected admin route (French) with legacy query redirect */}
   <Route path="/fr/admin" element={<AdminRedirect prefix="/fr" />} />
+  <Route path="/fr/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/fr/login" />} />
   {/* FR: Admin Categories */}
   <Route path="/fr/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/fr/login" />} />
@@ -673,7 +673,7 @@ const AppRoutes = () => {
   <Route path="/fr/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminProductsAdmin />} redirectTo="/fr/login" />} />
+  <Route path="/fr/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/fr/login" />} />
   <Route path="/fr/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/fr/login" />} />
@@ -701,7 +701,25 @@ const AppRoutes = () => {
       </RouteErrorBoundary>
     </LocaleGuard>
   </AppLayout>
-  </ChatProvider>
+);
+
+const DashboardRoute = () => {
+  const { user } = useAuth() || {};
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role !== 'admin') return <Navigate to="/account/profile" replace />;
+  return <AdminDashboard />;
+};
+
+const AppRoutes = () => {
+  const { user } = useAuth() || {};
+  const userRole = user?.role;
+  return (
+    <ChatProvider>
+      <Routes>
+        <Route path="/dashboard" element={<DashboardRoute />} />
+        <Route path="/*" element={<MainAppShell user={user} userRole={userRole} />} />
+      </Routes>
+    </ChatProvider>
   );
 };
 

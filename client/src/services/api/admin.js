@@ -35,10 +35,7 @@ export const adminApi = {
   // Users
   listUsers: (params = {}) => {
     const qs = new URLSearchParams();
-    const page = params.page || 1;
-    const pageSize = params.pageSize || 1000; // fetch many for client-side filter
-    qs.set('page', page);
-    qs.set('pageSize', pageSize);
+    Object.entries(params).forEach(([k,v]) => { if (v !== undefined && v !== null && v !== '') qs.append(k, v); });
     return req('/admin/users' + (qs.toString() ? `?${qs.toString()}` : ''));
   },
   createUser: (data) => req('/admin/users', { method: 'POST', body: JSON.stringify(data) }),

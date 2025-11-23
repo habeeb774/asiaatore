@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../stores/AuthContext';
-import { Button, Input, Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui';
+import { useAuth } from '../../contexts/AuthContext';
+import { Button, Input } from '../../components/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import AuthShell from '../../components/features/auth/AuthShell.jsx';
+import AuthFormField from '../../components/features/auth/AuthFormField.jsx';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'المعرف مطلوب'),
@@ -12,7 +14,7 @@ const loginSchema = z.object({
 });
 
 const LoginPage = () => {
-  const { login, devLoginAs } = useAuth() || {};
+  const { login } = useAuth() || {};
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state && location.state.from) || new URLSearchParams(location.search).get('redirect') || '/';
@@ -65,70 +67,118 @@ const LoginPage = () => {
     }
   };
 
-  const devAssumeAdmin = () => {
-    if (devLoginAs) devLoginAs('admin');
-    navigate('/admin');
-  };
+  const highlights = [
+    'الدخول الآمن إلى لوحة التحكم وتقارير الأداء.',
+    'إدارة المنتجات والطلبات والعملاء من مكان واحد.',
+    'دعم كامل للغة العربية وتجربة مهيأة للفرق المحلية.',
+  ];
 
   return (
-    <div className="min-h-[calc(100vh-120px)] w-full grid place-items-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>تسجيل الدخول</CardTitle>
-          <CardDescription>ادخل بيانات حسابك للوصول إلى المتجر ولوحة التحكم.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" aria-describedby={errors.root ? 'login-error' : undefined}>
-            <Input
-              id="identifier"
-              type="text"
-              label="البريد الإلكتروني أو رقم الجوال"
-              autoComplete="username"
-              placeholder="example@mail.com أو 05xxxxxxxx"
-              error={errors.identifier?.message}
-              {...register('identifier')}
-            />
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPwd ? 'text' : 'password'}
-                label="كلمة المرور"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                error={errors.password?.message}
-                {...register('password')}
-                className="pr-16"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute top-1/2 -translate-y-1/2 right-1 text-xs text-gray-600 mt-3"
-                onClick={()=>setShowPwd(s=>!s)}
-                title={showPwd ? 'إخفاء' : 'إظهار'}
-              >{showPwd ? 'إخفاء' : 'إظهار'}</Button>
-            </div>
-            {errors.root && (
-              <div id="login-error" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{errors.root.message}</div>
-            )}
-            <Button type="submit" disabled={isSubmitting} variant="secondary" className="w-full bg-sky-600 hover:bg-sky-700 text-white border-transparent">
-              {isSubmitting ? '...جاري الدخول' : 'دخول'}
-            </Button>
-          </form>
-          <div className="mt-4 grid gap-2">
-            <Link to="/forgot" className="text-xs underline text-gray-600 hover:text-gray-800">نسيت كلمة المرور؟</Link>
-            {import.meta.env.DEV && (
-              <Button type="button" variant="outline" onClick={devAssumeAdmin} className="bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100">
-                دخول فوري (محاكاة أدمن محلي)
-              </Button>
-            )}
+    <AuthShell
+      title="أهلاً بعودتك"
+      subtitle="سجّل الدخول للوصول إلى لوحة الإدارة وتتبع الأعمال اليومية بكل سهولة."
+      highlights={highlights}
+      dir="rtl"
+      footer={
+        <span>
+          باستخدامك هذا النظام فأنت توافق على الشروط والأحكام وسياسات الخصوصية الخاصة بمنفذ آسيا.
+        </span>
+      }
+    >
+      <header className="text-right">
+        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[0.75rem] text-emerald-200">
+          <span className="h-2 w-2 rounded-full bg-emerald-300" />
+          دخول الإدارة
+        </span>
+        <h2 className="mt-4 text-2xl font-bold text-white">تسجيل الدخول</h2>
+        <p className="mt-2 text-sm text-slate-300">
+          أدخل بيانات حسابك المصرّح به للاستفادة من أدوات إدارة المتجر.
+        </p>
+      </header>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="mt-8 space-y-6"
+        aria-describedby={errors.root ? 'login-error' : undefined}
+      >
+        <AuthFormField
+          id="identifier"
+          label="البريد الإلكتروني أو رقم الجوال"
+          error={errors.identifier?.message}
+        >
+          <Input
+            id="identifier"
+            type="text"
+            dir="rtl"
+            className="w-full text-right"
+            autoComplete="username"
+            placeholder="example@mail.com أو 05xxxxxxxx"
+            aria-invalid={Boolean(errors.identifier)}
+            {...register('identifier')}
+          />
+        </AuthFormField>
+
+        <AuthFormField
+          id="password"
+          label="كلمة المرور"
+          error={errors.password?.message}
+        >
+          <Input
+            id="password"
+            type={showPwd ? 'text' : 'password'}
+            dir="rtl"
+            className="w-full text-right pr-20"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            aria-invalid={Boolean(errors.password)}
+            {...register('password')}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-slate-200 hover:text-white"
+            onClick={() => setShowPwd((s) => !s)}
+            title={showPwd ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+          >
+            {showPwd ? 'إخفاء' : 'إظهار'}
+          </Button>
+        </AuthFormField>
+
+        {errors.root ? (
+          <div
+            id="login-error"
+            role="alert"
+            className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs leading-5 text-red-100"
+          >
+            {errors.root.message}
           </div>
-          <p className="mt-3 text-[0.72rem]">
-            ليس لديك حساب؟ <Link to="/register" className="underline">إنشاء حساب</Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        ) : null}
+
+        <div className="flex items-center justify-between text-xs text-slate-300">
+          <Link to="/forgot" className="transition hover:text-white">نسيت كلمة المرور؟</Link>
+          <span>يدعم النظام الأحرف العربية والإنجليزية</span>
+        </div>
+
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          variant="primary"
+          className="ui-btn--lg w-full border-emerald-400/60 bg-emerald-500 text-white hover:bg-emerald-400"
+        >
+          {isSubmitting ? '...جاري التحقق من البيانات' : 'تسجيل الدخول'}
+        </Button>
+      </form>
+
+      <div className="mt-6 space-y-3 text-center text-xs text-slate-300">
+        <p>
+          لا تمتلك حسابًا حتى الآن؟
+          <Link to="/register" className="ml-2 font-medium text-emerald-300 hover:text-emerald-200">
+            إنشاء حساب جديد
+          </Link>
+        </p>
+      </div>
+    </AuthShell>
   );
 };
 

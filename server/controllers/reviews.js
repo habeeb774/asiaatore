@@ -118,7 +118,7 @@ router.post('/:id/helpful', requireAuth, async (req, res) => {
       message: req.locale === 'ar' ? 'تم تسجيل تصويتك' : 'Your vote has been recorded'
     });
   } catch (error) {
-    console.error('Error marking review as helpful:', error);
+    req.log?.error({ err: error }, 'Error marking review as helpful'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في تسجيل التصويت' : 'Error recording vote'
@@ -175,7 +175,7 @@ router.post('/:id/response', requireAuth, async (req, res) => {
       message: req.locale === 'ar' ? 'تم إضافة الرد بنجاح' : 'Response added successfully'
     });
   } catch (error) {
-    console.error('Error adding review response:', error);
+    req.log?.error({ err: error }, 'Error adding review response'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في إضافة الرد' : 'Error adding response'
@@ -279,7 +279,7 @@ router.get('/product/:productId/enhanced', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching enhanced reviews:', error);
+    req.log?.error({ err: error }, 'Error fetching enhanced reviews'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في جلب المراجعات' : 'Error fetching reviews'
@@ -362,7 +362,7 @@ router.post('/enhanced', requireAuth, async (req, res) => {
       message: req.locale === 'ar' ? 'تم إرسال المراجعة بنجاح' : 'Review submitted successfully'
     });
   } catch (error) {
-    console.error('Error submitting enhanced review:', error);
+    req.log?.error({ err: error }, 'Error submitting enhanced review'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في إرسال المراجعة' : 'Error submitting review'
@@ -393,7 +393,7 @@ router.get('/user/:productId', requireAuth, async (req, res) => {
       data: review
     });
   } catch (error) {
-    console.error('Error fetching user review:', error);
+    req.log?.error({ err: error }, 'Error fetching user review'); // Use req.log
     res.status(500).json({
       success: false,
       message: req.locale === 'ar' ? 'حدث خطأ في جلب المراجعة' : 'Error fetching review'

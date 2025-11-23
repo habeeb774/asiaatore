@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Search, X } from 'lucide-react';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function SearchBox({ onSearch, placeholder, className = '' }) {
   const { locale } = useLanguage();

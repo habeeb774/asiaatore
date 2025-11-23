@@ -171,7 +171,7 @@ const upload = multer({
 });
 
 router.post('/products/:id/upload-image', requireRole('seller'), (req, res, next) => {
-  const ct = req.headers['content-type'] || '';
+  const ct = req.headers?.['content-type'] || '';
   if (!ct.startsWith('multipart/form-data')) return res.status(400).json({ error: 'INVALID_CONTENT_TYPE' });
   upload.single('image')(req, res, function(err){
     if (err) {
@@ -265,7 +265,8 @@ adminSellersRouter.post('/:id/approve', async (req, res) => {
     await audit({ action: 'KYC_APPROVE', entity: 'Seller', entityId: id, userId: req.user.id });
     res.json({ ok: true, seller: updated });
   } catch (e) {
-    res.status(400).json({ ok: false, error: 'KYC_APPROVE_FAILED', message: e.message });
+    req.log?.error({ err: e }, 'SELLER_KYC_SUBMIT_FAILED'); // Use req.log
+    res.status(400).json({ ok: false, error: 'SELLER_KYC_SUBMIT_FAILED', message: e.message }); // Return error message
   }
 });
 

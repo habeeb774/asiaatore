@@ -1,20 +1,19 @@
 import React from 'react';
-import SidebarNav from './SidebarNav';
+import Sidebar from '../Sidebar';
 import HeaderNav from './HeaderNav';
 import AnnouncementBar from './AnnouncementBar';
 import CategoryScroller from './CategoryScroller';
 import Breadcrumbs from './BreadcrumbsProxy.jsx';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useLocation } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
 import { ToastContainer } from 'react-toastify';
 import SiteFooter from './SiteFooter';
 import { FloatingCart } from '../ui';
-import { SidebarProvider } from '../../stores/SidebarContext';
+import { SidebarProvider } from '../../contexts/SidebarContext';
 import BottomNav from './BottomNav';
 import SearchOverlay from '../search/SearchOverlay';
-import CartSidebar from '../cart/CartSidebar';
-import { useCart } from '../../stores/CartContext';
+import { useCart } from '../../contexts/CartContext';
 import PageLoader from '../common/PageLoader';
 import AdminSetupModal from '../setup/AdminSetupModal.jsx';
 
@@ -156,7 +155,7 @@ const AppLayout = ({ children }) => {
         >
           <PageLoader />
           <AdminSetupModal />
-          <SidebarNav /> {/* الشريط الجانبي للتنقل */}
+          <Sidebar type="nav" /> {/* الشريط الجانبي للتنقل */}
 
           <div
             ref={contentRef}
@@ -214,21 +213,15 @@ const AppLayout = ({ children }) => {
           <BottomNav panel={panel} setPanel={setPanel} /> {/* التنقل السفلي للهواتف */}
 
           {/* ✅ السلة الجانبية */}
-          {panel === 'cart' && (
-            <CartSidebar
-              open={true}
-              onClose={() => setPanel(null)}
-              items={cartItems}
-              total={cartTotal}
-              locale={locale}
-              t={
-                typeof window !== 'undefined' && window.t
-                  ? window.t
-                  : (k) => k
-              }
-              updateQuantity={updateQuantity}
-            />
-          )} {/* عرض السلة الجانبية عند فتحها */}
+          <Sidebar
+            type="cart"
+            open={panel === 'cart'}
+            onClose={() => setPanel(null)}
+          />
+
+          {/* You can add other sidebar types here as well */}
+          {/* <Sidebar type="favorites" isOpen={panel === 'favorites'} onClose={() => setPanel(null)} /> */}
+          {/* <Sidebar type="user" isOpen={panel === 'user'} onClose={() => setPanel(null)} /> */}
         </div>
       </SidebarProvider>
       <ToastContainer

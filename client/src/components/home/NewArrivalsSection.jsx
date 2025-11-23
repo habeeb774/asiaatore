@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from '../../lib/framerLazy.js';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 import ProductCard from '../shared/ProductCard';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api/client';

@@ -11,10 +11,6 @@ if (SECRET === 'dev_insecure_secret_change_me' && process.env.NODE_ENV === 'prod
 const ACCESS_TTL = process.env.ACCESS_TOKEN_TTL || '15m';
 const REFRESH_TTL = process.env.REFRESH_TOKEN_TTL || '30d';
 
-export function signToken(payload, opts = {}) {
-  return jwt.sign(payload, SECRET, { expiresIn: ACCESS_TTL, ...opts });
-}
-
 export function signAccessToken(payload, opts = {}) {
   return jwt.sign(payload, SECRET, { expiresIn: ACCESS_TTL, ...opts });
 }
@@ -39,4 +35,4 @@ export function sha256(input) {
   return crypto.createHash('sha256').update(String(input)).digest('hex');
 }
 
-export default { signToken, signAccessToken, signRefreshToken, verifyToken, randomToken, sha256 };
+export default { signAccessToken, signRefreshToken, verifyToken, randomToken, sha256 };

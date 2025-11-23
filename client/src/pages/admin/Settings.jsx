@@ -1,19 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Seo from '../../components/Seo';
 import AdminLayout from '../../components/features/admin/AdminLayout';
-import { useSettings } from '../../stores/SettingsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { Button } from '../../components/ui';
-import Input from '../../components/ui/input';
-import EnvEditor from './EnvEditor';
-import SettingsUi from './SettingsUi';
-import SettingsLogo from './SettingsLogo';
-import SettingsWhatsapp from './SettingsWhatsapp';
-import SettingsShippingPayment from './SettingsShippingPayment';
-import SettingsShippingProviders from './SettingsShippingProviders';
-import SettingsLinksApps from './SettingsLinksApps';
-import SettingsCompanyFooter from './SettingsCompanyFooter';
-import SettingsTopStrip from './SettingsTopStrip';
-import SettingsHero from './SettingsHero';
+import Input from '../../components/ui/input';  
+import EnvEditor from './integrations/EnvEditor';
+import SettingsUi from './settings/SettingsUi';
+import SettingsLogo from './settings/SettingsLogo';
+import SettingsWhatsapp from './settings/SettingsWhatsapp';
+import SettingsShippingPayment from './settings/SettingsShippingPayment';
+import SettingsShippingProviders from './settings/SettingsShippingProviders';
+import SettingsLinksApps from './settings/SettingsLinksApps';
+import SettingsCompanyFooter from './settings/SettingsCompanyFooter';
+import SettingsTopStrip from './settings/SettingsTopStrip';
+import SettingsHero from './settings/SettingsHero';
 
 const Settings = () => {
   const { setting, loading, error, update, uploadLogo } = useSettings();

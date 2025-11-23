@@ -28,7 +28,7 @@ const logoUpload = multer({
 });
 
 function brandUploadMiddleware(req, res, next) {
-  const ct = req.headers['content-type'] || '';
+  const ct = req.headers?.['content-type'] || '';
   if (ct.startsWith('multipart/form-data')) {
     logoUpload.single('logo')(req, res, (err) => {
       if (err) {
@@ -227,7 +227,7 @@ router.get('/maintenance/scan', requireAdmin, async (_req, res) => {
     res.json({ ok: true, issues: { duplicateNames, noLogo: noLogo.map(mapBrand), zeroProducts: zeroProducts.map(mapBrand), missingLogoVariants } });
   } catch (e) {
     res.status(500).json({ ok:false, error:'MAINTENANCE_SCAN_FAILED', message: e.message });
-  }
+  } // Use req.log for structured logging
 });
 
 router.post('/maintenance/regen-logos', requireAdmin, async (req, res) => {

@@ -15,7 +15,7 @@ The stylesheet layer is split into a few tiers so we can reason about overrides 
 
 ## Shared tokens & mixins
 
-- `_design-system.scss` is now the **only** place we declare CSS custom properties. It includes layout spacing, surfaces, motion tokens, and the legacy `--brand-*` aliases that used to live in `design-tokens.css`.
+- `../theme/_tokens.scss` is the single source of CSS custom properties (layout spacing, surfaces, motion tokens, and the legacy `--brand-*` aliases). `_design-system.scss` simply forwards those tokens and includes header styles so existing imports keep working.
 - `_variables.scss` re-exposes those tokens to SCSS (e.g. `$brand-primary`, `$shadow-card`).
 - `_mixins.scss` ships reusable helpers:
 	- `card-surface` – consistent background/border/shadow wrapper for cards.

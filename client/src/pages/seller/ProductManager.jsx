@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { localizeName } from '../../utils/locale';
-import { useAuth } from '../../stores/AuthContext';
-import { useStore } from '../../stores/StoreContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useStore } from '../../contexts/StoreContext';
 import api from '../../services/api/client';
 import useCategories from '../../hooks/useCategories';
 

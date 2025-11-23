@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useLanguage } from '../stores/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
 
 /*
   Canonical + hreflang manager.

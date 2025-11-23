@@ -27,7 +27,7 @@ router.post('/track', async (req, res) => {
         eventData,
         userId,
         sessionId,
-        userAgent: userAgent || req.headers['user-agent'],
+        userAgent: userAgent || req.headers?.['user-agent'],
         ipAddress: ipAddress || req.ip,
         referrer,
         url
@@ -36,7 +36,7 @@ router.post('/track', async (req, res) => {
 
     res.json({ success: true, eventId: event.id });
   } catch (error) {
-    console.error('Error tracking analytics event:', error);
+    req.log?.error({ err: error }, 'Error tracking analytics event'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error tracking event'
@@ -202,7 +202,7 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching analytics dashboard:', error);
+    req.log?.error({ err: error }, 'Error fetching analytics dashboard'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error fetching analytics data'
@@ -251,7 +251,7 @@ router.patch('/insights/:id', requireAdmin, async (req, res) => {
       data: insight
     });
   } catch (error) {
-    console.error('Error updating insight:', error);
+    req.log?.error({ err: error }, 'Error updating insight'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error updating insight'
@@ -315,7 +315,7 @@ router.get('/realtime', requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching realtime analytics:', error);
+    req.log?.error({ err: error }, 'Error fetching realtime analytics'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error fetching realtime data'
@@ -363,7 +363,7 @@ router.post('/generate-insights', requireAdmin, async (req, res) => {
       count: insights.length
     });
   } catch (error) {
-    console.error('Error generating insights:', error);
+    req.log?.error({ err: error }, 'Error generating insights'); // Use req.log
     res.status(500).json({
       success: false,
       message: 'Error generating insights'

@@ -1,29 +1,33 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import Sidebar from '../../components/SidebarUnified';
-import * as CartContext from '../../stores/CartContext';
-import * as LanguageContext from '../../stores/LanguageContext';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import Sidebar from '../../components/Sidebar';
+import * as CartContext from '../../contexts/CartContext';
+import * as LanguageContext from '../../context/LanguageContext';
 import { MemoryRouter } from 'react-router-dom';
 
-describe('SidebarUnified (favorites)', () => {
-  test('renders View button and SafeImage for favorite item', () => {
+describe('Sidebar (favorites)', () => {
+  test('renders favorites list and removes item via action button', async () => {
     const initialFavorites = [{ id: 'p1', name: 'Favorite One', image: '/images/hero-background.svg', price: 9.99 }];
-  const onClose = vi.fn();
-  // mock hooks
-  vi.spyOn(CartContext, 'useCart').mockReturnValue({ cartItems: [], removeFromCart: vi.fn(), updateQuantity: vi.fn(), cartTotal: 0 });
-  vi.spyOn(LanguageContext, 'useLanguage').mockReturnValue({ locale: 'en' });
+    const onClose = vi.fn();
+    // mock hooks
+    vi.spyOn(CartContext, 'useCart').mockReturnValue({ cartItems: [], removeFromCart: vi.fn(), updateQuantity: vi.fn(), cartTotal: 0 });
+    vi.spyOn(LanguageContext, 'useLanguage').mockReturnValue({ locale: 'en' });
     render(
       <MemoryRouter>
-        <Sidebar isOpen={true} type="favorites" initialFavorites={initialFavorites} onClose={onClose} />
+        <Sidebar open={true} type="favorites" initialFavorites={initialFavorites} onClose={onClose} />
       </MemoryRouter>
     );
 
-    // ensure view button is present
-    const viewBtn = screen.getByRole('link', { name: /View|عرض/i });
-    expect(viewBtn).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Favorites/i })).toBeInTheDocument();
+    expect(screen.getByAltText('Favorite One')).toBeInTheDocument();
 
-    // ensure SafeImage img exists
-    const img = screen.getByAltText('Favorite One');
-    expect(img).toBeTruthy();
+    const favoriteRow = screen.getByText('Favorite One').closest('div').parentElement;
+    const removeButton = within(favoriteRow).getByRole('button');
+
+    fireEvent.click(removeButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/You have no favorite items/i)).toBeInTheDocument();
+    });
   });
 });

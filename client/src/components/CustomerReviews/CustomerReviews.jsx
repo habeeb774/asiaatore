@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLanguage, LocalizedText, DateDisplay } from '../../contexts/LanguageContext';
+import { useLanguage, LocalizedText, DateDisplay } from '../../context/LanguageContext';
 import { useNotifications } from '../../components/Notification/Notification';
 import { LazyImage } from '../shared/LazyImage/LazyImage';
 import { SkeletonLoader } from '../shared/SkeletonLoader/SkeletonLoader';

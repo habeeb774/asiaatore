@@ -11,8 +11,9 @@ if (process.env.SENDGRID_API_KEY) {
     provider = sgMail.default;
     providerName = 'sendgrid';
   } catch (e) {
-     
-    console.warn('[EMAIL] Failed to init SendGrid, falling back to simulate:', e.message);
+    // Use a logger if available, otherwise console.warn
+    if (global.appLogger) global.appLogger.warn({ err: e }, '[EMAIL] Failed to init SendGrid, falling back to simulate');
+    else console.warn('[EMAIL] Failed to init SendGrid, falling back to simulate:', e.message);
   }
 }
 
@@ -23,14 +24,16 @@ export async function sendEmail({ to, subject, text, html }) {
       await provider.send({ to, from, subject, text, html });
       return { ok: true, provider: providerName };
     } catch (e) {
-       
-      console.error('[EMAIL] SendGrid error:', e.response?.body || e.message);
+      // Use a logger if available, otherwise console.error
+      if (global.appLogger) global.appLogger.error({ err: e.response?.body || e }, '[EMAIL] SendGrid error');
+      else console.error('[EMAIL] SendGrid error:', e.response?.body || e.message);
       return { ok: false, error: e.message, provider: providerName };
     }
   }
   // Fallback simulate
-   
-  console.log('[EMAIL:simulate]', { to, subject, text: text?.slice(0, 160), hasHtml: !!html });
+  // Use a logger if available, otherwise console.log
+  if (global.appLogger) global.appLogger.info({ to, subject, text: text?.slice(0, 160), hasHtml: !!html }, '[EMAIL:simulate]');
+  else console.log('[EMAIL:simulate]', { to, subject, text: text?.slice(0, 160), hasHtml: !!html });
   return { ok: true, provider: 'simulate' };
 }
 

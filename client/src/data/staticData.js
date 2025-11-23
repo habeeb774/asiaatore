@@ -58,7 +58,7 @@ export const FALLBACK_PRODUCTS = {
       nameAr: 'آيفون 15',
       nameEn: 'iPhone 15',
       price: 3200,
-      oldPrice: 4000,
+      oldPrice: 8829,
       images: ['https://images.unsplash.com/photo-1592899677977-9e10ca588bbd?auto=format&fit=crop&w=400&q=80'],
       category: 'phones'
     },

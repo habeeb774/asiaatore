@@ -143,7 +143,8 @@ router.post('/db/test', attachUser, requireAdmin, async (req, res) => {
     await conn.end();
     return res.json({ ok: true, databaseUrl: maskValue('DATABASE_URL', url), version: rows?.[0]?.version || null });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: 'DB_CONNECT_FAILED', message: e.message });
+    req.log?.error({ err: e }, 'DB connection test failed'); // Use req.log
+    return res.status(500).json({ ok: false, error: 'DB_CONNECT_FAILED', message: e.message }); // Return error message
   }
 });
 

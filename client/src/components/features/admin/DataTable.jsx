@@ -49,6 +49,13 @@ export default function DataTable({
     onPageSizeChange?.(val);
   }
 
+  function handleRowClick(event, row) {
+    if (!onRowClick) return;
+    const interactiveSelector = 'button, a, input, textarea, select, [data-prevent-row-click]';
+    if (event.target.closest(interactiveSelector)) return;
+    onRowClick(row);
+  }
+
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
@@ -76,8 +83,8 @@ export default function DataTable({
             visibleRows.map((row, rIdx) => (
               <tr
                 key={row.id ?? rIdx}
-                className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 cursor-pointer"
-                onClick={() => onRowClick?.(row)}
+                className={`hover:bg-gray-50/80 dark:hover:bg-gray-800/40 ${onRowClick ? 'cursor-pointer' : ''}`}
+                onClick={(event) => handleRowClick(event, row)}
               >
                 {columns.map((col, cIdx) => (
                   <td key={cIdx} className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">

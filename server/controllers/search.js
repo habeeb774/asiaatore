@@ -122,7 +122,7 @@ router.get('/products', async (req, res) => {
         hasMore: total > page * pageSize
       });
     } catch (dbError) {
-      // Fallback to mock data when DB is not available
+      req.log?.warn({ err: dbError }, 'Search /products DB query failed, falling back to mock data'); // Use req.log
       const mockProducts = [
         {
           id: 1,
@@ -169,7 +169,7 @@ router.get('/products', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Search error:', error);
+    req.log?.error({ err: error }, 'Search error'); // Use req.log
     res.status(500).json({
       ok: false,
       error: 'Search failed',

@@ -1,6 +1,7 @@
 // Notification service for email and SMS
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
+import { deserializePaymentMeta } from '../utils/paymentMeta.js';
 
 // Email transporter
 const emailTransporter = process.env.SMTP_HOST ? nodemailer.createTransporter({
@@ -40,8 +41,11 @@ export async function sendOrderStatusNotification(order, newStatus, options = {}
   const messages = STATUS_MESSAGES[lang] || STATUS_MESSAGES.ar;
   const message = messages[newStatus] || `Order status updated to: ${newStatus}`;
 
-  const customerEmail = order?.paymentMeta?.address?.email || order?.user?.email;
-  const customerPhone = order?.paymentMeta?.address?.phone;
+  const meta = order?.paymentMeta && typeof order.paymentMeta === 'object' && !Array.isArray(order.paymentMeta)
+    ? order.paymentMeta
+    : deserializePaymentMeta(order?.paymentMeta);
+  const customerEmail = meta?.address?.email || order?.user?.email;
+  const customerPhone = meta?.address?.phone;
 
   // Send email
   if (!skipEmail && emailTransporter && customerEmail) {

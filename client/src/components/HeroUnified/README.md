@@ -189,7 +189,7 @@ const handleSlideClick = (slide, index) => {
 
 ### استخدام مع Context
 ```jsx
-import { useLanguage } from '../stores/LanguageContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const MyComponent = () => {
   const { locale } = useLanguage();
@@ -217,7 +217,7 @@ styles/
 ├── HeroUnified.css          # أنماط CSS الموحدة
 └── ...
 
-stores/
+contexts/
 ├── LanguageContext.jsx      # Context إدارة اللغات
 └── ...
 ```

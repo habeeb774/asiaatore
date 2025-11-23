@@ -43,13 +43,13 @@ function request(method, path, { headers = {}, body } = {}) {
 
 async function ensureBase() {
   if (BASE) return BASE;
-  // Broaden scan window: 4000-4011 (server may auto-increment)
-  const ports = Array.from({ length: 12 }, (_, i) => 4000 + i);
+  // Broaden scan window: 8829-4011 (server may auto-increment)
+  const ports = Array.from({ length: 12 }, (_, i) => 8829 + i);
   for (const p of ports) {
     try {
-      const r = await request('GET', `http://localhost:4000:${p}/_health`);
+      const r = await request('GET', `http://localhost:8829:${p}/_health`);
       if (r.status === 200) {
-        BASE = `http://localhost:4000:${p}`;
+        BASE = `http://localhost:8829:${p}`;
         return BASE;
       }
     } catch {}

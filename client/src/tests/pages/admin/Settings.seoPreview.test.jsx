@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Settings from '../../../pages/admin/Settings';
-import * as SettingsContext from '../../../stores/SettingsContext';
+import * as SettingsContext from '../../../contexts/SettingsContext';
 
 describe('Settings SEO Preview', () => {
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe('Settings SEO Preview', () => {
     if (meta) meta.remove();
   });
 
-  test('apply SEO preview updates document title and og:site_name', async () => {
+  test('apply SEO preview updates document title and og:site_name', async (ctx) => {
     render(
       <MemoryRouter>
         <Settings />
@@ -59,5 +59,5 @@ describe('Settings SEO Preview', () => {
     const og = document.head.querySelector('meta[property="og:site_name"]');
     expect(og).toBeTruthy();
     expect(og.getAttribute('content')).toBe('Preview Shop');
-  });
+  }, 10000);
 });

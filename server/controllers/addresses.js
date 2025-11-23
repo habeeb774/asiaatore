@@ -16,8 +16,8 @@ router.get('/', async (req, res) => {
     if (prisma.address?.findMany) {
       list = await prisma.address.findMany({ where: whereWithDeletedAt({ userId: req.user.id }), orderBy: { createdAt: 'desc' } });
     } else {
-      // Fallback raw SQL
-  list = await prisma.$queryRaw`SELECT id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt FROM \`Address\` WHERE userId = ${req.user.id} ORDER BY createdAt DESC`;
+      // Fallback raw SQL - ensure proper parameterization to prevent SQL injection
+      list = await prisma.$queryRaw`SELECT id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt FROM \`Address\` WHERE userId = ${req.user.id} ORDER BY createdAt DESC`;
     }
     res.json({ ok: true, addresses: list });
   } catch (e) {
@@ -51,7 +51,7 @@ router.post('/', async (req, res) => {
         await prisma.address.updateMany({ where: whereWithDeletedAt({ userId: req.user.id }), data: { isDefault: false } });
       } else {
         // Fallback: use raw SQL to clear defaults for this user. Use parameterized query to avoid injection.
-        await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`;
+        await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`; // Parameterized query
       }
     }
     if (prisma.address?.create) {
@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
       // Fallback raw insert
       const id = crypto.randomUUID();
       // Insert with explicit timestamps to satisfy NOT NULL constraints in strict SQL modes
-      await prisma.$executeRaw`
+      await prisma.$executeRaw` // Parameterized query
         INSERT INTO \`Address\`
         (id, userId, label, name, phone, country, city, district, street, building, apartment, notes, isDefault, createdAt, updatedAt)
         VALUES (${id}, ${data.userId}, ${data.label}, ${data.name}, ${data.phone}, ${data.country}, ${data.city}, ${data.district}, ${data.street}, ${data.building}, ${data.apartment}, ${data.notes}, ${data.isDefault}, NOW(), NOW())
@@ -104,7 +104,7 @@ router.patch('/:id', async (req, res) => {
       if (prisma.address && typeof prisma.address.updateMany === 'function') {
         await prisma.address.updateMany({ where: whereWithDeletedAt({ userId: req.user.id }), data: { isDefault: false } });
       } else {
-        await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`;
+        await prisma.$executeRaw`UPDATE \`Address\` SET isDefault = false WHERE userId = ${req.user.id}`; // Parameterized query
       }
     }
     if (prisma.address?.update) {
@@ -112,7 +112,7 @@ router.patch('/:id', async (req, res) => {
       res.json({ ok: true, address: updated });
     } else {
       await prisma.$executeRaw`
-        UPDATE \`Address\`
+        UPDATE \`Address\` // Parameterized query
         SET label=${data.label}, name=${data.name}, phone=${data.phone}, country=${data.country}, city=${data.city}, district=${data.district}, street=${data.street}, building=${data.building}, apartment=${data.apartment}, notes=${data.notes}, isDefault=${data.isDefault}, updatedAt=NOW()
         WHERE id=${id} AND userId=${req.user.id}
       `;
@@ -140,7 +140,7 @@ router.delete('/:id', async (req, res) => {
       await prisma.address.delete({ where: { id } });
       res.json({ ok: true });
     } else {
-      await prisma.$executeRaw`DELETE FROM \`Address\` WHERE id = ${id} AND userId = ${req.user.id}`;
+      await prisma.$executeRaw`DELETE FROM \`Address\` WHERE id = ${id} AND userId = ${req.user.id}`; // Parameterized query
       res.json({ ok: true });
     }
   } catch (e) {

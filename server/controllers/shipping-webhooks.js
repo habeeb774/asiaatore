@@ -17,7 +17,7 @@ const rawBodyParser = (req, res, next) => {
     req.rawBody = buf;
     // try parse JSON if content-type indicates JSON
     try {
-      const ct = (req.headers['content-type'] || '').toLowerCase();
+      const ct = (req.headers?.['content-type'] || '').toLowerCase();
       if (ct.includes('application/json')) {
         try { req.body = buf.length ? JSON.parse(buf.toString('utf8')) : {}; } catch { req.body = {}; }
       } else if (ct.includes('application/x-www-form-urlencoded')) {
@@ -75,6 +75,7 @@ router.post('/webhook/:provider', rawBodyParser, async (req, res) => {
     try { broadcast('shipping.update', { provider, ...result }); } catch (e) {}
     return res.json({ ok: true, result });
   } catch (e) {
+    req.log?.error({ err: e }, 'Shipping webhook failed'); // Use req.log
     return res.status(400).json({ ok: false, error: 'WEBHOOK_FAILED', message: e.message });
   }
 });

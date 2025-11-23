@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useCategories from '../hooks/useCategories';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
-import { useLanguage } from '../stores/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Chip } from './ui/Chip';
 
 const scrollShadows = 'after:content-[" "] after:absolute after:top-0 after:right-0 after:w-8 after:h-full after:pointer-events-none after:bg-gradient-to-l after:from-white after:to-transparent';

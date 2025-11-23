@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from '../../lib/framerLazy';
 import { Search, X, Package, Tag, Star, Clock, TrendingUp, Filter, ChevronUp, ChevronDown, DollarSign } from 'lucide-react';
 import api from '../../services/api/client';
 import { resolveLocalized } from '../../utils/locale';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import LazyImage from '../shared/LazyImage/LazyImage';
 
 // call useLanguage inside a small safe custom hook so the component

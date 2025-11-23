@@ -10,6 +10,10 @@ async function fetchProducts({ queryKey, signal }) {
   return get('/products', params, { signal });
 }
 
+export async function listProducts(params = {}, options = {}) {
+  return get('/products', params, options);
+}
+
 export function useProducts(params) {
   // Keep previous data during pagination for instant UI
   return useQuery({
@@ -25,6 +29,10 @@ const productKey = (id) => ['product', id];
 async function fetchProduct({ queryKey, signal }) {
   const [, id] = queryKey;
   return get(`/products/${id}`, undefined, { signal });
+}
+
+export async function getProduct(id, options = {}) {
+  return get(`/products/${id}`, undefined, options);
 }
 
 export function useProduct(id, { enabled = true } = {}) {
@@ -120,4 +128,9 @@ export async function exportProductsToExcel(params = {}) {
     params,
     { accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
   );
+}
+
+// Create a new product (admin)
+export async function createProduct(body) {
+  return post('/products', body);
 }

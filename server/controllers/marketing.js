@@ -29,7 +29,7 @@ const bannerUpload = multer({
   }
 });
 function bannerUploadMiddleware(req,res,next){
-  const ct = req.headers['content-type'] || '';
+  const ct = req.headers?.['content-type'] || '';
   if (ct.startsWith('multipart/form-data')) {
     bannerUpload.single('image')(req,res,(err)=>{
       if (err){

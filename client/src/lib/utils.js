@@ -1,9 +1,9 @@
-// Small helper inspired by shadcn/ui
-export function cn(...values) {
-  return values
-    .flatMap(v => Array.isArray(v) ? v : [v])
-    .filter(Boolean)
-    .join(' ');
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// Tailwind-aware className helper reused across UI components
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
 }
 
 export default { cn };

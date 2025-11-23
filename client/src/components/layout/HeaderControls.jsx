@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Search, ShoppingCart, User, Sun, Moon, Monitor, Languages } from 'lucide-react';
-import { useSidebar } from '../../stores/SidebarContext';
-import { useTheme } from '../../stores/ThemeContext';
+import { Menu, Search, ShoppingCart, User, Sun, Moon, Monitor, Languages, Settings } from 'lucide-react';
+import { useSidebar } from '../../contexts/SidebarContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // ✅ دالة آمنة لاستدعاء الثيم (في حال لم يكن السياق متوفرًا)
 function useSafeTheme() {
@@ -109,18 +109,26 @@ export default function HeaderControls({ t, locale, setLocale, cartItems, user }
         <ThemeIcon size={18} />
       </button>
 
+      {/* ✅ زر لوحة التحكم - يظهر فقط للمستخدمين المسجلين */}
+      {user && (
+        <Link
+          to="/admin"
+          className="border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 inline-flex"
+          aria-label="لوحة التحكم"
+          title="لوحة التحكم"
+        >
+          <Settings size={18} />
+        </Link>
+      )}
+
       {/* ✅ ملف المستخدم أو زر تسجيل الدخول */}
       <div className="flex items-center gap-2 sm:gap-3">
         {!user ? (
-            <Link
+          <Link
             to="/login"
-            className="border rounded bg-white/90 dark:bg-slate-950/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 flex items-center justify-center"
-            style={{ minWidth: 0, minHeight: 0, padding: 0 }}
+            className="border rounded bg-emerald-500/90 hover:bg-emerald-500 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors duration-300 inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium"
           >
-            <User size={14} className="block sm:hidden" />
-            <span className="hidden sm:inline-block text-sm px-3 py-1">
-              {t('login') || 'تسجيل الدخول'}
-            </span>
+            {t('login') || 'تسجيل الدخول'}
           </Link>
         ) : (
             <Link

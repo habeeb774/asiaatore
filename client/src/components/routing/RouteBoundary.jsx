@@ -27,9 +27,10 @@ export class RouteErrorBoundary extends React.Component {
 }
 
 export const PageFallback = () => (
-  <div style={{padding:'60px 24px', textAlign:'center'}}>
-    <div className="spinner" style={{width:42,height:42,border:'5px solid #eee',borderTop:'5px solid #69be3c',borderRadius:'50%',margin:'0 auto 24px',animation:'spin 1s linear infinite'}} />
-    <p style={{opacity:.7}}>جاري تحميل الصفحة...</p>
+  <div style={{padding:'60px 24px', textAlign:'center', minHeight:'50vh', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center'}}>
+    <div className="spinner" style={{width:48,height:48,border:'4px solid #f3f4f6',borderTop:'4px solid #10b981',borderRadius:'50%',margin:'0 auto 20px',animation:'spin 1s linear infinite'}} />
+    <p style={{opacity:0.8, fontSize:16, marginBottom:8}}>جاري تحميل الصفحة...</p>
+    <p style={{opacity:0.5, fontSize:14}}>يرجى الانتظار لحظة</p>
     <style>{`@keyframes spin {from{transform:rotate(0)} to{transform:rotate(360deg)}}`}</style>
   </div>
 );

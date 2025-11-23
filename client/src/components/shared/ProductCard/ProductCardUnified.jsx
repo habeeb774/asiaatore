@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useLanguage } from '../../../stores/LanguageContext';
-import { useCart } from '../../../stores/CartContext';
+import { useLanguage } from '../../../context/LanguageContext';
+import { useCart } from '../../../contexts/CartContext';
 import LazyImage from '../LazyImage/LazyImage';
 import { SkeletonLoader } from '../SkeletonLoader/SkeletonLoader';
 import { AnimatePresence, motion } from '../../../lib/framerLazy';
@@ -477,15 +477,14 @@ const ProductCard = ({
         return (
           <motion.div
             className={cardBaseClasses}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
             whileHover={{ y: -4, scale: 1.02 }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
           >
             <div className="product-image">
               <LazyImage
                 src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
-                alt={processedProduct.name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                alt={`${processedProduct.name}`}
                 width={400}
                 height={400}
                 priority={priority}
@@ -541,8 +540,8 @@ const ProductCard = ({
         return (
           <motion.div
             className={cardBaseClasses}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             whileHover={{ y: -4 }}
           >
             <div className="product-image">

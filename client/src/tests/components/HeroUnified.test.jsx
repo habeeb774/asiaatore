@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import HeroUnified from '../../components/HeroUnified/HeroUnified';
 import * as adsHook from '../../hooks/useAds';
-import * as settings from '../../stores/SettingsContext';
+import * as settings from '../../contexts/SettingsContext';
 import * as swiper from '../../components/HeroUnified/swiper';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -34,7 +34,7 @@ describe('HeroUnified', () => {
   const pagination = document.querySelector('.swiper-pagination');
   expect(pagination).toHaveAttribute('aria-live', 'polite');
   // find CTA button and test navigation handler exists
-  const ctaBtn = await screen.findByRole('button', { name: /Shop now/i });
+  const ctaBtn = await screen.findByRole('button', { name: 'Shop now' });
   expect(ctaBtn).toBeTruthy();
   });
 });

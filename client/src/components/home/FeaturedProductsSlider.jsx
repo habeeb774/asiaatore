@@ -2,7 +2,7 @@ import React from 'react';
 import ProductCard from '../shared/ProductCard';
 import Carousel from '../ui/Carousel';
 
-const FeaturedProductsSlider = ({ products = [], title, autoplay = true, interval = 4000 }) => {
+const FeaturedProductsSlider = ({ products = [], title, autoplay = true, interval = 8829 }) => {
   if (!products || products.length === 0) return null;
 
   return (

@@ -31,9 +31,9 @@ export async function createStcPayTransaction(orderPayload) {
   return apiPostWithHeaders('/pay/stc/create', orderPayload, { 'x-idempotency-key': idem });
 }
 
-export async function confirmStcPay({ orderId, sessionId, success = true } = {}) {
+export async function confirmStcPay({ orderId, sessionId, accessKey } = {}) {
   const idem = `stc-k-${(orderId||'x').slice?.(0,6)||'x'}-${Date.now().toString(36)}`;
-  return apiPostWithHeaders('/pay/stc/confirm', { orderId, sessionId, success }, { 'x-idempotency-key': idem });
+  return apiPostWithHeaders('/pay/stc/confirm', { orderId, sessionId, accessKey }, { 'x-idempotency-key': idem });
 }
 
 export async function initBankTransfer({ orderId } = {}) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from '../../lib/framerLazy.js';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 
 const NewsletterSignup = ({

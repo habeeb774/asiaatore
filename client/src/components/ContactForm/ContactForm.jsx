@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLanguage, LocalizedText } from '../../contexts/LanguageContext';
+import { useLanguage, LocalizedText } from '../../context/LanguageContext';
 import { useNotifications } from '../../components/Notification/Notification';
 
 const ContactForm = ({ className = '' }) => {

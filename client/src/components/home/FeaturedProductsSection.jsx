@@ -21,7 +21,7 @@ const FeaturedProductsSection = ({ products = [], Motion, containerVariants, ite
         spaceBetween: 20,
         grabCursor: true,
         autoplay: {
-          delay: 4000,
+          delay: 8829,
           disableOnInteraction: false,
           pauseOnMouseEnter: true,
         },

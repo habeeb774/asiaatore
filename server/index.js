@@ -1,58 +1,85 @@
 // Hardened Express API server (Prisma + MySQL) with logging, health, SSE, and optional SPA serving
-import 'dotenv/config';
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import compression from 'compression';
-import pino from 'pino';
-import pinoHttp from 'pino-http';
-import cookieParser from 'cookie-parser';
-import { createClient } from 'redis';
-import { registerSse } from './utils/realtimeHub.js';
-import path from 'path';
-import fs from 'fs';
+import "dotenv/config";
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import compression from "compression";
+import pino from "pino";
+import pinoHttp from "pino-http"; // Ensure pinoHttp is imported
+import cookieParser from "cookie-parser";
+import { createClient } from "redis";
+import { registerSse } from "./utils/realtimeHub.js";
+import path from "path";
+import fs from "fs";
 
 // IMPORTANT: Prepare DB env (DATABASE_URL) BEFORE importing prisma or any route that imports prisma
-const isProd = process.env.NODE_ENV === 'production';
-const allowDegraded = process.env.ALLOW_INVALID_DB === 'true' || (isProd && !process.env.DATABASE_URL);
+const isProd = process.env.NODE_ENV === "production";
+const allowDegraded =
+  process.env.ALLOW_INVALID_DB === "true" ||
+  (isProd && !process.env.DATABASE_URL);
 if (!process.env.DATABASE_URL) {
-    const fallback = 'mysql://root:AlvYFhUfDYXSCykrgHpncurIFgwffLmF@yamabiko.proxy.rlwy.net:23471/railway';
-    const shouldQuickStart = process.env.QUICK_START_DB === '1' || (!isProd && process.env.QUICK_START_DB !== '0');
-    // Do not force a fallback DB in degraded mode; allow routes that don't need DB to work
-    if (shouldQuickStart && !allowDegraded) {
-        process.env.DATABASE_URL = fallback;
-         
-        console.warn('[DB] QUICK_START_DB applied. Using fallback DATABASE_URL for dev.');
-    }
+  const fallback =
+    "mysql://root:AlvYFhUfDYXSCykrgHpncurIFgwffLmF@yamabiko.proxy.rlwy.net:23471/railway";
+  const shouldQuickStart =
+    process.env.QUICK_START_DB === "1" ||
+    (!isProd && process.env.QUICK_START_DB !== "0");
+  // Do not force a fallback DB in degraded mode; allow routes that don't need DB to work
+  if (shouldQuickStart && !allowDegraded && !process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = fallback;
+
+    console.warn(
+      "[DB] QUICK_START_DB applied. Using fallback DATABASE_URL for dev."
+    );
+  }
 }
 
 // Prepare encryption key for sensitive data
 if (!process.env.ENCRYPTION_KEY) {
-    const fallbackKey = 'dev-encryption-key-32-chars-long!!';
-    const shouldQuickStart = process.env.QUICK_START_DB === '1' || (!isProd && process.env.QUICK_START_DB !== '0');
-    if (shouldQuickStart) {
-        process.env.ENCRYPTION_KEY = fallbackKey;
-        console.warn('[ENCRYPTION] Using fallback ENCRYPTION_KEY for dev. Set ENCRYPTION_KEY in production.');
-    } else if (isProd) {
-        console.error('[ENCRYPTION] ENCRYPTION_KEY not set in production. Sensitive data encryption will fail.');
-    }
+  const fallbackKey = "dev-encryption-key-32-chars-long!!";
+  const shouldQuickStart =
+    process.env.QUICK_START_DB === "1" ||
+    (!isProd && process.env.QUICK_START_DB !== "0");
+  if (shouldQuickStart) {
+    process.env.ENCRYPTION_KEY = fallbackKey;
+    console.warn(
+      "[ENCRYPTION] Using fallback ENCRYPTION_KEY for dev. Set ENCRYPTION_KEY in production."
+    );
+  } else if (isProd) {
+    console.error(
+      "[ENCRYPTION] ENCRYPTION_KEY not set in production. Sensitive data encryption will fail."
+    );
+  }
 }
 
 // Structured logging (initialize early for Redis setup)
-const rootLogger = pino({ level: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'), base: { env: process.env.NODE_ENV || 'development' } });
+const rootLogger = pino({
+  level: process.env.LOG_LEVEL || (isProd ? "info" : "debug"),
+  base: { env: process.env.NODE_ENV || "development" },
+});
 // Separate namespaces for app vs api logs
-const appLogger = rootLogger.child({ component: 'app' });
-const apiLogger = rootLogger.child({ component: 'api' });
+const appLogger = rootLogger.child({ component: "app" });
+const apiLogger = rootLogger.child({ component: "api" });
 
 // Defer prisma and route imports until after env is ready
 let prisma; // will be set via dynamic import
 let attachUser;
-let authRoutes, productsRoutes, brandsRoutes, ordersRoutes, marketingRoutes, tierPricesRoutes, sellersRoutes, deliveryRoutes;
+let authRoutes,
+  productsRoutes,
+  brandsRoutes,
+  ordersRoutes,
+  marketingRoutes,
+  tierPricesRoutes,
+  sellersRoutes,
+  deliveryRoutes;
 let inventoryRoutes, reportsRoutes, invoicesRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
 let envRoutes, endpointsRoutes;
-let adminUsersRoutes, adminStatsRoutes, adminAuditRoutes, adminSellersRoutes;
+let adminUsersRoutes,
+  adminStatsRoutes,
+  adminAuditRoutes,
+  adminSellersRoutes,
+  adminReviewsRoutes;
 let paypalRouter, bankRouter, stcRouter, stripeRouter;
 let wishlistRoutes, cartRoutes, searchRoutes, supportRoutes;
 let setupRoutes;
@@ -66,455 +93,689 @@ let DB_STATUS = { connected: false, lastPingMs: null, error: null };
 let redisClient;
 if (process.env.REDIS_URL) {
   redisClient = createClient({ url: process.env.REDIS_URL });
-  redisClient.on('error', (err) => appLogger.error('Redis Client Error', err));
-  redisClient.connect().catch((err) => appLogger.warn('Redis connection failed', err));
+  redisClient.on("error", (err) => appLogger.error("Redis Client Error", err));
+  redisClient
+    .connect()
+    .catch((err) => appLogger.warn("Redis connection failed", err));
   global.redisClient = redisClient;
 } else {
-  appLogger.info('Redis not configured, skipping caching');
+  appLogger.info("Redis not configured, skipping caching");
 }
 
 const app = express();
-let PORT = Number(process.env.PORT) || 4000;
+let PORT = Number(process.env.PORT) || 8829;
 
 // Mount API request logger only for /api/* with request-id and sanitized headers
-app.use('/api', pinoHttp({
+app.use(
+  "/api",
+  pinoHttp({
     logger: apiLogger,
     genReqId: (req, res) => {
-        const hdrId = req.headers['x-request-id'] || req.headers['x-correlation-id'];
-        const id = (typeof hdrId === 'string' && hdrId) || Math.random().toString(36).slice(2, 12);
-        res.locals.requestId = id;
-        return id;
+      const hdrId =
+        req?.headers?.["x-request-id"] || req?.headers?.["x-correlation-id"];
+      const id =
+        (typeof hdrId === "string" && hdrId) ||
+        Math.random().toString(36).slice(2, 12);
+      res.locals.requestId = id;
+      return id;
     },
     serializers: {
-        req(req) {
-            const headers = { ...req.headers };
-            if (headers.authorization) headers.authorization = '[redacted]';
-            return { id: req.id, method: req.method, url: req.url, headers };
-        },
-        res(res) {
-            return { statusCode: res.statusCode };
-        }
+      req(req) {
+        if (!req)
+          return {
+            id: "unknown",
+            method: "unknown",
+            url: "unknown",
+            headers: {},
+          };
+        const headers = req.headers ? { ...req.headers } : {};
+        if (headers?.authorization) headers.authorization = "[redacted]";
+        return { id: req.id, method: req.method, url: req.url, headers };
+      },
+      res(res) {
+        return { statusCode: res.statusCode };
+      },
     },
     customLogLevel: (res, err) => {
-        if (err || res.statusCode >= 500) return 'error';
-        if (res.statusCode >= 400) return 'warn';
-        return 'info';
-    }
-}));
+      if (err || res.statusCode >= 500) return "error";
+      if (res.statusCode >= 400) return "warn";
+      // Log 401/403 as info unless DEBUG_AUTH is enabled
+      if (res.statusCode === 401 || res.statusCode === 403) {
+        if (process.env.DEBUG_AUTH === '1') return "warn";
+        return "info";
+      }
+      return "info";
+    },
+  })
+);
 
 // Security headers (tailored CSP in prod)
-app.use(helmet({
-    contentSecurityPolicy: isProd ? {
-        useDefaults: true,
-        directives: {
+app.use(
+  helmet({
+    contentSecurityPolicy: isProd
+      ? {
+          useDefaults: true,
+          directives: {
             "default-src": ["'self'"],
-            "img-src": ["'self'", 'data:', 'https:', 'blob:'],
-            "script-src": ["'self'", "'unsafe-inline'", 'https:'],
-            "style-src": ["'self'", "'unsafe-inline'", 'https:'],
-            "connect-src": ["'self'", 'https:', 'http:', 'ws:', 'wss:']
+            "img-src": ["'self'", "data:", "https:", "blob:"],
+            "script-src": ["'self'", "'unsafe-inline'", "https:"],
+            "style-src": ["'self'", "'unsafe-inline'", "https:"],
+            "connect-src": ["'self'", "https:", "http:", "ws:", "wss:"],
+          },
         }
-    } : false,
-    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    frameguard: { action: 'sameorigin' },
-}));
+      : false,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    frameguard: { action: "sameorigin" },
+  })
+);
 
 // Add explicit HSTS in production (ensure HTTPS in front of the app)
 if (isProd) {
-    try {
-        app.use(helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true }));
-    } catch {}
+  try {
+    app.use(
+      helmet.hsts({ maxAge: 31536000, includeSubDomains: true, preload: true })
+    );
+  } catch {}
 }
 
-// CORS: allow all in dev, STRICT allowlist in prod
+// CORS: allow all in dev (but reflect origin and allow credentials), STRICT allowlist in prod
 let corsOptions;
 if (!isProd) {
-    corsOptions = { origin: '*', credentials: false };
+  // In development reflect the request origin and allow credentials so the
+  // browser can send/receive cookies (used by /api/auth/refresh).
+  // Note: CORS with credentials cannot use wildcard '*' for origin.
+  corsOptions = { origin: true, credentials: true };
 } else {
-    const allowlist = (process.env.CORS_ORIGIN || '')
-        .split(',')
-        .map((o) => o.trim().replace(/\/$/, ''))
-        .filter(Boolean);
+  const allowlist = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
+    .filter(Boolean);
 
-    // In production, do NOT reflect arbitrary origins. If no allowlist provided, block cross-origin.
-    if (allowlist.length === 0) {
-        appLogger.warn('[CORS] No CORS_ORIGIN configured in production. Cross-origin requests will be blocked.');
-        corsOptions = { origin: false, credentials: true };
-    } else {
-        corsOptions = {
-            origin: (origin, cb) => {
-                if (!origin) return cb(null, false); // same-origin/no Origin header
-                try {
-                    const o = String(origin).replace(/\/$/, '');
-                    const ok = allowlist.includes(o);
-                    return cb(null, ok ? true : false);
-                } catch (e) {
-                    return cb(null, false);
-                }
-            },
-            credentials: true
-        };
-    }
+  // In production, do NOT reflect arbitrary origins. If no allowlist provided, block cross-origin.
+  if (allowlist.length === 0) {
+    appLogger.warn(
+      "[CORS] No CORS_ORIGIN configured in production. Cross-origin requests will be blocked."
+    );
+    corsOptions = { origin: false, credentials: true };
+  } else {
+    corsOptions = {
+      origin: (origin, cb) => {
+        if (!origin) return cb(null, false); // same-origin/no Origin header
+        try {
+          const o = String(origin).replace(/\/$/, "");
+          const ok = allowlist.includes(o);
+          return cb(null, ok ? true : false);
+        } catch (e) {
+          return cb(null, false);
+        }
+      },
+      credentials: true,
+    };
+  }
 }
 app.use(cors(corsOptions));
 
 // تأكد أن static للـ uploads بعد CORS مباشرة
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) { try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch { /* ignore */ } }
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  try {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  } catch {
+    /* ignore */
+  }
+}
 // Ensure compression runs early so static responses (including uploads) are compressed when appropriate
-app.use(compression({ threshold: Number(process.env.COMPRESSION_THRESHOLD || 1024) }));
+app.use(
+  compression({ threshold: Number(process.env.COMPRESSION_THRESHOLD || 1024) })
+);
 
 // Add a small middleware to set Cache-Control headers for uploads responses explicitly
-app.use('/uploads', (req, res, next) => {
-    try {
-        if (isProd) {
-            // 30 days caching for uploaded assets in production
-            res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
-        } else {
-            // short caching in dev to allow quick refreshes
-            res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-        }
-    } catch (e) { /* ignore */ }
-    next();
+app.use("/uploads", (req, res, next) => {
+  try {
+    if (isProd) {
+      // 30 days caching for uploaded assets in production
+      res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+    } else {
+      // short caching in dev to allow quick refreshes
+      res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  next();
 });
 
-app.use('/uploads', express.static(uploadsDir, { maxAge: isProd ? '7d' : 0 }));
+app.use("/uploads", express.static(uploadsDir, { maxAge: isProd ? "7d" : 0 }));
 
 // Common middleware
 app.use(cookieParser());
-app.use(express.json({ limit: process.env.JSON_LIMIT || '1mb' }));
+app.use(express.json({ limit: process.env.JSON_LIMIT || "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // CSRF protection for state-changing requests
-app.use('/api', (req, res, next) => {
-  const methods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+app.use("/api", (req, res, next) => {
+  const methods = ["POST", "PUT", "PATCH", "DELETE"];
   if (!methods.includes(req.method)) return next();
   // Skip CSRF for auth routes or if disabled
-  if (req.path.startsWith('/auth') || process.env.DISABLE_CSRF === 'true') return next();
+  if (req.path.startsWith("/auth") || process.env.DISABLE_CSRF === "true")
+    return next();
   // Check Origin or Referer header
-  const origin = req.headers.origin || req.headers.referer;
+  const origin = req.headers?.origin || req.headers?.referer;
   if (!origin) {
-    return res.status(403).json({ error: 'CSRF_MISSING_ORIGIN', message: 'Origin or Referer header required' });
+    return res.status(403).json({
+      error: "CSRF_MISSING_ORIGIN",
+      message: "Origin or Referer header required",
+    });
   }
   // In development, allow all origins (like CORS does)
   if (!isProd) return next();
-  const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
-  if (allowedOrigins.length && !allowedOrigins.some(o => origin.startsWith(o))) {
-    return res.status(403).json({ error: 'CSRF_INVALID_ORIGIN', message: 'Invalid Origin or Referer' });
+  const allowedOrigins = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (
+    allowedOrigins.length &&
+    !allowedOrigins.some((o) => origin.startsWith(o))
+  ) {
+    return res.status(403).json({
+      error: "CSRF_INVALID_ORIGIN",
+      message: "Invalid Origin or Referer",
+    });
   }
   next();
 });
 
 // Trust proxy when behind a proxy (Railway/Render/etc.)
 // Enable automatically in production unless explicitly disabled
-if (isProd || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
+if (isProd || process.env.TRUST_PROXY === "true") app.set("trust proxy", 1);
 
 // Rate limits (focused)
-const authLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_AUTH_WINDOW_MS || 60_000), max: Number(process.env.RATE_LIMIT_AUTH_MAX || 10) });
-const payLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_PAY_WINDOW_MS || 300_000), max: Number(process.env.RATE_LIMIT_PAY_MAX || 5) });
-const apiLimiter = rateLimit({ windowMs: Number(process.env.RATE_LIMIT_API_WINDOW_MS || 900_000), max: Number(process.env.RATE_LIMIT_API_MAX || 100), message: { error: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } });
-if (process.env.RATE_LIMIT_AUTH_ENABLE === 'true') app.use('/api/auth', authLimiter);
-if (process.env.RATE_LIMIT_PAY_ENABLE === 'true') app.use('/api/pay', payLimiter);
-if (process.env.RATE_LIMIT_API_ENABLE !== 'false') app.use('/api', apiLimiter);
+const authLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_AUTH_WINDOW_MS || 60_000),
+  max: Number(process.env.RATE_LIMIT_AUTH_MAX || 10),
+});
+const payLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_PAY_WINDOW_MS || 300_000),
+  max: Number(process.env.RATE_LIMIT_PAY_MAX || 5),
+});
+const apiLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_API_WINDOW_MS || 900_000),
+  max: Number(process.env.RATE_LIMIT_API_MAX || 100),
+  message: { error: "RATE_LIMIT_EXCEEDED", message: "Too many requests" },
+});
+if (process.env.RATE_LIMIT_AUTH_ENABLE === "true")
+  app.use("/api/auth", authLimiter);
+if (process.env.RATE_LIMIT_PAY_ENABLE === "true")
+  app.use("/api/pay", payLimiter);
+if (process.env.RATE_LIMIT_API_ENABLE !== "false") app.use("/api", apiLimiter);
 
 // Attach user (JWT from Authorization, with dev headers permitted in non-prod)
 // Attach user (injected later after dynamic imports)
 // Placeholder middleware until auth is loaded
 app.use((req, _res, next) => next());
 
-
 // Serve uploads statically (تم نقل التعريف بعد CORS)
 
 // Serve client public icons/images for PWA assets when backend is accessed directly
 try {
-    const clientPublic = path.join(process.cwd(), 'client', 'public');
-    const iconsDir = path.join(clientPublic, 'icons');
-    const imagesDir = path.join(clientPublic, 'images');
-    if (fs.existsSync(iconsDir)) app.use('/icons', express.static(iconsDir, { maxAge: isProd ? '30d' : 0 }));
-    if (fs.existsSync(imagesDir)) app.use('/images', express.static(imagesDir, { maxAge: isProd ? '30d' : 0 }));
+  const clientPublic = path.join(process.cwd(), "client", "public");
+  const iconsDir = path.join(clientPublic, "icons");
+  const imagesDir = path.join(clientPublic, "images");
+  if (fs.existsSync(iconsDir))
+    app.use("/icons", express.static(iconsDir, { maxAge: isProd ? "30d" : 0 }));
+  if (fs.existsSync(imagesDir))
+    app.use(
+      "/images",
+      express.static(imagesDir, { maxAge: isProd ? "30d" : 0 })
+    );
 } catch {}
 
 // Health endpoints and DB diagnostics
 async function pingDb() {
-    const start = Date.now();
-    try {
-        // prisma will be set after dynamic import; guard if missing
-        if (!prisma) throw new Error('Prisma not initialized');
-        await prisma.$queryRaw`SELECT 1`;
-        DB_STATUS = { connected: true, lastPingMs: Date.now() - start, error: null };
-    } catch (e) {
-        DB_STATUS = { connected: false, lastPingMs: Date.now() - start, error: e.message };
-    }
+  const start = Date.now();
+  try {
+    // prisma will be set after dynamic import; guard if missing
+    if (!prisma) throw new Error("Prisma not initialized");
+    await prisma.$queryRaw`SELECT 1`;
+    DB_STATUS = {
+      connected: true,
+      lastPingMs: Date.now() - start,
+      error: null,
+    };
+  } catch (e) {
+    DB_STATUS = {
+      connected: false,
+      lastPingMs: Date.now() - start,
+      error: e.message,
+    };
+  }
 }
-app.get('/_db_ping', async (_req, res) => { await pingDb(); res.json(DB_STATUS); });
-app.get('/_health', async (_req, res) => { await pingDb(); res.json({ ok: true, db: DB_STATUS, pid: process.pid, time: new Date().toISOString() }); });
-app.get('/api/health', async (_req, res) => { await pingDb(); res.json({ status: DB_STATUS.connected ? 'ok' : 'degraded', db: DB_STATUS }); });
+app.get("/_db_ping", async (_req, res) => {
+  await pingDb();
+  res.json(DB_STATUS);
+});
+app.get("/_health", async (_req, res) => {
+  await pingDb();
+  res.json({
+    ok: true,
+    db: DB_STATUS,
+    pid: process.pid,
+    time: new Date().toISOString(),
+  });
+});
+app.get("/api/health", async (_req, res) => {
+  await pingDb();
+  res.json({ status: DB_STATUS.connected ? "ok" : "degraded", db: DB_STATUS });
+});
 // Compatibility alias mentioned in repo guide
-app.get('/_db_status', async (_req, res) => { await pingDb(); res.json(DB_STATUS); });
+app.get("/_db_status", async (_req, res) => {
+  await pingDb();
+  res.json(DB_STATUS);
+});
 
 // SEO endpoints: robots.txt and sitemap.xml
-app.get('/robots.txt', (_req, res) => {
-    const origins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
-    const host = origins[0] || process.env.PUBLIC_BASE_URL || '';
-    const lines = [
-        'User-agent: *',
-        'Allow: /',
-        'Disallow: /admin',
-        `Sitemap: ${host ? host.replace(/\/$/, '') : ''}/sitemap.xml`
-    ].filter(Boolean);
-    res.type('text/plain').send(lines.join('\n'));
+app.get("/robots.txt", (_req, res) => {
+  const origins = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const host = origins[0] || process.env.PUBLIC_BASE_URL || "";
+  const lines = [
+    "User-agent: *",
+    "Allow: /",
+    "Disallow: /admin",
+    `Sitemap: ${host ? host.replace(/\/$/, "") : ""}/sitemap.xml`,
+  ].filter(Boolean);
+  res.type("text/plain").send(lines.join("\n"));
 });
 // sitemap.xml is served by a dedicated route module (server/routes/sitemap.js)
 
 // Lightweight endpoint to accept sendBeacon hits from the client for best-effort analytics.
 // This endpoint intentionally accepts any content type and returns 204 quickly.
-app.post('/_collect_event', express.text({ type: '*/*' }), (req, res) => {
+app.post("/_collect_event", express.text({ type: "*/*" }), (req, res) => {
+  try {
+    const raw = req.body || "";
+    let parsed = raw;
     try {
-        const raw = req.body || '';
-        let parsed = raw;
-        try { parsed = JSON.parse(String(raw)); } catch (e) { /* leave as text */ }
-        apiLogger.info({ event: parsed }, 'Beacon event collected');
+      parsed = JSON.parse(String(raw));
     } catch (e) {
-        appLogger.warn('Failed to process beacon event');
+      /* leave as text */
     }
-    // Always return 204 No Content so sendBeacon isn't blocked
-    res.status(204).end();
+    apiLogger.info({ event: parsed }, "Beacon event collected");
+  } catch (e) {
+    appLogger.warn("Failed to process beacon event");
+  }
+  res.status(204).end();
 });
 
-// Holder to register SSE after auth middleware is mounted so req.user is available
 function mountSseRoute() {
-    // Simple SSE endpoint for app notifications (keep-alive)
-    app.get('/api/events', (req, res) => {
+  // Simple SSE endpoint for app notifications (keep-alive)
+  app.get("/api/events", (req, res) => {
+    try {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      if (typeof res.flushHeaders === "function") res.flushHeaders();
+
+      // Add client connection logging
+      const clientInfo = {
+        userId: req.user?.id,
+        role: req.user?.role,
+        ip: req.ip,
+      };
+      apiLogger.info(clientInfo, "SSE client connected");
+
+      // register client in unified realtime hub which manages heartbeats
+      const sseClient = registerSse(res, req.user);
+      if (!sseClient) {
+        // If registration failed for any reason, return a clear error for easier debugging
+        if (!res.headersSent)
+          return res.status(500).json({
+            error: "SSE_REGISTER_FAILED",
+            message: "Failed to register event listener",
+          });
         try {
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            if (typeof res.flushHeaders === 'function') res.flushHeaders();
-            // register client in unified realtime hub which manages heartbeats
-            const sseClient = registerSse(res, req.user);
-            if (!sseClient) {
-                // If registration failed for any reason, return a clear error for easier debugging
-                if (!res.headersSent) return res.status(500).json({ error: 'SSE_REGISTER_FAILED', message: 'Failed to register event listener' });
-                try { res.end(); } catch (e) { /* ignore */ }
-                return;
-            }
-            // initial hello
-            try { res.write(`event: hello\n`); res.write(`data: ${JSON.stringify({ ok: true, t: Date.now() })}\n\n`); } catch(e) { /* ignore write errors */ }
-        } catch (err) {
-            // Log error and return a JSON error body for easier debugging
-            apiLogger.error({ err, path: req.path, method: req.method }, 'SSE /api/events failed');
-            if (!res.headersSent) {
-                return res.status(500).json({ error: 'SSE_SETUP_FAILED', message: 'Failed to open event stream' });
-            }
-            try { res.end(); } catch (e) { /* ignore */ }
+          res.end();
+        } catch (e) {
+          /* ignore */
         }
-    });
+        return;
+      }
+
+      // Handle client disconnection
+      res.on("close", () => {
+        apiLogger.info(clientInfo, "SSE client disconnected");
+      });
+
+      res.on("error", (err) => {
+        apiLogger.warn({ ...clientInfo, err: err.message }, "SSE client error");
+      });
+
+      // initial hello
+      try {
+        res.write(`event: hello\n`);
+        res.write(`data: ${JSON.stringify({ ok: true, t: Date.now() })}\n\n`);
+      } catch (e) {
+        /* ignore write errors */
+      }
+    } catch (err) {
+      // Log error and return a JSON error body for easier debugging
+      apiLogger.error(
+        { err, path: req.path, method: req.method },
+        "SSE /api/events failed"
+      );
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "SSE_SETUP_FAILED",
+          message: "Failed to open event stream",
+        });
+      }
+      try {
+        res.end();
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  });
 }
 
 // Dynamically import prisma and routes, then mount them
 async function loadModulesAndMount() {
-    const prismaMod = await import('./db/client.js');
-    prisma = prismaMod.default;
-    const authMod = await import('./middleware/auth.js');
-    attachUser = authMod.attachUser;
-    const [authR, prodR, brandR, orderR, mktR, tierR, sellR, delivR, invR, repR, paypalR, bankR, stcR, stripeR, settingsR, categoriesR, reviewsR, wishlistR, cartR, searchR, addressesR, supportR, adminUsersR, adminStatsR, adminAuditR, adsR, invoicesR, legalR, shippingR, shippingWebhooksR, setupR, smsaR, envR, uiSettingsR, endpointsR, sitemapR, subscriptionsR, analyticsR, uploadsR] = await Promise.all([
-        import('./controllers/auth.js'),
-        import('./controllers/products.js'),
-        import('./controllers/brands.js'),
-        import('./controllers/orders.js'),
-        import('./controllers/marketing.js'),
-        import('./controllers/tierPrices.js'),
-        import('./controllers/sellers.js'),
-        import('./controllers/delivery.js'),
-        import('./controllers/inventory.js'),
-        import('./controllers/reports.js'),
-        import('./paypal.js'),
-        import('./bank.js'),
-        import('./stc.js'),
-        import('./stripe.js'),
-        import('./controllers/settings.js'),
-        import('./controllers/categories.js'),
-        import('./controllers/reviews.js'),
-        import('./controllers/wishlist.js'),
-        import('./controllers/cart.js'),
-        import('./controllers/search.js'),
-        import('./controllers/addresses.js'),
-        import('./controllers/support.js'),
-        import('./controllers/adminUsers.js'),
-        import('./controllers/adminStats.js'),
-        import('./controllers/adminAudit.js'),
-        import('./controllers/ads.js'),
-        import('./controllers/invoices.js'),
-        import('./controllers/legal.js'),
-        import('./controllers/shipping.js'),
-        import('./controllers/shipping-webhooks.js'),
-        import('./controllers/setup.js'),
-        import('./controllers/smsa.js'),
-        import('./controllers/env.js'),
-        import('./controllers/endpoints.js'),
-            import('./controllers/uiSettings.js'),
-        import('./controllers/sitemap.js'),
-        import('./controllers/subscriptions.js'),
-        import('./controllers/analytics.js'),
-        import('./controllers/uploads.js'),
-    ]);
-    let notificationsR;
-    try {
-      notificationsR = await import('./controllers/notifications.js');
-      console.log('notificationsR imported successfully:', !!notificationsR.default);
-    } catch (e) {
-      console.error('Failed to import notifications:', e);
-      notificationsR = { default: null };
-    }
-    authRoutes = authR.default; productsRoutes = prodR.default; brandsRoutes = brandR.default; ordersRoutes = orderR.default;
-    marketingRoutes = mktR.default; tierPricesRoutes = tierR.default; sellersRoutes = sellR.default; deliveryRoutes = delivR.default;
-    inventoryRoutes = invR.default; reportsRoutes = repR.default; invoicesRoutes = invoicesR.default;
-    paypalRouter = paypalR.default; bankRouter = bankR.default; stcRouter = stcR.default; stripeRouter = stripeR.default;
-    settingsRoutes = settingsR.default; categoriesRoutes = categoriesR.default; reviewsRoutes = reviewsR.default; addressesRoutes = addressesR.default;
-    envRoutes = envR.default; endpointsRoutes = endpointsR.default;
-    uiSettingsRoutes = uiSettingsR.default;
-    subscriptionsRoutes = subscriptionsR.default;
-    analyticsRoutes = analyticsR.default;
-    uploadsRoutes = uploadsR.default;
-    notificationsRoutes = notificationsR.default;
-    supportRoutes = supportR.default;
-    shippingRoutes = shippingR.default; shippingWebhooksRoutes = shippingWebhooksR.default;
-    adminUsersRoutes = adminUsersR.default; adminStatsRoutes = adminStatsR.default; adminAuditRoutes = adminAuditR.default;
-    // sellers module also exports an admin router for KYC
-    adminSellersRoutes = sellR.adminSellersRouter;
-    wishlistRoutes = wishlistR.default; cartRoutes = cartR.default; searchRoutes = searchR.default;
-    setupRoutes = setupR.default;
-    smsaRoutes = smsaR.default;
-    sitemapRoutes = sitemapR.default;
-    // Now replace placeholder attachUser with real one by reordering middleware: remove last no-op? Not trivial; just use real middleware for subsequent routers.
-    app.use(attachUser);
-    // Mount SSE route AFTER auth so query/cookie/Bearer tokens populate req.user
-    mountSseRoute();
-    app.use('/api/auth', authRoutes);
-    app.use('/api/products', productsRoutes);
-    app.use('/api/brands', brandsRoutes);
-    app.use('/api/orders', ordersRoutes);
-    app.use('/api/inventory', inventoryRoutes);
-    app.use('/api/reports', reportsRoutes);
-    app.use('/api/invoices', invoicesRoutes);
-    app.use('/api/marketing', marketingRoutes);
-    app.use('/api/legal', legalR.default);
-    app.use('/api/tier-prices', tierPricesRoutes);
-    app.use('/api/sellers', sellersRoutes);
-    app.use('/api/delivery', deliveryRoutes);
-    app.use('/api/settings', settingsRoutes);
-    // per-user UI settings (developer settings) - supports get/post/export with file fallback
-    if (uiSettingsRoutes) app.use('/api/ui-settings', uiSettingsRoutes);
-    app.use('/api/env', envRoutes);
-    app.use('/api/categories', categoriesRoutes);
-    app.use('/api/reviews', reviewsRoutes);
-    app.use('/api/addresses', addressesRoutes);
-    app.use('/api/subscriptions', subscriptionsRoutes);
-    app.use('/api/analytics', analyticsRoutes);
-    app.use('/api/uploads', uploadsRoutes);
-    app.use('/api/notifications', notificationsRoutes);
-    // Shipping: quote + webhook receivers
-    if (shippingRoutes) app.use('/api/shipping', shippingRoutes);
-    if (shippingWebhooksRoutes) app.use('/api/shipping', shippingWebhooksRoutes);
-    app.use('/api/wishlist', wishlistRoutes);
-    app.use('/api/cart', cartRoutes);
-    app.use('/api/search', searchRoutes);
-    app.use('/api/support', supportRoutes);
-    // Setup (first admin creation): intentionally unauthenticated, guarded server-side to only allow when no users exist
-    if (setupRoutes) app.use('/api/setup', setupRoutes);
-    app.use('/api/pay/paypal', paypalRouter);
-    app.use('/api/pay/bank', bankRouter);
-    app.use('/api/pay/stc', stcRouter);
-    app.use('/api/pay/stripe', stripeRouter);
-    app.use('/api/ads', adsR.default);
-    app.use('/api/shipping/smsa', smsaRoutes);
-    // Sitemap route (serves /sitemap.xml)
-    if (sitemapRoutes) app.use('/', sitemapRoutes);
-    // Admin routes
-    if (adminUsersRoutes) app.use('/api/admin/users', adminUsersRoutes);
-    if (adminStatsRoutes) app.use('/api/admin/stats', adminStatsRoutes);
-    if (adminAuditRoutes) app.use('/api/admin/audit', adminAuditRoutes);
-    if (adminSellersRoutes) app.use('/api/admin/sellers', adminSellersRoutes);
-    app.use('/api/endpoints', endpointsRoutes);
+  const prismaMod = await import("./db/client.js");
+  prisma = prismaMod.default;
+  const authMod = await import("./middleware/auth.js");
+  attachUser = authMod.attachUser;
+  const [
+    authR,
+    prodR,
+    brandR,
+    orderR,
+    mktR,
+    tierR,
+    sellR,
+    delivR,
+    invR,
+    repR,
+    paypalR,
+    bankR,
+    stcR,
+    stripeR,
+    settingsR,
+    categoriesR,
+    reviewsR,
+    wishlistR,
+    cartR,
+    searchR,
+    addressesR,
+    supportR,
+    adminUsersR,
+    adminStatsR,
+    adminAuditR,
+    adminReviewsR,
+    adsR,
+    invoicesR,
+    shippingR,
+    shippingWebhooksR,
+    setupR,
+    smsaR,
+    envR,
+    uiSettingsR,
+    endpointsR,
+    sitemapR,
+    subscriptionsR,
+    analyticsR,
+    uploadsR,
+  ] = await Promise.all([
+    import("./modules/auth/index.js"), // Auth routes
+    import("./controllers/products.js"),
+    import("./controllers/brands.js"), // Brands routes
+    import("./controllers/orders.js"), // Orders routes
+    import("./controllers/marketing.js"), // Marketing routes
+    import("./controllers/tierPrices.js"), // Tier Prices routes
+    import("./controllers/sellers.js"),
+    import("./controllers/delivery.js"),
+    import("./controllers/inventory.js"),
+    import("./controllers/reports.js"),
+    import("./paypal.js"),
+    import("./bank.js"),
+    import("./stc.js"),
+    import("./stripe.js"),
+    import("./controllers/settings.js"), // Settings routes
+    import("./controllers/categories.js"),
+    import("./controllers/reviews.js"),
+    import("./controllers/wishlist.js"),
+    import("./controllers/cart.js"),
+    import("./controllers/search.js"),
+    import("./controllers/addresses.js"),
+    import("./controllers/support.js"),
+    import("./controllers/adminUsers.js"),
+    import("./controllers/adminStats.js"),
+    import("./controllers/adminAudit.js"), // Admin Audit routes
+    import("./controllers/adminReviews.js"),
+    import("./controllers/ads.js"),
+    import("./controllers/invoices.js"),
+    import("./controllers/shipping.js"),
+    import("./controllers/tierPrices.js"),
+    import("./controllers/shipping-webhooks.js"),
+    import("./controllers/setup.js"),
+    import("./controllers/smsa.js"),
+    import("./controllers/env.js"),
+    import("./controllers/endpoints.js"),
+    import("./controllers/uiSettings.js"),
+    import("./controllers/sitemap.js"), // Sitemap routes
+    import("./controllers/subscriptions.js"),
+    import("./controllers/analytics.js"),
+    import("./controllers/uploads.js"),
+  ]);
+  let notificationsR;
+  try {
+    notificationsR = await import("./controllers/notifications.js");
+    console.log(
+      "notificationsR imported successfully:",
+      !!notificationsR.default
+    );
+  } catch (e) {
+    console.error("Failed to import notifications:", e);
+    notificationsR = { default: null };
+  }
+  authRoutes = authR.default;
+  productsRoutes = prodR.default;
+  brandsRoutes = brandR.default;
+  ordersRoutes = orderR.default;
+  marketingRoutes = mktR.default;
+  tierPricesRoutes = tierR.default;
+  sellersRoutes = sellR.default;
+  deliveryRoutes = delivR.default;
+  inventoryRoutes = invR.default;
+  reportsRoutes = repR.default;
+  invoicesRoutes = invoicesR.default;
+  paypalRouter = paypalR.default;
+  bankRouter = bankR.default;
+  stcRouter = stcR.default;
+  stripeRouter = stripeR.default;
+  settingsRoutes = settingsR.default;
+  categoriesRoutes = categoriesR.default;
+  reviewsRoutes = reviewsR.default;
+  addressesRoutes = addressesR.default;
+  envRoutes = envR.default;
+  endpointsRoutes = endpointsR.default;
+  uiSettingsRoutes = uiSettingsR.default;
+  subscriptionsRoutes = subscriptionsR.default;
+  analyticsRoutes = analyticsR.default;
+  uploadsRoutes = uploadsR.default;
+  notificationsRoutes = notificationsR.default;
+  supportRoutes = supportR.default;
+  shippingRoutes = shippingR.default;
+  shippingWebhooksRoutes = shippingWebhooksR.default;
+  adminUsersRoutes = adminUsersR.default;
+  adminStatsRoutes = adminStatsR.default;
+  adminAuditRoutes = adminAuditR.default;
+  adminReviewsRoutes = adminReviewsR.default;
+  // sellers module also exports an admin router for KYC
+  adminSellersRoutes = sellR.adminSellersRouter;
+  wishlistRoutes = wishlistR.default;
+  cartRoutes = cartR.default;
+  searchRoutes = searchR.default;
+  setupRoutes = setupR.default;
+  smsaRoutes = smsaR.default;
+  sitemapRoutes = sitemapR.default;
+  // Now replace placeholder attachUser with real one by reordering middleware: remove last no-op? Not trivial; just use real middleware for subsequent routers.
+  app.use(attachUser);
+  // Mount SSE route AFTER auth so query/cookie/Bearer tokens populate req.user
+  mountSseRoute();
+  app.use("/api/auth", authRoutes);
+  app.use("/api/products", productsRoutes);
+  app.use("/api/brands", brandsRoutes);
+  app.use("/api/orders", ordersRoutes);
+  app.use("/api/inventory", inventoryRoutes);
+  app.use("/api/reports", reportsRoutes);
+  app.use("/api/invoices", invoicesRoutes);
+  app.use("/api/marketing", marketingRoutes);
+  app.use("/api/sellers", sellersRoutes);
+  app.use("/api/delivery", deliveryRoutes);
+  app.use("/api/settings", settingsRoutes);
+  // per-user UI settings (developer settings) - supports get/post/export with file fallback
+  if (uiSettingsRoutes) app.use("/api/ui-settings", uiSettingsRoutes);
+  app.use("/api/env", envRoutes);
+  app.use("/api/categories", categoriesRoutes);
+  app.use("/api/reviews", reviewsRoutes);
+  app.use("/api/addresses", addressesRoutes);
+  app.use("/api/subscriptions", subscriptionsRoutes);
+  app.use("/api/analytics", analyticsRoutes);
+  app.use("/api/uploads", uploadsRoutes);
+  app.use("/api/notifications", notificationsRoutes);
+  // Shipping: quote + webhook receivers (ensure these are mounted before generic /api/:id routes if any overlap)
+  if (shippingRoutes) app.use("/api/shipping", shippingRoutes);
+  if (shippingWebhooksRoutes) app.use("/api/shipping", shippingWebhooksRoutes);
+  app.use("/api/wishlist", wishlistRoutes);
+  app.use("/api/cart", cartRoutes);
+  app.use("/api/search", searchRoutes);
+  app.use("/api/support", supportRoutes);
+  // Setup (first admin creation): intentionally unauthenticated, guarded server-side to only allow when no users exist
+  if (setupRoutes) app.use("/api/setup", setupRoutes);
+  app.use("/api/pay/paypal", paypalRouter);
+  app.use("/api/pay/bank", bankRouter);
+  app.use("/api/pay/stc", stcRouter);
+  app.use("/api/pay/stripe", stripeRouter);
+  app.use("/api/ads", adsR.default);
+  app.use("/api/shipping/smsa", smsaRoutes);
+  // Sitemap route (serves /sitemap.xml)
+  if (sitemapRoutes) app.use("/", sitemapRoutes); // Mount sitemap at root
+  // Admin routes
+  if (adminUsersRoutes) app.use("/api/admin/users", adminUsersRoutes);
+  if (adminStatsRoutes) app.use("/api/admin/stats", adminStatsRoutes);
+  if (adminAuditRoutes) app.use("/api/admin/audit", adminAuditRoutes);
+  if (adminSellersRoutes) app.use("/api/admin/sellers", adminSellersRoutes);
+  if (adminReviewsRoutes) app.use("/api/admin/reviews", adminReviewsRoutes);
+  app.use("/api/endpoints", endpointsRoutes);
 }
 await loadModulesAndMount();
 
 // Optional SPA serving (from client/dist)
-if (process.env.SERVE_CLIENT === 'true') {
-    const dist = path.join(process.cwd(), 'client', 'dist');
-    if (fs.existsSync(dist)) {
-        // Serve fingerprinted static assets with long cache, but keep index.html short-lived
-        app.use((req, res, next) => {
-            try {
-                if (isProd) {
-                    // fingerprinted assets -> long cache
-                    if (/\.(?:js|css|woff2|webp|png|jpg|jpeg|svg)$/.test(req.path)) {
-                        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-                    }
-                    // index.html -> no long caching
-                    if (req.path === '/' || req.path.endsWith('index.html')) {
-                        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-                    }
-                }
-            } catch (e) { /* ignore */ }
-            next();
-        });
-        app.use(express.static(dist, { maxAge: isProd ? '7d' : 0 }));
-        app.get('*', (req, res, next) => {
-            if (req.path.startsWith('/api/')) return next();
-            res.sendFile(path.join(dist, 'index.html'));
-        });
-    } else {
-        appLogger.warn(`[SERVE_CLIENT] Enabled but folder not found: ${dist}`);
-    }
+if (process.env.SERVE_CLIENT === "true") {
+  const dist = path.join(process.cwd(), "client", "dist");
+  if (fs.existsSync(dist)) {
+    // Serve fingerprinted static assets with long cache, but keep index.html short-lived
+    app.use((req, res, next) => {
+      try {
+        if (isProd) {
+          // fingerprinted assets -> long cache
+          if (/\.(?:js|css|woff2|webp|png|jpg|jpeg|svg)$/.test(req.path)) {
+            res.setHeader(
+              "Cache-Control",
+              "public, max-age=31536000, immutable"
+            );
+          }
+          // index.html -> no long caching
+          if (req.path === "/" || req.path.endsWith("index.html")) {
+            res.setHeader(
+              "Cache-Control",
+              "public, max-age=0, must-revalidate"
+            );
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+      next();
+    });
+    app.use(express.static(dist, { maxAge: isProd ? "7d" : 0 }));
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api/")) return next();
+      res.sendFile(path.join(dist, "index.html"));
+    });
+  } else {
+    appLogger.warn(`[SERVE_CLIENT] Enabled but folder not found: ${dist}`);
+  }
 }
 
 // API 404 handler (structured JSON) before global error handler
-app.use('/api', (req, res, next) => {
-    if (!res.headersSent) {
-        apiLogger.warn({ path: req.path, requestId: res.locals.requestId || req.id }, 'API route not found');
-        return res.status(404).json({ error: 'NOT_FOUND', path: req.path, requestId: res.locals.requestId || req.id });
-    }
-    next();
+app.use("/api", (req, res, next) => {
+  if (!res.headersSent) {
+    apiLogger.warn(
+      { path: req.path, requestId: res.locals.requestId || req.id },
+      "API route not found"
+    );
+    return res.status(404).json({
+      error: "NOT_FOUND",
+      path: req.path,
+      requestId: res.locals.requestId || req.id,
+    });
+  }
+  next();
 });
 
 // Global error handler: log full error internally, hide stack from clients
 app.use((err, req, res, _next) => {
-    const requestId = res.locals.requestId || req?.id || undefined;
-    const log = req?.path?.startsWith('/api/') ? apiLogger : appLogger;
-    log.error({ err, requestId, path: req?.path, method: req?.method }, 'Unhandled error');
-    res.status(err.status || 500).json({ error: 'INTERNAL_ERROR', message: 'Internal Server Error', requestId });
+  const requestId = res.locals.requestId || req?.id || undefined;
+  const log = req?.path?.startsWith("/api/") ? apiLogger : appLogger;
+  log.error(
+    { err, requestId, path: req?.path, method: req?.method },
+    "Unhandled error"
+  );
+  res.status(err.status || 500).json({
+    error: "INTERNAL_ERROR",
+    message: "Internal Server Error",
+    requestId,
+  });
 });
 
 // Export app for Vercel serverless functions
 export function createServer() {
-    return app;
+  return app;
 }
 
 // Start server only when not in Vercel environment
 if (!process.env.VERCEL) {
-    // Start server (auto-increment port if busy)
-    function start(port, attempt = 0) {
-        const server = app.listen(port, async () => {
-            await pingDb();
-            appLogger.info(`API listening on http://localhost:${port}`);
-        });
-        server.on('error', (e) => {
-            if (e.code === 'EADDRINUSE' && attempt < 5) {
-                appLogger.warn(`[PORT] ${port} in use, retrying on ${port + 1} ...`);
-                start(port + 1, attempt + 1);
-            } else {
-                appLogger.error(e, 'Server failed to start');
-                process.exit(1);
-            }
-        });
-    }
+  // Start server (auto-increment port if busy)
+  function start(port, attempt = 0) {
+    const server = app.listen(port, async () => {
+      await pingDb();
+      appLogger.info(`API listening on http://localhost:${port}`);
+    });
 
-    start(PORT);
+    // Configure server timeouts for SSE connections
+    server.keepAliveTimeout = 65000; // 65 seconds
+    server.headersTimeout = 66000; // 66 seconds
+    server.requestTimeout = 0; // Disable for SSE
 
-    // Graceful shutdown
-    function shutdown(sig) {
-        appLogger.warn(`[APP] Signal ${sig} received — shutting down.`);
-        process.exit(0);
-    }
-    ['SIGINT','SIGTERM'].forEach(s => process.on(s, () => shutdown(s)));
+    server.on("error", (e) => {
+      if (e.code === "EADDRINUSE" && attempt < 5) {
+        appLogger.warn(`[PORT] ${port} in use, retrying on ${port + 1} ...`);
+        start(port + 1, attempt + 1);
+      } else {
+        appLogger.error(e, "Server failed to start");
+        process.exit(1);
+      }
+    });
+  }
+
+  start(PORT);
+
+  // Graceful shutdown
+  function shutdown(sig) {
+    appLogger.warn(`[APP] Signal ${sig} received — shutting down.`);
+    process.exit(0);
+  }
+  ["SIGINT", "SIGTERM"].forEach((s) => process.on(s, () => shutdown(s)));
 }

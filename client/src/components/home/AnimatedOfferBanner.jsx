@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from '../../lib/framerLazy.js';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 import { ButtonLink } from '../ui';
 import { Sparkles, Gift, Star, Zap, Flame } from 'lucide-react';
 

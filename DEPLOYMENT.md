@@ -65,7 +65,7 @@ JWT_SECRET="your-super-secure-jwt-secret"
 BCRYPT_ROUNDS=12
 
 # Server
-PORT=4000
+PORT=8829
 NODE_ENV=production
 CORS_ORIGIN="https://yourdomain.com"
 TRUST_PROXY=true
@@ -207,7 +207,7 @@ module.exports = {
     exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
-      PORT: 4000
+      PORT: 8829
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
@@ -234,8 +234,8 @@ pm2 logs my-store-server
 ```nginx
 # Upstream for load balancing (if using multiple instances)
 upstream my_store_backend {
-    server 127.0.0.1:4000;
-    server 127.0.0.1:4001;
+    server 127.0.0.1:8829;
+    server 127.0.0.1:8829;
     server 127.0.0.1:4002;
 }
 
@@ -502,8 +502,8 @@ pm2 scale my-store-server 4
 
 # Load balancer configuration
 upstream backend {
-    server 127.0.0.1:4000;
-    server 127.0.0.1:4001;
+    server 127.0.0.1:8829;
+    server 127.0.0.1:8829;
     server 127.0.0.1:4002;
     server 127.0.0.1:4003;
 }

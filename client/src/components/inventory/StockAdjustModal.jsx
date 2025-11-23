@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../services/api/client';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { resolveLocalized } from '../../utils/locale';
 
 export default function StockAdjustModal({ open, onClose, product, onAdjusted }) {

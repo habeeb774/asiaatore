@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { useLanguage } from '../../../stores/LanguageContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
 const NFTLoyaltyContext = createContext();
 

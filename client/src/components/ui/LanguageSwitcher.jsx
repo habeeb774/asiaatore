@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLanguage } from '../../stores/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const LanguageSwitcher = ({ className = '' }) => {
   const { locale, setLocale, available } = useLanguage();

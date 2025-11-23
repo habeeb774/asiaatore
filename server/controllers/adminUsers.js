@@ -42,7 +42,7 @@ router.post('/', requireAdmin, async (req, res) => {
         const hash = sha256(token);
         const expiresAt = new Date(Date.now() + 1000*60*60*24); // 24h
         await prisma.authToken.create({ data: { userId: created.id, type: 'password_reset', tokenHash: hash, expiresAt } });
-        const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.headers.host}`;
+        const baseUrl = process.env.APP_BASE_URL || `${req?.protocol || 'http'}://${req?.headers?.host || 'localhost:8829'}`;
         const url = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(created.email)}`;
         await sendEmail({ to: created.email, subject: 'Account created', text: `Your account has been created. Set password: ${url}` });
         inviteSent = true;
@@ -50,7 +50,7 @@ router.post('/', requireAdmin, async (req, res) => {
     } catch (e) {
       // Don't fail creation if invite email fails; just log in non-prod
       if (process.env.DEBUG_ERRORS === 'true' || process.env.NODE_ENV !== 'production') {
-        console.warn('[ADMIN_USERS] sendInvite failed:', e.message);
+        req.log?.warn({ err: e }, '[ADMIN_USERS] sendInvite failed'); // Use req.log
       }
     }
     audit({ action:'user.create', entity:'User', entityId: created.id, userId: req.user?.id, meta: { role, inviteSent } });

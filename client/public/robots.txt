@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: /sitemap.xml
+
+# Block sensitive areas
+Disallow: /api/
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /profile
+Disallow: /account/
+
+# Allow static assets
+Allow: /assets/
+Allow: /icons/
+Allow: /fonts/

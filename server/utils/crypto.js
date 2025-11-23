@@ -1,7 +1,13 @@
 import crypto from 'crypto';
 
 // Encryption key - should be in environment variables
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-prod'; // 32 bytes for AES-256
+let ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
+  console.error('[CRYPTO] ENCRYPTION_KEY is missing or too short. Using an insecure default. Please set a strong key (at least 32 chars) in production.');
+  // Fallback to a fixed length key for dev, but warn loudly
+  ENCRYPTION_KEY = 'insecure-dev-key-please-change-me-in-prod-1234567890';
+  process.env.ENCRYPTION_KEY = ENCRYPTION_KEY;
+}
 const ALGORITHM = 'aes-256-cbc';
 
 // Ensure key is 32 bytes
