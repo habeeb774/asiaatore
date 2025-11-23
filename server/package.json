@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "build": "prisma generate --schema=../prisma/schema.prisma",
     "start": "node index.js",
     "dev": "node index.js",
-    "postinstall": "prisma generate --schema=../prisma/schema.prisma"
+    "postinstall": "prisma generate --schema=../prisma/schema.prisma",
+    "db:generate": "prisma generate --schema=../prisma/schema.prisma"
   },
   "dependencies": {
     "@apollo/server": "^4.11.1",
