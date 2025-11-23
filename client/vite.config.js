@@ -36,6 +36,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
   const proxyTarget = resolveProxyTarget(env);
+  // Explicit backend host override (deployed backend on same server/IP)
+  // You can set VITE_BACKEND_PORT or VITE_BACKEND_HOST in .env.* to customize.
+  // Dynamic backend resolution:
+  // Priority order:
+  // 1. Explicit full host via VITE_BACKEND_HOST (e.g. http://api.example.com:3000)
+  // 2. Host + port via VITE_BACKEND_PORT combined with current host/IP assumption
+  // 3. Fallback to proxyTarget resolved from VITE_PROXY_TARGET
+  const backendPort = env.VITE_BACKEND_PORT || "";
+  const explicitHost = env.VITE_BACKEND_HOST?.trim();
+  const dynamicBackendHost = explicitHost
+    ? explicitHost
+    : backendPort
+    ? `http://72.61.104.194:${backendPort}`
+    : proxyTarget;
   const devMode = mode !== "production";
   const devHeadersEnabled =
     devMode ||
@@ -498,8 +512,9 @@ export default defineConfig(async ({ mode }) => {
       // Expose dev server on LAN for testing on real devices
       host: true,
       proxy: {
+        // Primary API proxy (override to fixed backend host/IP)
         "/api": {
-          target: proxyTarget,
+          target: dynamicBackendHost,
           changeOrigin: true,
           secure: false,
           // Enable WS upgrades if backend enables WebSocket on /api/events behind the same path
@@ -544,12 +559,12 @@ export default defineConfig(async ({ mode }) => {
           },
         },
         "/uploads": {
-          target: proxyTarget,
+          target: dynamicBackendHost,
           changeOrigin: true,
           secure: false,
         },
         "/api/uploads": {
-          target: proxyTarget,
+          target: dynamicBackendHost,
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, ""),
