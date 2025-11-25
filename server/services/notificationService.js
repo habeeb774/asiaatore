@@ -3,16 +3,18 @@ import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import { deserializePaymentMeta } from '../utils/paymentMeta.js';
 
-// Email transporter
-const emailTransporter = process.env.SMTP_HOST ? nodemailer.createTransporter({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-}) : null;
+// Email transporter (nodemailer.createTransport is the correct API)
+const emailTransporter = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true',
+      auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      } : undefined,
+    })
+  : null;
 
 // Twilio client
 const twilioClient = process.env.TWILIO_SID && process.env.TWILIO_TOKEN ? twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN) : null;
