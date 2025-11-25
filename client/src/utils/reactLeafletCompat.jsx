@@ -7,7 +7,6 @@ let loaded = null;
 
 async function loadLeaflet() {
   if (loaded) return loaded;
-  // Import CSS dynamically
   try {
     const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     if (!document.querySelector(`link[href="${cssHref}"]`)) {
@@ -16,25 +15,10 @@ async function loadLeaflet() {
       l.href = cssHref;
       document.head.appendChild(l);
     }
-  } catch { /* ignore */ }
+  } catch {}
 
-async function loadLeaflet() {
-  if (loaded) return loaded;
-  // Import CSS dynamically
-  try {
-    const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    if (!document.querySelector(`link[href="${cssHref}"]`)) {
-      const l = document.createElement('link');
-      l.rel = 'stylesheet';
-      l.href = cssHref;
-      document.head.appendChild(l);
-    }
-  } catch { /* ignore */ }
-
-  // Use dynamic import with computed module names to avoid static analysis
   const leafletPath = 'leaflet';
   const reactLeafletPath = 'react-leaflet';
-
   const [leafletModule, reactLeafletModule] = await Promise.all([
     import(/* @vite-ignore */ leafletPath),
     import(/* @vite-ignore */ reactLeafletPath)
@@ -42,8 +26,6 @@ async function loadLeaflet() {
 
   const L = leafletModule.default || leafletModule;
   const RL = reactLeafletModule.default || reactLeafletModule;
-
-  // Fix default icon URLs if needed
   try {
     if (L && L.Icon && L.Icon.Default && typeof L.Icon.Default.mergeOptions === 'function') {
       delete L.Icon.Default.prototype._getIconUrl;
@@ -53,14 +35,10 @@ async function loadLeaflet() {
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
     }
-  } catch { /* ignore */ }
+  } catch {}
 
-  loaded = {
-    L,
-    ...RL
-  };
+  loaded = { L, ...RL };
   return loaded;
-}
 }
 
 export default function ReactLeafletCompat({ children }) {

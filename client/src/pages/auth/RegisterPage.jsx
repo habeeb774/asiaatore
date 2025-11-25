@@ -90,12 +90,12 @@ const RegisterPage = () => {
       }
     >
       <header className="text-right">
-        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-3 py-1 text-[0.75rem] text-emerald-200">
-          <span className="h-2 w-2 rounded-full bg-emerald-300" />
+        <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-[0.75rem] text-primary">
+          <span className="h-2 w-2 rounded-full bg-primary" />
           إنشاء حساب إداري
         </span>
-        <h2 className="mt-4 text-2xl font-bold text-white">ابدأ التسجيل</h2>
-        <p className="mt-2 text-sm text-slate-300">
+        <h2 className="mt-4 text-2xl font-bold text-text">ابدأ التسجيل</h2>
+        <p className="mt-2 text-sm text-text-soft">
           أدخل بيانات التواصل الأساسية لتفعيل الحساب والوصول إلى لوحة التحكم الموحدة.
         </p>
       </header>
@@ -157,7 +157,7 @@ const RegisterPage = () => {
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-slate-200 hover:text-white"
+            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-text-soft hover:text-text"
             onClick={() => setShowPassword((value) => !value)}
             title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
           >
@@ -180,7 +180,7 @@ const RegisterPage = () => {
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-slate-200 hover:text-white"
+            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-text-soft hover:text-text"
             onClick={() => setShowConfirm((value) => !value)}
             title={showConfirm ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
           >
@@ -200,16 +200,17 @@ const RegisterPage = () => {
 
         <Button
           type="submit"
+          variant="primary"
           disabled={isSubmitting}
-          className="ui-btn--lg w-full border-emerald-400/60 bg-emerald-500 text-white hover:bg-emerald-400"
+          className="ui-btn--lg w-full"
         >
           {isSubmitting ? '...جاري إنشاء الحساب' : 'إنشاء الحساب'}
         </Button>
       </form>
 
-      <div className="mt-6 text-center text-xs text-slate-300">
+      <div className="mt-6 text-center text-xs text-text-soft">
         لديك حساب مسبقًا؟
-        <Link to="/login" className="mr-2 font-medium text-emerald-300 hover:text-emerald-200">
+        <Link to="/login" className="mr-2 font-medium text-primary hover:text-primary/80">
           تسجيل الدخول
         </Link>
       </div>

@@ -402,3 +402,79 @@ router.get('/user/:productId', requireAuth, async (req, res) => {
 });
 
 export default router;
+
+// ---------------- Seller Reviews (التقييمات للبائعين) ----------------
+// List approved seller reviews
+router.get('/seller/:sellerId', async (req, res) => {
+  try {
+    const list = await prisma.sellerReview.findMany({ where: { sellerId: req.params.sellerId, status: 'approved' }, orderBy: { createdAt: 'desc' }, take: 100 });
+    const avg = list.length ? (list.reduce((a,r)=>a+r.rating,0)/list.length) : 0;
+    res.json({ ok: true, reviews: list, average: avg, count: list.length });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'SELLER_REVIEWS_LIST_FAILED', message:e.message });
+  }
+});
+
+// Submit seller review (pending moderation)
+router.post('/seller', requireAuth, async (req, res) => {
+  try {
+    const { sellerId, rating, title, body } = req.body || {};
+    if (!sellerId || !rating) return res.status(400).json({ ok:false, error:'MISSING_FIELDS' });
+    // Prevent reviewing self
+    if (sellerId === req.user.id) return res.status(400).json({ ok:false, error:'CANNOT_REVIEW_SELF' });
+    // Ensure target is seller
+    const seller = await prisma.user.findUnique({ where: { id: sellerId } });
+    if (!seller || seller.role !== 'seller') return res.status(404).json({ ok:false, error:'SELLER_NOT_FOUND' });
+    // Check duplicate (pending or approved)
+    const existing = await prisma.sellerReview.findFirst({ where: { sellerId, userId: req.user.id, status: { in: ['pending','approved'] } } });
+    if (existing) return res.status(400).json({ ok:false, error:'ALREADY_REVIEWED' });
+    const review = await prisma.sellerReview.create({ data: { sellerId, userId: req.user.id, rating: Math.min(5, Math.max(1, parseInt(rating,10))), title: title || null, body: body || null } });
+    await audit({ action:'seller_review_submitted', entity:'sellerReview', entityId: review.id, userId: req.user.id, meta:{ sellerId } });
+    res.status(201).json({ ok:true, review });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'SELLER_REVIEW_CREATE_FAILED', message:e.message });
+  }
+});
+
+// Seller review moderation list (admin only)
+router.get('/seller/moderation', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok:false, error:'FORBIDDEN' });
+  try {
+    const list = await prisma.sellerReview.findMany({ where: { status:'pending' }, orderBy:{ createdAt:'desc' }, take:200 });
+    res.json({ ok:true, reviews:list });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'SELLER_REVIEW_MODERATION_LIST_FAILED', message:e.message });
+  }
+});
+
+async function updateSellerAggregate(sellerId) {
+  const approved = await prisma.sellerReview.findMany({ where: { sellerId, status:'approved' } });
+  const count = approved.length;
+  const avg = count ? approved.reduce((a,r)=>a+r.rating,0)/count : 0;
+  await prisma.user.update({ where:{ id: sellerId }, data:{ sellerRatingAvg: avg, sellerRatingCount: count } });
+}
+
+// Moderate seller review
+router.post('/seller/:id/moderate', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ ok:false, error:'FORBIDDEN' });
+  try {
+    const { action } = req.body || {};
+    if (!['approve','reject'].includes(action)) return res.status(400).json({ ok:false, error:'INVALID_ACTION' });
+    const review = await prisma.sellerReview.update({ where: { id: req.params.id }, data: { status: action === 'approve' ? 'approved' : 'rejected' } });
+    if (action === 'approve') await updateSellerAggregate(review.sellerId);
+    await audit({ action:'seller_review_moderated', entity:'sellerReview', entityId: review.id, userId: req.user.id, meta:{ action } });
+    res.json({ ok:true, review });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'SELLER_REVIEW_MODERATE_FAILED', message:e.message });
+  }
+});
+
+// Get current user's review for seller
+router.get('/seller/:sellerId/user', requireAuth, async (req, res) => {
+  try {
+    const r = await prisma.sellerReview.findFirst({ where: { sellerId: req.params.sellerId, userId: req.user.id, status: { in:['pending','approved'] } } });
+    res.json({ ok:true, review: r || null });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:'SELLER_REVIEW_USER_FETCH_FAILED', message:e.message });
+  }
+});

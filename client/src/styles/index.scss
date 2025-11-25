@@ -1,4 +1,5 @@
 /* Consolidated global styles entry to avoid duplicates and control load order */
+/* SCSS requires all @use rules before other statements; tailwind moved below */
 
 /* Foundation: tokens + helpers */
 @use './_design-system';
@@ -41,7 +42,32 @@
 @use './product-details';
 @use './AdminPage';
 @use './ProductList';
+/* Chat & global minor page-specific helpers extracted from former index.css */
+@use './chat';
 @import './Cart.css';
+
+/* Tailwind directives (migrated from index.css) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global animations (extracted from former index.css) */
+@keyframes slide-in {
+	from { transform: translateX(var(--slide-direction, -100%)); opacity: 0; }
+	to { transform: translateX(0); opacity: 1; }
+}
+@keyframes shrink { from { width: 100%; } to { width: 0%; } }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+@keyframes float-delayed { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+@keyframes float-slow { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+.animate-slide-in { animation: slide-in 0.3s ease-out forwards; }
+[dir="rtl"] .animate-slide-in { --slide-direction: 100%; }
+[dir="ltr"] .animate-slide-in { --slide-direction: -100%; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-delayed { animation: float-delayed 7s ease-in-out infinite; }
+.animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+
 
 /* Notes:
  - Route-specific styles like HomePage.scss, Hero.scss, product-details.scss remain imported by their pages for code-splitting.

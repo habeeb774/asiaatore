@@ -1,42 +1,62 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../services/api/client';
+import AuthShell from '../../components/features/auth/AuthShell.jsx';
+import { cn } from '../../lib/utils.js';
 
 const VerifyEmailPage = () => {
   const [sp] = useSearchParams();
   const [status, setStatus] = useState('loading');
   const [msg, setMsg] = useState('');
-  useEffect(()=>{
+
+  useEffect(() => {
     const token = sp.get('token');
     const email = sp.get('email');
-    if (!token || !email) { setStatus('error'); setMsg('بيانات مفقودة'); return; }
-    (async ()=>{
+    if (!token || !email) {
+      setStatus('error');
+      setMsg('بيانات مفقودة أو رابط غير صالح.');
+      return;
+    }
+    (async () => {
       try {
         const r = await api.authVerifyEmailConfirm(token, email);
-        if (r.ok) { setStatus('ok'); setMsg('تم تفعيل البريد بنجاح'); }
-        else { setStatus('error'); setMsg(r.error || 'فشل التفعيل'); }
-      } catch (e) { setStatus('error'); setMsg(e.message || 'خطأ'); }
+        if (r.ok) {
+          setStatus('ok');
+          setMsg('تم تفعيل بريدك الإلكتروني بنجاح. يمكنك الآن تسجيل الدخول.');
+        } else {
+          setStatus('error');
+          setMsg(r.error || 'فشل التفعيل. قد يكون الرابط منتهي الصلاحية.');
+        }
+      } catch (e) {
+        setStatus('error');
+        setMsg(e.message || 'حدث خطأ غير متوقع.');
+      }
     })();
   }, [sp]);
+
+  const boxBaseClass = "p-4 rounded-lg text-sm font-medium text-center";
+  const boxStatusClass = cn({
+    [boxBaseClass]: true,
+    'bg-success/10 text-success-dark': status === 'ok',
+    'bg-danger/10 text-danger-dark': status === 'error',
+    'bg-blue-500/10 text-blue-700': status === 'loading',
+  });
+
   return (
-    <div style={{direction:'rtl',display:'flex',justifyContent:'center',padding:'2rem'}}>
-      <div style={card}>
-        <h1 style={h1}>تأكيد البريد</h1>
-        <div style={status==='ok'? okBox : (status==='loading'? noteBox : errBox)}>
-          {msg || (status==='loading' ? '...جاري التحقق' : '')}
+    <AuthShell>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-text mb-4">تأكيد البريد الإلكتروني</h1>
+        <div className={boxStatusClass}>
+          {msg || (status === 'loading' ? '...جاري التحقق من الرابط' : '')}
         </div>
-        <p style={{fontSize:'.75rem',marginTop:'.5rem'}}>
-          <Link to="/login">العودة لتسجيل الدخول</Link>
+        <p className="text-sm text-center text-text-faint mt-6">
+          <Link to="/login" className="text-primary hover:underline font-semibold">
+            العودة إلى صفحة تسجيل الدخول
+          </Link>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 };
-
-const card = {background:'#fff',padding:'1.5rem 1.4rem 2rem',border:'1px solid #e2e8f0',borderRadius:18,display:'flex',flexDirection:'column',gap:'.65rem',width:'100%',maxWidth:420,boxShadow:'0 8px 34px -12px rgba(0,0,0,.15)'};
-const h1 = {margin:0,fontSize:'1.25rem',fontWeight:700};
-const errBox = {background:'#fee2e2',color:'#b91c1c',padding:'.5rem .7rem',borderRadius:12,fontSize:'.65rem',lineHeight:1.5};
-const okBox = {background:'#dcfce7',color:'#166534',padding:'.5rem .7rem',borderRadius:12,fontSize:'.65rem',lineHeight:1.5};
-const noteBox = {background:'#fff8e1',color:'#92400e',padding:'.5rem .7rem',borderRadius:12,fontSize:'.65rem',lineHeight:1.5};
 
 export default VerifyEmailPage;

@@ -99,6 +99,7 @@ export default function AdminDrawer({
       className={[
         'flex h-full flex-col bg-slate-900/98 text-white shadow-xl',
         'backdrop-blur-sm border-l border-slate-800',
+        'transition-all duration-300 ease-in-out',
         collapsed ? 'w-20' : 'w-72',
       ].join(' ')}
     >

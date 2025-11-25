@@ -104,7 +104,8 @@ const createOrderSchema = z
     // Accept top-level shipping meta for compatibility with tests/clients
     shipping: z.record(z.unknown()).optional(),
     note: z.string().trim().max(500).optional(),
-    userId: z.string().optional()
+    userId: z.string().optional(),
+    couponCode: z.string().trim().max(64).optional()
   })
   // Allow extra keys without failing validation to avoid internal _zod catchall issues
   .catchall(z.unknown());

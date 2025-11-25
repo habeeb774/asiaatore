@@ -177,7 +177,7 @@ const Profile = () => {
                       <Button type="submit" disabled={saving}>
                         {saving ? (locale==='ar' ? 'جارِ الحفظ...' : 'Saving...') : (locale==='ar' ? 'حفظ' : 'Save')}
                       </Button>
-                      <ButtonLink to="/account/security" variant="outline">
+                      <ButtonLink to="/account/security" variant="primary">
                         {locale==='ar' ? 'الأمان وكلمة المرور' : 'Security & Password'}
                       </ButtonLink>
                     </div>

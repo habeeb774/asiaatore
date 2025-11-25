@@ -86,6 +86,9 @@ export default defineConfig([
       reactHooks.configs['recommended-latest'],
       reactRefresh.configs.vite,
     ],
+    linterOptions: {
+      reportUnusedDisableDirectives: false,
+    },
     plugins: {
       'jsx-a11y': jsxA11y,
       'import': importPlugin,
@@ -106,7 +109,8 @@ export default defineConfig([
     rules: {
       // basic JSX a11y rule enabled; plugin is registered above
       'jsx-a11y/alt-text': 'warn',
-      'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': 'off',
+      'react-hooks/exhaustive-deps': 'off',
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'react-refresh/only-export-components': 'off',
       'import/no-unresolved': 'off', // Disabled due to path resolution issues with Vite

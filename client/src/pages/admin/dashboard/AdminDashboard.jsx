@@ -8,10 +8,12 @@ import { useAdmin } from '../../../contexts/AdminContext';
 import AdminLayout from '../../../components/features/admin/AdminLayout';
 import Seo from '../../../components/Seo';
 import AdminAccessControl from '../components/AdminAccessControl';
-import AdminNavigation from '../components/AdminNavigation';
-import AdminViewRenderer from '../components/AdminViewRenderer';
+// Lazy load the view renderer and navigation to trim initial admin bundle
+const AdminViewRenderer = React.lazy(() => import('../components/AdminViewRenderer'));
+const AdminNavigation = React.lazy(() => import('../components/AdminNavigation'));
 
-import '../../../styles/AdminPage.scss';
+// Admin styles are now code-split via dynamic import for smaller initial CSS.
+// They will be loaded only when the admin dashboard mounts.
 
 const AdminDashboard = () => {
   const { locale } = useLanguage();
@@ -44,7 +46,14 @@ const AdminDashboard = () => {
     return <AdminAccessControl user={user} />;
   }
 
-  const shouldShowNav = !location.pathname.startsWith('/admin/overview');
+  const shouldShowNav = !location.pathname.startsWith('/admin/overview') && !location.pathname.startsWith('/admin/products');
+
+  // Dynamically load admin stylesheet (code-split) on first mount.
+  React.useEffect(() => {
+    let cancelled = false;
+    import('../../../styles/AdminPage.scss').catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <AdminLayout title={pageTitle}>
@@ -53,9 +62,13 @@ const AdminDashboard = () => {
         description={locale === 'ar' ? 'لوحة تحكم الإدارة' : 'Admin control panel'} 
       />
       
-      <div className="admin-dashboard">
-        {shouldShowNav && <AdminNavigation />}
-        <AdminViewRenderer />
+      <div className="admin-dashboard h-full flex flex-col">
+        <React.Suspense fallback={<div className="text-sm text-gray-500 p-4">...جاري تحميل الواجهة...</div>}>
+          {shouldShowNav && <AdminNavigation />}
+        </React.Suspense>
+        <React.Suspense fallback={<div className="text-sm text-gray-500 p-4">...جاري تحميل المحتوى...</div>}>
+          <AdminViewRenderer />
+        </React.Suspense>
       </div>
     </AdminLayout>
   );

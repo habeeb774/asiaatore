@@ -21,10 +21,12 @@ export const queryClient = new QueryClient({
       networkMode: 'online',
       // Add background refetch for critical data
       refetchInterval: (query) => {
-        // Refetch cart/user data every 2 minutes in background
-        if (query.queryKey[0] === 'cart' || query.queryKey[0] === 'user') {
-          return 2 * 60_000;
-        }
+        try {
+          const key0 = query?.queryKey?.[0];
+          if (key0 === 'cart' || key0 === 'user') {
+            return 2 * 60_000; // background refresh every 2 minutes
+          }
+        } catch {}
         return false;
       },
     },

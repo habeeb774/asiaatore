@@ -25,6 +25,14 @@ const AppLayout = ({ children }) => {
   const [panel, setPanel] = React.useState(null); // حالة لإدارة اللوحات الجانبية مثل السلة
   const { cartItems = [], updateQuantity } = useCart();
 
+  // Set dark mode by default for the new theme
+  React.useEffect(() => {
+    document.body.classList.add('dark-mode');
+    return () => {
+      document.body.classList.remove('dark-mode');
+    };
+  }, []);
+
   // السماح بفتح السلة من أي مكان في التطبيق
   const contentRef = React.useRef(null); // مرجع لعنصر المحتوى الرئيسي لإدارة الهوامش
 
@@ -143,7 +151,7 @@ const AppLayout = ({ children }) => {
     <ToastProvider>
       <SidebarProvider>
         <div
-          className={`app-layout professional-layout theme-minimal ${
+          className={`app-layout professional-layout bg-background text-text ${
             isHome ? 'home-inline-sidebar' : ''
           }`}
           style={{

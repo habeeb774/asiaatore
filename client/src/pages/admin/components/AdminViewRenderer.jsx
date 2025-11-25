@@ -42,7 +42,7 @@ const AdminViewRenderer = () => {
 
   return (
     <React.Suspense fallback={<div className="loading-view">جاري التحميل...</div>}>
-      <div className="admin-view-container">
+      <div className="admin-view-container flex-grow min-h-0 overflow-y-auto">
         {renderView()}
       </div>
     </React.Suspense>

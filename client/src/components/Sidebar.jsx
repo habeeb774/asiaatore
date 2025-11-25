@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
-import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, Users, Settings, Menu, X, MessageCircle, Sun, Moon, Globe, LogOut } from 'lucide-react';
+import { Home, BookOpen, Package, BadgePercent, Store, ShoppingCart, ClipboardList, Users, User, Settings, Menu, X, MessageCircle, Sun, Moon, Globe, LogOut } from 'lucide-react';
 import { Tooltip } from './ui';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -452,24 +452,145 @@ const Sidebar = ({
   const whatsappNumber = setting?.supportWhatsapp ? String(setting.supportWhatsapp).replace(/\D+/g, '') : '';
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : null;
 
-  // --- Handlers from SidebarUnified ---
-  const handleRemoveFromCart = useCallback((productId) => {
-    removeFromCart(productId);
-  }, [removeFromCart]);
-
-  const handleUpdateQuantity = useCallback((productId, quantity) => {
-    if (quantity <= 0) {
-      handleRemoveFromCart(productId);
-    } else {
-      updateQuantity(productId, quantity);
-    }
-  }, [updateQuantity, handleRemoveFromCart]);
-
-  const handleRemoveFromFavorites = useCallback((productId) => {
-    dispatch({ type: 'SET_FAVORITES', value: sb.favorites.filter(item => item.id !== productId) });
-  }, [sb.favorites]);
   // --- End Handlers ---
 
+  // --- New Refactored & Redesigned Sidebar Components ---
+
+  const SidebarHeader = () => (
+    <div className="flex items-center justify-between p-4 border-b border-slate-200/70 dark:border-slate-800/70">
+      <Link to="/" className="flex items-center gap-3" onClick={closePanel}>
+        <img
+          src={setting?.logoUrl || '/images/site-logo.svg'}
+          alt={setting?.siteName || 'Logo'}
+          className="h-10 w-auto"
+        />
+        <span className="text-lg font-bold text-slate-800 dark:text-slate-100">
+          {locale === 'ar' ? (setting?.siteNameAr || 'متجري') : (setting?.siteNameEn || 'My Store')}
+        </span>
+      </Link>
+      <button
+        type="button"
+        className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+        onClick={closePanel}
+        aria-label={t('closeMenu') || 'إغلاق القائمة'}
+      >
+        <X size={20} />
+      </button>
+    </div>
+  );
+
+  const SidebarNav = () => {
+    const accountLinks = [
+      { to: '/account/profile', labelAr: 'ملفي الشخصي', labelEn: 'My Profile', navKey: 'profile', icon: Users },
+      { to: '/account/orders', labelAr: 'طلباتي', labelEn: 'My Orders', navKey: 'orders', icon: ClipboardList },
+    ];
+
+    const infoLinks = [
+        { to: '/about', labelAr: 'عنا', labelEn: 'About Us', navKey: 'about', icon: Store },
+        { to: '/contact', labelAr: 'اتصل بنا', labelEn: 'Contact Us', navKey: 'contact', icon: MessageCircle },
+    ];
+
+    return (
+      <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Store Section */}
+        <div className="space-y-1">
+          <h3 className="px-3 text-xs font-semibold uppercase text-slate-400 tracking-wider" id="store-links-header">
+            {t('nav.store') || 'المتجر'}
+          </h3>
+          <ul className="space-y-1" role="list" aria-labelledby="store-links-header">
+            {coreNav.map((item) => (
+              <NavLinkItem key={item.to} item={item} pathname={pathname} locale={locale} closeMobile={closePanel} t={t} badges={sb.badges} />
+            ))}
+          </ul>
+        </div>
+        
+        {/* Account Section */}
+        {user && (
+          <div className="space-y-1">
+            <h3 className="px-3 text-xs font-semibold uppercase text-slate-400 tracking-wider" id="account-links-header">
+              {t('nav.account') || 'حسابي'}
+            </h3>
+            <ul className="space-y-1" role="list" aria-labelledby="account-links-header">
+              {accountLinks.map((item) => (
+                <NavLinkItem key={item.to} item={item} pathname={pathname} locale={locale} closeMobile={closePanel} t={t} />
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Info Section */}
+        <div className="space-y-1">
+            <h3 className="px-3 text-xs font-semibold uppercase text-slate-400 tracking-wider" id="info-links-header">
+              {t('nav.information') || 'المعلومات'}
+            </h3>
+            <ul className="space-y-1" role="list" aria-labelledby="info-links-header">
+              {infoLinks.map((item) => (
+                <NavLinkItem key={item.to} item={item} pathname={pathname} locale={locale} closeMobile={closePanel} t={t} />
+              ))}
+            </ul>
+          </div>
+      </nav>
+    );
+  };
+
+  const SidebarFooter = () => (
+    <div className="p-4 border-t border-slate-200/70 dark:border-slate-800/70 space-y-4">
+      {/* User Profile / Login */}
+      <div>
+        {!user ? (
+          <Link to="/login" onClick={closePanel} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">
+            <User size={18} />
+            <span>{t('login') || 'تسجيل الدخول'}</span>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+              {user?.avatar ? <img src={user.avatar} alt={user.name || 'avatar'} className="w-full h-full object-cover" /> : <Users size={22} className="text-slate-500 dark:text-slate-400" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{user.name}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+            </div>
+            <button onClick={() => { logout(); closePanel(); }} aria-label={t('logout') || 'تسجيل الخروج'} className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+              <LogOut size={18} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+          aria-label={t('toggleTheme') || 'تبديل الثيم'}
+        >
+          {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+          <span>{theme === 'dark' ? t('dark') : t('light')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const langs = ['ar','en','fr']; const idx = Math.max(0, langs.indexOf(locale)); setLocale(langs[(idx+1)%langs.length]);
+          }}
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+          aria-label={t('changeLanguage') || 'تبديل اللغة'}
+        >
+          <Globe size={16} />
+          <span className="uppercase">{locale}</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderNavContent = () => (
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+      <SidebarHeader />
+      <SidebarNav />
+      <SidebarFooter />
+    </div>
+  );
 
   // Unified toggle
   const handleToggle = () => {
@@ -502,104 +623,6 @@ const Sidebar = ({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setHoverExpand(true);
   };
-
-  const renderNavContent = () => (
-    <>
-      {/* Header */}
-      <div className="sidebar-modern__head">
-        <span id="sidebar-brand" className="sidebar-modern__brand">
-          {locale === 'ar' 
-            ? (setting?.siteNameAr || 'متجر الأغذية الفاخر')
-            : (setting?.siteNameEn || 'Premium Foods Store')
-          }
-        </span>
-        <button
-          type="button"
-          className="sidebar-modern__toggle"
-          ref={toggleBtnRef}
-          onClick={handleToggle}
-          aria-expanded={sb.mobileOpen}
-          aria-controls="app-sidebar"
-          aria-pressed={sb.collapsed}
-          aria-label={sb.mobileOpen ? (locale==='ar'?'إغلاق القائمة':'Close menu') : (sb.collapsed ? (locale==='ar'?'تكبير الشريط':'Expand sidebar') : (locale==='ar'?'تصغير الشريط':'Collapse sidebar'))}
-          data-testid={sb.mobileOpen ? 'sidebar-close' : undefined}
-        >
-          {sb.mobileOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <ul className="sidebar-modern__nav" role="list" aria-label="Main navigation">
-        <li className="nav-section-label">
-          {locale === 'ar' ? 'التصفح' : 'Browse'}
-        </li>
-        
-        {coreNav.map((item) => (
-          <NavLinkItem
-            key={item.to}
-            item={item}
-            pathname={pathname}
-            locale={locale}
-            // don't show collapsed/mini nav on mobile-sized screens
-            collapsed={Boolean(sb.collapsed && !sb.mobileOpen && !hoverExpand && !isMobile)}
-            mobileMode={isMobile}
-            closeMobile={() => {
-              dispatch({ type: 'SET_MOBILE_OPEN', value: false });
-              ctxSetOpen?.(false);
-            }}
-            t={t}
-            badges={sb.badges}
-          />
-        ))}
-      </ul>
-
-      {/* Footer */}
-      <div className="sidebar-modern__footer">
-        {/* User profile */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {user?.avatar ? <img src={user.avatar} alt={user.name || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={24} />}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '.95rem', fontWeight: 700 }}>{user?.name || (locale === 'ar' ? 'ضيف' : 'Guest')}</div>
-            <div style={{ fontSize: '.75rem', color: 'var(--sb-text-muted)' }}>{user ? (user.email) : (locale === 'ar' ? 'غير مسجل' : 'Not signed in')}</div>
-          </div>
-          {user && <button onClick={logout} aria-label={locale === 'ar' ? 'تسجيل الخروج' : 'Logout'}><LogOut size={18} /></button>}
-        </div>
-
-        {/* Actions */}
-        <div className="footer-actions">
-            <button
-              type="button"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="footer-icon-btn theme-toggle"
-              aria-label={locale === 'ar' ? 'تبديل ثيم' : 'Toggle theme'}
-              title={locale === 'ar' ? 'تبديل الثيم' : 'Toggle theme'}
-            >
-              {theme === 'dark' ? <Moon size={18} className="lucide" /> : <Sun size={18} className="lucide" />}
-              <span className="btn-label" aria-hidden>
-                {locale === 'ar' ? (theme === 'dark' ? 'داكن' : 'فاتح') : (theme === 'dark' ? 'Dark' : 'Light')}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                const langs = ['ar','en','fr']; const idx = Math.max(0, langs.indexOf(locale)); setLocale(langs[(idx+1)%langs.length]);
-              }}
-              className="footer-icon-btn language-toggle"
-              aria-label={locale === 'ar' ? 'تبديل اللغة' : 'Change language'}
-              title={locale === 'ar' ? 'تغيير اللغة' : 'Change language'}
-            >
-              <Globe size={18} className="lucide" />
-              <span className="btn-label" aria-hidden>
-                {locale === 'ar' ? 'ع' : locale === 'en' ? 'EN' : 'FR'}
-              </span>
-            </button>
-        </div>
-      </div>
-    </>
-  );
 
   const closePanel = useCallback(() => {
     dispatch({ type: 'SET_MOBILE_OPEN', value: false });

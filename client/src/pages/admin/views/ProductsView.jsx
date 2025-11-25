@@ -7,14 +7,14 @@ import Modal from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { useAdminProducts } from '../hooks/useAdminProducts';
 import { useCategories } from '../hooks/useCategories';
-import {
-  ProductForm,
-  ProductImagesManager,
-  ProductTierManager,
-  ExcelActions,
-  ProductsTable
-} from '../../../components/features/admin/products';
+import ProductsTable from '../../../components/features/admin/products/ProductsTable';
 import { useToast } from '../../../contexts/ToastContext';
+
+// Heavier admin product management components lazy-loaded to shrink initial admin bundle
+const ProductForm = React.lazy(() => import('../../../components/features/admin/products/ProductForm'));
+const ProductImagesManager = React.lazy(() => import('../../../components/features/admin/products/ProductImagesManager'));
+const ProductTierManager = React.lazy(() => import('../../../components/features/admin/products/ProductTierManager'));
+const ExcelActions = React.lazy(() => import('../../../components/features/admin/products/ExcelActions'));
 
 const ProductsView = () => {
   const {
@@ -77,31 +77,35 @@ const ProductsView = () => {
     };
   }, [productsList]);
 
-  const numberFormatter = useMemo(() => new Intl.NumberFormat('ar-SA'), []);
-  const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }),
-    []
-  );
+  // Lazy currency/number formatters to avoid constructing Intl instances in initial render
+  const [fmt, setFmt] = React.useState(null);
+  React.useEffect(() => {
+    let mounted = true;
+    import('../../../utils/intlFormattersLazy').then(m => { if(mounted) setFmt(m); }).catch(()=>{});
+    return () => { mounted = false; };
+  }, []);
+  const numberFormatter = (value) => fmt ? fmt.formatNumber(value) : value;
+  const currencyFormatter = (value) => fmt ? fmt.formatCurrency(value) : value;
 
   const kpiCards = useMemo(
     () => [
       {
         label: 'إجمالي المنتجات',
-        value: numberFormatter.format(metrics.total)
+        value: numberFormatter(metrics.total)
       },
       {
         label: 'منتجات نشطة',
-        value: numberFormatter.format(metrics.active),
+        value: numberFormatter(metrics.active),
         help: metrics.draft ? `${numberFormatter.format(metrics.draft)} مسودة بانتظار النشر` : undefined
       },
       {
         label: 'بحاجة لإعادة التوريد',
-        value: numberFormatter.format(metrics.lowStock),
+        value: numberFormatter(metrics.lowStock),
         help: metrics.outOfStock ? `${numberFormatter.format(metrics.outOfStock)} نفدت بالكامل` : undefined
       },
       {
         label: 'قيمة المخزون التقديرية',
-        value: currencyFormatter.format(metrics.inventoryValue),
+        value: currencyFormatter(metrics.inventoryValue),
         help: 'السعر الحالي × الكمية المتوفرة'
       }
     ],
@@ -289,30 +293,36 @@ const ProductsView = () => {
         title={activeProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}
         size="xl"
       >
-        <ProductForm
-          product={activeProduct}
-          categories={categoriesOptions}
-          onSubmit={handleFormSubmit}
-          onCancel={closeFormModal}
-          showHeader={false}
-        />
+        <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">جاري تحميل النموذج...</div>}>
+          <ProductForm
+            product={activeProduct}
+            categories={categoriesOptions}
+            onSubmit={handleFormSubmit}
+            onCancel={closeFormModal}
+            showHeader={false}
+          />
+        </React.Suspense>
       </Modal>
 
       {panelType === 'images' && panelProduct && (
-        <ProductImagesManager
-          product={panelProduct}
-          onChange={handleImagesChange}
-          onClose={closePanel}
-        />
+        <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">جاري تحميل إدارة الصور...</div>}>
+          <ProductImagesManager
+            product={panelProduct}
+            onChange={handleImagesChange}
+            onClose={closePanel}
+          />
+        </React.Suspense>
       )}
 
       {panelType === 'tiers' && panelProduct && (
-        <ProductTierManager
-          product={panelProduct}
-          tiers={panelProduct.tiers || []}
-          onChange={handleTiersChange}
-          onClose={closePanel}
-        />
+        <React.Suspense fallback={<div className="p-4 text-sm text-gray-500">جاري تحميل إدارة مستويات التسعير...</div>}>
+          <ProductTierManager
+            product={panelProduct}
+            tiers={panelProduct.tiers || []}
+            onChange={handleTiersChange}
+            onClose={closePanel}
+          />
+        </React.Suspense>
       )}
     </>
   );

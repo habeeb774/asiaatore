@@ -15,19 +15,30 @@ const HAS_PRISMA_SESSION =
 const HAS_PRISMA_AUTHTOKEN =
   !!prisma.authToken && typeof prisma.authToken.create === "function";
 
-export async function loginUser(identifier, password, mfaCode) {
-  const user = await prisma.user.findFirst({ // Use findFirst for OR condition
-    where: {
-      OR: [{ email: identifier.trim().toLowerCase() }, { phone: identifier.trim() }],
-    },
-  });
-  if (!user) { // If no user found, throw specific error
-    throw new Error("USER_NOT_FOUND");
-  }
+// Multi-identifier login (email OR phone). If password omitted for social, caller must pass socialProvider/signed token.
+export async function loginUser(identifier, password, mfaCode, options = {}) {
+  const trimmed = identifier.trim();
+  const isEmail = /@/.test(trimmed);
+  const where = isEmail
+    ? { email: trimmed.toLowerCase() }
+    : { phone: trimmed };
+  let user = await prisma.user.findFirst({ where });
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) {
-    throw new Error("WRONG_PASSWORD");
+  // Fallback: allow login by social provider id if configured
+  if (!user && options?.socialProvider && options?.socialProviderId) {
+    user = await prisma.user.findFirst({
+      where: {
+        socialProvider: options.socialProvider,
+        socialProviderId: options.socialProviderId,
+      },
+    });
+  }
+  if (!user) throw new Error("USER_NOT_FOUND");
+
+  // Social auth may bypass password if validated upstream
+  if (!options?.socialLogin) {
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) throw new Error("WRONG_PASSWORD");
   }
 
   if (user.mfaEnabled) {
@@ -47,17 +58,25 @@ export async function loginUser(identifier, password, mfaCode) {
   return user;
 }
 
-export async function registerUser(email, password, name, phone) {
-  if (email) { // Check if email already exists
+export async function registerUser(email, password, name, phone, social) {
+  if (email) {
     const existingEmail = await prisma.user.findUnique({ where: { email } });
     if (existingEmail) throw new Error("EMAIL_EXISTS");
   }
-  if (phone) { // Check if phone already exists
+  if (phone) {
     const existingPhone = await prisma.user.findFirst({ where: { phone } });
     if (existingPhone) throw new Error("PHONE_EXISTS");
   }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
+  if (social?.provider && social?.providerId) {
+    const existingSocial = await prisma.user.findFirst({
+      where: {
+        socialProvider: social.provider,
+        socialProviderId: social.providerId,
+      },
+    });
+    if (existingSocial) throw new Error("SOCIAL_EXISTS");
+  }
+  const hashedPassword = password ? await bcrypt.hash(password, 10) : await bcrypt.hash(randomToken(16), 10);
   const user = await prisma.user.create({
     data: {
       email,
@@ -65,9 +84,10 @@ export async function registerUser(email, password, name, phone) {
       name,
       phone,
       role: "user",
+      socialProvider: social?.provider,
+      socialProviderId: social?.providerId,
     },
   });
-
   return user;
 }
 

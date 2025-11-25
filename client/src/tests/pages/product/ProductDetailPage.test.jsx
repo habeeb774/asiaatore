@@ -35,6 +35,20 @@ describe('ProductDetailPage interactions', () => {
       };
     }
     vi.spyOn(ProductsContext, 'useProducts').mockReturnValue({ getProductById: (id) => product, products: [product] });
+    // Mock marketing track endpoint to silence network errors during tests
+    if (!global.fetch) {
+      global.fetch = (...args) => Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
+    } else {
+      vi.spyOn(global, 'fetch').mockImplementation((input, init) => {
+        try {
+          const url = typeof input === 'string' ? input : (input?.url || '');
+          if (url.includes('/api/marketing/track')) {
+            return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
+          }
+        } catch {}
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+    }
   });
 
   afterEach(() => {

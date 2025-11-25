@@ -22,7 +22,6 @@ const PaymentMethod = () => {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
-  // إن لم توجد عناصر بالسلة نعيد المستخدم
   useEffect(() => {
     if (!cartItems || !cartItems.length) {
       navigate('/cart');
@@ -62,41 +61,45 @@ const PaymentMethod = () => {
       setErr('لم يتم إكمال العملية');
     }
   };
+  
+  const baseInputClass = "w-full bg-bg-alt border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary-alt outline-none transition-all";
+  const baseButtonClass = "w-full text-center px-4 py-3 rounded-lg text-sm font-semibold border-0 cursor-pointer transition-colors";
 
   return (
-    <section className="payment-method-page" style={{ maxWidth: 520, margin: '2rem auto', background: '#fff', padding: '1.5rem 1.75rem', borderRadius: 12, boxShadow: '0 8px 24px -10px rgba(0,0,0,.08)' }}>
-      <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>الدفع بالبطاقة</h2>
+    <section className="max-w-xl mx-auto my-8 bg-surface p-6 sm:p-8 rounded-xl shadow-lg">
+      <h2 className="text-2xl font-bold mb-2 text-text">الدفع بالبطاقة</h2>
       {totals && (
-        <div style={{ fontSize: '.9rem', marginBottom: '1rem', color: '#374151' }}>
-          الإجمالي: <strong>{totals.formatted.grandTotal}</strong>
+        <div className="text-base mb-6 text-text-soft">
+          الإجمالي: <strong className="font-bold text-text">{totals.formatted.grandTotal}</strong>
         </div>
       )}
-      {!intent && <p style={{ fontSize: '.75rem', color: '#666' }}>تهيئة عملية الدفع...</p>}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '.85rem' }}>
+      {!intent && <p className="text-sm text-text-faint">تهيئة عملية الدفع...</p>}
+      
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label style={{ display: 'block', fontSize: '.75rem', marginBottom: 4 }}>اسم حامل البطاقة</label>
+          <label className="block text-sm font-medium mb-1.5 text-text-label">اسم حامل البطاقة</label>
           <input
             required
             value={cardName}
             onChange={(e) => setCardName(e.target.value)}
             placeholder="الاسم كما في البطاقة"
-            style={inputStyle}
+            className={baseInputClass}
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '.75rem', marginBottom: 4 }}>رقم البطاقة</label>
+          <label className="block text-sm font-medium mb-1.5 text-text-label">رقم البطاقة</label>
           <input
             required
             value={cardNumber}
             onChange={(e) => setCardNumber(maskNumber(e.target.value))}
             placeholder="1234 5678 9012 3456"
             inputMode="numeric"
-            style={inputStyle}
+            className={baseInputClass}
           />
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '.75rem', marginBottom: 4 }}>انتهاء (MM/YY)</label>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-1.5 text-text-label">انتهاء (MM/YY)</label>
             <input
               required
               value={expiry}
@@ -106,74 +109,43 @@ const PaymentMethod = () => {
                 setExpiry(v);
               }}
               placeholder="08/26"
-              style={inputStyle}
+              className={baseInputClass}
             />
           </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '.75rem', marginBottom: 4 }}>CVV</label>
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-1.5 text-text-label">CVV</label>
             <input
               required
               value={cvv}
               onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="123"
               inputMode="numeric"
-              style={inputStyle}
+              className={baseInputClass}
             />
           </div>
         </div>
 
-        {err && <div style={{ color: '#b91c1c', fontSize: '.8rem' }}>{err}</div>}
-        {status === 'processing' && <div style={{ fontSize: '.75rem', color: '#64748b' }}>جاري المعالجة...</div>}
-        {error && <div style={{ color: '#b91c1c', fontSize: '.75rem' }}>{error}</div>}
+        {err && <div className="text-danger text-sm font-medium">{err}</div>}
+        {status === 'processing' && <div className="text-text-faint text-sm">جاري المعالجة...</div>}
+        {error && <div className="text-danger text-sm font-medium">{error}</div>}
 
         <button
           type="submit"
           disabled={loading}
-          style={{
-            background: 'linear-gradient(90deg,#69be3c,#f6ad55)',
-            color: '#fff',
-            border: 0,
-            padding: '.85rem 1.2rem',
-            borderRadius: 10,
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '.5rem',
-            fontSize: '.9rem'
-          }}
+          className={`${baseButtonClass} bg-primary text-white hover:bg-primary-alt disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4`}
         >
           {loading ? 'جاري المعالجة...' : 'إتمام الدفع'}
         </button>
         <button
           type="button"
           onClick={() => navigate('/checkout')}
-          style={{
-            background: '#f3f4f6',
-            color: '#374151',
-            border: 0,
-            padding: '.7rem 1.1rem',
-            borderRadius: 10,
-            fontSize: '.8rem',
-            cursor: 'pointer'
-          }}
+          className={`${baseButtonClass} bg-bg-alt text-text-soft hover:bg-border`}
         >
           العودة لملخص الطلب
         </button>
       </form>
     </section>
   );
-};
-
-const inputStyle = {
-  width: '100%',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 8,
-  padding: '.65rem .75rem',
-  fontSize: '.85rem',
-  outline: 'none'
 };
 
 export default PaymentMethod;

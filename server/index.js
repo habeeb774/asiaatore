@@ -75,6 +75,7 @@ let authRoutes,
 let inventoryRoutes, reportsRoutes, invoicesRoutes;
 let settingsRoutes, categoriesRoutes, reviewsRoutes, addressesRoutes;
 let envRoutes, endpointsRoutes;
+let couponsRoutes, loyaltyRoutes, referralRoutes, abandonedRoutes;
 let adminUsersRoutes,
   adminStatsRoutes,
   adminAuditRoutes,
@@ -168,6 +169,36 @@ app.use(
     frameguard: { action: "sameorigin" },
   })
 );
+
+// Additional security & performance headers (can be disabled via SECURITY_HEADERS_DISABLE=true)
+if (process.env.SECURITY_HEADERS_DISABLE !== 'true') {
+  app.use((req, res, next) => {
+    try {
+      // Explicitly clear X-Powered-By
+      res.removeHeader('X-Powered-By');
+      // Basic permissions policy (tighten as needed)
+      res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+      // MIME sniff protection (helmet sets this, duplicate harmless)
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // Cross origin isolation (optional; can disable if issues)
+      if (process.env.CROSS_ORIGIN_ISOLATION !== 'false') {
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        // COEP may break third-party embeds; only enable in prod when explicitly opted in
+        if (isProd && process.env.ENABLE_COEP === 'true') {
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+        }
+        res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+      }
+      // Fallback caching for API responses (override per-route as needed)
+      if (req.path.startsWith('/api/')) {
+        res.setHeader('Cache-Control', 'no-store');
+      }
+    } catch (e) {
+      /* ignore header errors */
+    }
+    next();
+  });
+}
 
 // Add explicit HSTS in production (ensure HTTPS in front of the app)
 if (isProd) {
@@ -503,6 +534,10 @@ async function loadModulesAndMount() {
     settingsR,
     categoriesR,
     reviewsR,
+    couponsR,
+    loyaltyR,
+    referralR,
+    abandonedR,
     wishlistR,
     cartR,
     searchR,
@@ -543,6 +578,10 @@ async function loadModulesAndMount() {
     import("./controllers/settings.js"), // Settings routes
     import("./controllers/categories.js"),
     import("./controllers/reviews.js"),
+    import("./controllers/coupons.js"),
+    import("./controllers/loyalty.js"),
+    import("./controllers/referral.js"),
+    import("./controllers/abandoned.js"),
     import("./controllers/wishlist.js"),
     import("./controllers/cart.js"),
     import("./controllers/search.js"),
@@ -596,6 +635,10 @@ async function loadModulesAndMount() {
   settingsRoutes = settingsR.default;
   categoriesRoutes = categoriesR.default;
   reviewsRoutes = reviewsR.default;
+  couponsRoutes = couponsR.default;
+  loyaltyRoutes = loyaltyR.default;
+  referralRoutes = referralR.default;
+  abandonedRoutes = abandonedR.default;
   addressesRoutes = addressesR.default;
   envRoutes = envR.default;
   endpointsRoutes = endpointsR.default;
@@ -639,6 +682,10 @@ async function loadModulesAndMount() {
   app.use("/api/env", envRoutes);
   app.use("/api/categories", categoriesRoutes);
   app.use("/api/reviews", reviewsRoutes);
+  if (couponsRoutes) app.use("/api/coupons", couponsRoutes);
+  if (loyaltyRoutes) app.use("/api/loyalty", loyaltyRoutes);
+  if (referralRoutes) app.use("/api/referral", referralRoutes);
+  if (abandonedRoutes) app.use("/api/abandoned", abandonedRoutes);
   app.use("/api/addresses", addressesRoutes);
   app.use("/api/subscriptions", subscriptionsRoutes);
   app.use("/api/analytics", analyticsRoutes);
@@ -775,7 +822,27 @@ if (!process.env.VERCEL) {
   // Graceful shutdown
   function shutdown(sig) {
     appLogger.warn(`[APP] Signal ${sig} received — shutting down.`);
-    process.exit(0);
+    // Attempt graceful cleanup (Prisma, Redis)
+    Promise.resolve()
+      .then(async () => {
+        try {
+          if (prisma?.$disconnect) {
+            await prisma.$disconnect();
+            appLogger.info('[APP] Prisma disconnected');
+          }
+        } catch (e) {
+          appLogger.warn({ err: e.message }, '[APP] Prisma disconnect failed');
+        }
+        try {
+          if (redisClient?.quit) {
+            await redisClient.quit();
+            appLogger.info('[APP] Redis client closed');
+          }
+        } catch (e) {
+          appLogger.warn({ err: e.message }, '[APP] Redis close failed');
+        }
+      })
+      .finally(() => process.exit(0));
   }
   ["SIGINT", "SIGTERM"].forEach((s) => process.on(s, () => shutdown(s)));
 }

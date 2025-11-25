@@ -84,54 +84,45 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
           {t('Skip to content')}
         </a>
 
-        <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-4 grid grid-cols-12 items-center">
+        <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-4 flex items-center justify-between gap-4">
 
-          {/* زر القائمة — يظهر فقط على الشاشات الصغيرة */}
-          <div className="col-span-2 flex items-center sm:hidden">
+          {/* Left Section: Mobile Menu Toggle */}
+          <div className="flex-shrink-0 flex items-center lg:hidden">
             <button
               onClick={toggleSidebar}
               aria-expanded={isMenuOpen}
               aria-label={isMenuOpen ? t('إغلاق القائمة') : t('افتح القائمة')}
               aria-controls="app-sidebar"
-              className="p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 border shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+              className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              {isMenuOpen ? <XIcon size={20} /> : <MenuIcon size={20} />}
+              {isMenuOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
             </button>
           </div>
 
-          {/* الشعار في المنتصف مع اسم الشركة */}
-          <div className="col-span-8 flex flex-col items-center justify-center text-center select-none pointer-events-auto">
-            <Link to="/" className="flex flex-col items-center">
+          {/* Center Section: Logo */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:translate-x-0 lg:translate-y-0 flex-shrink-0">
+            <Link to="/" className="flex flex-col items-center text-center">
               <img
                 src={setting?.logoUrl || '/images/site-logo.svg'}
                 alt={setting?.siteName || 'Logo'}
-                className="h-14 md:h-16 w-auto mb-1"
+                className="h-14 md:h-16 w-auto"
               />
-              <span className="text-sm md:text-base font-semibold text-slate-800 dark:text-slate-100">
+              <span className="hidden sm:block text-sm font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">
                 شركة منفذ آسيا التجارية
               </span>
             </Link>
           </div>
 
-          {/* عناصر التحكم — تبقى على اليمين */}
-          <div className="col-span-2 flex items-center justify-end gap-2">
-            <button
-              onClick={triggerSearch}
-              className="sm:hidden p-2 rounded-lg bg-white/80 dark:bg-slate-800/80 border shadow-sm"
-            >
-              <SearchIcon size={18} />
-            </button>
-
+          {/* Right Section: Controls */}
+          <div className="flex-shrink-0 flex items-center justify-end">
             <HeaderControls
               t={t}
               locale={locale}
               setLocale={setLocale}
-              panel={panel}
               setPanel={setPanel}
               cartItems={cartItems}
-              cartTotal={cartTotal}
-              updateQuantity={updateQuantity}
               user={user}
+              triggerSearch={triggerSearch}
             />
           </div>
         </div>

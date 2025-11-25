@@ -1,4 +1,4 @@
-import { loginSchema, registerSchema } from "./auth.validation.js";
+import { loginSchema, registerSchema, socialLoginSchema } from "./auth.validation.js";
 import {
   loginUser, // Ensure loginUser is imported
   registerUser,
@@ -6,7 +6,7 @@ import {
   sendVerificationEmail,
   refreshSession,
 } from "./auth.service.js";
-import { signAccessToken } from "../../utils/jwt.js";
+import { signAccessToken, verifyToken } from "../../utils/jwt.js";
 import { cookieOpts } from "../../utils/cookie.js";
 import prisma from "../../db/client.js";
 
@@ -27,9 +27,12 @@ export async function registerHandler(req, res) {
         fields: parsed.error.flatten(),
       });
     }
-    const { email, password, name, phone } = parsed.data;
+    const { email, password, name, phone, socialProvider, socialProviderId } = parsed.data;
 
-    const user = await registerUser(email, password, name, phone);
+    const user = await registerUser(email, password, name, phone, {
+      provider: socialProvider,
+      providerId: socialProviderId,
+    });
 
     // Auto-login user after registration
     const accessToken = signAccessToken({ id: user.id, role: user.role, email: user.email });
@@ -76,7 +79,6 @@ export async function loginHandler(req, res) {
       return res.status(400).json({ ok: false, error: "MISSING_CREDENTIALS", fields: parsed.error.flatten() });
     }
     const { identifier, password, mfaCode } = parsed.data;
-
     const user = await loginUser(identifier, password, mfaCode);
 
     const accessToken = signAccessToken({ id: user.id, role: user.role, email: user.email });
@@ -141,5 +143,40 @@ export async function meHandler(req, res) {
     res.json(userResponse);
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching user profile', error: error.message });
+  }
+}
+
+/**
+ * @desc Social login (token already validated client-side with provider SDK)
+ * @route POST /api/auth/social
+ * @access Public
+ */
+export async function socialLoginHandler(req, res) {
+  try {
+    const parsed = socialLoginSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'MISSING_SOCIAL_FIELDS', fields: parsed.error.flatten() });
+    }
+    const { provider, providerId, email, name } = parsed.data;
+
+    // Find existing user by provider id OR email fallback
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { socialProvider: provider, socialProviderId: providerId },
+          email ? { email } : { id: '___skip' },
+        ],
+      },
+    });
+    if (!user) {
+      user = await registerUser(email || `${providerId}@${provider}.login`, null, name, null, { provider, providerId });
+    }
+    const accessToken = signAccessToken({ id: user.id, role: user.role, email: user.email });
+    const { rawRefresh, ttlMs } = await createSession(user.id, req.headers?.['user-agent'], req.ip);
+    res.cookie(REFRESH_COOKIE, rawRefresh, { ...cookieOpts(req), maxAge: ttlMs });
+    return res.json({ ok: true, accessToken, user: { id: user.id, role: user.role, email: user.email, name: user.name } });
+  } catch (error) {
+    req.log?.error({ err: error }, 'Social login error');
+    return res.status(500).json({ ok: false, error: 'SOCIAL_LOGIN_FAILED' });
   }
 }

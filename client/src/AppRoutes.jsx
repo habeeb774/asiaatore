@@ -5,18 +5,19 @@ import { ChatProvider } from './contexts/ChatContext.jsx';
 import { RouteErrorBoundary, PageFallback } from './components/routing/RouteBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
-import AdminUsers from "./pages/admin/users/AdminUsers";
-import Reports from "./pages/admin/reports/Reports";
-import BankTransfers from "./pages/admin/orders/BankTransfers";
-import Analytics from "./pages/admin/analytics/Analytics";
-import Customers from "./pages/admin/users/Customers";
-import Settings from "./pages/admin/Settings";
-import AuditAdmin from "./pages/admin/reports/AuditAdmin";
-import ReviewsAdmin from "./pages/admin/products/ReviewsAdmin";
-import BrandsAdmin from "./pages/admin/products/BrandsAdmin";
-import AccountSecurity from "./pages/account/AccountSecurity.jsx";
-import DeveloperSettings from "./pages/admin/integrations/DeveloperSettings.jsx";
-import AnalyticsDashboard from "./pages/admin/analytics/AnalyticsDashboard";
+// Admin and account pages were previously eagerly imported; convert to lazy for bundle size reduction.
+const AdminUsers = React.lazy(() => import(/* webpackChunkName: "admin-users" */ './pages/admin/users/AdminUsers'));
+const Reports = React.lazy(() => import(/* webpackChunkName: "admin-reports" */ './pages/admin/reports/Reports'));
+const BankTransfers = React.lazy(() => import(/* webpackChunkName: "admin-orders" */ './pages/admin/orders/BankTransfers'));
+const Analytics = React.lazy(() => import(/* webpackChunkName: "admin-analytics" */ './pages/admin/analytics/Analytics'));
+const Customers = React.lazy(() => import(/* webpackChunkName: "admin-users" */ './pages/admin/users/Customers'));
+const Settings = React.lazy(() => import(/* webpackChunkName: "admin-settings" */ './pages/admin/Settings'));
+const AuditAdmin = React.lazy(() => import(/* webpackChunkName: "admin-reports" */ './pages/admin/reports/AuditAdmin'));
+const ReviewsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-products" */ './pages/admin/products/ReviewsAdmin'));
+const BrandsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-products" */ './pages/admin/products/BrandsAdmin'));
+const AccountSecurity = React.lazy(() => import(/* webpackChunkName: "account-security" */ './pages/account/AccountSecurity.jsx'));
+const DeveloperSettings = React.lazy(() => import(/* webpackChunkName: "admin-settings" */ './pages/admin/integrations/DeveloperSettings.jsx'));
+const AnalyticsDashboard = React.lazy(() => import(/* webpackChunkName: "admin-analytics" */ './pages/admin/analytics/AnalyticsDashboard'));
 import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Lazy load heavy pages to split bundles per-route

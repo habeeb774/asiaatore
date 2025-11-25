@@ -68,22 +68,42 @@ import {
   useLocation,
 } from "react-router-dom";
 import AppRoutes from "./AppRoutes";
-import "./index.css";
+// Merged tailwind + global base into styles/index.scss to avoid duplicate CSS bundles
+// import "./index.css"; // removed (was causing duplicate global CSS)
 import "./styles/ui.css";
 
 // Local Cairo font (self-hosted via package) - load only essential weights initially
 import "@fontsource/cairo/400.css";
 import "@fontsource/cairo/600.css";
 
-// Lazy load additional font weights only when needed
+// Optimized lazy font loading: defer non-critical weights until idle or first heading enters viewport
 const loadAdditionalFonts = () => {
-  if (typeof document !== "undefined") {
-    // Load additional weights after initial render with lower priority
-    setTimeout(() => {
-      import("@fontsource/cairo/300.css");
-      import("@fontsource/cairo/500.css");
-      import("@fontsource/cairo/700.css");
-    }, 2000); // Delay additional fonts to prioritize content
+  if (typeof document === "undefined") return;
+  const load = () => {
+    import("@fontsource/cairo/300.css");
+    import("@fontsource/cairo/500.css");
+    import("@fontsource/cairo/700.css");
+  };
+  // If user scrolls quickly to content (h1/h2) we prioritize earlier
+  const target = document.querySelector("h1, h2");
+  if (target && "IntersectionObserver" in window) {
+    const obs = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          obs.disconnect();
+          load();
+          return;
+        }
+      }
+    }, { rootMargin: "300px" });
+    obs.observe(target);
+  }
+  // Fallback: requestIdleCallback or timeout to guarantee eventual load
+  const schedule = () => load();
+  if ("requestIdleCallback" in window) {
+    try { window.requestIdleCallback(schedule, { timeout: 5000 }); } catch { setTimeout(schedule, 2500); }
+  } else {
+    setTimeout(schedule, 2500);
   }
 };
 
@@ -204,6 +224,16 @@ const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
   : null;
 const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || null;
+const paypalOptions = {
+  "client-id": paypalClientId,
+  currency: "SAR",
+};
+if (import.meta.env.VITE_PAYPAL_DATA_CSP_NONCE) {
+  paypalOptions["data-csp-nonce"] = import.meta.env.VITE_PAYPAL_DATA_CSP_NONCE;
+}
+if (import.meta.env.VITE_PAYPAL_DATA_CLIENT_TOKEN) {
+  paypalOptions["data-client-token"] = import.meta.env.VITE_PAYPAL_DATA_CLIENT_TOKEN;
+}
 
 const Providers = ({ children }) => {
   const location = useLocation();
@@ -267,10 +297,7 @@ const Providers = ({ children }) => {
                               {stripePromise && paypalClientId ? (
                                 <Elements stripe={stripePromise}>
                                   <PayPalScriptProvider
-                                    options={{
-                                      "client-id": paypalClientId,
-                                      currency: "SAR",
-                                    }}
+                                    options={paypalOptions}
                                   >
                                     {commonContent}
                                   </PayPalScriptProvider>
@@ -281,10 +308,7 @@ const Providers = ({ children }) => {
                                 </Elements>
                               ) : paypalClientId ? (
                                 <PayPalScriptProvider
-                                  options={{
-                                    "client-id": paypalClientId,
-                                    currency: "SAR",
-                                  }}
+                                  options={paypalOptions}
                                 >
                                   {commonContent}
                                 </PayPalScriptProvider>

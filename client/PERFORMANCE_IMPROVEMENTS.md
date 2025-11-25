@@ -193,3 +193,39 @@ To monitor the performance improvements:
 - [ ] React Query calls work with v5
 - [ ] Component exports are accessible
 - [ ] Bundle size is optimized
+
+## Phase 2 (In-Progress)
+
+### Implemented
+- Critical CSS inlined (`index.html`) for above-the-fold rendering.
+- Performance budget script (`scripts/perf-budget.js`) enforcing bundle thresholds; tightened limits (admin/react/maps/index/router).
+- Admin bundle decomposition: lazy-loaded `AdminNavigation`, `AdminViewRenderer`, and heavy product management components (`ProductForm`, `ProductImagesManager`, `ProductTierManager`, `ExcelActions`).
+- Code-split admin styles: `AdminPage.scss` dynamically imported only on admin dashboard mount (separate CSS chunk `AdminPage-*.css`).
+- Lighthouse script enhanced (`scripts/run-lighthouse.js`) with env-configurable URL, form factor, throttling, category filtering, and summary JSON output (`client/lighthouse-summary.json`).
+- Added server security/performance headers: Permissions-Policy, COOP/CORP (opt-in COEP), strict Cache-Control `no-store` for API responses, and removal of `X-Powered-By` for reduced fingerprinting.
+
+### Remaining / Next Targets
+- Reduce `chunk.admin` further (goal interim <60 kB gzip, final <55 kB) by splitting Overview stat card grids & deferring non-critical queries until idle.
+- Extract Overview stat cards to a lazy component loaded after first paint; skeleton first.
+- Modularize / prune admin selectors from global CSS (target main `index-*.css` reduction >15%).
+- Replace remaining large raster hero assets with optimized WebP/AVIF + proper `sizes` hints.
+- Backend: add CSP & security/perf headers (Cache-Control for static, `Strict-Transport-Security`, `X-Content-Type-Options`).
+- Lighthouse rerun after next reductions with tighter targets (Mobile LCP <2.9s, TBT <200ms, CLS <0.03).
+
+### Running Lighthouse (Updated)
+```powershell
+# Build client first
+npm run build -w client
+
+# Run lighthouse (override defaults via env variables)
+#   LH_URL=http://localhost:5176
+#   LH_FORM_FACTOR=mobile|desktop
+#   LH_THROTTLING=simulate|provided
+#   LH_CATEGORIES=performance,seo,accessibility,best-practices,pwa
+
+$env:LH_URL='http://localhost:5176'; node scripts/run-lighthouse.js
+
+# Outputs:
+# - client/lighthouse-report.json / .html (full report)
+# - client/lighthouse-summary.json (key metrics summary)
+```

@@ -9,6 +9,11 @@ import InventoryService from '../../services/inventoryService.js';
 import { ensureInvoiceForOrder } from '../../utils/invoice.js';
 import { sendInvoiceWhatsApp } from '../../services/whatsapp.js';
 import { serializePaymentMeta, deserializePaymentMeta } from '../../utils/paymentMeta.js';
+import { validateCoupon, incrementCouponUsage } from '../coupons/service.js';
+import { addPoints } from '../loyalty/service.js';
+import { audit } from '../../utils/audit.js';
+import prismaRaw from '../../db/client.js';
+// audit imported above (deduplicated)
 
 function providerTrackingUrl(provider, trackingNumber) {
   try {
@@ -36,6 +41,8 @@ export function mapOrder(o) {
     total: o.grandTotal,
     paymentMethod: o.paymentMethod,
     paymentMeta: deserializePaymentMeta(o.paymentMeta),
+    couponCode: o.couponCode || null,
+    couponDiscount: o.couponDiscount != null ? o.couponDiscount : 0,
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
     items: (o.items || []).map(i => ({
@@ -244,7 +251,35 @@ export const OrdersService = {
     const currency = input.currency || 'SAR';
     const items = await normalizeItems(input.items || []);
     const shippingOverride = extractShippingOverride(input);
-    const totals = computeTotals(items, { shipping: shippingOverride });
+    // Base totals (without coupon) so we can validate against original subtotal
+    const baseTotals = computeTotals(items, { shipping: shippingOverride });
+    let couponCode = null;
+    let couponDiscount = 0;
+    // Apply coupon discount if provided
+    if (input.couponCode && String(input.couponCode).trim()) {
+      try {
+        const codeRaw = String(input.couponCode).trim();
+        // Feature flag: allow disabling coupons quickly
+        if (String(process.env.COUPONS_ENABLED || 'true').toLowerCase() === 'true') {
+          const validation = await validateCoupon({ code: codeRaw, userId, subtotal: baseTotals.subtotal });
+          if (validation.ok) {
+            couponCode = validation.code;
+            couponDiscount = validation.discount;
+          }
+        }
+      } catch (e) {
+        if (process.env.DEBUG_ERRORS === 'true') console.warn('[ORDERS] coupon validation failed (non-fatal):', e.message);
+      }
+    }
+    // Merge coupon discount into overall discount and recompute tax/grandTotal if applied
+    let totals = { ...baseTotals };
+    if (couponDiscount > 0) {
+      const discountCombined = baseTotals.discount + couponDiscount;
+      const taxableBase = baseTotals.subtotal - discountCombined;
+      const tax = +(taxableBase * 0.15).toFixed(2);
+      const grandTotal = +(baseTotals.subtotal - discountCombined + tax + (baseTotals.shipping || 0)).toFixed(2);
+      totals = { ...baseTotals, discount: discountCombined, tax, grandTotal };
+    }
     const created = await prisma.order.create({
       data: {
         userId,
@@ -256,6 +291,8 @@ export const OrdersService = {
         grandTotal: totals.grandTotal,
         paymentMethod: input.paymentMethod || null,
         paymentMeta: input.paymentMeta ? serializePaymentMeta(input.paymentMeta) : null,
+        couponCode: couponCode,
+        couponDiscount: couponDiscount || 0,
         items: {
           create: items.map(i => ({
             productId: i.productId,
@@ -274,6 +311,19 @@ export const OrdersService = {
       ...created,
       paymentMeta: deserializePaymentMeta(created.paymentMeta),
     };
+    // Audit coupon application if applied
+    if (couponCode) {
+      try {
+        await audit({ action: 'order_coupon_applied', entity: 'Order', entityId: created.id, userId, meta: { code: couponCode, couponDiscount } });
+        // Increment coupon usage (best effort, swallow errors to avoid blocking order creation)
+        try {
+          await incrementCouponUsage(couponCode);
+          await audit({ action: 'coupon_usage_incremented', entity: 'coupon', entityId: couponCode, userId, meta: { orderId: created.id } });
+        } catch (incErr) {
+          if (process.env.DEBUG_ERRORS === 'true') console.warn('[ORDERS] incrementCouponUsage failed:', incErr.message);
+        }
+      } catch {}
+    }
     try {
       const toReserve = (items || [])
         .filter(i => i.productId && i.productId !== 'custom')
@@ -349,7 +399,8 @@ export const OrdersService = {
       const canUserModify = !isAdmin && existing.status === 'pending' && existing.userId === requesterId;
       if (!isAdmin && !canUserModify) {
         const err = new Error('FORBIDDEN_ITEMS_MOD');
-    return createdNormalized;
+        err.statusCode = 403;
+        throw err;
       }
       itemsData = await normalizeItems(body.items);
     }
@@ -393,6 +444,57 @@ export const OrdersService = {
         if (s === 'paid') {
           try { await ensureInvoiceForOrder(updated.id); } catch {}
           try { await sendInvoiceWhatsApp(updated.id).catch(() => null); } catch {}
+          // Loyalty awarding (only once per order)
+          try {
+            if (String(process.env.LOYALTY_ENABLED || 'true').toLowerCase() === 'true') {
+              const already = await prisma.loyaltyLedger.findFirst({ where: { orderId: updated.id, source: 'order' } });
+              if (!already) {
+                const net = Math.max(0, Math.round(updated.subtotal - updated.discount));
+                const rateRaw = process.env.LOYALTY_POINTS_RATE || process.env.LOYALTY_POINTS_PER_CURRENCY; // support either name
+                const rate = rateRaw ? Number(rateRaw) : 0.1; // fallback 0.1 point per currency unit
+                let pts = Math.floor(net * rate);
+                if (pts > 0) {
+                  try {
+                    await addPoints(updated.userId, pts, { source: 'order', orderId: updated.id, meta: { net, rate } });
+                    await audit({ action: 'order_loyalty_awarded', entity: 'Order', entityId: updated.id, userId: updated.userId, meta: { points: pts, net } });
+                  } catch (lpErr) {
+                    if (process.env.DEBUG_ERRORS === 'true') console.warn('[LOYALTY] award failed:', lpErr.message);
+                  }
+                }
+              }
+            }
+          } catch (e2) {
+            if (process.env.DEBUG_ERRORS === 'true') console.warn('[LOYALTY] unexpected failure', e2.message);
+          }
+            // Abandoned cart recovery (if enabled)
+            if (process.env.ABANDONED_CART_ENABLED === 'true') {
+              try { await markRecoveredByOrder({ userId: existing.userId, orderId: existing.id }); } catch {}
+            }
+          // Referral bonus (first paid order of referred user)
+          try {
+            if (String(process.env.REFERRAL_ENABLED || 'true').toLowerCase() === 'true') {
+              const ref = await prisma.referral.findFirst({ where: { referredUserId: updated.userId, rewardAppliedAt: null } });
+              if (ref) {
+                const referrerPoints = Number(process.env.REFERRAL_REFERRER_POINTS || 100);
+                const referredPoints = Number(process.env.REFERRAL_REFERRED_POINTS || 50);
+                // Award points (best effort)
+                if (referrerPoints > 0) {
+                  try { await addPoints(ref.referrerUserId, referrerPoints, { source: 'referral', orderId: updated.id, meta: { role: 'referrer', referralId: ref.id } }); } catch {}
+                }
+                if (referredPoints > 0) {
+                  try { await addPoints(updated.userId, referredPoints, { source: 'referral', orderId: updated.id, meta: { role: 'referred', referralId: ref.id } }); } catch {}
+                }
+                try {
+                  await prisma.referral.update({ where: { id: ref.id }, data: { rewardAppliedAt: new Date() } });
+                } catch {}
+                try {
+                  await audit({ action: 'referral_bonus_applied', entity: 'referral', entityId: ref.id, userId: updated.userId, meta: { orderId: updated.id, referrer: ref.referrerUserId, referrerPoints, referredPoints } });
+                } catch {}
+              }
+            }
+          } catch (e3) {
+            if (process.env.DEBUG_ERRORS === 'true') console.warn('[REFERRAL] bonus error', e3.message);
+          }
         }
       }
     } catch (e) {

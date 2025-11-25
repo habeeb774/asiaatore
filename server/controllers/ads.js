@@ -7,10 +7,13 @@ const router = express.Router();
 
 // GET /api/ads - List all ads
 router.get('/', async (req, res) => {
+  console.log('GET /api/ads request received');
   try {
     const ads = await prisma.ad.findMany();
+    console.log(`Found ${ads.length} ads`);
     res.json(ads);
   } catch (err) {
+    console.error('Error in GET /api/ads:', err);
     res.status(500).json({ error: 'Failed to fetch ads', details: err.message });
   }
 });

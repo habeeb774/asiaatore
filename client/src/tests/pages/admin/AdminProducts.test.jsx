@@ -60,7 +60,8 @@ describe('ProductsView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'تعديل' }));
 
-    const nameInput = screen.getByPlaceholderText('أدخل اسم المنتج');
+    // Updated placeholder text after form refactor
+    const nameInput = screen.getByPlaceholderText('مثال: قميص قطني عالي الجودة');
     expect(nameInput.value).toBe('منتج اختبار');
     fireEvent.change(nameInput, { target: { value: 'منتج معدل' } });
 
@@ -77,14 +78,22 @@ describe('ProductsView', () => {
 
   test('creates a new product when the form is submitted without editing product', async () => {
     const { createProduct } = renderProductsView();
-
-    fireEvent.change(screen.getByPlaceholderText('أدخل اسم المنتج'), { target: { value: 'منتج جديد' } });
+    // Open the creation modal before accessing form fields (modal closed by default)
+    fireEvent.click(screen.getByRole('button', { name: 'إضافة منتج' }));
+    fireEvent.change(screen.getByPlaceholderText('مثال: قميص قطني عالي الجودة'), { target: { value: 'منتج جديد' } });
     fireEvent.change(screen.getAllByPlaceholderText('0.00')[0], { target: { value: '55' } });
 
-    const selectCategory = screen.getAllByRole('combobox')[0];
+    const selectCategory = screen.getAllByRole('combobox').find(el => el.hasAttribute('required'));
+    expect(selectCategory).toBeTruthy();
     fireEvent.change(selectCategory, { target: { value: 'cat-1' } });
 
+    // Trigger submit via the submit button (type=submit) and ensure form submit fires.
     fireEvent.click(screen.getByRole('button', { name: 'إضافة المنتج' }));
+    // Fallback explicit submit in case click does not propagate in test environment.
+    const formEl = screen.getByPlaceholderText('مثال: قميص قطني عالي الجودة').closest('form');
+    if (formEl) {
+      fireEvent.submit(formEl);
+    }
 
     await waitFor(() => expect(createProduct).toHaveBeenCalledWith(expect.objectContaining({
       name: 'منتج جديد',

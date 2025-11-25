@@ -10,51 +10,34 @@ import { useToast } from '../../../contexts/ToastContext';
 const statusOptions = ['pending','paid','shipped','completed','cancelled'];
 
 const OrderCard = ({ o, updateOrderStatus, onDeleteRequest, checked, onToggle }) => (
-  <div
-    style={{
-      padding:'10px 12px',
-      border:'1px solid #e5e7eb',
-      borderRadius:12,
-      background:'#fff',
-      display:'grid',
-      gap:6
-    }}
-  >
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-      <div style={{display:'flex',gap:8,alignItems:'center'}}>
-        <input type="checkbox" checked={!!checked} onChange={()=>onToggle && onToggle(o.id)} />
-        <strong style={{fontSize:'.8rem'}}>طلب #{o.id}</strong>
+  <div className="p-3 border border-border rounded-xl bg-surface grid gap-2 shadow-sm transition-all hover:shadow-md hover:-translate-y-px">
+    <div className="flex justify-between items-center">
+      <div className="flex gap-3 items-center">
+        <input type="checkbox" checked={!!checked} onChange={() => onToggle && onToggle(o.id)} className="rounded border-gray-300 text-primary focus:ring-primary" />
+        <strong className="text-sm font-bold text-text">طلب #{o.id}</strong>
       </div>
-      <span style={{fontSize:'.6rem',background:'#f1f5f9',padding:'4px 8px',borderRadius:20}}>
+      <span className="text-xs bg-bg-alt px-2 py-1 rounded-full font-medium">
         {o.status}
       </span>
     </div>
-    <div style={{fontSize:'.65rem',color:'#475569',display:'flex',gap:12,flexWrap:'wrap'}}>
+    <div className="text-xs text-text-faint flex gap-3 flex-wrap">
       <span>العميل: {o.customer?.name || o.customer?.fullName || 'غير محدد'}</span>
       <span>الإجمالي: {(o.totals?.grandTotal || 0)} ر.س</span>
       <span>العناصر: {o.items?.length || 0}</span>
     </div>
-    <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+    <div className="flex flex-wrap gap-2 items-center">
       <select
         value={o.status}
-        onChange={e=>updateOrderStatus && updateOrderStatus(o.id, e.target.value)}
-        style={{padding:'4px 8px',border:'1px solid #d1d5db',borderRadius:8,fontSize:'.6rem'}}
+        onChange={e => updateOrderStatus && updateOrderStatus(o.id, e.target.value)}
+        className="text-xs p-1.5 rounded-lg border border-border bg-surface hover:bg-bg-alt focus:ring-2 focus:ring-primary transition-all"
       >
         {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
       </select>
-      <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#fff',fontSize:12,textDecoration:'none'}}>فاتورة</a>
+      <a href={`/api/orders/${o.id}/invoice`} target="_blank" rel="noopener" className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-bg-alt transition-all no-underline text-text">فاتورة</a>
       <button
         type="button"
-        onClick={()=> onDeleteRequest && onDeleteRequest(o.id)}
-        style={{
-          background:'#dc2626',
-          color:'#fff',
-          border:0,
-          borderRadius:8,
-          padding:'4px 10px',
-          fontSize:'.6rem',
-          cursor:'pointer'
-        }}
+        onClick={() => onDeleteRequest && onDeleteRequest(o.id)}
+        className="text-xs px-3 py-1.5 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-all font-medium"
       >
         حذف
       </button>
@@ -124,56 +107,64 @@ const OrdersManagement = () => {
     return () => { mounted = false; };
   }, []);
 
+  const baseInputClass = "text-xs p-2 rounded-lg border border-border bg-surface focus:ring-2 focus:ring-primary transition-all";
+  const baseButtonClass = "text-xs px-3 py-2 rounded-lg border border-border transition-all";
+
   return (
     <AdminLayout title="إدارة الطلبات">
       <div aria-busy={loading ? 'true' : 'false'} aria-live="polite">
       {!user || user.role !== 'admin' ? (
-        <div style={{padding:'1rem',background:'#fef2f2',color:'#b91c1c',borderRadius:10,fontSize:'.8rem'}}>
+        <div className="p-4 bg-danger/10 text-danger-dark rounded-lg text-sm">
           صلاحيات غير كافية
         </div>
       ) : (
         <>
-          <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:12}}>
-            <select
-              value={filter}
-              onChange={e=>{ setFilter(e.target.value); setPage(1); }}
-              style={{padding:6,borderRadius:8,border:'1px solid #e5e7eb',fontSize:12}}
-            >
+          <div className="flex flex-wrap items-center gap-2 mb-4 p-2 rounded-xl bg-surface border border-border-soft shadow-sm">
+            <select value={filter} onChange={e => { setFilter(e.target.value); setPage(1); }} className={baseInputClass}>
               <option value="all">جميع الحالات</option>
               {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <input
               value={search}
-              onChange={e=>{ setSearch(e.target.value); setPage(1); }}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
               placeholder="بحث (رقم / عميل)"
-              style={{padding:6,borderRadius:8,border:'1px solid #e5e7eb',fontSize:12,minWidth:180}}
+              className={`${baseInputClass} min-w-[180px]`}
             />
-            <button type="button" onClick={()=>{ setSelectAll(prev=>{ const next = !prev; if (!next) setSelected([]); return next; }); }} title="اختيار الكل" style={{padding:6,borderRadius:8,border:'1px solid #e5e7eb',background: selectAll? '#efefef' : '#fff'}}> {selectAll ? 'إلغاء الاختيار' : 'اختيار الكل'}</button>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <select value={bulkStatus} onChange={e=>setBulkStatus(e.target.value)} style={{padding:6,borderRadius:8,border:'1px solid #e5e7eb'}}>
+            <button type="button" onClick={() => { setSelectAll(prev => { const next = !prev; if (!next) setSelected([]); return next; }); }} title="اختيار الكل" className={`${baseButtonClass} ${selectAll ? 'bg-primary/20 border-primary-alt' : 'bg-bg-alt'}`}>
+              {selectAll ? 'إلغاء الاختيار' : 'اختيار الكل'}
+            </button>
+            
+            <div className="w-px h-6 bg-border mx-2"></div>
+
+            {/* Bulk Actions */}
+            <div className="flex items-center gap-2">
+              <select value={bulkStatus} onChange={e => setBulkStatus(e.target.value)} className={baseInputClass}>
                 {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <button type="button" onClick={async ()=>{
+              <button type="button" onClick={() => {
                 if (!selected.length) return toast?.warn?.('اختر طلبات لتنفيذ الإجراء');
                 openConfirm({
                   title: 'تأكيد تغيير الحالة',
                   message: `تغيير حالة ${selected.length} طلب إلى ${bulkStatus}?`,
-                  confirmLabel: 'تأكيد',
-                  cancelLabel: 'إلغاء',
-                      onConfirm: async () => {
+                  onConfirm: async () => {
                     try {
-                      await import('../../../services/api/admin').then(m=>m.adminApi.bulkUpdateOrdersStatus(selected, bulkStatus));
+                      await import('../../../services/api/admin').then(m => m.adminApi.bulkUpdateOrdersStatus(selected, bulkStatus));
                       selected.forEach(id => mergeOrder({ id, status: bulkStatus }));
-                      setSelected([]);
-                      setSelectAll(false);
+                      setSelected([]); setSelectAll(false);
                       toast?.success?.('تم تغيير الحالة بنجاح');
-                    } catch (e) { toast?.error?.('فشل العملية: '+(e.message||e)); }
+                    } catch (e) { toast?.error?.('فشل العملية: ' + (e.message || e)); }
                   }
                 });
-              }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#10b981',color:'#fff'}}>تغيير حالة مجمّع</button>
+              }} className={`${baseButtonClass} bg-primary text-white hover:bg-primary-alt font-semibold`}>
+                تغيير حالة مجمّع
+              </button>
             </div>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <select value={assignDriver} onChange={e=>setAssignDriver(e.target.value)} style={{padding:6,borderRadius:8,border:'1px solid #e5e7eb'}}>
+            
+            <div className="w-px h-6 bg-border mx-2"></div>
+
+            {/* Driver Actions */}
+            <div className="flex items-center gap-2">
+               <select value={assignDriver} onChange={e=>setAssignDriver(e.target.value)} className={baseInputClass}>
                 <option value="">اختر سائقاً</option>
                 {drivers.map(d => (
                   <option key={d.userId || d.id} value={d.userId || d.id}>{(d.name || d.fullName || d.email || ('driver:'+ (d.userId||d.id)))}</option>
@@ -185,77 +176,43 @@ const OrdersManagement = () => {
                 try {
                   await import('../../../services/api/admin').then(m=>m.adminApi.deliveryAssignBulk(selected, assignDriver));
                   selected.forEach(id => mergeOrder({ id, deliveryDriverId: assignDriver, deliveryStatus: 'assigned' }));
-                  setSelected([]);
-                  setSelectAll(false);
+                  setSelected([]); setSelectAll(false);
                   toast?.success?.('تم إسناد الطلبات للسائق');
                 } catch(e){ toast?.error?.('فشل الإسناد: '+(e.message||e)); }
-              }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#06b6d4',color:'#fff'}}>إسناد مجمّع</button>
+              }} className={`${baseButtonClass} bg-info text-white hover:bg-info-alt font-semibold`}>إسناد مجمّع</button>
               <button type="button" onClick={async ()=>{
                 try {
                   const res = await import('../../../services/api/admin').then(m=>m.adminApi.deliveryAssignAuto({ limit: 50 }));
                   if (refresh) await refresh();
                   toast?.success?.(`تم الإسناد التلقائي`);
                 } catch(e){ toast?.error?.('فشل الإسناد التلقائي: '+(e.message||e)); }
-              }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#f59e0b',color:'#fff'}}>إسناد تلقائي</button>
+              }} className={`${baseButtonClass} bg-accent text-white hover:bg-accent-alt font-semibold`}>إسناد تلقائي</button>
             </div>
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <label style={{display:'flex',flexDirection:'column',fontSize:11}}>
-                من
-                <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{padding:6,borderRadius:6,border:'1px solid #e5e7eb',fontSize:12}} />
-              </label>
-              <label style={{display:'flex',flexDirection:'column',fontSize:11}}>
-                إلى
-                <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{padding:6,borderRadius:6,border:'1px solid #e5e7eb',fontSize:12}} />
-              </label>
-              <button type="button" onClick={async ()=>{
-                try {
-                  const params = { status: filter==='all'?undefined:filter, from: dateFrom || undefined, to: dateTo || undefined };
-                  const csv = await import('../../../services/api/admin').then(m=>m.adminApi.exportOrdersCsv(params));
-                  const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a'); a.href = url; a.download = 'orders.csv'; a.click(); URL.revokeObjectURL(url);
-                  toast?.success?.('تم تنزيل CSV');
-                } catch(e){ toast?.error?.('فشل التصدير: '+(e.message||e)); }
-              }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#fff'}}>تصدير CSV</button>
-              <button type="button" onClick={async ()=>{
-                try {
-                  const params = { status: filter==='all'?undefined:filter, from: dateFrom || undefined, to: dateTo || undefined };
-                  const blob = await import('../../../services/api/admin').then(m=>m.adminApi.exportOrdersXlsx(params));
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a'); a.href = url; a.download = 'orders.xlsx'; a.click(); URL.revokeObjectURL(url);
-                  toast?.success?.('تم تنزيل XLSX');
-                } catch(e){ toast?.error?.('فشل التصدير: '+(e.message||e)); }
-              }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#fff'}}>تصدير XLSX</button>
-            </div>
+
+            <div className="flex-grow"></div>
+
             <div style={{fontSize:12,alignSelf:'center'}}>عدد: {filtered.length}</div>
           </div>
           {loading ? (
-            <div style={{display:'grid',gap:10}}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ padding:'10px 12px', border:'1px solid #e5e7eb', borderRadius:12, background:'#fff' }}>
-                  <div style={{ display:'grid', gap:8 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-4 w-16" />
+            <div className="grid gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-3 border border-border rounded-xl bg-surface grid gap-3">
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-5 w-24" /> <Skeleton className="h-5 w-16" />
                     </div>
-                    <div style={{ display:'flex', gap:12 }}>
-                      <Skeleton className="h-3 w-40" />
-                      <Skeleton className="h-3 w-24" />
-                      <Skeleton className="h-3 w-20" />
+                    <div className="flex gap-4">
+                      <Skeleton className="h-4 w-40" /> <Skeleton className="h-4 w-24" />
                     </div>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <Skeleton className="h-7 w-24" />
-                      <Skeleton className="h-7 w-16" />
-                      <Skeleton className="h-7 w-16" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-24" /> <Skeleton className="h-8 w-20" /> <Skeleton className="h-8 w-20" />
                     </div>
-                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{display:'grid',gap:10}}>
-              {filtered.length === 0
-                ? <div style={{fontSize:13,color:'#64748b'}}>لا توجد طلبات مطابقة.</div>
+            <div className="grid gap-3">
+              {paged.length === 0
+                ? <div className="text-sm text-text-faint p-8 text-center">لا توجد طلبات مطابقة.</div>
                 : paged.map(o => (
                     <OrderCard
                       key={o.id}
@@ -264,19 +221,17 @@ const OrdersManagement = () => {
                       onDeleteRequest={(id) => openConfirm({
                         title: 'حذف الطلب',
                         message: `هل أنت متأكد من حذف الطلب #${id}? هذا الإجراء لا يمكن التراجع عنه.`,
-                        confirmLabel: 'احذف',
-                        cancelLabel: 'إلغاء',
                         onConfirm: async () => {
                           try {
                             await deleteOrder(id);
                             if (refresh) await refresh();
                             toast?.success?.('تم حذف الطلب');
-                          } catch (e) { toast?.error?.('فشل الحذف: '+(e?.message||e)); }
+                          } catch (e) { toast?.error?.('فشل الحذف: ' + (e?.message || e)); }
                         }
                       })}
                       checked={selected.includes(o.id)}
-                      onToggle={(id)=>{
-                        setSelected(s=> s.includes(id) ? s.filter(x=>x!==id) : [...s, id]);
+                      onToggle={(id) => {
+                        setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
                         if (selectAll) setSelectAll(false);
                       }}
                     />
@@ -285,28 +240,20 @@ const OrdersManagement = () => {
             </div>
           )}
           {pageCount > 1 && (
-            <div style={{display:'flex',gap:6,marginTop:16,flexWrap:'wrap'}}>
-              <button
-                disabled={page===1}
-                onClick={()=>setPage(p=>Math.max(1,p-1))}
-                style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#fff',fontSize:12,cursor:page===1?'not-allowed':'pointer'}}
-              >السابق</button>
-              <span style={{fontSize:12,alignSelf:'center'}}>صفحة {page} / {pageCount}</span>
-              <button
-                disabled={page===pageCount}
-                onClick={()=>setPage(p=>Math.min(pageCount,p+1))}
-                style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#fff',fontSize:12,cursor:page===pageCount?'not-allowed':'pointer'}}
-              >التالي</button>
+            <div className="flex gap-2 mt-4 items-center justify-center">
+              <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} className={`${baseButtonClass} bg-surface disabled:opacity-50 disabled:cursor-not-allowed`}>السابق</button>
+              <span className="text-sm text-text-faint">صفحة {page} / {pageCount}</span>
+              <button disabled={page === pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))} className={`${baseButtonClass} bg-surface disabled:opacity-50 disabled:cursor-not-allowed`}>التالي</button>
             </div>
           )}
           {/* Confirm Modal */}
           <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title={confirmProps.title} size="sm" footer={
-            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-              <button onClick={() => setConfirmOpen(false)} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#fff'}}>{confirmProps.cancelLabel || 'إلغاء'}</button>
-              <button onClick={async () => { try { setConfirmOpen(false); await (confirmProps.onConfirm ? confirmProps.onConfirm() : null); } catch(e){ toast?.error?.(e?.message||'حدث خطأ'); } }} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'#ef4444',color:'#fff'}}>{confirmProps.confirmLabel || 'نعم'}</button>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmOpen(false)} className={`${baseButtonClass} bg-surface`}>{confirmProps.cancelLabel || 'إلغاء'}</button>
+              <button onClick={async () => { try { setConfirmOpen(false); await (confirmProps.onConfirm ? confirmProps.onConfirm() : null); } catch (e) { toast?.error?.('حدث خطأ'); } }} className={`${baseButtonClass} bg-danger text-white hover:bg-danger/90`}>{confirmProps.confirmLabel || 'نعم'}</button>
             </div>
           }>
-            <div style={{fontSize:13}}>{confirmProps.message}</div>
+            <div className="text-sm text-text-soft">{confirmProps.message}</div>
           </Modal>
         </>
       )}

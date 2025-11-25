@@ -49,12 +49,12 @@ export default function AdminLayout({ title, children, topbar }) {
   const menuBtnRef = useRef(null);
   const pinnedPadding = isDesktop && pinned ? (collapsed ? 'lg:pr-24' : 'lg:pr-72') : '';
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-50 text-slate-800">
+    <div dir="rtl" className="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
   {/* Sticky top admin nav */}
   <AdminSideNav drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} collapsed={collapsed} setCollapsed={setCollapsed} pinned={pinned} setPinned={setPinned} menuBtnRef={menuBtnRef} />
 
       {/* Page content container */}
-  <main id="main" className={`max-w-[1400px] mx-auto px-4 py-6 relative ${pinnedPadding}`}>
+  <main id="main" className={`flex-grow min-h-0 max-w-[1400px] mx-auto px-4 py-6 relative w-full transition-all duration-300 ease-in-out ${pinnedPadding}`}>
         {isDesktop && pinned ? (
           <AdminDrawer
             mode="pinned"

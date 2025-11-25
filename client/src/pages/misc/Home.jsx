@@ -23,54 +23,55 @@ const Home = () => {
 
   return (
     <>
-  <HomeSEO locale={locale} />
+      <HomeSEO locale={locale} />
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-16 sm:space-y-24">
+        {/* قسم الهيرو الرئيسي مع الإعلانات والشعار */}
+        <ErrorBoundary>
+          <Suspense fallback={<HeroSkeleton className="mb-6"/>}>
+            <HeroUnified />
+          </Suspense>
+        </ErrorBoundary>
 
-      {/* قسم الهيرو الرئيسي مع الإعلانات والشعار */}
-      <ErrorBoundary>
-        <Suspense fallback={<HeroSkeleton className="mb-6"/>}>
-          <HeroUnified />
-        </Suspense>
-      </ErrorBoundary>
+        {/* قسم الفئات */}
+        <ErrorBoundary>
+          <Suspense fallback={<SliderSkeleton className="my-4"/>}>
+            <CategoriesSection
+              title={t ? (t('home.browseByCategory') || 'تصفح حسب الفئة') : 'تصفح حسب الفئة'}
+            />
+          </Suspense>
+        </ErrorBoundary>
 
-      {/* قسم الفئات */}
-      <ErrorBoundary>
-        <Suspense fallback={<SliderSkeleton className="my-4"/>}>
-          <CategoriesSection
-            title={t ? (t('home.browseByCategory') || 'تصفح حسب الفئة') : 'تصفح حسب الفئة'}
-          />
-        </Suspense>
-      </ErrorBoundary>
+        {/* قسم المنتجات المميزة */}
+        <ErrorBoundary>
+          <Suspense fallback={<ProductGridSkeleton count={6} className="my-6"/>}>
+            <FeaturedProductsSection
+              products={Array.isArray(featuredProducts) ? featuredProducts : []}
+              Motion={motion}
+              containerVariants={containerVariants}
+              itemVariants={itemVariants}
+              t={t}
+              locale={locale}
+            />
+          </Suspense>
+        </ErrorBoundary>
 
-      {/* قسم المنتجات المميزة */}
-      <ErrorBoundary>
-        <Suspense fallback={<ProductGridSkeleton count={6} className="my-6"/>}>
-          <FeaturedProductsSection
-            products={Array.isArray(featuredProducts) ? featuredProducts : []}
-            Motion={motion}
-            containerVariants={containerVariants}
-            itemVariants={itemVariants}
-            t={t}
-            locale={locale}
-          />
-        </Suspense>
-      </ErrorBoundary>
+        <ErrorBoundary>
+          <Suspense fallback={<SliderSkeleton className="my-6"/>}>
+            <OffersSpecialSection
+              products={Array.isArray(products) ? products : []}
+              Motion={motion}
+              t={t}
+              locale={locale}
+            />
+          </Suspense>
+        </ErrorBoundary>
 
-      <ErrorBoundary>
-        <Suspense fallback={<SliderSkeleton className="my-6"/>}>
-          <OffersSpecialSection
-            products={Array.isArray(products) ? products : []}
-            Motion={motion}
-            t={t}
-            locale={locale}
-          />
-        </Suspense>
-      </ErrorBoundary>
-
-      <ErrorBoundary>
-        <Suspense fallback={<div className="py-4"/>}>
-          <BrandsStrip/>
-        </Suspense>
-      </ErrorBoundary>
+        <ErrorBoundary>
+          <Suspense fallback={<div className="py-4"/>}>
+            <BrandsStrip/>
+          </Suspense>
+        </ErrorBoundary>
+      </div>
     </>
   );
 }

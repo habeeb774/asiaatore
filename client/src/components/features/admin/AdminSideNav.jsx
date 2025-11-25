@@ -47,7 +47,7 @@ export default function AdminSideNav({ drawerOpen, setDrawerOpen, collapsed, set
         {/* Drawer toggle button (visible on all sizes) */}
         {/* Drawer toggle — open the drawer via layout (if available), else toggle a fallback */}
         <button
-          className="p-2 rounded-md text-slate-600 hover:bg-slate-100"
+          className="p-2 rounded-md text-slate-600 hover:bg-slate-100 lg:hidden"
               aria-label={drawerOpen ? 'إغلاق اللوحة الجانبية' : 'فتح اللوحة الجانبية'}
               aria-expanded={drawerOpen}
           ref={menuBtnRef}

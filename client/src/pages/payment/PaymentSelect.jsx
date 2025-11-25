@@ -10,7 +10,6 @@ const PaymentSelect = () => {
     method,
     status,
     error,
-    formatCurrency,
     submitCOD
   } = useContext(PaymentContext);
   const navigate = useNavigate();
@@ -31,40 +30,31 @@ const PaymentSelect = () => {
     await submitCOD();
   };
 
+  const baseButtonClass = "w-full text-center px-4 py-4 rounded-lg text-base font-semibold border-0 cursor-pointer transition-colors duration-200 flex items-center justify-center gap-3";
+
   return (
-    <section style={wrapper}>
-      <h2 style={title}>اختر وسيلة الدفع</h2>
+    <section className="max-w-lg mx-auto my-8 bg-surface p-6 sm:p-8 rounded-2xl shadow-lg">
+      <h2 className="text-2xl font-bold mb-4 text-text">اختر وسيلة الدفع</h2>
       {totals && (
-        <div style={summaryBox}>
-          <div>الإجمالي: <strong>{totals.formatted.grandTotal}</strong></div>
+        <div className="bg-bg-alt p-4 rounded-xl text-base mb-6">
+          <div className="text-text-soft">الإجمالي: <strong className="text-text font-bold">{totals.formatted.grandTotal}</strong></div>
         </div>
       )}
-      <div style={methods}>
-        <button onClick={() => choose('card')} style={btn}>
+      <div className="flex flex-col gap-3">
+        <button onClick={() => choose('card')} className={`${baseButtonClass} bg-primary text-white hover:bg-primary-alt`}>
           💳 بطاقة بنكية
         </button>
-        <button onClick={handleCOD} style={btnSecondary}>
+        <button onClick={handleCOD} className={`${baseButtonClass} bg-slate-800 text-white hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600`}>
           🚚 دفع عند الاستلام
         </button>
-        <button disabled style={btnDisabled} title="قريباً">
+        <button disabled title="قريباً" className={`${baseButtonClass} bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400`}>
           🏦 تحويل بنكي (قريباً)
         </button>
       </div>
-      {status === 'processing' && <p style={muted}>جاري التحميل...</p>}
-      {error && <p style={errStyle}>{error}</p>}
+      {status === 'processing' && <p className="text-sm text-text-faint mt-4 text-center">جاري التحميل...</p>}
+      {error && <p className="text-sm text-danger mt-4 text-center font-medium">{error}</p>}
     </section>
   );
 };
-
-const wrapper = { maxWidth: 520, margin: '2rem auto', background:'#fff', padding:'1.5rem 1.75rem', borderRadius:12, boxShadow:'0 8px 24px -10px rgba(0,0,0,.08)', direction:'rtl' };
-const title = { margin:'0 0 1rem', fontSize:'1.25rem' };
-const summaryBox = { background:'#f8fafc', padding:'.75rem 1rem', borderRadius:10, fontSize:'.85rem', marginBottom:'1rem' };
-const methods = { display:'flex', flexDirection:'column', gap:'.75rem' };
-const baseBtn = { padding:'.9rem 1rem', borderRadius:10, fontWeight:600, border:0, cursor:'pointer', fontSize:'.9rem' };
-const btn = { ...baseBtn, background:'linear-gradient(90deg,#69be3c,#f6ad55)', color:'#fff' };
-const btnSecondary = { ...baseBtn, background:'#1e293b', color:'#fff' };
-const btnDisabled = { ...baseBtn, background:'#e2e8f0', color:'#64748b', cursor:'not-allowed' };
-const muted = { fontSize:'.75rem', color:'#64748b' };
-const errStyle = { color:'#b91c1c', fontSize:'.8rem' };
 
 export default PaymentSelect;

@@ -1,10 +1,8 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Search, ShoppingCart, User, Sun, Moon, Monitor, Languages, Settings } from 'lucide-react';
-import { useSidebar } from '../../contexts/SidebarContext';
+import { Search, ShoppingCart, User, Sun, Moon, Monitor, Languages, Settings } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-// ✅ دالة آمنة لاستدعاء الثيم (في حال لم يكن السياق متوفرًا)
 function useSafeTheme() {
   try {
     return useTheme();
@@ -13,24 +11,13 @@ function useSafeTheme() {
   }
 }
 
-// ✅ دالة آمنة لاستدعاء حالة الشريط الجانبي (sidebar)
-function useSafeSidebar() {
-  try {
-    return useSidebar();
-  } catch {
-    return {};
-  }
-}
+// A consistent base style for all icon buttons in the header
+const iconButtonClass = "relative inline-flex items-center justify-center p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-200";
 
-export default function HeaderControls({ t, locale, setLocale, cartItems, user }) {
+export default function HeaderControls({ t, locale, setLocale, cartItems, user, setPanel, triggerSearch }) {
   const cartBtnRef = useRef(null);
+  const cartCount = Array.isArray(cartItems) ? cartItems.reduce((s, i) => s + (i.quantity || 1), 0) : 0;
 
-  // ✅ حساب عدد المنتجات في السلة
-  const cartCount = Array.isArray(cartItems)
-    ? cartItems.reduce((s, i) => s + (i.quantity || 1), 0)
-    : 0;
-
-  // ✅ تبديل اللغة بالتناوب بين العربية والإنجليزية والفرنسية
   const langs = ['ar', 'en', 'fr'];
   const onCycleLanguage = () => {
     if (!setLocale) return;
@@ -39,109 +26,65 @@ export default function HeaderControls({ t, locale, setLocale, cartItems, user }
     setLocale(next);
   };
 
-  // ✅ تأثير بصري عند تحديث عدد السلة
   useEffect(() => {
     const el = cartBtnRef.current;
-    if (!el || typeof el.animate !== 'function') return;
+    if (!el || typeof el.animate !== 'function' || cartCount === 0) return;
     try {
       el.animate(
-        [
-          { transform: 'scale(1)' },
-          { transform: 'scale(1.08)' },
-          { transform: 'scale(1)' }
-        ],
-        { duration: 280, easing: 'cubic-bezier(.2,.9,.3,1)' }
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }],
+        { duration: 200, easing: 'ease-in-out' }
       );
     } catch {}
   }, [cartCount]);
 
-  // ✅ إعداد التبديل بين الثيمات (نظام - فاتح - داكن)
   const { theme, setTheme } = useSafeTheme();
-  const nextTheme = useMemo(
-    () => (theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'),
-    [theme]
-  );
-
+  const nextTheme = useMemo(() => (theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'), [theme]);
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
-  const themeLabel =
-    theme === 'dark'
-      ? t?.('themeDark') || 'الوضع الداكن'
-      : theme === 'light'
-      ? t?.('themeLight') || 'الوضع الفاتح'
-      : t?.('themeSystemAuto') || 'النظام (تلقائي)';
-
-  const _sidebarCtx = useSafeSidebar();
-  const { setOpen: openSidebar, open: sidebarOpen } = _sidebarCtx || {};
+  const themeLabel = theme === 'dark' ? t?.('themeDark') || 'الوضع الداكن' : theme === 'light' ? t?.('themeLight') || 'الوضع الفاتح' : t?.('themeSystemAuto') || 'النظام (تلقائي)';
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 transition-colors duration-300">
-      {/* ✅ زر فتح القائمة الجانبية (يُخفى عند فتح القائمة لتجنب التكرار) */}
-      {!sidebarOpen && (
-        <button
-          type="button"
-          onClick={() => openSidebar?.(true)}
-          className="header-menu-button hidden md:inline-flex border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-          aria-label={t?.('openMenu') || 'فتح القائمة'}
-        >
-          <Menu size={18} />
-        </button>
-      )}
-
-      {/* ✅ زر تغيير اللغة (يظهر فقط على الشاشات الكبيرة) */}
-      <button
-        type="button"
-        onClick={onCycleLanguage}
-        className="hidden md:inline-flex border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300"
-        aria-label={t?.('changeLanguage') || 'تغيير اللغة'}
-        title={locale === 'ar' ? 'English' : locale === 'en' ? 'Français' : 'العربية'}
-      >
-        <Languages size={18} />
+      {/* --- Icon Controls Group --- */}
+      <button type="button" onClick={triggerSearch} className={iconButtonClass} aria-label={t?.('search') || 'بحث'}>
+        <Search size={20} />
       </button>
 
-      {/* ✅ زر تغيير الثيم */}
-      <button
-        type="button"
-        onClick={() => setTheme(nextTheme)}
-        className="border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 hidden sm:inline-flex"
-        aria-label={t?.('toggleTheme') || 'تبديل الثيم'}
-        title={themeLabel}
-      >
-        <ThemeIcon size={18} />
+      <button type="button" onClick={() => setPanel('cart')} className={iconButtonClass} aria-label={t?.('shoppingCart') || 'سلة التسوق'} ref={cartBtnRef}>
+        <ShoppingCart size={20} />
+        {cartCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">
+            {cartCount}
+          </span>
+        )}
       </button>
 
-      {/* ✅ زر لوحة التحكم - يظهر فقط للمستخدمين المسجلين */}
+      <button type="button" onClick={onCycleLanguage} className={`${iconButtonClass} hidden md:inline-flex`} aria-label={t?.('changeLanguage') || 'تغيير اللغة'} title={locale === 'ar' ? 'English' : locale === 'en' ? 'Français' : 'العربية'}>
+        <Languages size={20} />
+      </button>
+      
+      <button type="button" onClick={() => setTheme(nextTheme)} className={`${iconButtonClass} hidden sm:inline-flex`} aria-label={t?.('toggleTheme') || 'تبديل الثيم'} title={themeLabel}>
+        <ThemeIcon size={20} />
+      </button>
+
       {user && (
-        <Link
-          to="/admin"
-          className="border rounded bg-white/90 dark:bg-slate-950/90 p-1.5 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300 inline-flex"
-          aria-label="لوحة التحكم"
-          title="لوحة التحكم"
-        >
-          <Settings size={18} />
+        <Link to="/admin" className={`${iconButtonClass} hidden sm:inline-flex`} aria-label="لوحة التحكم" title="لوحة التحكم">
+          <Settings size={20} />
         </Link>
       )}
 
-      {/* ✅ ملف المستخدم أو زر تسجيل الدخول */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {!user ? (
-          <Link
-            to="/login"
-            className="border rounded bg-emerald-500/90 hover:bg-emerald-500 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 transition-colors duration-300 inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium"
-          >
-            {t('login') || 'تسجيل الدخول'}
-          </Link>
-        ) : (
-            <Link
-            to="/account/profile"
-            className="flex items-center gap-2 px-3 py-1 border rounded text-sm bg-white/90 dark:bg-slate-950/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors duration-300"
-          >
-            <User size={12} />
-            <span className="hidden sm:inline-block">
-              {user.name || (user.email || '').split('@')[0]}
-            </span>
-          </Link>
-        )}
-      </div>
+      {/* --- User Account Control --- */}
+      <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+
+      {!user ? (
+        <Link to="/login" className="px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-200 bg-emerald-500 text-white hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+          {t('login') || 'تسجيل الدخول'}
+        </Link>
+      ) : (
+        <Link to="/account/profile" className="flex items-center gap-2 rounded-full pl-2 pr-3 py-1 text-sm transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+          <span className="font-semibold">{user.name || (user.email || '').split('@')[0]}</span>
+          <User size={18} className="p-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" />
+        </Link>
+      )}
     </div>
   );
 }

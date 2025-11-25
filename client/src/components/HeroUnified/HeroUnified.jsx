@@ -73,14 +73,20 @@ export default function HeroUnified(){
     }
 
     if (legacyAds.length) {
-      return legacyAds.map((ad, index) => ({
-        id: ad.id || `ad-${index}`,
-        title: ad.title || (locale === 'ar' ? 'عرض حصري' : 'Exclusive Deal'),
-        subtitle: ad.description || '',
-        image: ad.image || '/images/hero-background.svg',
-        link: ad.link || '#',
-        cta: ad.link ? { text: locale === 'ar' ? 'تعرف على المزيد' : 'Learn More', link: ad.link } : null
-      }));
+      return legacyAds.map((ad, index) => {
+        // Respect dynamic CTA data if provided; fall back to localized defaults.
+        const ctaLink = ad?.cta?.link || ad?.link;
+        const fallbackText = locale === 'ar' ? 'تعرف على المزيد' : 'Learn More';
+        const ctaText = ad?.cta?.text || fallbackText;
+        return {
+          id: ad.id || `ad-${index}`,
+          title: ad.title || (locale === 'ar' ? 'عرض حصري' : 'Exclusive Deal'),
+            subtitle: ad.description || '',
+          image: ad.image || '/images/hero-background.svg',
+          link: ad.link || '#',
+          cta: ctaLink ? { text: ctaText, link: ctaLink } : null
+        };
+      });
     }
 
     return defaultSlides;

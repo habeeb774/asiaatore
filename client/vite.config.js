@@ -45,12 +45,15 @@ export default defineConfig(async ({ mode }) => {
   // 3. Fallback to proxyTarget resolved from VITE_PROXY_TARGET
   const backendPort = env.VITE_BACKEND_PORT || "";
   const explicitHost = env.VITE_BACKEND_HOST?.trim();
+  // Prefer explicit full host if provided; otherwise, if only a port is set,
+  // default to localhost for safety (avoid hard-coded external IP fallbacks).
   const dynamicBackendHost = explicitHost
     ? explicitHost
     : backendPort
-    ? `http://72.61.104.194:${backendPort}`
+    ? `http://localhost:${backendPort}`
     : proxyTarget;
   const devMode = mode !== "production";
+  const enableBundleDebug = env.DEBUG_BUNDLES === "true" || env.VITE_DEBUG_BUNDLES === "true";
   const devHeadersEnabled =
     devMode ||
     env.VITE_DEV_HEADERS === "1" ||
@@ -361,12 +364,16 @@ export default defineConfig(async ({ mode }) => {
       target: "esnext",
       minify: "esbuild",
       cssMinify: true,
-      sourcemap: false, // Disable in production for smaller bundles
+      // Enable sourcemaps when debugging vendor chunk runtime errors
+      sourcemap: enableBundleDebug ? "hidden" : false,
       // Warn earlier about large chunks and help Rollup split common deps
       chunkSizeWarningLimit: 350,
       rollupOptions: {
         output: {
-          manualChunks(id) {
+          // Only apply manual chunking when not in bundle debug mode
+          manualChunks: enableBundleDebug
+            ? undefined
+            : function (id) {
             if (id.includes("node_modules")) {
               const reactChunkPattern = /node_modules[\\/](react|react-dom|scheduler|use-sync-external-store)[\\/]/;
               if (reactChunkPattern.test(id)) return "vendor.react";
@@ -495,7 +502,7 @@ export default defineConfig(async ({ mode }) => {
             if (id.includes("/src/utils/") || id.includes("/src/lib/")) {
               return "chunk.utils";
             }
-          },
+            },
         },
       },
       // Add a small hook to emit a treemap when VISUALIZE=true is set

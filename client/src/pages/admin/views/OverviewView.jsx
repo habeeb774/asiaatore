@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api/client';
 import { adminApi } from '../../../services/api/admin';
 
+const OverviewStatsLazy = React.lazy(() => import('./OverviewStats'));
+
 const OverviewView = () => {
   const { locale } = useLanguage();
   const { setting: storeSettings } = useSettings() || {};
@@ -142,37 +144,47 @@ const OverviewView = () => {
     };
   }, [locale]);
 
+  // Defer queries until browser idle or short timeout to reduce initial blocking
+  const [enableQueries, setEnableQueries] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => setEnableQueries(true), { timeout: 300 });
+    } else {
+      const t = setTimeout(() => setEnableQueries(true), 150);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['admin-stats-overview'],
     queryFn: () => adminApi.getStatsOverview(),
     staleTime: 5 * 60 * 1000,
+    enabled: enableQueries,
   });
 
   const { data: financials, isLoading: finLoading, error: finError } = useQuery({
     queryKey: ['admin-stats-financials', 14],
     queryFn: () => adminApi.getStatsFinancials(14),
     staleTime: 10 * 60 * 1000,
+    enabled: enableQueries,
   });
 
   const { data: recentOrders, isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ['admin-recent-orders'],
     queryFn: () => adminApi.getRecentOrders(5),
     staleTime: 2 * 60 * 1000,
+    enabled: enableQueries,
   });
 
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => api.listUsers(),
     staleTime: 5 * 60 * 1000,
+    enabled: enableQueries,
   });
 
-  if (statsLoading || finLoading || ordersLoading || usersLoading) {
-    return (
-      <div className="overview-loading">
-        <div className="loading-message">{labels.loading}</div>
-      </div>
-    );
-  }
+  const initialLoading = !enableQueries;
+  const anyLoading = statsLoading || finLoading || ordersLoading || usersLoading;
 
   const statsData = !statsError && stats ? stats : fallback.stats;
   const financialData = !finError && financials ? financials : fallback.financials;
@@ -204,86 +216,39 @@ const OverviewView = () => {
     { key: 'growth', value: financialTotals?.growth, label: labels.cards.growth14, formatter: formatPercent },
   ];
 
+  // Prepare transformed recent order display values for child component (avoid reformatting inside lazy chunk)
+  const recentOrdersDisplay = recentOrdersData.map(o => ({
+    ...o,
+    displayTotal: formatCurrency(o.total),
+  }));
+
+  // Skeleton placeholder while waiting for queries or lazy component
+  if (initialLoading) {
+    return (
+      <div className="overview-view">
+        <div className="stat-grid">
+          {Array.from({ length: 4 }).map((_,i) => (
+            <div key={i} className="stat-card skeleton" style={{ height:'100px' }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="overview-view">
-      {hasError && (
-        <div
-          className="overview-notice"
-          style={{
-            backgroundColor: 'rgba(16,185,129,0.12)',
-            border: '1px solid rgba(16,185,129,0.25)',
-            color: '#047857',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            marginBottom: '24px',
-            lineHeight: 1.5,
-          }}
-          role="status"
-        >
-          {labels.fallbackNotice}
-        </div>
-      )}
-
-      <section className="overview-section">
-        <h2 className="section-title">{labels.sections.daily}</h2>
-        <div className="stat-grid">
-          {summaryCards.map((card) => (
-            <div key={card.key} className="stat-card">
-              <div className="stat-value">{card.formatter(card.value)}</div>
-              <div className="stat-label">{card.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="overview-section">
-        <h2 className="section-title">{labels.sections.store}</h2>
-        <div className="stat-grid">
-          {storeCards.map((card) => (
-            <div key={card.key} className="stat-card">
-              <div className="stat-value">{card.formatter(card.value)}</div>
-              <div className="stat-label">{card.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="overview-section">
-        <h2 className="section-title">{labels.sections.financial}</h2>
-        <div className="stat-grid">
-          {financialCards.map((card) => (
-            <div key={card.key} className="stat-card">
-              <div className="stat-value">{card.formatter(card.value)}</div>
-              <div className="stat-label">{card.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="overview-section">
-        <h2 className="section-title">{labels.sections.orders}</h2>
-        <div className="recent-orders">
-          {showEmptyOrders ? (
-            <div className="empty-state">{labels.emptyOrders}</div>
-          ) : (
-            <div className="orders-list">
-              {recentOrdersData.map((order) => (
-                <div key={order.id} className="order-card">
-                  <div className="order-info">
-                    <div className="order-id">#{order.id}</div>
-                    <div className="order-customer">{order.customer}</div>
-                  </div>
-                  <div className="order-details">
-                    <div className="order-total">{formatCurrency(order.total)}</div>
-                    <div className="order-status">{order.status}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
+    <React.Suspense fallback={<div className="overview-loading"><div className="loading-message">{labels.loading}</div></div>}>
+      <OverviewStatsLazy
+        labels={labels}
+        summaryCards={summaryCards}
+        storeCards={storeCards}
+        financialCards={financialCards}
+        recentOrders={recentOrdersDisplay}
+        showEmptyOrders={showEmptyOrders}
+        usingFallbackOrders={usingFallbackOrders}
+        fallbackNotice={labels.fallbackNotice}
+        hasError={hasError}
+      />
+    </React.Suspense>
   );
 };
 
