@@ -79,9 +79,19 @@
   
   --color-accent: #f59e0b;       /* amber-500 */
   --color-accent-rgb: 245, 158, 11;
+  --color-danger-rgb: 220, 38, 38;
 
   --color-danger: #dc2626;       /* red-600 */
   --color-danger-2: #b91c1c;     /* red-700 */
+  --color-text-contrast: #fff;
+  --color-dark-blue-rgb: 15, 23, 42;
+  --color-light-gray-rgb: 215, 219, 224;
+  --color-blue-600-rgb: 37, 99, 235;
+  --color-blue-900: #1e3a8a;
+  --color-green-900: #065f46;
+  --color-emerald-600-rgb: 16, 185, 129;
+  --color-orange-900: #92400e;
+  --color-red-900: #991b1b;
 
   --color-gold: var(--color-accent); /* Gold is now the accent color */
 
@@ -186,12 +196,25 @@
   --color-primary: #4ade80;      /* green-400 */
   --color-primary-alt: #22c55e;  /* green-500 */
   --color-primary-rgb: 74, 222, 128;
+  --color-white-rgb: 255, 255, 255;
+  --color-black-rgb: 0, 0, 0;
+  --color-gold-focus-rgb: 200, 169, 106;
   
   --color-accent: #fcd34d;       /* amber-300 */
   --color-accent-rgb: 252, 211, 77;
+  --color-danger-rgb: 248, 113, 113;
   
   --color-danger: #f87171;       /* red-400 */
   --color-danger-2: #ef4444;     /* red-500 */
+  --color-text-contrast: #fff;
+  --color-dark-blue-rgb: 15, 23, 42;
+  --color-light-gray-rgb: 215, 219, 224;
+  --color-blue-600-rgb: 37, 99, 235;
+  --color-blue-900: #1e3a8a;
+  --color-green-900: #065f46;
+  --color-emerald-600-rgb: 16, 185, 129;
+  --color-orange-900: #92400e;
+  --color-red-900: #991b1b;
 
   --color-gold: var(--color-accent);
 

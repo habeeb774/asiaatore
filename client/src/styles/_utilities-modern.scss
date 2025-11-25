@@ -32,7 +32,7 @@
 
   .btn { --btn-bg:var(--color-surface); --btn-color:var(--color-text); --btn-border:var(--color-border); --btn-radius:var(--radius-md); display:inline-flex; align-items:center; justify-content:center; gap:.55rem; font:600 var(--text-sm)/1 var(--font-sans); padding:.65rem .95rem; border:1px solid var(--btn-border); background:var(--btn-bg); color:var(--btn-color); text-decoration:none; border-radius:var(--btn-radius); cursor:pointer; transition:background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast); }
   .btn:hover { background:var(--color-bg-alt); }
-  .btn-primary { --btn-bg:var(--grad-primary); --btn-color:#fff; --btn-border:transparent; box-shadow:0 6px 18px -6px rgba(var(--color-primary-rgb),.4); }
+  .btn-primary { --btn-bg:var(--grad-primary); --btn-color:var(--color-text-contrast); --btn-border:transparent; box-shadow:0 6px 18px -6px rgba(var(--color-primary-rgb),.4); }
   .btn-primary:hover { filter:brightness(1.07); }
   .btn-outline { --btn-bg:var(--color-bg); }
   .btn-outline:hover { border-color:var(--color-border); background:var(--color-bg-alt); }
@@ -43,10 +43,10 @@
   .btn-sm { font-size:var(--text-xs); padding:.45rem .7rem; }
 
   .badge { display:inline-flex; align-items:center; font:600 var(--text-xs)/1 var(--font-sans); background:var(--grad-soft); border:1px solid var(--color-border-soft); padding:.35rem .55rem; border-radius:var(--radius-md); gap:.35rem; }
-  .badge-primary { background:var(--grad-primary); color:#fff; border:0; }
+  .badge-primary { background:var(--grad-primary); color:var(--color-text-contrast); border:0; }
   .badge-soft { background:rgba(var(--color-primary-rgb),.08); color:var(--color-primary); }
 
-  .divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,#d7dbe0,transparent); border:0; }
+  .divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(var(--color-light-gray-rgb),1),transparent); border:0; }
 
   .section-modern { position:relative; padding-block:clamp(2.8rem,5vw,4.5rem); }
   .section-modern + .section-modern { margin-top:0; }

@@ -1,17 +1,12 @@
-// Variables
-$color-primary: #69be3c;
-$color-surface: #ffffff;
-$color-border: #e2e8f0;
-$color-text: #1f2937;
-$color-text-faint: #64748b;
+
 
 // Mixins
 @mixin card {
-  background: $color-surface;
+  background: var(--color-surface);
   padding: 1rem;
   border-radius: 14px;
-  box-shadow: 0 4px 14px -6px rgba(0,0,0,.08);
-  border: 1px solid $color-border;
+  box-shadow: 0 4px 14px -6px rgba(var(--color-black-rgb),.08);
+  border: 1px solid var(--color-border);
 }
 
 @mixin flex-center {
@@ -30,10 +25,10 @@ $color-text-faint: #64748b;
   max-width: 520px;
   margin: 2rem auto;
   padding: 2rem;
-  background: #fff;
-  border: 1px solid $color-border;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  box-shadow: 0 6px 28px -8px rgba(0,0,0,.12);
+  box-shadow: 0 6px 28px -8px rgba(var(--color-black-rgb),.12);
   text-align: center;
 
   h2 {
@@ -44,14 +39,14 @@ $color-text-faint: #64748b;
   p {
     font-size: .75rem;
     line-height: 1.7;
-    color: #475569;
+    color: var(--color-text-label);
   }
 }
 
 .debug-info {
   margin-top: 1rem;
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--color-surface-muted);
   border-radius: 8px;
   font-size: .7rem;
   font-family: monospace;
@@ -67,14 +62,13 @@ $color-text-faint: #64748b;
   margin-top: 12px;
   font-size: .7rem;
   font-weight: 600;
-  color: $color-primary;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
 // Navigation
 .admin-navigation {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid $color-border;
+  border-bottom: 1px solid var(--color-border);
 
   .nav-items {
     display: flex;
@@ -86,19 +80,19 @@ $color-text-faint: #64748b;
     padding: 0.75rem 1rem;
     border: none;
     background: transparent;
-    color: $color-text-faint;
+    color: var(--color-text-faint);
     cursor: pointer;
     border-radius: 8px 8px 0 0;
     transition: all 0.2s ease;
 
     &:hover {
-      background: #f8fafc;
-      color: $color-text;
+      background: var(--color-surface-muted);
+      color: var(--color-text);
     }
 
     &.active {
-      background: $color-primary;
-      color: white;
+      background: var(--color-primary);
+      color: var(--color-text-contrast);
       font-weight: 600;
     }
   }
@@ -113,7 +107,7 @@ $color-text-faint: #64748b;
   @include flex-center;
   height: 200px;
   font-size: 1rem;
-  color: $color-text-faint;
+  color: var(--color-text-faint);
 }
 
 // Products View
@@ -134,30 +128,23 @@ $color-text-faint: #64748b;
 
 // Overview View
 .overview-view {
+  background: var(--color-surface-muted);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+
   .overview-section {
     margin-bottom: 2rem;
 
     .section-title {
       margin: 0 0 1rem 0;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: $color-text;
+      color: var(--color-text);
     }
   }
 
-  .overview-loading,
-  .overview-error {
-    @include flex-center;
-    height: 200px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid $color-border;
-
-    .loading-message,
-    .error-message {
-      font-size: 1rem;
-      color: $color-text-faint;
-    }
+  .loading-message,
+  .error-message {
+    font-size: 1rem;
+    color: var(--color-text-faint);
   }
 
   .recent-orders {
@@ -176,12 +163,12 @@ $color-text-faint: #64748b;
       .order-info {
         .order-id {
           font-weight: 600;
-          color: $color-text;
+          color: var(--color-text);
         }
 
         .order-customer {
           font-size: 0.8rem;
-          color: $color-text-faint;
+          color: var(--color-text-faint);
         }
       }
 
@@ -190,12 +177,12 @@ $color-text-faint: #64748b;
 
         .order-total {
           font-weight: 600;
-          color: $color-text;
+          color: var(--color-text);
         }
 
         .order-status {
           font-size: 0.8rem;
-          color: $color-text-faint;
+          color: var(--color-text-faint);
         }
       }
     }
@@ -203,7 +190,7 @@ $color-text-faint: #64748b;
     .empty-state {
       text-align: center;
       padding: 2rem;
-      color: $color-text-faint;
+      color: var(--color-text-faint);
       font-size: 0.9rem;
     }
   }
@@ -226,13 +213,13 @@ $color-text-faint: #64748b;
   .stat-value {
     font-size: 1.6rem;
     font-weight: 700;
-    color: $color-text;
+    color: var(--color-text);
   }
 
   .stat-label {
     font-size: .7rem;
     letter-spacing: .5px;
-    color: $color-text-faint;
+    color: var(--color-text-faint);
     font-weight: 600;
   }
 }
@@ -241,20 +228,20 @@ $color-text-faint: #64748b;
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  background: $color-surface;
+  background: var(--color-surface);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 14px -6px rgba(0,0,0,.06);
-  border: 1px solid $color-border;
+  box-shadow: 0 4px 14px -6px rgba(var(--color-black-rgb),.06);
+  border: 1px solid var(--color-border);
 
   th, td {
     padding: 0.75rem;
     text-align: right;
-    border-bottom: 1px solid $color-border;
+    border-bottom: 1px solid var(--color-border);
   }
 
   th {
-    background: #f8fafc;
+    background: var(--color-surface-muted);
     font-weight: 600;
     font-size: 0.8rem;
   }
@@ -343,9 +330,9 @@ $color-text-faint: #64748b;
   border-radius: 12px;
   background: linear-gradient(
     90deg,
-    rgba(0,0,0,0.06) 25%,
-    rgba(0,0,0,0.12) 37%,
-    rgba(0,0,0,0.06) 63%
+    rgba(var(--color-black-rgb),0.06) 25%,
+    rgba(var(--color-black-rgb),0.12) 37%,
+    rgba(var(--color-black-rgb),0.06) 63%
   );
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
@@ -355,9 +342,9 @@ $color-text-faint: #64748b;
   .skeleton {
     background: linear-gradient(
       90deg,
-      rgba(255,255,255,0.06) 25%,
-      rgba(255,255,255,0.12) 37%,
-      rgba(255,255,255,0.06) 63%
+      rgba(var(--color-white-rgb),0.06) 25%,
+      rgba(var(--color-white-rgb),0.12) 37%,
+      rgba(var(--color-white-rgb),0.06) 63%
     );
   }
 }
@@ -372,14 +359,14 @@ $color-text-faint: #64748b;
 }
 
 .admin-root table:focus-within {
-  border-color: rgba(200,169,106,0.55) !important;
-  box-shadow: 0 0 0 2px rgba(200,169,106,0.35), 0 6px 18px -8px rgba(0,0,0,0.08);
+  border-color: rgba(var(--color-gold-focus-rgb),0.55) !important;
+  box-shadow: 0 0 0 2px rgba(var(--color-gold-focus-rgb),0.35), 0 6px 18px -8px rgba(var(--color-black-rgb),0.08);
 }
 
 .admin-root table tr:focus-within {
-  outline: 1px solid rgba(200,169,106,0.35);
+  outline: 1px solid rgba(var(--color-gold-focus-rgb),0.35);
   outline-offset: -1px;
-  background: rgba(200,169,106,0.03);
+  background: rgba(var(--color-gold-focus-rgb),0.03);
 }
 
 .admin-root table thead th {
@@ -399,7 +386,7 @@ $color-text-faint: #64748b;
 }
 
 .admin-root table thead th:hover::after {
-  background: rgba(200,169,106,0.65);
+  background: rgba(var(--color-gold-focus-rgb),0.65);
   opacity: 1;
 }
 
@@ -410,7 +397,7 @@ $color-text-faint: #64748b;
 
 .admin-root table thead th[aria-sort]::after,
 .admin-root table thead th.sort-active::after {
-  background: rgba(200,169,106,0.85);
+  background: rgba(var(--color-gold-focus-rgb),0.85);
   opacity: 1;
 }
 
@@ -426,13 +413,13 @@ $color-text-faint: #64748b;
 .admin-root table thead th[aria-sort="asc"]::before {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 6px solid rgba(200,169,106,0.9);
+  border-bottom: 6px solid rgba(var(--color-gold-focus-rgb),0.9);
 }
 
 .admin-root table thead th[aria-sort="desc"]::before {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 6px solid rgba(200,169,106,0.9);
+  border-top: 6px solid rgba(var(--color-gold-focus-rgb),0.9);
 }
 
 .admin-subbar {
@@ -441,7 +428,7 @@ $color-text-faint: #64748b;
   border: 1px solid var(--color-border-soft);
   border-radius: 12px;
   padding: .6rem .9rem;
-  box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+  box-shadow: 0 2px 10px rgba(var(--color-dark-blue-rgb),0.04);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -455,7 +442,7 @@ $color-text-faint: #64748b;
   bottom: 0;
   height: 2px;
   border-radius: 2px;
-  background: linear-gradient(90deg, rgba(200,169,106,0.0), rgba(200,169,106,0.85), rgba(200,169,106,0.0));
+  background: linear-gradient(90deg, rgba(var(--color-gold-focus-rgb),0.0), rgba(var(--color-gold-focus-rgb),0.85), rgba(var(--color-gold-focus-rgb),0.0));
 }
 
 .admin-subbar-title { 

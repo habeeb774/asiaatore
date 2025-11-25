@@ -75,15 +75,15 @@ $break-lg: 1200px;
   $offset: var(--ring-offset)
 ) {
   outline: none;
-  box-shadow: 0 0 0 $offset rgba(0,0,0,0), 0 0 0 $size rgba(0,0,0,0);
+  box-shadow: 0 0 0 $offset rgba(var(--color-black-rgb),0), 0 0 0 $size rgba(var(--color-black-rgb),0);
   &:focus-visible {
-    box-shadow: 0 0 0 $offset rgba(255,255,255,0.2), 0 0 0 ($size + $offset) $color;
+    box-shadow: 0 0 0 $offset rgba(var(--color-white-rgb),0.2), 0 0 0 ($size + $offset) $color;
   }
 }
 
 @mixin interactive-pill(
   $bg: var(--color-primary),
-  $color: #fff,
+  $color: var(--color-text-contrast),
   $border: transparent
 ) {
   background: $bg;
@@ -108,8 +108,8 @@ $break-lg: 1200px;
 }
 
 @mixin glass-panel($blur: var(--overlay-blur)) {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(var(--color-white-rgb),0.08);
+  border: 1px solid rgba(var(--color-white-rgb),0.15);
   backdrop-filter: blur($blur);
   -webkit-backdrop-filter: blur($blur);
 }

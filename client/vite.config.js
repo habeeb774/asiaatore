@@ -508,6 +508,9 @@ export default defineConfig(async ({ mode }) => {
       // Add a small hook to emit a treemap when VISUALIZE=true is set
       rollupOptionsHook: undefined,
     },
+    optimizeDeps: {
+      include: ["lucide-react"],
+    },
     css: {
       postcss: "./postcss.config.cjs",
     },
