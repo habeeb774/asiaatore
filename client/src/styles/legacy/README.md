@@ -1,10 +1,33 @@
-# Legacy style tokens
+# Legacy / Deprecated Styles
 
-This folder hosts small shared partials for the older hero/cart layouts that still ship with the storefront. The goal is to keep duplicated selectors (for example `.product`, `.price`, `.stars`, `.btn_add_cart`) in a single place so that multiple hero variants can reuse them without copy/pasting hundreds of lines again.
+> **⚠️ WARNING:** These files are **deprecated** and kept for reference only.
+> Do NOT import these files in new code.
 
-Current partials:
+## Files Moved Here (Nov 2025 Cleanup)
 
+| File | Reason Deprecated |
+| --- | --- |
+| `index.css` | Replaced by `index.scss` - was commented out in main.jsx |
+| `global-fonts.css` | Consolidated into `fonts.css` |
+| `cairo-font-fix.css` | Duplicate of font system |
+| `force-cairo-font.css` | Duplicate of font system |
+| `cart-button-fix.css` | Replaced by proper `product-styles.css` |
+| `override-cart-button.css` | Duplicate with `!important` abuse |
+| `product-card-overrides.css` | Duplicate with `!important` abuse |
+| `product-card-typography.css` | Font now handled globally |
+| `auth-enhanced.css` | Unused authentication theme |
+| `auth-luxury.css` | Unused authentication theme |
+| `auth-modern.css` | Unused authentication theme |
 
- Whenever you need to touch any of the legacy hero files (`Hero.scss`, `HeroUnified.css`), import one of these partials or rely on the global `index.scss` entry rather than duplicating declarations. The former monolith `reda-store-theme.css` has been migrated to the `components/` partials and removed from the repository.
+## Original Legacy Files
 
-> Tip: if a hero variation needs a bespoke tweak, extend the mixins (e.g. `@include mixins.card-surface($padding: 24px)`) instead of copying raw background/border/shadow declarations.
+| File | Purpose |
+| --- | --- |
+| `_legacy-product-block.scss` | Shared product card styles for hero variants |
+
+## Migration Notes
+
+If you need functionality from any of these files:
+1. Check if the functionality exists in `../fonts.css` or `../product-styles.css`
+2. Use design tokens from `../../theme/_tokens.scss`
+3. Avoid `!important` - fix specificity at the source instead

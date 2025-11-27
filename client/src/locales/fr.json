@@ -15,7 +15,8 @@
     "stores": "Magasins",
     "myOrders": "Mes commandes",
     "sellerKyc": "KYC Vendeur",
-    "dashboard": "Tableau de bord"
+    "dashboard": "Tableau de bord",
+    "taglineFallback": "Votre boutique quotidienne tout-en-un"
   },
   "catalog": "Catalogue",
   "offers": "Offres",

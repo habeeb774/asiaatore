@@ -25,6 +25,12 @@ export function safeProductInclude() {
   if (modelHasField('Product', 'tierPrices')) {
     include.tierPrices = true;
   }
+  if (modelHasField('Product', 'inventory')) {
+    include.inventory = {
+      where: { warehouseId: null },
+      select: { lowStockThreshold: true }
+    };
+  }
   return include;
 }
 

@@ -1,0 +1,51 @@
+/* تطبيق إجباري لخط Cairo على جميع عناوين المنتجات */
+.product-card *,
+.product-card h1,
+.product-card h2,
+.product-card h3,
+.product-card h4,
+.product-card h5,
+.product-card h6,
+.product-card .title,
+.product-card .name,
+.product-card .product-title,
+.product-card .product-name,
+.product-card .MuiTypography-root,
+.product-card .ant-typography,
+.product-card [class*='title'],
+.product-card [class*='name'],
+.product-card [class*='Title'],
+.product-card [class*='Name'] {
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  text-align: right !important;
+  direction: rtl !important;
+}
+
+/* إجبار التحميل المسبق لخط Cairo */
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Cairo'),
+       url('https://fonts.gstatic.com/s/cairo/v20/SLXGc1nY6HkvalIkTpu0xg.woff2') format('woff2'),
+       url('https://fonts.gstatic.com/s/cairo/v20/SLXGc1nY6HkvalIvTpc.woff2') format('woff');
+  unicode-range: U+0600-06FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE80-FEFC;
+}
+
+/* إزالة أي تأثيرات خارجية قد تمنع تطبيق الخط */
+.product-card * {
+  text-rendering: optimizeLegibility !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* إصلاح مشاكل عرض النصوص العربية */
+[lang="ar"] .product-card *,
+[dir="rtl"] .product-card * {
+  letter-spacing: 0 !important;
+  word-spacing: 0 !important;
+  text-transform: none !important;
+}

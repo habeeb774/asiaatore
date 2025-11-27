@@ -1,14 +1,48 @@
 import React, { useState, useEffect } from "react";
+import { 
+  Package, 
+  ImageIcon, 
+  Tag, 
+  DollarSign, 
+  Box, 
+  Upload, 
+  X, 
+  Layers,
+  Info,
+  Save,
+  Sparkles
+} from "lucide-react";
 import { Button } from "../../../ui/Button";
 import { Input } from "../../../ui/input";
 import { Select } from "../../../ui/select";
-import Panel from "../../../ui/Panel";
 import { useToast } from "../../../../contexts/ToastContext";
 
-// Consistent styling for form elements
-const labelCls = 'block text-sm font-medium mb-2 text-gray-500 dark:text-gray-400';
-const inputCls = 'w-full rounded-lg border-gray-200 bg-white/70 dark:bg-gray-800/70 dark:border-gray-700 dark:text-gray-100';
-const textareaCls = `${inputCls} p-3`;
+// Enhanced styling
+const labelCls = 'block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300';
+const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100';
+const textareaCls = `${inputCls} resize-none`;
+
+// Section Panel component
+const SectionPanel = ({ icon: Icon, title, children, color = "emerald" }) => {
+  const colorClasses = {
+    emerald: "from-emerald-500 to-emerald-600 text-emerald-600 bg-emerald-50",
+    blue: "from-blue-500 to-blue-600 text-blue-600 bg-blue-50",
+    purple: "from-purple-500 to-purple-600 text-purple-600 bg-purple-50",
+    amber: "from-amber-500 to-amber-600 text-amber-600 bg-amber-50"
+  };
+  
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 dark:border-slate-800">
+        <div className={`rounded-lg p-2 ${colorClasses[color].split(' ').slice(2).join(' ')}`}>
+          <Icon className={`h-5 w-5 ${colorClasses[color].split(' ')[2]}`} />
+        </div>
+        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">{title}</h3>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  );
+};
 
 
 const ProductForm = ({
@@ -39,6 +73,18 @@ const ProductForm = ({
   const toast = useToast();
 
   const [imagePreviews, setImagePreviews] = useState([]); // For previewing images
+
+  const resolveText = (value) => {
+    if (typeof value === 'string') return value;
+    if (!value) return '';
+    if (typeof value === 'object') {
+      const locale = value?.ar ? 'ar' : value?.en ? 'en' : null;
+      if (locale) return value[locale];
+      const firstString = Object.values(value).find((entry) => typeof entry === 'string');
+      if (firstString) return firstString;
+    }
+    return String(value || '');
+  };
 
   useEffect(() => {
     // Cleanup object URLs to avoid memory leaks
@@ -171,32 +217,52 @@ const ProductForm = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {showHeader && (
-        <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-            {product ? "تعديل المنتج" : "إضافة منتج جديد"}
-          </h2>
-          {onCancel && (
-            <Button variant="ghost" onClick={onCancel} size="icon">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
-          )}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 text-white shadow-xl mb-6">
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="rounded-xl bg-white/20 p-3 backdrop-blur-sm">
+                <Package className="h-7 w-7" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">{product ? "تعديل المنتج" : "إضافة منتج جديد"}</h1>
+                <p className="text-emerald-100 text-sm mt-0.5">
+                  {product ? "قم بتحديث بيانات المنتج" : "أدخل بيانات المنتج الجديد"}
+                </p>
+              </div>
+            </div>
+            {onCancel && (
+              <Button 
+                variant="ghost" 
+                onClick={onCancel} 
+                size="icon"
+                className="text-white hover:bg-white/20 rounded-xl"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
+          {/* Decorative elements */}
+          <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-xl" />
+          <Sparkles className="absolute top-4 left-4 h-8 w-8 text-white/20" />
         </div>
       )}
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
-          <strong className="font-bold">خطأ!</strong>
-          <span className="block sm:inline"> {error}</span>
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700" role="alert">
+          <Info className="h-5 w-5 flex-shrink-0" />
+          <div>
+            <strong className="font-semibold">خطأ!</strong>
+            <span className="block sm:inline"> {error}</span>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ----- Primary Column ----- */}
         <div className="lg:col-span-2 space-y-6">
-          <Panel>
-            <div className="space-y-4">
+          <SectionPanel icon={Package} title="معلومات المنتج الأساسية" color="emerald">
+            <div className="space-y-5">
               <div>
                 <label htmlFor="product-name" className={labelCls}>اسم المنتج *</label>
                 <Input
@@ -214,17 +280,19 @@ const ProductForm = ({
                   id="product-description"
                   value={form.description}
                   onChange={(e) => handleChange("description", e.target.value)}
-                  placeholder="أدخل وصفًا تفصيليًا للمنتج..."
-                  rows={8}
+                  placeholder="أدخل وصفًا تفصيليًا للمنتج يوضح مميزاته وفوائده..."
+                  rows={6}
                   className={textareaCls}
                 />
               </div>
             </div>
-          </Panel>
+          </SectionPanel>
 
-           <Panel>
-            <h3 className="text-lg font-semibold mb-4">صور المنتج</h3>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+          <SectionPanel icon={ImageIcon} title="صور المنتج" color="blue">
+            <div 
+              className="border-2 border-dashed border-slate-200 hover:border-emerald-300 rounded-xl p-8 text-center transition-colors cursor-pointer group"
+              onClick={() => document.getElementById('product-images').click()}
+            >
               <input
                 id="product-images"
                 type="file"
@@ -233,32 +301,46 @@ const ProductForm = ({
                 onChange={handleImageChange}
                 className="hidden"
               />
-              <label htmlFor="product-images" className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium">
-                ارفع صورًا أو اسحبها وأفلتها هنا
-              </label>
-              <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 10MB</p>
+              <div className="flex flex-col items-center gap-3">
+                <div className="rounded-full bg-emerald-100 p-4 group-hover:bg-emerald-200 transition-colors">
+                  <Upload className="h-8 w-8 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700">اضغط لرفع الصور</p>
+                  <p className="text-sm text-slate-500 mt-1">أو اسحب الصور وأفلتها هنا</p>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">PNG, JPG, WEBP • حتى 10MB لكل صورة</p>
+              </div>
             </div>
-             {imagePreviews.length > 0 && (
-              <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+            {imagePreviews.length > 0 && (
+              <div className="mt-5 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                 {imagePreviews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <img src={preview} alt={`Preview ${index}`} className="h-24 w-24 object-cover rounded-lg shadow-md" />
+                  <div key={index} className="relative group aspect-square">
+                    <img 
+                      src={preview} 
+                      alt={`Preview ${index}`} 
+                      className="w-full h-full object-cover rounded-xl shadow-sm border border-slate-100" 
+                    />
                     <button
                       type="button"
-                      onClick={() => handleRemoveImage(index)}
-                      className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveImage(index); }}
+                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg"
                     >
-                      &times;
+                      <X className="h-3.5 w-3.5" />
                     </button>
+                    {index === 0 && (
+                      <span className="absolute bottom-2 right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        الرئيسية
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-          </Panel>
+          </SectionPanel>
 
-          <Panel>
-             <h3 className="text-lg font-semibold mb-4">التصنيف والعلامة التجارية</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <SectionPanel icon={Tag} title="التصنيف والعلامة التجارية" color="purple">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label htmlFor="product-category" className={labelCls}>الفئة *</label>
                 <Select
@@ -270,8 +352,8 @@ const ProductForm = ({
                 >
                   <option value="">اختر الفئة</option>
                   {categories?.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                    <option key={cat.id ?? cat._id ?? cat.value} value={cat.id ?? cat._id ?? cat.value}>
+                      {resolveText(cat.name || cat.label || cat.title)}
                     </option>
                   ))}
                 </Select>
@@ -286,7 +368,7 @@ const ProductForm = ({
                   className={inputCls}
                 />
               </div>
-               <div>
+              <div className="md:col-span-2">
                 <label htmlFor="product-tags" className={labelCls}>علامات المنتج</label>
                 <Input
                   id="product-tags"
@@ -295,41 +377,43 @@ const ProductForm = ({
                   placeholder="علامة1، علامة2، علامة3"
                   className={inputCls}
                 />
-                <small className="text-gray-500 dark:text-gray-400 mt-1 block">افصل بين العلامات بفاصلة</small>
+                <p className="text-xs text-slate-500 mt-1.5">افصل بين العلامات بفاصلة</p>
               </div>
             </div>
-          </Panel>
+          </SectionPanel>
         </div>
 
         {/* ----- Secondary Column ----- */}
         <div className="space-y-6">
-          <Panel>
-             <h3 className="text-lg font-semibold mb-4">التسعير والمخزون</h3>
+          <SectionPanel icon={DollarSign} title="التسعير والمخزون" color="amber">
             <div className="space-y-4">
               <div>
-                <label htmlFor="product-price" className={labelCls}>السعر *</label>
-                <Input
-                  id="product-price"
-                  type="number"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => handleChange("price", e.target.value)}
-                  placeholder="0.00"
-                  required
-                  className={inputCls}
-                />
+                <label htmlFor="product-price" className={labelCls}>السعر (ر.س) *</label>
+                <div className="relative">
+                  <Input
+                    id="product-price"
+                    type="number"
+                    step="0.01"
+                    value={form.price}
+                    onChange={(e) => handleChange("price", e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className={`${inputCls} pl-12`}
+                  />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">ر.س</span>
+                </div>
               </div>
               <div>
-                <label htmlFor="product-sku" className={labelCls}>SKU</label>
+                <label htmlFor="product-sku" className={labelCls}>رمز SKU</label>
                 <Input
                   id="product-sku"
                   value={form.sku}
                   onChange={(e) => handleChange("sku", e.target.value)}
-                  placeholder="رمز المنتج الفريد"
+                  placeholder="ABC-123"
                   className={inputCls}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="product-stock" className={labelCls}>المخزون</label>
                   <Input
@@ -342,96 +426,128 @@ const ProductForm = ({
                   />
                 </div>
                 <div>
-                  <label htmlFor="product-min-stock" className={labelCls}>حد أدنى</label>
+                  <label htmlFor="product-min-stock" className={labelCls}>حد التنبيه</label>
                   <Input
                     id="product-min-stock"
                     type="number"
                     value={form.minStock}
                     onChange={(e) => handleChange("minStock", e.target.value)}
-                    placeholder="0"
+                    placeholder="5"
                     className={inputCls}
                   />
                 </div>
               </div>
             </div>
-          </Panel>
-          <Panel>
-            <h3 className="text-lg font-semibold mb-4">المواصفات</h3>
+          </SectionPanel>
+
+          <SectionPanel icon={Box} title="الأبعاد والوزن" color="blue">
             <div className="space-y-4">
-               <div>
-                  <label htmlFor="product-weight" className={labelCls}>الوزن (كجم)</label>
-                  <Input
-                    id="product-weight"
-                    type="number"
-                    step="0.01"
-                    value={form.weight}
-                    onChange={(e) => handleChange("weight", e.target.value)}
-                    placeholder="0.00"
-                    className={inputCls}
-                  />
-                </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="product-length" className={labelCls}>الطول</label>
+              <div>
+                <label htmlFor="product-weight" className={labelCls}>الوزن (كجم)</label>
+                <Input
+                  id="product-weight"
+                  type="number"
+                  step="0.01"
+                  value={form.weight}
+                  onChange={(e) => handleChange("weight", e.target.value)}
+                  placeholder="0.00"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>الأبعاد (سم)</label>
+                <div className="grid grid-cols-3 gap-2">
                   <Input
                     id="product-length"
                     type="number"
                     step="0.01"
                     value={form.dimensions.length}
                     onChange={(e) => handleDimensionChange("length", e.target.value)}
-                    placeholder="سم"
+                    placeholder="الطول"
                     className={inputCls}
                   />
-                </div>
-                <div>
-                  <label htmlFor="product-width" className={labelCls}>العرض</label>
                   <Input
                     id="product-width"
                     type="number"
                     step="0.01"
                     value={form.dimensions.width}
                     onChange={(e) => handleDimensionChange("width", e.target.value)}
-                    placeholder="سم"
+                    placeholder="العرض"
                     className={inputCls}
                   />
-                </div>
-                <div>
-                  <label htmlFor="product-height" className={labelCls}>الارتفاع</label>
                   <Input
                     id="product-height"
                     type="number"
                     step="0.01"
                     value={form.dimensions.height}
                     onChange={(e) => handleDimensionChange("height", e.target.value)}
-                    placeholder="سم"
+                    placeholder="الارتفاع"
                     className={inputCls}
                   />
                 </div>
               </div>
             </div>
-          </Panel>
-           <Panel>
-            <h3 className="text-lg font-semibold mb-4">الحالة</h3>
-            <Select
-              value={form.status}
-              onChange={(e) => handleChange("status", e.target.value)}
-              className={inputCls}
-            >
-              <option value="active">نشط</option>
-              <option value="draft">مسودة</option>
-              <option value="archived">مؤرشف</option>
-            </Select>
-          </Panel>
+          </SectionPanel>
+
+          <SectionPanel icon={Layers} title="حالة المنتج" color="emerald">
+            <div className="space-y-3">
+              {[
+                { value: 'active', label: 'نشط', desc: 'متاح للبيع', color: 'emerald' },
+                { value: 'draft', label: 'مسودة', desc: 'غير منشور', color: 'amber' },
+                { value: 'archived', label: 'مؤرشف', desc: 'مخفي من المتجر', color: 'slate' }
+              ].map((status) => (
+                <label
+                  key={status.value}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    form.status === status.value
+                      ? `border-${status.color}-500 bg-${status.color}-50`
+                      : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="status"
+                    value={status.value}
+                    checked={form.status === status.value}
+                    onChange={(e) => handleChange("status", e.target.value)}
+                    className="sr-only"
+                  />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    form.status === status.value ? `border-${status.color}-500` : 'border-slate-300'
+                  }`}>
+                    {form.status === status.value && (
+                      <div className={`w-2 h-2 rounded-full bg-${status.color}-500`} />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-700">{status.label}</p>
+                    <p className="text-xs text-slate-500">{status.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </SectionPanel>
         </div>
       </div>
 
       {showActions && (
-        <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700 mt-8">
-          <Button type="submit" variant="primary" disabled={loading} className="flex-1">
-            {loading ? "جاري الحفظ..." : product ? "تحديث المنتج" : "إضافة المنتج"}
+        <div className="flex gap-4 pt-6 border-t border-slate-200 dark:border-slate-700 mt-8">
+          <Button 
+            type="submit" 
+            disabled={loading} 
+            className="flex-1 gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white py-3 rounded-xl font-semibold shadow-lg shadow-emerald-200 transition-all"
+          >
+            <Save className="h-5 w-5" />
+            {loading ? "جاري الحفظ..." : product ? "تحديث المنتج" : "حفظ المنتج"}
           </Button>
           {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel} 
+              disabled={loading}
+              className="px-6 py-3 rounded-xl border-slate-200 hover:bg-slate-50"
+            >
               إلغاء
             </Button>
           )}

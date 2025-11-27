@@ -7,7 +7,7 @@ body { padding-top: 1px; }
 
 span { color: var(--main_color); }
 p { color: var(--p_color); }
-h1,h2,h3,h4,h5,h6 { color: var(--color_heading); font-family: 'DM Sans', sans-serif; }
+h1,h2,h3,h4,h5,h6 { color: var(--color_heading); font-family: var(--font-heading, var(--font-cairo)); }
 img { width: 100%; }
 input,select,button { border: none; outline: none; }
 

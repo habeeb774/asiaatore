@@ -1,4 +1,5 @@
 import React from 'react';
+import { Input } from '../../../components/ui';
 
 const SettingsTopStrip = ({ form, onChange, errors }) => {
   return (
@@ -16,9 +17,9 @@ const SettingsTopStrip = ({ form, onChange, errors }) => {
           </label>
           <label htmlFor="topStripBackground" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>لون الخلفية</span>
-            <input id="topStripBackground" type="color" value={form.topStripBackground} onChange={e=>onChange('topStripBackground', e.target.value)} />
-            <input aria-label="Hex" value={form.topStripBackground} onChange={e=>onChange('topStripBackground', e.target.value)} />
-            {errors.topStripBackground && <small style={{color:'#dc2626'}}>{errors.topStripBackground}</small>}
+            <Input id="topStripBackground" type="color" value={form.topStripBackground} onChange={e=>onChange('topStripBackground', e.target.value)} />
+            <Input aria-label="Hex" value={form.topStripBackground} onChange={e=>onChange('topStripBackground', e.target.value)} />
+            {errors.topStripBackground && <small style={{color:'var(--color-danger)'}}>{errors.topStripBackground}</small>}
           </label>
           <div style={{fontSize:'.65rem', opacity:.7}}>محتوى الشريط العلوي يُدار من قسم التسويق (بانرات الموقع - موقع topStrip).</div>
         </div>

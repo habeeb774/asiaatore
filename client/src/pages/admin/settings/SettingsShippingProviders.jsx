@@ -1,4 +1,5 @@
 import React from 'react';
+import { Input } from '../../../components/ui';
 
 export default function SettingsShippingProviders(props) {
   const { form, onChange, errors } = props;
@@ -15,26 +16,26 @@ export default function SettingsShippingProviders(props) {
             </div>
             <label htmlFor="aramexApiUrl" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>Aramex API URL</span>
-              <input id="aramexApiUrl" type="url" value={form.aramexApiUrl} onChange={e=>onChange('aramexApiUrl', e.target.value)} placeholder="https://api.aramex.com/..." />
-              {errors.aramexApiUrl && <small style={{color:'#dc2626'}}>{errors.aramexApiUrl}</small>}
+              <Input id="aramexApiUrl" type="url" value={form.aramexApiUrl} onChange={e=>onChange('aramexApiUrl', e.target.value)} placeholder="https://api.aramex.com/..." />
+              {errors.aramexApiUrl && <small style={{color:'var(--color-danger)'}}>{errors.aramexApiUrl}</small>}
             </label>
             <label htmlFor="aramexApiKey" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>API Key</span>
-              <input id="aramexApiKey" value={form.aramexApiKey} onChange={e=>onChange('aramexApiKey', e.target.value)} placeholder="••••••" />
+              <Input id="aramexApiKey" value={form.aramexApiKey} onChange={e=>onChange('aramexApiKey', e.target.value)} placeholder="••••••" />
             </label>
             <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
               <label htmlFor="aramexApiUser" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>Username</span>
-                <input id="aramexApiUser" value={form.aramexApiUser} onChange={e=>onChange('aramexApiUser', e.target.value)} placeholder="user" />
+                <Input id="aramexApiUser" value={form.aramexApiUser} onChange={e=>onChange('aramexApiUser', e.target.value)} placeholder="user" />
               </label>
               <label htmlFor="aramexApiPass" style={{display:'grid', gap:4}}>
                 <span style={{fontSize:'.7rem', fontWeight:700}}>Password</span>
-                <input id="aramexApiPass" type="password" value={form.aramexApiPass} onChange={e=>onChange('aramexApiPass', e.target.value)} placeholder="••••••" />
+                <Input id="aramexApiPass" type="password" autoComplete="new-password" value={form.aramexApiPass} onChange={e=>onChange('aramexApiPass', e.target.value)} placeholder="••••••" />
               </label>
             </div>
             <label htmlFor="aramexWebhookSecret" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>Webhook Secret (توقيع)</span>
-              <input id="aramexWebhookSecret" value={form.aramexWebhookSecret} onChange={e=>onChange('aramexWebhookSecret', e.target.value)} placeholder="secret" />
+              <Input id="aramexWebhookSecret" value={form.aramexWebhookSecret} onChange={e=>onChange('aramexWebhookSecret', e.target.value)} placeholder="secret" />
             </label>
           </div>
           <div style={{display:'grid', gap:8, alignContent:'start'}}>
@@ -44,16 +45,16 @@ export default function SettingsShippingProviders(props) {
             </div>
             <label htmlFor="smsaApiUrl" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>SMSA API URL</span>
-              <input id="smsaApiUrl" type="url" value={form.smsaApiUrl} onChange={e=>onChange('smsaApiUrl', e.target.value)} placeholder="https://api.smsaexpress.com/..." />
-              {errors.smsaApiUrl && <small style={{color:'#dc2626'}}>{errors.smsaApiUrl}</small>}
+              <Input id="smsaApiUrl" type="url" value={form.smsaApiUrl} onChange={e=>onChange('smsaApiUrl', e.target.value)} placeholder="https://api.smsaexpress.com/..." />
+              {errors.smsaApiUrl && <small style={{color:'var(--color-danger)'}}>{errors.smsaApiUrl}</small>}
             </label>
             <label htmlFor="smsaApiKey" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>API Key</span>
-              <input id="smsaApiKey" value={form.smsaApiKey} onChange={e=>onChange('smsaApiKey', e.target.value)} placeholder="••••••" />
+              <Input id="smsaApiKey" value={form.smsaApiKey} onChange={e=>onChange('smsaApiKey', e.target.value)} placeholder="••••••" />
             </label>
             <label htmlFor="smsaWebhookSecret" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>Webhook Secret (توقيع)</span>
-              <input id="smsaWebhookSecret" value={form.smsaWebhookSecret} onChange={e=>onChange('smsaWebhookSecret', e.target.value)} placeholder="secret" />
+              <Input id="smsaWebhookSecret" value={form.smsaWebhookSecret} onChange={e=>onChange('smsaWebhookSecret', e.target.value)} placeholder="secret" />
             </label>
           </div>
         </div>

@@ -56,15 +56,20 @@ export function mapProduct(p) {
   return {
     id: p.id,
     slug: p.slug,
+    sku: p.sku ?? null,
     name: { ar: p.nameAr, en: p.nameEn },
     short: { ar: p.shortAr, en: p.shortEn },
     category: p.category,
+    categoryId: p.categoryId ?? null,
     price,
     oldPrice,
     originalPrice: oldPrice,
+    costPrice: toNumber(p.costPrice),
     image: p.image,
     images: imagesAll,
     imageVariants: mainVariants,
+    status: p.status ?? null,
+    brandId: p.brandId ?? p.brand?.id ?? null,
     gallery,
     brand: p.brand
       ? {
@@ -85,6 +90,14 @@ export function mapProduct(p) {
             note: { ar: t.noteAr, en: t.noteEn },
           }))
       : [],
+    minStock: Array.isArray(p.inventory)
+      ? p.inventory.reduce((threshold, row) => {
+          const low = row?.lowStockThreshold;
+          if (low == null) return threshold;
+          if (threshold == null) return low;
+          return Math.min(threshold, low);
+        }, null)
+      : null,
     rating: p.rating,
     stock: p.stock,
     createdAt: p.createdAt,

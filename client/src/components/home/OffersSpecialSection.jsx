@@ -5,7 +5,72 @@ import Carousel from '../ui/Carousel';
 import { Sparkles, Crown, Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api/client';
-import './OffersSpecialSection.css';
+import '../../styles/legacy/OffersSpecialSection.css';
+
+const deriveFallbackOffers = (products = []) => {
+  if (!Array.isArray(products) || products.length === 0) return [];
+
+  const toNumber = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  };
+
+  const computeDiscount = (product, currentPrice, originalPrice) => {
+    if (!originalPrice || !currentPrice || originalPrice <= currentPrice) return 0;
+    return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+  };
+
+  const discountScore = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+  };
+
+  const normalized = products
+    .filter((product) => product && typeof product === 'object')
+    .map((product, index) => {
+      const price = toNumber(product.price ?? product.currentPrice ?? product.salePrice);
+      const originalPrice = toNumber(
+        product.originalPrice ?? product.compareAtPrice ?? product.priceBeforeDiscount
+      );
+      const discount = toNumber(product.discount) ?? computeDiscount(product, price, originalPrice);
+      const images = Array.isArray(product.images) && product.images.length > 0
+        ? product.images
+        : product.coverImage
+          ? [product.coverImage]
+          : product.thumbnail
+            ? [product.thumbnail]
+            : [];
+
+      return {
+        ...product,
+        id:
+          product.id ||
+          product.sku ||
+          product.slug ||
+          product.productId ||
+          product.handle ||
+          `${product.name || product.nameAr || product.nameEn || 'offer'}-${index}`,
+        name: product.nameAr || product.name || product.nameEn || product.title || '',
+        nameAr: product.nameAr || product.name || '',
+        nameEn: product.nameEn || product.name || product.title || '',
+        price,
+        originalPrice,
+        discount: discount || 0,
+        images,
+        displayImage: product.displayImage || images[0] || null,
+        isSpecialOffer: true,
+      };
+    })
+    .filter((product) => {
+      if (!product) return false;
+      if (product.discount && product.discount > 0) return true;
+      if (product.price && product.originalPrice && product.price < product.originalPrice) return true;
+      return Boolean(product.isSpecialOffer);
+    })
+    .sort((a, b) => discountScore(b.discount) - discountScore(a.discount));
+
+  return normalized.slice(0, 8);
+};
 
 /**
  * OffersSpecialSection Component - Displays special luxury offers in a unique slider
@@ -25,13 +90,12 @@ const OffersSpecialSection = ({
     isLoading,
     error
   } = useQuery({
-    queryKey: ['special-offers'],
+    queryKey: ['special-offers', Array.isArray(products) ? products.length : 0],
     queryFn: async () => {
       try {
         const data = await api.listOffers();
         if (Array.isArray(data)) {
-          // Normalize offers data similar to products
-          return data.map(offer => ({
+          const normalized = data.map(offer => ({
             ...offer,
             name: offer.nameAr || offer.name || '',
             nameAr: offer.nameAr || offer.name || '',
@@ -41,17 +105,18 @@ const OffersSpecialSection = ({
             displayImage: offer.image || offer.displayImage,
             discount: offer.discount || 0,
             isSpecialOffer: true
-          }));
+          })).filter(Boolean);
+
+          if (normalized.length > 0) {
+            return normalized;
+          }
         }
-        return [];
+
+        // No offers returned from API – fallback to product catalogue
+        return deriveFallbackOffers(products);
       } catch (err) {
         console.warn('Failed to load special offers, falling back to filtered products:', err);
-        // Fallback: filter products for offers
-        return products.filter(product =>
-          product.discount > 0 ||
-          product.isSpecialOffer ||
-          (product.price && product.originalPrice && product.price < product.originalPrice)
-        ).slice(0, 8);
+        return deriveFallbackOffers(products);
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

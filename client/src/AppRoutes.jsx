@@ -5,81 +5,84 @@ import { ChatProvider } from './contexts/ChatContext.jsx';
 import { RouteErrorBoundary, PageFallback } from './components/routing/RouteBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
+import lazyWithRetry from './utils/lazyWithRetry';
 // Admin and account pages were previously eagerly imported; convert to lazy for bundle size reduction.
-const AdminUsers = React.lazy(() => import(/* webpackChunkName: "admin-users" */ './pages/admin/users/AdminUsers'));
-const Reports = React.lazy(() => import(/* webpackChunkName: "admin-reports" */ './pages/admin/reports/Reports'));
-const BankTransfers = React.lazy(() => import(/* webpackChunkName: "admin-orders" */ './pages/admin/orders/BankTransfers'));
-const Analytics = React.lazy(() => import(/* webpackChunkName: "admin-analytics" */ './pages/admin/analytics/Analytics'));
-const Customers = React.lazy(() => import(/* webpackChunkName: "admin-users" */ './pages/admin/users/Customers'));
-const Settings = React.lazy(() => import(/* webpackChunkName: "admin-settings" */ './pages/admin/Settings'));
-const AuditAdmin = React.lazy(() => import(/* webpackChunkName: "admin-reports" */ './pages/admin/reports/AuditAdmin'));
-const ReviewsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-products" */ './pages/admin/products/ReviewsAdmin'));
-const BrandsAdmin = React.lazy(() => import(/* webpackChunkName: "admin-products" */ './pages/admin/products/BrandsAdmin'));
-const AccountSecurity = React.lazy(() => import(/* webpackChunkName: "account-security" */ './pages/account/AccountSecurity.jsx'));
-const DeveloperSettings = React.lazy(() => import(/* webpackChunkName: "admin-settings" */ './pages/admin/integrations/DeveloperSettings.jsx'));
-const AnalyticsDashboard = React.lazy(() => import(/* webpackChunkName: "admin-analytics" */ './pages/admin/analytics/AnalyticsDashboard'));
+const AdminUsers = lazyWithRetry(() => import(/* webpackChunkName: "admin-users" */ './pages/admin/users/AdminUsers'));
+const Reports = lazyWithRetry(() => import(/* webpackChunkName: "admin-reports" */ './pages/admin/reports/Reports'));
+const BankTransfers = lazyWithRetry(() => import(/* webpackChunkName: "admin-orders" */ './pages/admin/orders/BankTransfers'));
+const Analytics = lazyWithRetry(() => import(/* webpackChunkName: "admin-analytics" */ './pages/admin/analytics/Analytics'));
+const Customers = lazyWithRetry(() => import(/* webpackChunkName: "admin-users" */ './pages/admin/users/Customers'));
+const Settings = lazyWithRetry(() => import(/* webpackChunkName: "admin-settings" */ './pages/admin/Settings'));
+const AuditAdmin = lazyWithRetry(() => import(/* webpackChunkName: "admin-reports" */ './pages/admin/reports/AuditAdmin'));
+const ReviewsAdmin = lazyWithRetry(() => import(/* webpackChunkName: "admin-products" */ './pages/admin/products/ReviewsAdmin'));
+const BrandsAdmin = lazyWithRetry(() => import(/* webpackChunkName: "admin-products" */ './pages/admin/products/BrandsAdmin'));
+const AccountSecurity = lazyWithRetry(() => import(/* webpackChunkName: "account-security" */ './pages/account/AccountSecurity.jsx'));
+const DeveloperSettings = lazyWithRetry(() => import(/* webpackChunkName: "admin-settings" */ './pages/admin/integrations/DeveloperSettings.jsx'));
+const AnalyticsDashboard = lazyWithRetry(() => import(/* webpackChunkName: "admin-analytics" */ './pages/admin/analytics/AnalyticsDashboard'));
 import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Lazy load heavy pages to split bundles per-route
-const Home = React.lazy(() => import('./pages/misc/Home.jsx'));
-const Cart = React.lazy(() => import('./pages/checkout/Cart.jsx'));
-const CheckoutPage = React.lazy(() => import('./pages/checkout/CheckoutPage.jsx'));
-const LoginPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.LoginPage })));
-const RegisterPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.RegisterPage })));
-const ForgotPasswordPage = React.lazy(() => import('./pages/auth/index.js').then(m => ({ default: m.ForgotPasswordPage })));
-const ResetPasswordPage = React.lazy(() => import('./pages/auth/ResetPasswordPage.jsx'));
-const VerifyEmailPage = React.lazy(() => import('./pages/auth/VerifyEmailPage.jsx'));
-const Orders = React.lazy(() => import('./pages/orders/Orders.jsx'));
-const MyOrders = React.lazy(() => import('./pages/orders/MyOrders.jsx'));
-const OrderDetails = React.lazy(() => import('./pages/orders/OrderDetails.jsx'));
-const AdminDashboard = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/dashboard/AdminDashboard.jsx'));
-const ProductInventory = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/products/ProductInventory.jsx'));
-const AdminOrders = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/orders/Orders.jsx'));
-const AdminInvoices = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/orders/Invoices.jsx'));
-const AdminMarketing = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Marketing.jsx'));
-const AdminCategories = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/products/CategoriesAdmin.jsx'));
-const AdminApps = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Apps.jsx'));
-const AdminIntegrations = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Integrations.jsx'));
-const AdminAds = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/AdsAdmin.jsx'));
-const SellerDashboard = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerDashboard.jsx'));
-const DeliveryDashboard = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliveryDashboard.jsx'));
+const Home = lazyWithRetry(() => import('./pages/misc/Home.jsx'));
+const Cart = lazyWithRetry(() => import('./pages/checkout/Cart.jsx'));
+const CheckoutPage = lazyWithRetry(() => import('./pages/checkout/CheckoutPage.jsx'));
+const LoginPage = lazyWithRetry(() => import('./pages/auth/index.js').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazyWithRetry(() => import('./pages/auth/index.js').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazyWithRetry(() => import('./pages/auth/index.js').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazyWithRetry(() => import('./pages/auth/ResetPasswordPage.jsx'));
+const VerifyEmailPage = lazyWithRetry(() => import('./pages/auth/VerifyEmailPage.jsx'));
+const Orders = lazyWithRetry(() => import('./pages/orders/Orders.jsx'));
+const MyOrders = lazyWithRetry(() => import('./pages/orders/MyOrders.jsx'));
+const OrderDetails = lazyWithRetry(() => import('./pages/orders/OrderDetails.jsx'));
+const AdminDashboard = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/dashboard/AdminDashboard.jsx'));
+const ProductInventory = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/products/ProductInventory.jsx'));
+const AdminOrders = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/orders/Orders.jsx'));
+const AdminInvoices = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/orders/Invoices.jsx'));
+const AdminMarketing = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Marketing.jsx'));
+const AdminCategories = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/products/CategoriesAdmin.jsx'));
+const AdminApps = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Apps.jsx'));
+const AdminIntegrations = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/Integrations.jsx'));
+const AdminAds = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/integrations/AdsAdmin.jsx'));
+const SellerDashboard = lazyWithRetry(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerDashboard.jsx'));
+const DeliveryDashboard = lazyWithRetry(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliveryDashboard.jsx'));
 import Canonical from './components/Canonical';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AnimatePresence, motion } from './lib/framerLazy.js';
 // NOTE: useLanguage was imported but unused; removed to prevent lint warning.
-const ProductDetailPage = React.lazy(() => import(/* webpackChunkName: "product" */ './pages/products/ProductDetailPage.jsx'));
-const StoresPage = React.lazy(() => import(/* webpackChunkName: "stores" */ './pages/store/StoresPage.jsx'));
-const OffersPage = React.lazy(() => import(/* webpackChunkName: "offers" */ './pages/misc/OffersPage.jsx'));
-const InvoiceViewer = React.lazy(() => import(/* webpackChunkName: "invoice" */ './pages/orders/InvoiceViewer.jsx'));
-const CatalogPage = React.lazy(() => import(/* webpackChunkName: "catalog" */ './pages/products/CatalogPage.jsx'));
-const LegalPage = React.lazy(() => import(/* webpackChunkName: "legal" */ './pages/legal/Legal.jsx'));
-const ProductsPage = React.lazy(() => import(/* webpackChunkName: "products" */ './pages/products/Products.jsx'));
-const ChatPage = React.lazy(() => import(/* webpackChunkName: "chat" */ './pages/misc/Chat.jsx'));
-const ProductReviews = React.lazy(() => import(/* webpackChunkName: "reviews" */ './pages/products/ProductReviews.jsx'));
-const StyleGuide = React.lazy(() => import(/* webpackChunkName: "styleguide" */ './pages/dev/StyleGuide.jsx'));
-const SubscriptionPlans = React.lazy(() => import(/* webpackChunkName: "subscriptions" */ './pages/features/SubscriptionPlans.jsx'));
-const ProfilePage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Profile'));
-const ProductManager = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/ProductManager'));
-const OrderTracker = React.lazy(() => import(/* webpackChunkName: "orders" */ './pages/orders/OrderTracker.jsx'));
-const AddressesPage = React.lazy(() => import(/* webpackChunkName: "profile" */ './pages/account/Addresses.jsx'));
-const SellerKyc = React.lazy(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerKyc.jsx'));
-const AdminKycReview = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/users/AdminKycReview.jsx'));
-const SellerAdminPage = React.lazy(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/users/SellerAdminPage.jsx'));
-const DeliveryMap = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Map.jsx'));
-const DeliveryHistory = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/History.jsx'));
-const DeliveryAvailability = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Availability.jsx'));
-const DeliverySummary = React.lazy(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliverySummary.jsx'));
-const UIPreview = React.lazy(() => import(/* webpackChunkName: "ui" */ './pages/dev/UIPreview.jsx'));
-const SearchResults = React.lazy(() => import(/* webpackChunkName: "search" */ './pages/misc/SearchResults.jsx'));
+const ProductDetailPage = lazyWithRetry(() => import(/* webpackChunkName: "product" */ './pages/products/ProductDetailPage.jsx'));
+const StoresPage = lazyWithRetry(() => import(/* webpackChunkName: "stores" */ './pages/store/StoresPage.jsx'));
+const OffersPage = lazyWithRetry(() => import(/* webpackChunkName: "offers" */ './pages/misc/OffersPage.jsx'));
+const InvoiceViewer = lazyWithRetry(() => import(/* webpackChunkName: "invoice" */ './pages/orders/InvoiceViewer.jsx'));
+const CatalogPage = lazyWithRetry(() => import(/* webpackChunkName: "catalog" */ './pages/products/CatalogPage.jsx'));
+const LegalPage = lazyWithRetry(() => import(/* webpackChunkName: "legal" */ './pages/legal/Legal.jsx'));
+const ProductsPage = lazyWithRetry(() => import(/* webpackChunkName: "products" */ './pages/products/Products.jsx'));
+const ChatPage = lazyWithRetry(() => import(/* webpackChunkName: "chat" */ './pages/misc/Chat.jsx'));
+const ProductReviews = lazyWithRetry(() => import(/* webpackChunkName: "reviews" */ './pages/products/ProductReviews.jsx'));
+const StyleGuide = lazyWithRetry(() => import(/* webpackChunkName: "styleguide" */ './pages/dev/StyleGuide.jsx'));
+const SubscriptionPlans = lazyWithRetry(() => import(/* webpackChunkName: "subscriptions" */ './pages/features/SubscriptionPlans.jsx'));
+const Wishlist = lazyWithRetry(() => import(/* webpackChunkName: "wishlist" */ './pages/features/Wishlist.jsx'));
+const ProfilePage = lazyWithRetry(() => import(/* webpackChunkName: "profile" */ './pages/account/Profile'));
+const ProductManager = lazyWithRetry(() => import(/* webpackChunkName: "seller" */ './pages/seller/ProductManager'));
+const OrderTracker = lazyWithRetry(() => import(/* webpackChunkName: "orders" */ './pages/orders/OrderTracker.jsx'));
+const AddressesPage = lazyWithRetry(() => import(/* webpackChunkName: "profile" */ './pages/account/Addresses.jsx'));
+const SellerKyc = lazyWithRetry(() => import(/* webpackChunkName: "seller" */ './pages/seller/SellerKyc.jsx'));
+const AdminKycReview = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/users/AdminKycReview.jsx'));
+const SellerAdminPage = lazyWithRetry(() => import(/* webpackChunkName: "admin-core" */ './pages/admin/users/SellerAdminPage.jsx'));
+const DeliveryMap = lazyWithRetry(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Map.jsx'));
+const DeliveryHistory = lazyWithRetry(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/History.jsx'));
+const DeliveryAvailability = lazyWithRetry(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/Availability.jsx'));
+const DeliverySummary = lazyWithRetry(() => import(/* webpackChunkName: "delivery" */ './pages/delivery/DeliverySummary.jsx'));
+const UIPreview = lazyWithRetry(() => import(/* webpackChunkName: "ui" */ './pages/dev/UIPreview.jsx'));
+const SearchResults = lazyWithRetry(() => import(/* webpackChunkName: "search" */ './pages/misc/SearchResults.jsx'));
 // Home page now fully implemented (replaces placeholder)
-const ToastTest = React.lazy(() => import('./pages/dev/ToastTest.jsx'));
-const NFTLoyaltyPage = React.lazy(() => import(/* webpackChunkName: "nft" */ './pages/features/NFTLoyaltyPage.jsx'));
-const GamificationPage = React.lazy(() => import(/* webpackChunkName: "gamification" */ './pages/features/GamificationPage.jsx'));
-const ARViewerPage = React.lazy(() => import(/* webpackChunkName: "ar" */ './pages/features/ARViewerPage.jsx'));
-const VoiceCommercePage = React.lazy(() => import(/* webpackChunkName: "voice" */ './pages/features/VoiceCommercePage.jsx'));
-const SocialCommercePage = React.lazy(() => import(/* webpackChunkName: "social" */ './pages/features/SocialCommercePage.jsx'));
-const SmartInventoryPage = React.lazy(() => import(/* webpackChunkName: "inventory" */ './pages/features/SmartInventoryPage.jsx'));
-const PersonalizationPage = React.lazy(() => import(/* webpackChunkName: "personalization" */ './pages/features/PersonalizationPage.jsx'));
-const SustainabilityPage = React.lazy(() => import(/* webpackChunkName: "sustainability" */ './pages/features/SustainabilityPage.jsx'));
+const ToastTest = lazyWithRetry(() => import('./pages/dev/ToastTest.jsx'));
+const NFTLoyaltyPage = lazyWithRetry(() => import(/* webpackChunkName: "nft" */ './pages/features/NFTLoyaltyPage.jsx'));
+const GamificationPage = lazyWithRetry(() => import(/* webpackChunkName: "gamification" */ './pages/features/GamificationPage.jsx'));
+const ARViewerPage = lazyWithRetry(() => import(/* webpackChunkName: "ar" */ './pages/features/ARViewerPage.jsx'));
+const VoiceCommercePage = lazyWithRetry(() => import(/* webpackChunkName: "voice" */ './pages/features/VoiceCommercePage.jsx'));
+const SocialCommercePage = lazyWithRetry(() => import(/* webpackChunkName: "social" */ './pages/features/SocialCommercePage.jsx'));
+const SmartInventoryPage = lazyWithRetry(() => import(/* webpackChunkName: "inventory" */ './pages/features/SmartInventoryPage.jsx'));
+const PersonalizationPage = lazyWithRetry(() => import(/* webpackChunkName: "personalization" */ './pages/features/PersonalizationPage.jsx'));
+const SustainabilityPage = lazyWithRetry(() => import(/* webpackChunkName: "sustainability" */ './pages/features/SustainabilityPage.jsx'));
 
 const RouteTracker = () => {
   const location = useLocation();
@@ -194,7 +197,7 @@ const AdminRedirect = ({ prefix = '' }) => {
   if (view === 'products') return <Navigate to={`${prefix}/admin/products`} replace />;
   if (view === 'orders') return <Navigate to={`${prefix}/admin/orders`} replace />;
   if (view === 'marketing') return <Navigate to={`${prefix}/admin/marketing`} replace />;
-  if (view === 'ads') return <Navigate to={`${prefix}/admin/ads`} replace />;
+  if (view === 'ads') return <Navigate to={`${prefix}/admin/marketing?section=ads`} replace />;
   if (view === 'settings') return <Navigate to={`${prefix}/admin/settings`} replace />;
   if (view === 'invoices') return <Navigate to={`${prefix}/admin/invoices`} replace />;
   if (view === 'audit') return <Navigate to={`${prefix}/admin/audit`} replace />;
@@ -234,18 +237,19 @@ const MainAppShell = ({ user, userRole }) => (
           <Route path="/admin" element={<AdminRedirect prefix="" />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/products" element={<ProductsPage />} />
-          <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/product/:id" element={<ErrorBoundary><ProductDetailPage /></ErrorBoundary>} />
           <Route path="/product/:productId/reviews" element={<ProductReviews />} />
           <Route path="/search" element={<SearchResults />} />
         <Route path="/stores" element={<StoresPage />} />
     <Route path="/offers" element={<OffersPage />} />
+  <Route path="/wishlist" element={<Wishlist />} />
     <Route path="/style-guide" element={<StyleGuide />} />
     <Route path="/ui" element={<UIPreview />} />
   {/* demo/hero removed - demo page not present in this template */}
   <Route path="/test/toast" element={<ToastTest />} />
   <Route path="/cart" element={<Cart />} />
   <Route path="/subscriptions" element={<SubscriptionPlans />} />
-  <Route path="/checkout" element={<CheckoutPage />} />
+  <Route path="/checkout" element={<ErrorBoundary><CheckoutPage /></ErrorBoundary>} />
   <Route path="/orders" element={<Orders />} />
   <Route path="/legal/:slug" element={<LegalPage />} />
   <Route path="/my-orders" element={<MyOrders />} />
@@ -350,6 +354,11 @@ const MainAppShell = ({ user, userRole }) => (
   {/* Protected admin route (Arabic default) */}
   <Route path="/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/login" />} />
   <Route path="/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/login" />} />
+  <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
+  <Route path="/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/login" />} />
+  <Route path="/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/login" />} />
+  <Route path="/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/login" />} />
+  <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
   {/* Dedicated Admin Categories page -> redirects to AdminDashboard cats view */}
   <Route path="/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/login" />} />
   <Route path="/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/login" />} />
@@ -357,334 +366,68 @@ const MainAppShell = ({ user, userRole }) => (
   <Route path="/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/login" />} />
   <Route path="/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/login" />} />
   <Route path="/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/login" />} />
-  <Route path="/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/login" />} />
-  <Route path="/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/login" />} />
-  <Route path="/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<SellerAdminPage />} redirectTo="/login" />} />
-  <Route path="/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/login" />} />
   <Route path="/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/login" />} />
-  <Route path="/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['developer']} element={<DeveloperSettings />} redirectTo="/login" />} />
-  <Route path="/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/login" />} />
-  <Route path="/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/login" />} />
-  <Route path="/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/login" />} />
-  <Route path="/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/login" />} />
-  <Route path="/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/login" />} />
-  <Route path="/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/login" />} />
-  <Route path="/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminAds />} redirectTo="/login" />} />
-  <Route path="/login" element={<LoginPage />} />
-  <Route path="/register" element={<RegisterPage />} />
-  <Route path="/forgot" element={<ForgotPasswordPage />} />
-  <Route path="/reset-password" element={<ResetPasswordPage />} />
-  <Route path="/verify-email" element={<VerifyEmailPage />} />
+  <Route path="/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<SellerAdminPage />} redirectTo="/login" />} />
 
-  {/* Advanced Features */}
-  <Route path="/gamification" element={<ProtectedRoute isAuthed={!!user} element={<GamificationPage />} redirectTo="/login" />} />
-  <Route path="/ar-viewer" element={<ARViewerPage />} />
-  <Route path="/voice-commerce" element={<VoiceCommercePage />} />
-  <Route path="/social-commerce" element={<ProtectedRoute isAuthed={!!user} element={<SocialCommercePage />} redirectTo="/login" />} />
-  <Route path="/smart-inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin','seller']} element={<SmartInventoryPage />} redirectTo="/login" />} />
-  <Route path="/personalization" element={<ProtectedRoute isAuthed={!!user} element={<PersonalizationPage />} redirectTo="/login" />} />
-  <Route path="/sustainability" element={<SustainabilityPage />} />
-  <Route path="/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/login" />} />
-  <Route path="/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/login" />} />
+<Route path="/checkout" element={<ErrorBoundary><CheckoutPage /></ErrorBoundary>} />
+<Route path="/en/checkout" element={<ErrorBoundary><CheckoutPage /></ErrorBoundary>} />
+<Route path="/fr/checkout" element={<ErrorBoundary><CheckoutPage /></ErrorBoundary>} />
 
-        {/* English prefixed */}
-  <Route path="/en" element={<Home />} />
-  <Route path="/en/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/en/login" />} />
-  <Route path="/en/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/en/login" />} />
-  <Route path="/en/catalog" element={<CatalogPage />} />
-  <Route path="/en/products" element={<ProductsPage />} />
-  <Route path="/en/product/:id" element={<ProductDetailPage />} />
-  <Route path="/en/search" element={<SearchResults />} />
-        <Route path="/en/stores" element={<StoresPage />} />
-    <Route path="/en/offers" element={<OffersPage />} />
-    <Route path="/en/style-guide" element={<StyleGuide />} />
-  <Route path="/fr/ui" element={<UIPreview />} />
-  {/* fr/demo/hero removed - demo page not present in this template */}
-  <Route path="/fr/test/toast" element={<ToastTest />} />
-  <Route path="/en/test/toast" element={<ToastTest />} />
-  <Route path="/en/cart" element={<Cart />} />
-  <Route path="/en/subscriptions" element={<SubscriptionPlans />} />
-  <Route path="/en/checkout" element={<CheckoutPage />} />
-  <Route path="/en/orders" element={<Orders />} />
-  <Route path="/en/legal/:slug" element={<LegalPage />} />
-  <Route path="/en/my-orders" element={<MyOrders />} />
-  <Route path="/en/order/:id" element={<OrderDetails />} />
-  <Route path="/en/order/:id/track" element={<OrderTracker />} />
-  <Route path="/en/account/addresses" element={<ProtectedRoute isAuthed={!!user} element={<AddressesPage />} redirectTo="/en/login" />} />
-  <Route path="/en/invoice/:id" element={<InvoiceViewer />} />
-  <Route path="/en/seller/kyc" element={<ProtectedRoute isAuthed={!!user} element={<SellerKyc />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/sellers/kyc" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminKycReview />} redirectTo="/en/login" />} />
-  <Route
-    path="/en/seller/products"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['seller','admin']}
-        element={<ProductManager />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  <Route
-    path="/en/delivery"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryDashboard />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  <Route
-    path="/en/delivery/map"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryMap />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  <Route
-    path="/en/delivery/history"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryHistory />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  <Route
-    path="/en/delivery/availability"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryAvailability />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  <Route
-    path="/en/delivery/summary"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliverySummary />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  <Route path="/en/DeliveryDashboard" element={<Navigate to="/en/delivery" replace />} />
-  <Route
-    path="/en/seller"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['seller','admin']}
-        element={<SellerDashboard />}
-        redirectTo="/en/login"
-      />
-    }
-  />
-  {/* Alias (EN): capitalized path redirect */}
-  <Route path="/en/SellerDashboard" element={<Navigate to="/en/seller" replace />} />
-  <Route path="/en/account/security" element={<ProtectedRoute isAuthed={!!user} element={<AccountSecurity />} redirectTo="/en/login" />} />
-  <Route path="/en/account/profile" element={<ProtectedRoute isAuthed={!!user} element={<ProfilePage />} redirectTo="/en/login" />} />
-  {/* Protected admin route (English) with legacy query redirect */}
-  <Route path="/en/admin" element={<AdminRedirect prefix="/en" />} />
-  {/* Legacy en redirect to users if query has view=users will be handled client-side (optional) */}
-  <Route path="/en/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/en/login" />} />
-  {/* EN: Admin Categories */}
-  <Route path="/en/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/en/login" />} />
-  <Route path="/en/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminAds />} redirectTo="/en/login" />} />
-  <Route path="/en/login" element={<LoginPage />} />
-  <Route path="/en/register" element={<RegisterPage />} />
-  <Route path="/en/forgot" element={<ForgotPasswordPage />} />
-  <Route path="/en/reset-password" element={<ResetPasswordPage />} />
-  <Route path="/en/verify-email" element={<VerifyEmailPage />} />
-  <Route path="/en/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
-  <Route path="/en/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
+// ...
 
-  {/* Advanced Features */}
-  <Route path="/en/gamification" element={<ProtectedRoute isAuthed={!!user} element={<GamificationPage />} redirectTo="/en/login" />} />
-  <Route path="/en/ar-viewer" element={<ARViewerPage />} />
-  <Route path="/en/voice-commerce" element={<VoiceCommercePage />} />
-  <Route path="/en/social-commerce" element={<ProtectedRoute isAuthed={!!user} element={<SocialCommercePage />} redirectTo="/en/login" />} />
-  <Route path="/en/smart-inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin','seller']} element={<SmartInventoryPage />} redirectTo="/en/login" />} />
-  <Route path="/en/personalization" element={<ProtectedRoute isAuthed={!!user} element={<PersonalizationPage />} redirectTo="/en/login" />} />
-  <Route path="/en/sustainability" element={<SustainabilityPage />} />
-  <Route path="/en/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
-  <Route path="/en/account/nft-loyalty" element={<ProtectedRoute isAuthed={!!user} element={<NFTLoyaltyPage />} redirectTo="/en/login" />} />
+<Route path="/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["developer"]} element={<ErrorBoundary><DeveloperSettings /></ErrorBoundary>} redirectTo="/login" />} />
+<Route path="/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminMarketing /></ErrorBoundary>} redirectTo="/login" />} />
+<Route path="/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminApps /></ErrorBoundary>} redirectTo="/login" />} />
+<Route path="/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminIntegrations /></ErrorBoundary>} redirectTo="/login" />} />
+<Route path="/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminAds /></ErrorBoundary>} redirectTo="/login" />} />
 
-        {/* French prefixed */}
-  <Route path="/fr" element={<Home />} />
-  <Route path="/fr/admin/inventory" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ProductInventory />} redirectTo="/fr/login" />} />
-  <Route path="/fr/chat" element={<ProtectedRoute isAuthed={!!user} element={<ChatPage />} redirectTo="/fr/login" />} />
-  <Route path="/fr/catalog" element={<CatalogPage />} />
-  <Route path="/fr/products" element={<ProductsPage />} />
-  <Route path="/fr/product/:id" element={<ProductDetailPage />} />
-  <Route path="/fr/search" element={<SearchResults />} />
-  <Route path="/fr/stores" element={<StoresPage />} />
-    <Route path="/fr/offers" element={<OffersPage />} />
-    <Route path="/fr/style-guide" element={<StyleGuide />} />
-  <Route path="/fr/ui" element={<UIPreview />} />
-  <Route path="/fr/cart" element={<Cart />} />
-  <Route path="/fr/subscriptions" element={<SubscriptionPlans />} />
-  <Route path="/fr/checkout" element={<CheckoutPage />} />
-  <Route path="/fr/orders" element={<Orders />} />
-  <Route path="/fr/legal/:slug" element={<LegalPage />} />
-  <Route path="/fr/my-orders" element={<MyOrders />} />
-  <Route path="/fr/order/:id" element={<OrderDetails />} />
-  <Route path="/fr/order/:id/track" element={<OrderTracker />} />
-  <Route path="/fr/account/addresses" element={<ProtectedRoute isAuthed={!!user} element={<AddressesPage />} redirectTo="/fr/login" />} />
-  <Route path="/fr/invoice/:id" element={<InvoiceViewer />} />
-  <Route path="/fr/seller/kyc" element={<ProtectedRoute isAuthed={!!user} element={<SellerKyc />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/sellers/kyc" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminKycReview />} redirectTo="/fr/login" />} />
-  <Route
-    path="/fr/seller/products"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['seller','admin']}
-        element={<ProductManager />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  <Route
-    path="/fr/delivery"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryDashboard />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  <Route
-    path="/fr/delivery/map"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryMap />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  <Route
-    path="/fr/delivery/history"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryHistory />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  <Route
-    path="/fr/delivery/availability"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliveryAvailability />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  <Route
-    path="/fr/delivery/summary"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['delivery','admin']}
-        element={<DeliverySummary />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  <Route path="/fr/DeliveryDashboard" element={<Navigate to="/fr/delivery" replace />} />
-  <Route
-    path="/fr/seller"
-    element={
-      <ProtectedRoute
-        isAuthed={!!user}
-        userRole={userRole}
-        requiredRoles={['seller','admin']}
-        element={<SellerDashboard />}
-        redirectTo="/fr/login"
-      />
-    }
-  />
-  {/* Alias (FR): capitalized path redirect */}
-  <Route path="/fr/SellerDashboard" element={<Navigate to="/fr/seller" replace />} />
-  <Route path="/fr/account/security" element={<ProtectedRoute isAuthed={!!user} element={<AccountSecurity />} redirectTo="/fr/login" />} />
-  <Route path="/fr/account/profile" element={<ProtectedRoute isAuthed={!!user} element={<ProfilePage />} redirectTo="/fr/login" />} />
-  {/* Protected admin route (French) with legacy query redirect */}
-  <Route path="/fr/admin" element={<AdminRedirect prefix="/fr" />} />
-  <Route path="/fr/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/fr/login" />} />
-  {/* FR: Admin Categories */}
-  <Route path="/fr/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/analytics-dashboard" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AnalyticsDashboard />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminMarketing />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminApps />} redirectTo="/fr/login" />} />
-  <Route path="/fr/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminIntegrations />} redirectTo="/fr/login" />} />
-  <Route path="/fr/login" element={<LoginPage />} />
-  <Route path="/fr/register" element={<RegisterPage />} />
-  <Route path="/fr/forgot" element={<ForgotPasswordPage />} />
-  <Route path="/fr/reset-password" element={<ResetPasswordPage />} />
-  <Route path="/fr/verify-email" element={<VerifyEmailPage />} />
+// ...
 
+<Route path="/en/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/en/login" />} />
+<Route path="/en/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/en/login" />} />
+<Route path="/en/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/en/login" />} />
+<Route path="/en/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/en/login" />} />
+<Route path="/en/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/en/login" />} />
+<Route path="/en/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/en/login" />} />
+<Route path="/en/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/en/login" />} />
+<Route path="/en/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["developer"]} element={<ErrorBoundary><DeveloperSettings /></ErrorBoundary>} redirectTo="/en/login" />} />
+<Route path="/en/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminMarketing /></ErrorBoundary>} redirectTo="/en/login" />} />
+<Route path="/en/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminApps /></ErrorBoundary>} redirectTo="/en/login" />} />
+<Route path="/en/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminIntegrations /></ErrorBoundary>} redirectTo="/en/login" />} />
+<Route path="/en/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminAds /></ErrorBoundary>} redirectTo="/en/login" />} />
+<Route path="/en/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/en/login" />} />
+<Route path="/en/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/en/login" />} />
+<Route path="/en/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/en/login" />} />
+<Route path="/en/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/en/login" />} />
+<Route path="/en/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/en/login" />} />
+<Route path="/en/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/en/login" />} />
+<Route path="/en/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/en/login" />} />
+<Route path="/en/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<SellerAdminPage />} redirectTo="/en/login" />} />
+<Route path="/en/admin/sellers/kyc" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminKycReview />} redirectTo="/en/login" />} />
+
+// ...
+
+<Route path="/fr/admin/overview" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/users" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminUsers />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/customers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Customers />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/products" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminDashboard />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/orders" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminOrders />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/invoices" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminInvoices />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/analytics" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Analytics />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/developer-settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["developer"]} element={<ErrorBoundary><DeveloperSettings /></ErrorBoundary>} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/marketing" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminMarketing /></ErrorBoundary>} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/apps" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminApps /></ErrorBoundary>} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/integrations" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminIntegrations /></ErrorBoundary>} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/ads" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={["admin"]} element={<ErrorBoundary><AdminAds /></ErrorBoundary>} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/settings" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Settings />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/reports" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<Reports />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/audit" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AuditAdmin />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/reviews" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<ReviewsAdmin />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/brands" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BrandsAdmin />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/categories" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminCategories />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/bank-transfers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<BankTransfers />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/sellers" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<SellerAdminPage />} redirectTo="/fr/login" />} />
+<Route path="/fr/admin/sellers/kyc" element={<ProtectedRoute isAuthed={!!user} userRole={userRole} requiredRoles={['admin']} element={<AdminKycReview />} redirectTo="/fr/login" />} />
   {/* Advanced Features */}
   <Route path="/fr/gamification" element={<ProtectedRoute isAuthed={!!user} element={<GamificationPage />} redirectTo="/fr/login" />} />
   <Route path="/fr/ar-viewer" element={<ARViewerPage />} />
@@ -716,10 +459,30 @@ const AppRoutes = () => {
   const userRole = user?.role;
   return (
     <ChatProvider>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardRoute />} />
-        <Route path="/*" element={<MainAppShell user={user} userRole={userRole} />} />
-      </Routes>
+      <Suspense fallback={<PageFallback /> }>
+        <Routes>
+          {/* Auth routes without the main AppLayout */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/en/login" element={<LoginPage />} />
+          <Route path="/en/register" element={<RegisterPage />} />
+          <Route path="/en/forgot" element={<ForgotPasswordPage />} />
+          <Route path="/en/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/en/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/fr/login" element={<LoginPage />} />
+          <Route path="/fr/register" element={<RegisterPage />} />
+          <Route path="/fr/forgot" element={<ForgotPasswordPage />} />
+          <Route path="/fr/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/fr/verify-email" element={<VerifyEmailPage />} />
+
+          {/* Main app routes with the layout */}
+          <Route path="/dashboard" element={<DashboardRoute />} />
+          <Route path="/*" element={<MainAppShell user={user} userRole={userRole} />} />
+        </Routes>
+      </Suspense>
     </ChatProvider>
   );
 };

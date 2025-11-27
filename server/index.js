@@ -12,6 +12,7 @@ import { createClient } from "redis";
 import { registerSse } from "./utils/realtimeHub.js";
 import path from "path";
 import fs from "fs";
+import { cacheConfig, performanceMonitor, apiCompression } from "./middleware/cacheMiddleware.js";
 
 // IMPORTANT: Prepare DB env (DATABASE_URL) BEFORE importing prisma or any route that imports prisma
 const isProd = process.env.NODE_ENV === "production";
@@ -282,6 +283,10 @@ app.use("/uploads", express.static(uploadsDir, { maxAge: isProd ? "7d" : 0 }));
 app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_LIMIT || "1mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Performance monitoring and compression
+app.use("/api", performanceMonitor());
+app.use("/api", apiCompression());
 
 // CSRF protection for state-changing requests
 app.use("/api", (req, res, next) => {
@@ -666,6 +671,14 @@ async function loadModulesAndMount() {
   app.use(attachUser);
   // Mount SSE route AFTER auth so query/cookie/Bearer tokens populate req.user
   mountSseRoute();
+  
+  // Apply caching to appropriate routes
+  app.use("/api/products", cacheConfig.products);
+  app.use("/api/categories", cacheConfig.categories);
+  app.use("/api/brands", cacheConfig.brands);
+  app.use("/api/settings", cacheConfig.settings);
+  app.use("/api/search", cacheConfig.search);
+  
   app.use("/api/auth", authRoutes);
   app.use("/api/products", productsRoutes);
   app.use("/api/brands", brandsRoutes);

@@ -1,11 +1,5 @@
-@use './variables' as *;
+/* Core base styles - reset handled by base/_reset.scss */
+/* Radius tokens defined in theme/_tokens.scss */
 
-* { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 img { max-width: 100%; height: auto; }
-
-:root {
-  --radius-sm: #{$radius-sm};
-  --radius-md: #{$radius-md};
-  --radius-lg: #{$radius-lg};
-}

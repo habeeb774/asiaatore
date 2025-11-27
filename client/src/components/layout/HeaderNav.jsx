@@ -1,9 +1,6 @@
 // ✅ Updated HeaderNav.jsx with requested modifications
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { AnimatePresence } from '../../lib/framerLazy';
-import { createPortal } from 'react-dom';
-import CartPanel from '../cart/CartPanel';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import HeaderControls from './HeaderControls';
 import TopStrip from './TopStrip';
 import { MenuIcon, XIcon, SearchIcon } from './HeaderIcons';
@@ -18,7 +15,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 
 const defaultLanguage = () => ({ t: (k) => k, locale: 'en', setLocale: () => {} });
 const defaultAuth = () => ({ user: null, logout: () => {} });
-const defaultCart = () => ({ cartItems: [], updateQuantity: () => {}, removeFromCart: () => {} });
+const defaultCart = () => ({ cartItems: [] });
 
 export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
   const location = useLocation();
@@ -30,17 +27,14 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
 
   const { t, locale, setLocale } = langCtx;
   const { user } = authCtx;
-  const { cartItems = [], updateQuantity } = cartCtx;
+  const { cartItems = [] } = cartCtx;
   const { setting } = settingsCtx || {};
+  const siteTagline = setting?.siteTagline;
 
   useDarkMode();
   const { isLoading } = useSearch({ onSearch: (query) => console.log('Searching for:', query) });
   const { isMenuOpen, toggleSidebar } = useSidebarState(sidebarCtx);
-  const [panel, setPanel] = useState(null);
   const [scrolled, setScrolled] = useState(false);
-
-  const cartTotal = useMemo(() => cartItems.reduce((s, i) => s + ((i.price || i.salePrice || 0) * (i.quantity || 1)), 0), [cartItems]);
-  const closeCart = useCallback(() => setPanel(null), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 6);
@@ -84,10 +78,10 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
           {t('Skip to content')}
         </a>
 
-        <div className="relative max-w-full sm:max-w-[1200px] mx-auto w-full h-full px-4 flex items-center justify-between gap-4">
+        <div className="relative mx-auto flex h-full w-full max-w-full px-4 flex-wrap items-center justify-between gap-x-4 gap-y-3 sm:max-w-[1200px] lg:flex-nowrap">
 
           {/* Left Section: Mobile Menu Toggle */}
-          <div className="flex-shrink-0 flex items-center lg:hidden">
+          <div className="order-1 flex items-center lg:hidden">
             <button
               onClick={toggleSidebar}
               aria-expanded={isMenuOpen}
@@ -99,27 +93,17 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
             </button>
           </div>
 
-          {/* Center Section: Logo */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:translate-x-0 lg:translate-y-0 flex-shrink-0">
-            <Link to="/" className="flex flex-col items-center text-center">
-              <img
-                src={setting?.logoUrl || '/images/site-logo.svg'}
-                alt={setting?.siteName || 'Logo'}
-                className="h-14 md:h-16 w-auto"
-              />
-              <span className="hidden sm:block text-sm font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                شركة منفذ آسيا التجارية
-              </span>
-            </Link>
+          {/* Center Section */}
+          <div className="order-3 w-full text-center text-sm font-medium text-slate-600 dark:text-slate-300 md:order-2 md:w-auto md:flex-1">
+            {siteTagline || (t('nav.taglineFallback') !== 'nav.taglineFallback' ? t('nav.taglineFallback') : null)}
           </div>
 
           {/* Right Section: Controls */}
-          <div className="flex-shrink-0 flex items-center justify-end">
+          <div className="order-2 flex flex-1 items-center justify-end gap-2.5 md:order-3">
             <HeaderControls
               t={t}
               locale={locale}
               setLocale={setLocale}
-              setPanel={setPanel}
               cartItems={cartItems}
               user={user}
               triggerSearch={triggerSearch}
@@ -127,24 +111,6 @@ export const HeaderNav = React.memo(function HeaderNav({ className = '' }) {
           </div>
         </div>
       </header>
-
-      {/* Cart panel portal */}
-      {typeof document !== 'undefined' &&
-        createPortal(
-          <AnimatePresence>
-            {panel === 'cart' && (
-              <CartPanel
-                onClose={closeCart}
-                items={cartItems}
-                total={cartTotal}
-                locale={locale}
-                t={t}
-                updateQuantity={updateQuantity}
-              />
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
     </>
   );
 });

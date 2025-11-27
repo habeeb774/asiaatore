@@ -72,7 +72,7 @@ export default function BrandsAdmin() {
               .finally(() => setBrandLoading(false));
           }}>تحديث</Button>
           {brandLoading && <span>...تحميل</span>}
-          {brandError && <span style={{color:'#b91c1c'}}>{brandError}</span>}
+          {brandError && <span style={{color:'var(--color-danger-2)'}}>{brandError}</span>}
         </div>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead>

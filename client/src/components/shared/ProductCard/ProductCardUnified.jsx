@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useCart } from '../../../contexts/CartContext';
+import { useSettings } from '../../../contexts/SettingsContext';
 import LazyImage from '../LazyImage/LazyImage';
 import { SkeletonLoader } from '../SkeletonLoader/SkeletonLoader';
 import { AnimatePresence, motion } from '../../../lib/framerLazy';
@@ -56,21 +57,107 @@ const ProductCard = ({
 }) => {
   const { locale } = useLanguage();
   const { addToCart, updateQuantity, cartItems, maxPerItem } = useCart();
+  const settingsCtx = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const normalizedVariant = VARIANT_CLASS_MAP[variant] || 'grid';
+  const currencyFormatter = useMemo(() => new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
+    style: 'currency',
+    currency: 'SAR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }), [locale]);
+  const formatCurrency = useCallback((value) => {
+    const safeNumber = Math.max(0, Number(value) || 0);
+    return currencyFormatter.format(safeNumber);
+  }, [currencyFormatter]);
+
+  const fallbackImage = useMemo(() => {
+    const logoCandidate = settingsCtx?.setting?.logoUrl ?? settingsCtx?.setting?.logo;
+
+    const pickString = (value) => {
+      if (typeof value === 'string' && value.trim()) return value;
+      if (value && typeof value === 'object') {
+        const localized = value[locale] || value.en;
+        if (typeof localized === 'string' && localized.trim()) return localized;
+        const firstString = Object.values(value).find((entry) => typeof entry === 'string' && entry.trim());
+        if (firstString) return firstString;
+      }
+      return null;
+    };
+
+    const resolved = pickString(logoCandidate);
+    return resolved || '/images/site-logo.svg';
+  }, [settingsCtx?.setting, locale]);
 
   // حالات المكون
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    try {
+      const check = () => setIsMobile(typeof window !== 'undefined' ? window.innerWidth <= 640 : false);
+      check();
+      window.addEventListener('resize', check);
+      return () => window.removeEventListener('resize', check);
+    } catch {}
+  }, []);
 
   // بيانات المنتج المعالجة
   const processedProduct = useMemo(() => {
     if (!product) return null;
 
-    const images = product.images || [product.image] || [];
+    const images = (() => {
+      const list = [];
+
+      if (Array.isArray(product.images)) {
+        product.images.forEach((img) => {
+          if (!img) return;
+          if (typeof img === 'string' && img.trim()) {
+            list.push(img);
+            return;
+          }
+          if (typeof img === 'object') {
+            const localized = img[locale] || img.en;
+            if (typeof localized === 'string' && localized.trim()) {
+              list.push(localized);
+              return;
+            }
+            const fallback = Object.values(img).find((entry) => typeof entry === 'string' && entry.trim());
+            if (fallback) list.push(fallback);
+          }
+        });
+      }
+
+      const additionalImageFields = [
+        product.image,
+        product.coverImage,
+        product.thumbnail,
+        product.displayImage
+      ];
+
+      additionalImageFields.forEach((img) => {
+        if (!img) return;
+        if (typeof img === 'string' && img.trim()) {
+          list.push(img);
+          return;
+        }
+        if (typeof img === 'object') {
+          const localized = img[locale] || img.en;
+          if (typeof localized === 'string' && localized.trim()) {
+            list.push(localized);
+            return;
+          }
+          const fallback = Object.values(img).find((entry) => typeof entry === 'string' && entry.trim());
+          if (fallback) list.push(fallback);
+        }
+      });
+
+      return list.length > 0 ? Array.from(new Set(list)) : [fallbackImage];
+    })();
     const rawName = product.name || product.title || '';
     // Handle multilingual names
     const name = typeof rawName === 'object' && rawName[locale]
@@ -111,13 +198,62 @@ const ProductCard = ({
       savings,
       hasMultipleImages: images.length > 1
     };
-  }, [product]);
+  }, [product, fallbackImage, locale]);
+
+  const productHighlights = useMemo(() => {
+    if (!processedProduct) return [];
+
+    const highlights = [];
+
+    if (processedProduct.hasDiscount && processedProduct.savings > 0) {
+      highlights.push({
+        key: 'savings',
+        text: locale === 'ar'
+          ? `وفرت ${formatCurrency(processedProduct.savings)}`
+          : `Saved ${formatCurrency(processedProduct.savings)}`,
+        tone: 'savings'
+      });
+    }
+
+    if (processedProduct.isOutOfStock) {
+      highlights.push({
+        key: 'out-of-stock',
+        text: locale === 'ar' ? 'غير متاح مؤقتاً' : 'Temporarily unavailable',
+        tone: 'danger'
+      });
+    } else if (processedProduct.stock <= 3) {
+      highlights.push({
+        key: 'low-stock',
+        text: locale === 'ar'
+          ? `كمية محدودة (${processedProduct.stock})`
+          : `Limited stock (${processedProduct.stock})`,
+        tone: 'warning'
+      });
+    } else {
+      highlights.push({
+        key: 'dispatch',
+        text: locale === 'ar' ? 'شحن فوري' : 'Express dispatch',
+        tone: 'success'
+      });
+    }
+
+    if (processedProduct.rating >= 4 && processedProduct.reviews > 0) {
+      highlights.push({
+        key: 'rating',
+        text: locale === 'ar' ? 'الأكثر تقييماً' : 'Client favourite',
+        tone: 'accent'
+      });
+    }
+
+    return highlights.slice(0, 3);
+  }, [formatCurrency, locale, processedProduct]);
 
   const cardBaseClasses = useMemo(() => {
     const classes = [
       'product-card',
       `product-card--${normalizedVariant}`,
-      'group'
+      'group',
+      'product-card--elevated'
     ];
 
     if (processedProduct?.isOutOfStock) {
@@ -196,6 +332,31 @@ const ProductCard = ({
     }
   }, [processedProduct, isWishlisted, onAddToWishlist, onRemoveFromWishlist]);
 
+  const handleTiltMove = useCallback((e) => {
+    try {
+      const el = e.currentTarget;
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const nx = x / rect.width;
+      const ny = y / rect.height;
+      const rx = (0.5 - ny) * 6;
+      const ry = (nx - 0.5) * 6;
+      el.style.setProperty('--tilt-x', rx.toFixed(2) + 'deg');
+      el.style.setProperty('--tilt-y', ry.toFixed(2) + 'deg');
+      el.style.setProperty('--tilt-scale', '1.03');
+    } catch {}
+  }, []);
+
+  const handleTiltLeave = useCallback((e) => {
+    try {
+      const el = e.currentTarget;
+      el.style.setProperty('--tilt-x', '0deg');
+      el.style.setProperty('--tilt-y', '0deg');
+      el.style.setProperty('--tilt-scale', '1');
+    } catch {}
+  }, []);
+
   // إذا لم يكن هناك منتج، لا نعرض شيئاً
   if (!processedProduct) {
     return null;
@@ -239,9 +400,9 @@ const ProductCard = ({
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute top-3 left-3 z-20"
+            className="z-20"
           >
-            <span className="inline-block bg-gradient-to-r from-red-500 to-pink-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-lg">
+            <span className="discount-badge">
               -{processedProduct.discountPercent}%
             </span>
           </motion.div>
@@ -273,22 +434,51 @@ const ProductCard = ({
     );
   });
 
+  const ProductHighlights = memo(() => {
+    if (!productHighlights.length) return null;
+
+    return (
+      <div className="product-highlights">
+        {productHighlights.map((highlight) => (
+          <span
+            key={highlight.key}
+            className={`highlight-chip highlight-chip--${highlight.tone}`}
+          >
+            {highlight.text}
+          </span>
+        ))}
+      </div>
+    );
+  });
+
   // مكون السعر
   const PriceDisplay = memo(() => (
-    <div className="flex items-center space-x-2 rtl:space-x-reverse">
-      <span className="text-lg font-bold text-gray-900 dark:text-white">
-        {processedProduct.price} {locale === 'ar' ? 'ر.س' : 'SAR'}
-      </span>
+    <div className="product-price-display">
+      <motion.span
+        layout
+        className="price-primary"
+      >
+        {formatCurrency(processedProduct.price)}
+      </motion.span>
 
       {processedProduct.hasDiscount && (
-        <>
-          <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-            {processedProduct.oldPrice} {locale === 'ar' ? 'ر.س' : 'SAR'}
-          </span>
-          <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-            {locale === 'ar' ? `وفرت ${processedProduct.savings} ر.س` : `Save ${processedProduct.savings} SAR`}
-          </span>
-        </>
+        <motion.span
+          layout
+          className="price-old"
+        >
+          {formatCurrency(processedProduct.oldPrice)}
+        </motion.span>
+      )}
+
+      {processedProduct.hasDiscount && processedProduct.savings > 0 && (
+        <motion.span
+          layout
+          className="price-savings"
+        >
+          {locale === 'ar'
+            ? `وفرت ${formatCurrency(processedProduct.savings)}`
+            : `Saved ${formatCurrency(processedProduct.savings)}`}
+        </motion.span>
       )}
     </div>
   ));
@@ -301,10 +491,10 @@ const ProductCard = ({
     const canAddMore = !processedProduct.isOutOfStock && !isAtMax;
     if (currentQty > 0) {
       return (
-        <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center rounded-2xl border border-slate-200/60 bg-white/80 p-1 shadow-inner backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/80">
           <button
             onClick={() => handleUpdateQuantity(currentQty - 1)}
-            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="rounded-xl p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-700"
             disabled={currentQty <= 1}
           >
             <Minus className="w-4 h-4" />
@@ -314,7 +504,7 @@ const ProductCard = ({
           </span>
           <button
             onClick={() => handleUpdateQuantity(currentQty + 1)}
-            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="rounded-xl p-2 text-slate-600 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:text-slate-200 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
             disabled={!canAddMore}
           >
             <Plus className="w-4 h-4" />
@@ -329,7 +519,7 @@ const ProductCard = ({
         whileTap={{ scale: canAddMore ? 0.97 : 1 }}
         onClick={handleAddToCart}
         disabled={!canAddMore || isAddingToCart}
-        className={`add-to-cart-btn ${(!canAddMore || isAddingToCart) ? 'is-disabled' : ''}`}
+        className={`add-to-cart-btn add-to-cart-btn--luxury ${(!canAddMore || isAddingToCart) ? 'is-disabled' : ''}`}
       >
         {isAddingToCart ? (
           <>
@@ -356,12 +546,12 @@ const ProductCard = ({
   // مكون التراكب التفاعلي
   const InteractiveOverlay = memo(() => (
     <AnimatePresence>
-      {isHovered && (
+      {(isHovered || isMobile) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-10"
+          className="product-overlay absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] backdrop-blur-sm"
         >
           <div className="flex space-x-3 rtl:space-x-reverse">
             {showQuickView && (
@@ -370,7 +560,7 @@ const ProductCard = ({
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.1 }}
                 onClick={handleQuickView}
-                className="bg-white/95 backdrop-blur-sm text-gray-900 p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
+                className="quick-view-btn bg-white/95 backdrop-blur-sm text-gray-900 p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
                 aria-label={locale === 'ar' ? 'عرض سريع' : 'Quick View'}
               >
                 <Eye className="w-5 h-5" />
@@ -408,9 +598,9 @@ const ProductCard = ({
             className={cardBaseClasses}
             whileHover={{ y: -2 }}
           >
-            <div className="product-image">
+            <div className="product-image" onMouseMove={handleTiltMove} onMouseLeave={handleTiltLeave}>
               <LazyImage
-                src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
+                src={processedProduct.images[currentImageIndex] || fallbackImage}
                 alt={processedProduct.name}
                 className="w-full h-full object-cover"
                 width={96}
@@ -423,6 +613,8 @@ const ProductCard = ({
               <h3 className="product-name text-sm line-clamp-2">
                 {processedProduct.name}
               </h3>
+
+              <ProductHighlights />
 
               <div className="product-footer">
                 <div className="price">
@@ -440,9 +632,9 @@ const ProductCard = ({
             className={cardBaseClasses}
             whileHover={{ y: -2 }}
           >
-            <div className="product-image">
+            <div className="product-image" onMouseMove={handleTiltMove} onMouseLeave={handleTiltLeave}>
               <LazyImage
-                src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
+                src={processedProduct.images[currentImageIndex] || fallbackImage}
                 alt={processedProduct.name}
                 className="w-full h-full object-cover"
                 width={128}
@@ -453,11 +645,13 @@ const ProductCard = ({
 
             <div className="product-info">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
+                <h3 className="product-name font-semibold text-gray-900 dark:text-white text-lg">
                   {processedProduct.name}
                 </h3>
                 {showRating && <RatingStars rating={processedProduct.rating} reviews={processedProduct.reviews} />}
               </div>
+
+              <ProductHighlights />
 
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
                 {processedProduct.description}
@@ -481,9 +675,9 @@ const ProductCard = ({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <div className="product-image">
+            <div className="product-image" onMouseMove={handleTiltMove} onMouseLeave={handleTiltLeave}>
               <LazyImage
-                src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
+                src={processedProduct.images[currentImageIndex] || fallbackImage}
                 alt={`${processedProduct.name}`}
                 width={400}
                 height={400}
@@ -494,13 +688,13 @@ const ProductCard = ({
               <InteractiveOverlay />
 
               {processedProduct.hasMultipleImages && (
-                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1 rtl:space-x-reverse">
+                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2 rtl:space-x-reverse">
                   {processedProduct.images.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                      className={`rounded-full transition-all ${
+                        index === currentImageIndex ? 'w-3 h-3 bg-white shadow ring-1 ring-white/60' : 'w-3 h-3 bg-white/60 ring-1 ring-white/40'
                       }`}
                     />
                   ))}
@@ -509,7 +703,7 @@ const ProductCard = ({
             </div>
 
             <div className="product-info">
-              <h3 className="font-bold text-gray-900 dark:text-white text-xl line-clamp-2">
+              <h3 className="product-name font-bold text-gray-900 dark:text-white text-xl line-clamp-2">
                 {processedProduct.name}
               </h3>
 
@@ -518,6 +712,8 @@ const ProductCard = ({
                   <RatingStars rating={processedProduct.rating} reviews={processedProduct.reviews} size="md" />
                 </div>
               )}
+
+              <ProductHighlights />
 
               {processedProduct.description && (
                 <p className="product-description line-clamp-3">
@@ -544,11 +740,11 @@ const ProductCard = ({
             onMouseLeave={() => setIsHovered(false)}
             whileHover={{ y: -4 }}
           >
-            <div className="product-image">
+            <div className="product-image" onMouseMove={handleTiltMove} onMouseLeave={handleTiltLeave}>
               <LazyImage
-                src={processedProduct.images[currentImageIndex] || '/placeholder-product.png'}
+                src={processedProduct.images[currentImageIndex] || fallbackImage}
                 alt={processedProduct.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover"
                 width={300}
                 height={300}
                 priority={priority}
@@ -559,7 +755,7 @@ const ProductCard = ({
             </div>
 
             <div className="product-info">
-              <h3 className="font-medium text-gray-900 dark:text-white text-base line-clamp-2">
+              <h3 className="product-name font-medium text-gray-900 dark:text-white text-base line-clamp-2">
                 {processedProduct.name}
               </h3>
 
@@ -568,6 +764,8 @@ const ProductCard = ({
                   <RatingStars rating={processedProduct.rating} reviews={processedProduct.reviews} />
                 </div>
               )}
+
+              <ProductHighlights />
 
               <div className="product-footer">
                 <div className="price">

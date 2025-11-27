@@ -1,6 +1,8 @@
 export { Button, ButtonLink, buttonVariants } from './Button';
 export { Input } from './input';
+export { Textarea } from './textarea';
 export { Select } from './select';
+export { default as ButtonGroup } from './ButtonGroup';
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
 export { Badge } from './badge';
 export { Label } from './label';
@@ -10,7 +12,6 @@ export { default as Carousel } from './Carousel';
 export { default as Modal } from './Modal';
 export { default as Navbar } from './Navbar';
 export { default as LanguageSwitcher } from './LanguageSwitcher';
-export { default as FloatingCart } from './FloatingCart';
 export { ToastProvider, useToast } from './ToastProvider';
 export { default as ModalMount } from './ModalMount';
 export { default as Panel } from './Panel';

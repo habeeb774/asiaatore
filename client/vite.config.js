@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
+import imageOptimization from "./vite-plugin-image-optimization.js";
 // The visualizer plugin is optional; import it dynamically at build time
 // to avoid hard failures when it's not installed in the environment.
 
@@ -100,6 +101,14 @@ export default defineConfig(async ({ mode }) => {
       react(),
       VitePWA({
         registerType: "autoUpdate",
+        // Disable Service Worker in development to avoid SSL errors
+        devOptions: {
+          enabled: false,
+          type: "module"
+        },
+        // Handle SSL and HTTPS issues in production
+        strategies: devMode ? "injectManifest" : "generateSW",
+        injectRegister: devMode ? null : 'auto',
         includeAssets: [
           "favicon.svg",
           "favicon.ico",
@@ -109,52 +118,21 @@ export default defineConfig(async ({ mode }) => {
         manifest: {
           name: env.VITE_APP_NAME || "جر منفذ آسيا",
           short_name: env.VITE_APP_SHORT_NAME || "منفذ آسيا",
-          description:
-            env.VITE_APP_DESC || "متجر إلكتروني حديث للمنتجات والعروض اليومية",
-          theme_color: "#69be3c",
-          background_color: "#ffffff",
-          display: "standalone",
-          display_override: ["standalone", "browser"],
-          dir: "rtl",
-          lang: "ar",
-          scope: "/",
+          description: env.VITE_APP_DESC || "متجر إلكتروني حديث للمنتجات والعروض اليومية",
           start_url: "/",
-          orientation: "portrait-primary",
-          categories: ["shopping", "lifestyle", "ecommerce"],
+          display: "standalone",
+          background_color: "#ffffff",
+          theme_color: "#3b82f6",
           icons: [
             {
-              src: "/icons/pwa-192.png",
+              src: "pwa-192x192.png",
               sizes: "192x192",
               type: "image/png",
-              purpose: "any",
             },
             {
-              src: "/icons/pwa-512.png",
+              src: "pwa-512x512.png",
               sizes: "512x512",
               type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "/icons/pwa-512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "maskable",
-            },
-          ],
-          shortcuts: [
-            {
-              name: "العروض",
-              short_name: "العروض",
-              description: "تصفح أحدث الخصومات",
-              url: "/offers",
-              icons: [{ src: "/icons/pwa-192.png", sizes: "192x192" }],
-            },
-            {
-              name: "السلة",
-              short_name: "سلة",
-              description: "متابعة مشترياتك الحالية",
-              url: "/cart",
-              icons: [{ src: "/icons/pwa-192.png", sizes: "192x192" }],
             },
           ],
         },
@@ -353,8 +331,6 @@ export default defineConfig(async ({ mode }) => {
           clientsClaim: true,
           skipWaiting: true,
         },
-        // Disable SW in dev to avoid caching stale bundles while debugging
-        devOptions: { enabled: false },
       }),
       // Generate a treemap HTML file when VISUALIZE=true is set in environment
       visualizerPlugin,
@@ -367,59 +343,95 @@ export default defineConfig(async ({ mode }) => {
       // Enable sourcemaps when debugging vendor chunk runtime errors
       sourcemap: enableBundleDebug ? "hidden" : false,
       // Warn earlier about large chunks and help Rollup split common deps
-      chunkSizeWarningLimit: 350,
+      chunkSizeWarningLimit: 150,
+      // Improve build performance
+      reportCompressedSize: false,
+      // Optimize chunks for better caching
       rollupOptions: {
         output: {
+          // Optimize chunk loading with smaller chunks for better caching
+          experimentalMinChunkSize: 15000,
+          // Ensure consistent chunk naming for preloading
+          chunkFileNames: (chunkInfo) => {
+            const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+            if (chunkInfo.name.startsWith('vendor.')) {
+              return `assets/${chunkInfo.name}-[hash].js`;
+            }
+            if (chunkInfo.name.startsWith('chunk.')) {
+              return `assets/${chunkInfo.name}-[hash].js`;
+            }
+            return `assets/${chunkInfo.name}-[hash].js`;
+          },
           // Only apply manual chunking when not in bundle debug mode
           manualChunks: enableBundleDebug
             ? undefined
             : function (id) {
             if (id.includes("node_modules")) {
-              const reactChunkPattern = /node_modules[\\/](react|react-dom|scheduler|use-sync-external-store)[\\/]/;
-              if (reactChunkPattern.test(id)) return "vendor.react";
+              // Core React - include ALL React-related modules first
+              if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+                return "vendor.react";
+              }
+              
+              // React-related packages that should be in React chunk
+              const reactRelatedPackages = [
+                "scheduler",
+                "use-sync-external-store", 
+                "react-is",
+                "react-shallow-renderer",
+                "react-test-renderer",
+                "@types/react",
+                "@types/react-dom"
+              ];
+              
+              if (reactRelatedPackages.some(pkg => id.includes(`node_modules/${pkg}`))) {
+                return "vendor.react";
+              }
+              
+              // Force any React context or hooks into React chunk
+              if (id.includes("createContext") || id.includes("useState") || 
+                  id.includes("useEffect") || id.includes("useRef") || 
+                  id.includes("useContext") || id.includes("useReducer")) {
+                return "vendor.react";
+              }
+              
+              // React Router - separate for route-based loading
               if (
                 id.includes("react-router") ||
                 id.includes("history") ||
                 id.includes("@remix-run")
               )
                 return "vendor.router";
-              if (id.includes("@tanstack") || id.includes("react-query"))
-                return "vendor.tanstack";
+              // Data fetching - split into smaller chunks
+              if (id.includes("@tanstack/react-query")) return "vendor.tanstack";
+              if (id.includes("@tanstack/react-query-devtools")) return "vendor.devtools";
+              // Animation - lazy load
               if (id.includes("framer-motion")) return "vendor.motion";
-              // Split i18next into separate chunk for better caching
-              if (id.includes("i18next")) return "vendor.i18next";
-              // Split Zustand into separate chunk
-              if (id.includes("zustand")) return "vendor.zustand";
-              // Split Lucide icons into separate chunk (large library)
+              // State management - separate chunks
+              if (id.includes("zustand")) return "vendor.state";
+              // Icons - split by usage
               if (id.includes("lucide-react")) return "vendor.icons";
-              // Split payment libraries into separate chunks
-              if (id.includes("@stripe")) return "vendor.stripe";
-              if (id.includes("@paypal")) return "vendor.paypal";
-              // Split Twilio into separate chunk
-              if (id.includes("twilio")) return "vendor.twilio";
-              // Split Zod into separate chunk
-              if (id.includes("zod")) return "vendor.zod";
-              // Split Sharp into separate chunk
-              if (id.includes("sharp")) return "vendor.sharp";
-              // Split Leaflet into separate chunk (maps)
+              // Forms - split validation and core
+              if (id.includes("@hookform/resolvers")) return "vendor.forms";
+              if (id.includes("react-hook-form")) return "vendor.forms";
+              // Payments - separate by provider
+              if (id.includes("@stripe")) return "vendor.payment";
+              if (id.includes("@paypal")) return "vendor.payment";
+              // Notifications - separate
+              if (id.includes("react-toastify")) return "vendor.ui";
+              // Internationalization - separate
+              if (id.includes("i18next")) return "vendor.i18n";
+              // Maps - lazy load
               if (id.includes("leaflet")) return "vendor.maps";
-              // Split Swiper into separate chunk
-              if (id.includes("swiper")) return "vendor.swiper";
-              // Split Hook Form into separate chunk
-              if (id.includes("@hookform") || id.includes("react-hook-form"))
-                return "vendor.forms";
-              // Split Toastify into separate chunk
-              if (id.includes("react-toastify")) return "vendor.notifications";
-              // Fonts chunk
-              if (
-                id.includes("@fontsource") ||
-                id.includes("@font-face") ||
-                id.includes("fontsource")
-              )
-                return "vendor.fonts";
-              // Lodash chunk
-              if (id.includes("lodash")) return "vendor.lodash";
-              return "vendor";
+              // Charts - separate
+              if (id.includes("recharts")) return "vendor.charts";
+              // Utilities - smaller chunks
+              if (id.includes("zod")) return "vendor.utils";
+              if (id.includes("date-fns")) return "vendor.utils";
+              if (id.includes("clsx")) return "vendor.utils";
+              // Development tools - separate
+              if (id.includes("@vitejs/plugin-react")) return "vendor.dev";
+              // Common utilities - merge with ui for better caching
+              return "vendor.common";
             }
 
             // Split large feature areas into separate chunks
@@ -427,6 +439,13 @@ export default defineConfig(async ({ mode }) => {
               id.includes("/src/pages/admin/") ||
               id.includes("/src/components/admin/")
             ) {
+              // Further split admin into sub-chunks
+              if (id.includes("dashboard")) return "chunk.admin.dashboard";
+              if (id.includes("products")) return "chunk.admin.products";
+              if (id.includes("orders")) return "chunk.admin.orders";
+              if (id.includes("users")) return "chunk.admin.users";
+              if (id.includes("reports")) return "chunk.admin.reports";
+              if (id.includes("settings")) return "chunk.admin.settings";
               return "chunk.admin";
             }
             if (
@@ -510,6 +529,8 @@ export default defineConfig(async ({ mode }) => {
     },
     optimizeDeps: {
       include: ["lucide-react"],
+      // Pre-bundle dependencies for faster dev startup
+      force: true,
     },
     css: {
       postcss: "./postcss.config.cjs",

@@ -1,0 +1,102 @@
+/* Override all product card button styles */
+.product-card .product-footer .add-to-cart-btn,
+.product-card .product-footer button,
+.product-card .product-footer a,
+.product-card .add-to-cart,
+.product-card .product-actions button,
+.product-card .product-actions a {
+  /* Reset all properties */
+  all: unset !important;
+  
+  /* Layout */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  
+  /* Visual */
+  background: linear-gradient(90deg, #34d399, #10b981) !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.6rem 1.5rem !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  width: 100% !important;
+  margin: 0.75rem 0 0 0 !important;
+  line-height: 1.5 !important;
+  height: auto !important;
+  min-height: 46px !important;
+  font-family: 'Cairo', sans-serif !important;
+}
+
+/* Hover state */
+.product-card .product-footer .add-to-cart-btn:hover,
+.product-card .product-footer button:hover,
+.product-card .product-footer a:hover,
+.product-card .add-to-cart:hover,
+.product-card .product-actions button:hover,
+.product-card .product-actions a:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+  filter: brightness(1.05) !important;
+}
+
+/* Focus state */
+.product-card .product-footer .add-to-cart-btn:focus,
+.product-card .product-footer button:focus,
+.product-card .product-footer a:focus,
+.product-card .add-to-cart:focus,
+.product-card .product-actions button:focus,
+.product-card .product-actions a:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.5) !important;
+}
+
+/* Icon styles */
+.product-card .product-footer .add-to-cart-btn svg,
+.product-card .product-footer button svg,
+.product-card .product-footer a svg,
+.product-card .add-to-cart svg,
+.product-card .product-actions button svg,
+.product-card .product-actions a svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  color: white !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+}
+
+/* Price styles */
+.product-card .product-footer .price,
+.product-card .price {
+  width: 100% !important;
+  text-align: center !important;
+  margin: 0 0 0.5rem 0 !important;
+  padding: 0 !important;
+}
+
+.product-card .product-footer .price span,
+.product-card .price span {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: var(--color-text, #1a202c) !important;
+  font-family: 'Cairo', sans-serif !important;
+}
+
+/* Ensure text color is white */
+.product-card .product-footer .add-to-cart-btn span,
+.product-card .product-footer button span,
+.product-card .product-footer a span,
+.product-card .add-to-cart span,
+.product-card .product-actions button span,
+.product-card .product-actions a span {
+  color: white !important;
+}

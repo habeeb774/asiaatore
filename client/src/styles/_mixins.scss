@@ -1,3 +1,6 @@
+@use "sass:map";
+@use "sass:meta";
+
 /* Flex center utility */
 @mixin flex-center($direction: row, $justify: center, $align: center) {
   display: flex;
@@ -112,4 +115,34 @@ $break-lg: 1200px;
   border: 1px solid rgba(var(--color-white-rgb),0.15);
   backdrop-filter: blur($blur);
   -webkit-backdrop-filter: blur($blur);
+}
+
+@mixin media-breakpoint-up($name, $breakpoints: null) {
+  $resolved: null;
+  @if $breakpoints != null {
+    $resolved: $breakpoints;
+  } @else if meta.global-variable-exists('grid-breakpoints') {
+    $resolved: meta.global-variable-get('grid-breakpoints');
+  } @else {
+    $resolved: (
+      xs: 0,
+      sm: 576px,
+      md: 768px,
+      lg: 992px,
+      xl: 1200px,
+      xxl: 1400px
+    );
+  }
+
+  $min: map.get($resolved, $name);
+
+  @if $min == null {
+    @content;
+  } @else if $min == 0 {
+    @content;
+  } @else {
+    @media (min-width: $min) {
+      @content;
+    }
+  }
 }

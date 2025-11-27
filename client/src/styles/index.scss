@@ -1,52 +1,82 @@
-/* Consolidated global styles entry to avoid duplicates and control load order */
-/* SCSS requires all @use rules before other statements; tailwind moved below */
+// =============================================
+// Main Styles Entry Point
+// =============================================
 
-/* Foundation: tokens + helpers */
-@use './_design-system';
-@use './_variables' as vars;
-@use './core/_variables' as cvars;
-@use './_mixins' as mixins;
-@use './core/_mixins' as cmixins;
+// 1. Design System (must be first)
+@use '_design-system' as *;
 
-/* Base + utilities */
-@use './core/_base';
-@use './core/_components';
-@use './_utilities-modern';
-@use './_ui';
-@use './top-strips';
+// 2. Core variables and mixins
+@use 'core/_mixins' as *;
+@use 'core/_variables' as *;
 
-/* Theme + shared components */
-@use './theme';
-@use './product-card';
-@use './legacy/legacy-product-block';
+// Import design tokens (CSS custom properties)
+@use '_design-system' as *;
 
-/* Rede theme partials (migrated from reda-store-theme.css) */
-@use './components/rede-core';
-@use './components/rede-header';
-@use './components/rede-slider';
-@use './components/rede-banners';
-@use './components/rede-product';
-@use './components/rede-footer';
-@use './components/rede-cart';
-@use './components/rede-checkout';
-@use './components/rede-responsive';
+// Import base styles
+@use 'base/reset';
+@use 'base/typography';
+@use 'base/animations';
 
-/* Feature modules */
-@use './pages';
-@use './enhancements';
-@use './sidebar-modern';
+// Import core utilities
+@use 'core/variables';
+@use 'core/mixins';
+@use 'core/base';
+@use 'core/components';
 
-/* Include page-specific styles to centralize imports and avoid duplicates */
-@use './HomePage';
-@use './Hero';
-@use './product-details';
-@use './AdminPage';
-@use './ProductList';
-/* Chat & global minor page-specific helpers extracted from former index.css */
-@use './chat';
-@import './Cart.css';
+// Import layout styles
+@use 'layout/header';
+@use 'layout/footer';
+@use 'layout/sidebar';
+@use 'layout/grid';
+@use 'layout/minimal-grid' as minimal-grid;
 
-/* Tailwind directives (migrated from index.css) */
+// Import component styles
+@use 'components/rede-core';
+@use 'components/rede-header';
+@use 'components/rede-footer';
+@use 'components/_ProductCardModern';
+@use 'components/_HeroModern';
+
+// Import home page styles
+@use 'home/_home-page-base';
+
+// Import modern sidebar
+@use 'sidebar-modern';
+
+// Import theme styles
+@use 'theme';
+
+// Import site-specific styles
+@use 'site';
+
+// Import legacy styles (kept for compatibility)
+@use 'AdminPage';
+@use 'Header';
+@use 'Hero';
+@use 'HomePage';
+@use 'ProductList';
+@use '_design-system';
+@use '_header' as header-legacy;
+@use '_product-card';
+@use '_products';
+@use '_shame';
+@use '_sidebar' as sidebar-legacy;
+@use '_ui';
+@use '_utilities-modern';
+@use '_variables' as variables-legacy;
+@use 'chat';
+@use 'enhancements';
+
+// 7. Home page components
+@use 'home/_home-hero';
+@use 'home/_home-product-card';
+
+// 8. Utilities and Shame file (must be before Tailwind)
+@use '_shame' as *;
+
+// =============================================
+// Tailwind Directives (must be after all @use rules)
+// =============================================
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

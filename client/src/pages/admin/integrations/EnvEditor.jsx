@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '../../../components/ui';
+import { Button, Input } from '../../../components/ui';
 
 // API helper functions
 const apiCall = async (method, path, body) => {
@@ -11,7 +11,7 @@ const apiCall = async (method, path, body) => {
     credentials: 'include'
   };
   if (body) options.body = JSON.stringify(body);
-  const res = await fetch(url);
+  const res = await fetch(url, options);
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }));
     throw { ...error, status: res.status };
@@ -136,7 +136,7 @@ export default function EnvEditor() {
         <div>ملفات البيئة:</div>
         <div>الخادم: <code>{files.serverEnv || 'غير محدد'}</code></div>
         <div>الواجهة: <code>{files.clientEnv || 'غير محدد'}</code></div>
-        {prod && <div style={{color:'#991b1b'}}>تنبيه: وضع الإنتاج — قد يتم تعطيل تعديل البيئة.</div>}
+        {prod && <div style={{color:'var(--color-red-900)'}}>تنبيه: وضع الإنتاج — قد يتم تعطيل تعديل البيئة.</div>}
       </div>
 
       <fieldset style={{display:'grid', gap:8, border:'1px solid #e2e8f0', borderRadius:8, padding:12}}>
@@ -144,15 +144,15 @@ export default function EnvEditor() {
         <div style={{display:'grid', gap:8}}>
           <label htmlFor="viteProxyTarget" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>VITE_PROXY_TARGET</span>
-            <input id="viteProxyTarget" value={viteProxyTarget} onChange={e=>setViteProxyTarget(e.target.value)} placeholder="http://localhost:8829" />
+            <Input id="viteProxyTarget" value={viteProxyTarget} onChange={e=>setViteProxyTarget(e.target.value)} placeholder="http://localhost:8829" />
           </label>
           <label htmlFor="viteApiUrl" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>VITE_API_URL (اختياري)</span>
-            <input id="viteApiUrl" value={viteApiUrl} onChange={e=>setViteApiUrl(e.target.value)} placeholder="http://localhost:8829/api" />
+            <Input id="viteApiUrl" value={viteApiUrl} onChange={e=>setViteApiUrl(e.target.value)} placeholder="http://localhost:8829/api" />
           </label>
           <label htmlFor="viteTimeout" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>VITE_API_TIMEOUT_MS (اختياري)</span>
-            <input id="viteTimeout" value={viteTimeout} onChange={e=>setViteTimeout(e.target.value)} placeholder="12000" />
+            <Input id="viteTimeout" value={viteTimeout} onChange={e=>setViteTimeout(e.target.value)} placeholder="12000" />
           </label>
           <div style={{display:'flex', gap:8}}>
             <Button type="button" variant="primary" onClick={onSaveClient} disabled={savingClient}>
@@ -167,29 +167,29 @@ export default function EnvEditor() {
         <div style={{display:'grid', gap:8}}>
           <label htmlFor="dbUrl" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>DATABASE_URL (بديل عن القيم التفصيلية)</span>
-            <input id="dbUrl" value={dbUrl} onChange={e=>setDbUrl(e.target.value)} placeholder="mysql://user:pass@host:3306/dbname" />
+            <Input id="dbUrl" value={dbUrl} onChange={e=>setDbUrl(e.target.value)} placeholder="mysql://user:pass@host:3306/dbname" />
           </label>
           <div className="text-xs" style={{opacity:.7}}>أو أدخل القيم التفصيلية أدناه (إذا تم تحديد DATABASE_URL سيتم تجاهل هذه القيم عند الحفظ).</div>
           <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
             <label htmlFor="dbHost" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>DB_HOST</span>
-              <input id="dbHost" value={dbHost} onChange={e=>setDbHost(e.target.value)} placeholder="localhost أو عنوان السيرفر" />
+              <Input id="dbHost" value={dbHost} onChange={e=>setDbHost(e.target.value)} placeholder="localhost أو عنوان السيرفر" />
             </label>
             <label htmlFor="dbPort" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>DB_PORT</span>
-              <input id="dbPort" value={dbPort} onChange={e=>setDbPort(e.target.value)} placeholder="3306" />
+              <Input id="dbPort" value={dbPort} onChange={e=>setDbPort(e.target.value)} placeholder="3306" />
             </label>
             <label htmlFor="dbUser" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>DB_USER</span>
-              <input id="dbUser" value={dbUser} onChange={e=>setDbUser(e.target.value)} placeholder="root أو اسم المستخدم" />
+              <Input id="dbUser" value={dbUser} onChange={e=>setDbUser(e.target.value)} placeholder="root أو اسم المستخدم" />
             </label>
             <label htmlFor="dbPass" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>DB_PASS</span>
-              <input id="dbPass" type="password" value={dbPass} onChange={e=>setDbPass(e.target.value)} placeholder="•••••• (اتركه فارغاً لعدم التغيير)" />
+              <Input id="dbPass" type="password" autoComplete="new-password" value={dbPass} onChange={e=>setDbPass(e.target.value)} placeholder="•••••• (اتركه فارغاً لعدم التغيير)" />
             </label>
             <label htmlFor="dbName" style={{display:'grid', gap:4}}>
               <span style={{fontSize:'.7rem', fontWeight:700}}>DB_NAME</span>
-              <input id="dbName" value={dbName} onChange={e=>setDbName(e.target.value)} placeholder="اسم قاعدة البيانات" />
+              <Input id="dbName" value={dbName} onChange={e=>setDbName(e.target.value)} placeholder="اسم قاعدة البيانات" />
             </label>
           </div>
           <div className="text-xs" style={{opacity:.75}}>معاينة سلسلة الاتصال المبنية من القيم التفصيلية:</div>
@@ -207,7 +207,7 @@ export default function EnvEditor() {
         </div>
       </fieldset>
 
-      <div aria-live="polite" className="text-xs" style={{color: msg?.startsWith('فشل') ? '#991b1b' : '#065f46'}}>{msg}</div>
+      <div aria-live="polite" className="text-xs" style={{color: msg?.startsWith('فشل') ? 'var(--color-red-900)' : 'var(--color-green-900)'}}>{msg}</div>
       <small style={{opacity:.7}}>ملاحظة: قد تحتاج لإعادة تشغيل خادم API وتحديث واجهة Vite حتى تُطبق التغييرات.</small>
     </div>
   );

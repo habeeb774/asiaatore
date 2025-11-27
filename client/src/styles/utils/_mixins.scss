@@ -1,0 +1,412 @@
+// SCSS Mixins
+
+// =============================================
+// Breakpoint Mixins
+// =============================================
+
+// Breakpoint viewport sizes and media queries.
+//
+// Breakpoints are defined as a map of (name: minimum width), order from small to large:
+//
+//    (xs: 0, sm: 576px, md: 768px, lg: 992px, xl: 1200px, xxl: 1400px)
+
+// Breakpoint viewport sizes and media queries.
+//
+// Breakpoints are defined as a map of (name: minimum width), order from small to large:
+//
+//    (xs: 0, sm: 576px, md: 768px, lg: 992px, xl: 1200px, xxl: 1400px)
+
+// Name of the next breakpoint, or null for the last breakpoint.
+//
+//    >> breakpoint-next(sm)
+//    md
+//    >> breakpoint-next(sm, (xs: 0, sm: 576px, md: 768px, lg: 992px, xl: 1200px))
+//    md
+//    >> breakpoint-next(sm, $breakpoint-names: (xs sm md lg xl))
+//    md
+@function breakpoint-next($name, $breakpoints: $grid-breakpoints, $breakpoint-names: map-keys($breakpoints)) {
+  $n: index($breakpoint-names, $name);
+  @return if($n < length($breakpoint-names), nth($breakpoint-names, $n + 1), null);
+}
+
+// Minimum breakpoint width. Null for the smallest (first) breakpoint.
+@function breakpoint-min($name, $breakpoints: $grid-breakpoints) {
+  $min: map-get($breakpoints, $name);
+  @return if($min != 0, $min, null);
+}
+
+// Maximum breakpoint width. The maximum value is reduced by 0.02px to work around the
+// limitations of `min-` and `max-` prefixes and viewports with fractional widths.
+@function breakpoint-max($name, $breakpoints: $grid-breakpoints) {
+  $max: map-get($breakpoints, $name);
+  @return if($max and $max > 0, $max - 0.02, null);
+}
+
+// Returns a blank string if smallest breakpoint, otherwise returns the name with a dash in front.
+@function breakpoint-infix($name, $breakpoints: $grid-breakpoints) {
+  @return if(breakpoint-min($name, $breakpoints) == null, "", "-#{$name}");
+}
+
+// Media of at least the minimum breakpoint width. No query for the smallest breakpoint.
+@mixin media-breakpoint-up($name, $breakpoints: $grid-breakpoints) {
+  $min: breakpoint-min($name, $breakpoints);
+  @if $min {
+    @media (min-width: $min) {
+      @content;
+    }
+  } @else {
+    @content;
+  }
+}
+
+// Media of at most the maximum breakpoint width. No query for the largest breakpoint.
+@mixin media-breakpoint-down($name, $breakpoints: $grid-breakpoints) {
+  $max: breakpoint-max($name, $breakpoints);
+  @if $max {
+    @media (max-width: $max) {
+      @content;
+    }
+  } @else {
+    @content;
+  }
+}
+
+// Media that spans multiple breakpoint widths.
+@mixin media-breakpoint-between($lower, $upper, $breakpoints: $grid-breakpoints) {
+  $min: breakpoint-min($lower, $breakpoints);
+  $max: breakpoint-max($upper, $breakpoints);
+
+  @if $min != null and $max != null {
+    @media (min-width: $min) and (max-width: $max) {
+      @content;
+    }
+  } @else if $max == null {
+    @include media-breakpoint-up($lower, $breakpoints) {
+      @content;
+    }
+  } @else if $min == null {
+    @include media-breakpoint-down($upper, $breakpoints) {
+      @content;
+    }
+  }
+}
+
+// Media between the breakpoint's minimum and maximum widths.
+@mixin media-breakpoint-only($name, $breakpoints: $grid-breakpoints) {
+  $min: breakpoint-min($name, $breakpoints);
+  $next: breakpoint-next($name, $breakpoints);
+  $max: breakpoint-max($next);
+
+  @if $min != null and $next != null {
+    @media (min-width: $min) and (max-width: $max) {
+      @content;
+    }
+  } @else if $max == null {
+    @include media-breakpoint-up($name, $breakpoints) {
+      @content;
+    }
+  } @else if $min == null {
+    @include media-breakpoint-down($next, $breakpoints) {
+      @content;
+    }
+  }
+}
+
+// =============================================
+// Flexbox Mixins
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// Position Mixins
+@mixin position($position, $top: null, $right: null, $bottom: null, $left: null) {
+  position: $position;
+  @if $top != null { top: $top; }
+  @if $right != null { right: $right; }
+  @if $bottom != null { bottom: $bottom; }
+  @if $left != null { left: $left; }
+}
+
+@mixin absolute($top: null, $right: null, $bottom: null, $left: null) {
+  @include position(absolute, $top, $right, $bottom, $left);
+}
+
+@mixin fixed($top: null, $right: null, $bottom: null, $left: null) {
+  @include position(fixed, $top, $right, $bottom, $left);
+}
+
+// Button Styles
+@mixin button-reset {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  outline: inherit;
+}
+
+@mixin button-style($bg-color, $text-color, $hover-bg: null, $hover-text: null) {
+  background-color: $bg-color;
+  color: $text-color;
+  border: 1px solid transparent;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+  display: inline-block;
+  font-weight: 500;
+  line-height: 1.5;
+  
+  &:hover {
+    background-color: $hover-bg or darken($bg-color, 10%);
+    color: $hover-text or $text-color;
+  }
+  
+  &:focus {
+    outline: 2px solid rgba($bg-color, 0.4);
+    outline-offset: 2px;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Card Styles
+@mixin card($padding: 1rem, $border-radius: 0.5rem) {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: $padding;
+  transition: box-shadow 0.2s ease-in-out;
+  
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Responsive Breakpoints
+$breakpoints: (
+  'xs': 375px,
+  'sm': 640px,
+  'md': 768px,
+  'lg': 1024px,
+  'xl': 1280px,
+  '2xl': 1536px
+);
+
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    @media (min-width: map-get($breakpoints, $breakpoint)) {
+      @content;
+    }
+  } @else {
+    @warn "Breakpoint #{$breakpoint} is not defined in $breakpoints map.";
+  }
+}
+
+// Transitions
+@mixin transition($properties: all, $duration: 0.2s, $timing: ease-in-out, $delay: 0s) {
+  $transition: ();
+  
+  @each $property in $properties {
+    $transition: append($transition, #{$property} $duration $timing $delay, comma);
+  }
+  
+  transition: $transition;
+}
+
+// Text Styles
+@mixin text-ellipsis($lines: 1) {
+  @if $lines == 1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// RTL Support
+@mixin rtl($property, $ltr-value, $rtl-value) {
+  [dir='ltr'] & {
+    #{$property}: $ltr-value;
+  }
+  
+  [dir='rtl'] & {
+    #{$property}: $rtl-value;
+  }
+}
+
+// Scrollbar Styling
+@mixin scrollbar($width: 8px, $track: #f1f1f1, $thumb: #c1c1c1, $thumb-hover: #a8a8a8) {
+  &::-webkit-scrollbar {
+    width: $width;
+    height: $width;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: $track;
+    border-radius: $width;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: $thumb;
+    border-radius: $width;
+    
+    &:hover {
+      background: $thumb-hover;
+    }
+  }
+  
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: $thumb $track;
+}
+
+// New Utility Mixins
+
+// Border Radius
+@mixin border-radius($radius) {
+  border-radius: $radius;
+  -webkit-border-radius: $radius;
+  -moz-border-radius: $radius;
+}
+
+// Box Shadow
+@mixin box-shadow($shadow) {
+  box-shadow: $shadow;
+  -webkit-box-shadow: $shadow;
+  -moz-box-shadow: $shadow;
+}
+
+// Opacity
+@mixin opacity($opacity) {
+  opacity: $opacity;
+  filter: alpha(opacity=$opacity * 100);
+}
+
+// Overflow
+@mixin overflow($overflow) {
+  overflow: $overflow;
+  -webkit-overflow: $overflow;
+  -moz-overflow: $overflow;
+}
+
+// Text Overflow
+@mixin text-overflow($overflow) {
+  text-overflow: $overflow;
+  -webkit-text-overflow: $overflow;
+  -moz-text-overflow: $overflow;
+}
+
+// Word Break
+@mixin word-break($break) {
+  word-break: $break;
+  -webkit-word-break: $break;
+  -moz-word-break: $break;
+}
+
+// Hyphens
+@mixin hyphens($hyphens) {
+  hyphens: $hyphens;
+  -webkit-hyphens: $hyphens;
+  -moz-hyphens: $hyphens;
+}
+
+// User Select
+@mixin user-select($select) {
+  user-select: $select;
+  -webkit-user-select: $select;
+  -moz-user-select: $select;
+}
+
+// Appearance
+@mixin appearance($appearance) {
+  appearance: $appearance;
+  -webkit-appearance: $appearance;
+  -moz-appearance: $appearance;
+}
+
+// Backface Visibility
+@mixin backface-visibility($visibility) {
+  backface-visibility: $visibility;
+  -webkit-backface-visibility: $visibility;
+  -moz-backface-visibility: $visibility;
+}
+
+// Perspective
+@mixin perspective($perspective) {
+  perspective: $perspective;
+  -webkit-perspective: $perspective;
+  -moz-perspective: $perspective;
+}
+
+// Perspective Origin
+@mixin perspective-origin($origin) {
+  perspective-origin: $origin;
+  -webkit-perspective-origin: $origin;
+  -moz-perspective-origin: $origin;
+}
+
+// Transform
+@mixin transform($transform) {
+  transform: $transform;
+  -webkit-transform: $transform;
+  -moz-transform: $transform;
+}
+
+// Transform Origin
+@mixin transform-origin($origin) {
+  transform-origin: $origin;
+  -webkit-transform-origin: $origin;
+  -moz-transform-origin: $origin;
+}
+
+// Transition Property
+@mixin transition-property($property) {
+  transition-property: $property;
+  -webkit-transition-property: $property;
+  -moz-transition-property: $property;
+}
+
+// Transition Duration
+@mixin transition-duration($duration) {
+  transition-duration: $duration;
+  -webkit-transition-duration: $duration;
+  -moz-transition-duration: $duration;
+}
+
+// Transition Timing Function
+@mixin transition-timing-function($function) {
+  transition-timing-function: $function;
+  -webkit-transition-timing-function: $function;
+  -moz-transition-timing-function: $function;
+}
+
+// Transition Delay
+@mixin transition-delay($delay) {
+  transition-delay: $delay;
+  -webkit-transition-delay: $delay;
+  -moz-transition-delay: $delay;
+}

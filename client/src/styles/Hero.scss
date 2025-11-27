@@ -16,7 +16,7 @@ span{ color: var(--main_color); }
 p{ color: var(--p_color); }
 h1,h2,h3,h4,h5,h6{
     color: var(--color_heading);
-    font-family: var(--font-heading, "DM Sans");
+    font-family: var(--font-heading, var(--font-cairo));
 }
 
 img{
@@ -628,7 +628,7 @@ footer  .bottom_footer .payment_img{
     transition: 0.3s;
 }
 .cart .items_in_cart .item_cart .delete_item i:hover{
-    color: #E51A1A;
+    color: var(--color-danger);
 }
 
 .cart .items_in_cart .item_cart .quantity_control{
@@ -1014,7 +1014,7 @@ color: var(--color_heading);
     transition: 0.3s;
 }
 .checkout .ordersummary  .delete_item i:hover{
-    color: #E51A1A;
+    color: var(--color-danger);
     transform: scale(1.1);
 }
 

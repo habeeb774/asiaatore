@@ -1,0 +1,74 @@
+/* Override any existing styles for the cart button */
+.product-footer .add-to-cart-btn,
+.product-footer button.add-to-cart-btn,
+.product-footer a.add-to-cart-btn,
+.product-footer .add-to-cart-btn:focus,
+.product-footer .add-to-cart-btn:active,
+.product-footer .add-to-cart-btn:hover {
+  /* Reset all properties */
+  all: unset;
+  
+  /* Layout */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  
+  /* Visual */
+  background: linear-gradient(90deg, #34d399, #10b981) !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.5rem 1.25rem !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25) !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  width: 100% !important;
+  margin-top: 0.75rem !important;
+  line-height: 1.5 !important;
+  height: auto !important;
+  min-height: 40px !important;
+}
+
+/* Hover state */
+.product-footer .add-to-cart-btn:hover {
+  filter: brightness(1.05) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.3) !important;
+  color: white !important;
+  background: linear-gradient(90deg, #34d399, #10b981) !important;
+}
+
+/* Icon styles */
+.product-footer .add-to-cart-btn svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  color: white !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  stroke-width: 2 !important;
+}
+
+/* Remove any focus outlines that might interfere */
+.product-footer .add-to-cart-btn:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.5) !important;
+}
+
+/* Price styles */
+.product-footer .price {
+  width: 100% !important;
+  text-align: center !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.product-footer .price span {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: var(--color-text, #1a202c) !important;
+}

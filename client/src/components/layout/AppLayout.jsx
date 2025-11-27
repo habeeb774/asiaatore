@@ -5,11 +5,10 @@ import AnnouncementBar from './AnnouncementBar';
 import CategoryScroller from './CategoryScroller';
 import Breadcrumbs from './BreadcrumbsProxy.jsx';
 import { useLanguage } from '../../context/LanguageContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ToastProvider } from '../ui/ToastProvider';
 import { ToastContainer } from 'react-toastify';
 import SiteFooter from './SiteFooter';
-import { FloatingCart } from '../ui';
 import { SidebarProvider } from '../../contexts/SidebarContext';
 import BottomNav from './BottomNav';
 import SearchOverlay from '../search/SearchOverlay';
@@ -22,8 +21,13 @@ const AppLayout = ({ children }) => {
   const { locale } = useLanguage();
   const { pathname } = useLocation();
   const isHome = pathname === '/' || pathname === '/ar';
-  const [panel, setPanel] = React.useState(null); // حالة لإدارة اللوحات الجانبية مثل السلة
-  const { cartItems = [], updateQuantity } = useCart();
+  const showCategoryScroller = React.useMemo(() => {
+    const productPaths = ['/products', '/products/'];
+    if (productPaths.includes(pathname)) return true;
+    return pathname.startsWith('/category') || pathname.startsWith('/collections') || pathname.startsWith('/search');
+  }, [pathname]);
+  const { cartItems = [] } = useCart();
+  const navigate = useNavigate();
 
   // Set dark mode by default for the new theme
   React.useEffect(() => {
@@ -133,10 +137,15 @@ const AppLayout = ({ children }) => {
     };
   }, [contentRef]);
   React.useEffect(() => {
-    const handler = () => setPanel('cart');
+    const handler = () => {
+      const prefix = locale && locale !== 'ar' ? `/${locale}` : '';
+      try {
+        navigate(`${prefix}/cart`);
+      } catch {}
+    };
     window.addEventListener('cart:open', handler);
     return () => window.removeEventListener('cart:open', handler);
-  }, []); // إضافة مستمع لحدث فتح السلة من أي مكان في التطبيق
+  }, [locale, navigate]); // إضافة مستمع لحدث فتح السلة من أي مكان في التطبيق
 
   const cartTotal = Array.isArray(cartItems)
     ? cartItems.reduce(
@@ -178,8 +187,8 @@ const AppLayout = ({ children }) => {
             <AnnouncementBar /> {/* شريط الإعلانات */}
             <HeaderNav /> {/* الهيدر الرئيسي */}
 
-            {/* ✅ عرض شريط الفئات فقط في غير الصفحة الرئيسية */}
-            { <CategoryScroller />} {/* شريط تمرير الفئات */}
+            {/* ✅ عرض شريط الفئات فقط في صفحات المنتجات */}
+            {showCategoryScroller ? <CategoryScroller /> : null} {/* شريط تمرير الفئات */}
 
             {/* Breadcrumbs: render a simple, computed breadcrumb for most pages.
                Skip homepage and product detail pages (product page has its own bespoke breadcrumb). */}
@@ -216,20 +225,11 @@ const AppLayout = ({ children }) => {
             <SiteFooter /> {/* تذييل الموقع */}
           </div>
 
-          <FloatingCart /> {/* سلة التسوق العائمة */}
           <SearchOverlay /> {/* تراكب البحث */}
-          <BottomNav panel={panel} setPanel={setPanel} /> {/* التنقل السفلي للهواتف */}
-
-          {/* ✅ السلة الجانبية */}
-          <Sidebar
-            type="cart"
-            open={panel === 'cart'}
-            onClose={() => setPanel(null)}
-          />
+          <BottomNav /> {/* التنقل السفلي للهواتف */}
 
           {/* You can add other sidebar types here as well */}
-          {/* <Sidebar type="favorites" isOpen={panel === 'favorites'} onClose={() => setPanel(null)} /> */}
-          {/* <Sidebar type="user" isOpen={panel === 'user'} onClose={() => setPanel(null)} /> */}
+          {/* Additional sidebar panels (favorites/user) can be mounted here if reintroduced */}
         </div>
       </SidebarProvider>
       <ToastContainer

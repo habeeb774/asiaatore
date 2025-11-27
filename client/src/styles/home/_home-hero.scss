@@ -56,13 +56,13 @@
   .hero-slider__frame { aspect-ratio: 16/9; max-height: clamp(160px, 36vh, 260px); }
 }
 
-.section-padding.bg-white .text-center h3 { color: #111827; }
-.section-padding.bg-white .text-center p { color: #6b7280; }
+.section-padding.bg-white-custom .text-center h3 { color: #111827; }
+.section-padding.bg-white-custom .text-center p { color: #6b7280; }
 
 .section-padding .grid > div { background: transparent; }
 
 .home-products.section-padding.bg-gray-50 { background: #f3f4f6; }
-.home-products.section-padding.bg-white { background: #ffffff; }
+.home-products.section-padding.bg-white-custom { background: #ffffff; }
 
 /* Featured products grid */
 .featured-grid {

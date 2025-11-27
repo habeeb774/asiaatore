@@ -1,0 +1,21 @@
+// RTL utilities and logical properties
+// Keep minimal to satisfy @use and provide helpers
+
+:root[dir='rtl'] {
+  --dir-inline-start: left;
+  --dir-inline-end: right;
+}
+:root[dir='ltr'] {
+  --dir-inline-start: right;
+  --dir-inline-end: left;
+}
+
+// Logical margin/padding helpers (class-based)
+.mis-0 { margin-inline-start: 0 !important; }
+.mie-0 { margin-inline-end: 0 !important; }
+.pis-0 { padding-inline-start: 0 !important; }
+.pie-0 { padding-inline-end: 0 !important; }
+
+// Text direction helpers
+.text-dir-start { text-align: start !important; }
+.text-dir-end { text-align: end !important; }

@@ -1,0 +1,139 @@
+// Typography
+@use '../utils/variables' as *;
+// =============================================
+
+// Base typography
+body {
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  line-height: 1.5;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+// Headings
+h1, h2, h3, h4, h5, h6 {
+  font-family: $font-family-sans;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.5em;
+  color: var(--text-primary);
+}
+
+h1 { 
+  font-size: 2.5rem; // 40px
+  @media (max-width: $breakpoint-md) {
+    font-size: 2rem; // 32px
+  }
+}
+
+h2 { 
+  font-size: 2rem; // 32px
+  @media (max-width: $breakpoint-md) {
+    font-size: 1.75rem; // 28px
+  }
+}
+
+h3 { 
+  font-size: 1.5rem; // 24px
+  @media (max-width: $breakpoint-md) {
+    font-size: 1.25rem; // 20px
+  }
+}
+
+h4 { font-size: 1.25rem; } // 20px
+h5 { font-size: 1.125rem; } // 18px
+h6 { font-size: 1rem; }     // 16px
+
+// Paragraphs
+p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+// Links
+a {
+  color: $primary;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  
+  &:hover {
+    color: $primary-dark;
+    text-decoration: underline;
+  }
+  
+  &:focus {
+    outline: 2px solid $primary-light;
+    outline-offset: 2px;
+  }
+}
+
+// Lists
+ul, ol {
+  margin-bottom: 1rem;
+  padding-right: 1.5rem;
+  
+  li {
+    margin-bottom: 0.5rem;
+  }
+}
+
+// Blockquotes
+blockquote {
+  margin: 1.5rem 0;
+  padding: 0.5rem 1rem 0.5rem 1.5rem;
+  border-right: 4px solid $primary;
+  background-color: rgba($primary, 0.05);
+  font-style: italic;
+  
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Code
+code, pre {
+  font-family: $font-family-mono;
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: $border-radius-sm;
+  font-size: 0.875em;
+}
+
+pre {
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  
+  code {
+    padding: 0;
+    background-color: transparent;
+  }
+}
+
+// Text utilities
+.text-center { text-align: center !important; }
+.text-right { text-align: left !important; }
+.text-left { text-align: right !important; }
+
+// RTL specific
+[dir='rtl'] {
+  text-align: right;
+  
+  .text-right { text-align: left !important; }
+  .text-left { text-align: right !important; }
+  
+  ul, ol {
+    padding-right: 0;
+    padding-left: 1.5rem;
+  }
+  
+  blockquote {
+    border-right: none;
+    border-left: 4px solid $primary;
+    padding-right: 1.5rem;
+    padding-left: 1rem;
+  }
+}

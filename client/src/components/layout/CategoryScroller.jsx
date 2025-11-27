@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import api from '../../services/api/client';
-import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
+import { Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
 
 const CategoryScroller = () => {
   const { locale } = useLanguage();
@@ -12,10 +12,6 @@ const CategoryScroller = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const trackRef = useRef(null);
-  const [showAll, setShowAll] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const dragState = useRef({ down:false, startX:0, scrollLeft:0, moved:false });
-  const MAX_DEFAULT = 12;
 
   useEffect(() => {
     setLoading(true);
@@ -50,6 +46,8 @@ const CategoryScroller = () => {
     return arr;
   }, [cats]);
 
+  const catCount = uniqueCats.length;
+
   const activeSlug = useMemo(() => {
     const m = new URLSearchParams(search).get('category');
     if (m) return m;
@@ -58,46 +56,91 @@ const CategoryScroller = () => {
     return idx >= 0 ? parts[idx+1] : null;
   }, [pathname, search]);
 
-  const scrollBy = (dir) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const delta = Math.round(el.clientWidth * 0.8) * (dir === 'left' ? -1 : 1);
-    el.scrollBy({ left: delta, behavior: 'smooth' });
-  };
+  const rows = 1;
 
-  // Drag-to-scroll (mouse & touch)
-  const onDragStart = (clientX) => {
-    const el = trackRef.current; if (!el) return;
-    dragState.current = { down:true, startX: clientX, scrollLeft: el.scrollLeft, moved:false };
-    setDragging(true);
-    el.dataset.dragging = '1';
-  };
-  const onDragMove = (clientX) => {
-    const el = trackRef.current; if (!el) return;
-    if (!dragState.current.down) return;
-    const dx = clientX - dragState.current.startX;
-    if (Math.abs(dx) > 4) dragState.current.moved = true;
-    el.scrollLeft = dragState.current.scrollLeft - dx;
-  };
-  const onDragEnd = () => {
-    const el = trackRef.current; if (el) { delete el.dataset.dragging; }
-    dragState.current.down = false; setDragging(false);
-  };
-  const handleMouseDown = (e) => { if (e.button !== 0) return; onDragStart(e.clientX); };
-  const handleMouseMove = (e) => { if (!dragState.current.down) return; try { if (e.cancelable) e.preventDefault(); } catch {} onDragMove(e.clientX); };
-  const handleMouseUp = () => onDragEnd();
-  const handleMouseLeave = () => onDragEnd();
-  const handleTouchStart = (e) => { const t = e.touches?.[0]; if (!t) return; onDragStart(t.clientX); };
-  const handleTouchMove = (e) => { const t = e.touches?.[0]; if (!t) return; onDragMove(t.clientX); };
-  const handleTouchEnd = () => onDragEnd();
-    const handleWheel = (e) => {
-    const el = trackRef.current; if (!el) return;
-    // Convert vertical wheel to horizontal scroll for better UX
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      el.scrollBy({ left: e.deltaY, behavior: 'auto' });
-      try { if (e.cancelable) e.preventDefault(); } catch {}
+  const baseCycle = useMemo(() => {
+    if (!catCount) return [];
+    const sorted = uniqueCats.slice();
+    return sorted;
+  }, [uniqueCats, catCount]);
+
+  const primaryCycle = useMemo(() => {
+    if (!baseCycle.length) return [];
+    const minItems = Math.max(rows * 6, baseCycle.length);
+    let extended = baseCycle.slice();
+    while (extended.length < minItems) {
+      extended = extended.concat(baseCycle);
+      if (extended.length > baseCycle.length * 6) break;
     }
-  };
+    return extended;
+  }, [baseCycle, rows]);
+
+  const marqueeCats = useMemo(() => {
+    if (!primaryCycle.length) return [];
+    return primaryCycle.concat(primaryCycle);
+  }, [primaryCycle]);
+  const primaryLength = primaryCycle.length;
+  const columns = Math.max(1, Math.ceil((primaryLength || 1) / rows));
+
+  const [cycleWidth, setCycleWidth] = useState(0);
+  const cycleWidthRef = useRef(0);
+
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (!el || !marqueeCats.length) {
+      cycleWidthRef.current = 0;
+      setCycleWidth(0);
+      return () => {};
+    }
+
+    const measure = () => {
+      if (!el) return;
+      const width = el.scrollWidth ? el.scrollWidth / 2 : 0;
+      if (!width && cycleWidthRef.current !== 0) {
+        cycleWidthRef.current = 0;
+        setCycleWidth(0);
+      } else if (width && Math.abs(width - cycleWidthRef.current) > 4) {
+        cycleWidthRef.current = width;
+        setCycleWidth(width);
+      }
+    };
+
+    measure();
+
+    let ro;
+    try {
+      if (typeof ResizeObserver === 'function') {
+        ro = new ResizeObserver(() => measure());
+        ro.observe(el);
+      } else {
+        const id = setInterval(measure, 5000);
+        ro = { disconnect: () => clearInterval(id) };
+      }
+    } catch {
+      const id = setInterval(measure, 5000);
+      ro = { disconnect: () => clearInterval(id) };
+    }
+
+    return () => {
+      try { ro?.disconnect?.(); } catch {}
+    };
+  }, [marqueeCats.length]);
+
+  const marqueeDuration = useMemo(() => {
+    if (cycleWidth > 0) {
+      const seconds = Math.min(80, Math.max(24, cycleWidth / 70));
+      return `${seconds}s`;
+    }
+    const seconds = Math.min(70, Math.max(22, columns * 3.5));
+    return `${seconds}s`;
+  }, [columns, cycleWidth]);
+
+  const trackStyle = useMemo(() => ({
+    '--category-rows': rows,
+    '--category-marquee-duration': marqueeDuration,
+    '--category-columns': columns,
+    ...(cycleWidth > 0 ? { '--category-marquee-distance': `${cycleWidth}px` } : {}),
+  }), [rows, marqueeDuration, columns, cycleWidth]);
 
   // Keyboard navigation between pills for accessibility
   const handlePillKeyDown = (e) => {
@@ -105,8 +148,13 @@ const CategoryScroller = () => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
     const container = trackRef.current;
     if (!container) return;
-    const pills = Array.from(container.querySelectorAll('button.cat-pill'));
-    const idx = pills.indexOf(e.currentTarget);
+    const pills = Array.from(container.querySelectorAll('button.cat-pill[data-cycle="primary"]'));
+    if (!pills.length) return;
+    const slug = e.currentTarget?.dataset?.slug;
+    let idx = pills.indexOf(e.currentTarget);
+    if (idx < 0 && slug) {
+      idx = pills.findIndex((btn) => btn.dataset.slug === slug);
+    }
     if (idx < 0) return;
     e.preventDefault();
     let nextIdx = idx;
@@ -124,28 +172,16 @@ const CategoryScroller = () => {
 
   return (
     <div className="category-scroller" role="navigation" aria-label={locale==='ar'?'الأقسام':'Categories'}>
-      {/* Arrows */}
-      <button type="button" aria-label="Scroll right" onClick={()=>scrollBy('right')} className="cat-arrow absolute left-2 top-[calc(var(--header-height,72px)+10px)] z-10 hidden md:inline-flex" data-dir="right">
-        <ChevronRight size={18} />
-      </button>
-      <button type="button" aria-label="Scroll left" onClick={()=>scrollBy('left')} className="cat-arrow absolute right-2 top-[calc(var(--header-height,72px)+10px)] z-10 hidden md:inline-flex" data-dir="left">
-        <ChevronLeft size={18} />
-      </button>
       <div
         ref={trackRef}
-        className={`category-track${dragging ? ' is-dragging' : ''}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
+        className="category-track"
+        style={trackStyle}
+        data-animate={marqueeCats.length > primaryLength && cycleWidth > 0 ? 'true' : undefined}
+        data-rows={rows}
       >
-        {loading && <span className="text-xs opacity-70 px-2">…</span>}
-        {error && <span className="text-xs text-red-600 px-2">خطأ</span>}
-        {!loading && (showAll ? uniqueCats : uniqueCats.slice(0, MAX_DEFAULT)).map(c => {
+        {loading && !marqueeCats.length && <span className="category-track__status">{locale === 'ar' ? 'جاري التحميل…' : 'Loading…'}</span>}
+        {error && !marqueeCats.length && <span className="category-track__status category-track__status--error">{locale === 'ar' ? 'تعذّر تحميل الفئات' : 'Failed to load categories'}</span>}
+        {!loading && marqueeCats.map((c, idx) => {
           const active = activeSlug && activeSlug === c.slug;
           const n = (c?.name?.ar || c?.name?.en || c?.slug || '').toLowerCase();
           const pickIcon = () => {
@@ -201,8 +237,7 @@ const CategoryScroller = () => {
           };
           const Icon = pickIcon();
           const onPick = (slug) => {
-            // Avoid triggering click after a drag interaction
-            if (trackRef.current?.dataset?.dragging === '1' || dragState.current.moved) return;
+            if (!slug) return;
             // Update current page query params in-place (no route change to catalog)
             const params = new URLSearchParams(search || '');
             params.set('category', slug);
@@ -211,14 +246,20 @@ const CategoryScroller = () => {
             const qs = params.toString();
             navigate(`${pathname}${qs ? `?${qs}` : ''}`, { replace: false });
           };
+          const isClone = idx >= primaryLength;
+          const slug = c.slug || c.id || `${idx}`;
           return (
             <button
-              key={c.id || c.slug}
+              key={`${slug}-${idx}`}
               type="button"
               onClick={() => onPick(c.slug)}
               className={`cat-pill ${active ? 'active' : ''}`}
               aria-current={active ? 'page' : undefined}
               onKeyDown={handlePillKeyDown}
+              data-cycle={isClone ? 'clone' : 'primary'}
+              data-slug={slug}
+              tabIndex={isClone ? -1 : undefined}
+              aria-hidden={isClone ? true : undefined}
             >
               {Icon && <Icon size={14} className="opacity-70" />}
               <span>{locale==='ar' ? (c.name?.ar || c.slug) : (c.name?.en || c.slug)}</span>
@@ -226,10 +267,8 @@ const CategoryScroller = () => {
             </button>
           );
         })}
-        {uniqueCats.length > MAX_DEFAULT && (
-          <button type="button" onClick={()=>setShowAll(s=>!s)} className="cat-pill">
-            {showAll ? (locale==='ar' ? 'إخفاء' : 'Hide') : (locale==='ar' ? 'عرض المزيد' : 'Show more')}
-          </button>
+        {!loading && !marqueeCats.length && !error && (
+          <span className="category-track__status">{locale === 'ar' ? 'لا توجد فئات متاحة' : 'No categories available'}</span>
         )}
       </div>
     </div>

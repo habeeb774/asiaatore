@@ -11,7 +11,7 @@
 .cart .items_in_cart .item_cart img { width: 80px; }
 .cart .items_in_cart .item_cart h4 { margin-bottom:10px; font-weight:500; font-size:14px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; line-clamp:2; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .cart .items_in_cart .item_cart .delete_item i { font-size:22px; cursor:pointer; transition: 0.3s; }
-.cart .items_in_cart .item_cart .delete_item i:hover { color: #E51A1A; }
+.cart .items_in_cart .item_cart .delete_item i:hover { color: var(--color-danger); }
 .cart .items_in_cart .item_cart .quantity_control { display:flex; align-self:center; gap:5px; margin-top: 5px; }
 .cart .items_in_cart .item_cart .quantity_control span { font-size:18px; min-width:40px; display:flex; justify-content:center; align-items:center; }
 .cart .items_in_cart .item_cart .quantity_control button { width:27px; height:27px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; border-radius:2px; border:1px solid var(--border_color); }

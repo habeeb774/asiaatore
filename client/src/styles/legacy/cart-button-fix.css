@@ -1,0 +1,61 @@
+/* !important is used to override any conflicting styles */
+.add-to-cart-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  background: linear-gradient(90deg, #34d399, #10b981) !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.5rem 1.25rem !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25) !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  width: 100% !important;
+  margin-top: 0.75rem !important;
+}
+
+.add-to-cart-btn:hover {
+  filter: brightness(1.05) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.3) !important;
+  color: white !important;
+}
+
+.add-to-cart-btn svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  color: white !important;
+}
+
+/* Reset any conflicting styles from other selectors */
+button.add-to-cart-btn,
+a.add-to-cart-btn,
+.product-footer .add-to-cart-btn {
+  all: unset !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  background: linear-gradient(90deg, #34d399, #10b981) !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.5rem 1.25rem !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25) !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  width: 100% !important;
+  margin-top: 0.75rem !important;
+}

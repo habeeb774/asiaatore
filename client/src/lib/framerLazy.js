@@ -5,8 +5,10 @@ function filterMotionProps(props) {
   const motionProps = new Set([
     'whileTap', 'whileHover', 'whileFocus', 'whileDrag', 'whileInView',
     'initial', 'animate', 'exit', 'transition', 'variants', 'layout',
+    'layoutId', 'layoutDependency', 'layoutScroll',
     'drag', 'dragConstraints', 'dragElastic', 'dragMomentum',
-    'onAnimationStart', 'onAnimationComplete', 'onUpdate'
+    'onAnimationStart', 'onAnimationComplete', 'onUpdate',
+    'onLayoutAnimationStart', 'onLayoutAnimationComplete'
   ])
   const filtered = {}
   for (const key in props) {

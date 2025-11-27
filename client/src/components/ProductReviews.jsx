@@ -51,7 +51,7 @@ export default function ProductReviews({ productId }) {
         </Link>
       </div>
       {loading && <div style={{ fontSize:'.7rem', color:'#64748b' }}>جاري التحميل...</div>}
-      {error && <div style={{ fontSize:'.65rem', color:'#dc2626' }}>{error}</div>}
+      {error && <div style={{ fontSize:'.65rem', color:'var(--color-danger)' }}>{error}</div>}
       {!loading && !reviews.length && <div style={{ fontSize:'.65rem', color:'#475569' }}>لا توجد مراجعات بعد.</div>}
       <ul style={{ listStyle:'none', margin:0, padding:5, display:'flex', flexDirection:'column', gap:10 }}>
         {reviews.map(r => (

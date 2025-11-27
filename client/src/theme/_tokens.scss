@@ -70,15 +70,21 @@
   --color-text-label: #4b5563; /* Tailwind gray-600 */
   
   /* NEW BRAND COLORS */
-  --color-primary: #22c55e;      /* green-500 */
-  --color-primary-alt: #16a34a;  /* green-600 */
-  --color-primary-rgb: 34, 197, 94;
+  --color-primary: #ED1C24;
+  --color-primary-alt: #1C75BC;
+  --color-primary-rgb: 237, 28, 36;
+  --color-primary-hover: #D0161D;
+  --color-primary-active: #B50F16;
+  --color-primary-alt-hover: #175E97;
+  --color-primary-alt-active: #124A78;
   --color-white-rgb: 255, 255, 255;
   --color-black-rgb: 0, 0, 0;
   --color-gold-focus-rgb: 200, 169, 106;
   
-  --color-accent: #f59e0b;       /* amber-500 */
-  --color-accent-rgb: 245, 158, 11;
+  --color-accent: #ACCCE6;
+  --color-accent-rgb: 172, 204, 230;
+  --color-accent-hover: #98BEE0;
+  --color-accent-active: #82AFD9;
   --color-danger-rgb: 220, 38, 38;
 
   --color-danger: #dc2626;       /* red-600 */
@@ -110,8 +116,8 @@
 
   /* ===== GRADIENTS ===== */
   --grad-primary: linear-gradient(180deg, var(--color-primary), var(--color-primary-alt));
-  --grad-hero: linear-gradient(90deg, #16a34a, #22c55e);
-  --grad-accent: linear-gradient(90deg, #f59e0b, #fcd34d);
+  --grad-hero: linear-gradient(90deg, var(--color-primary-alt), var(--color-primary));
+  --grad-accent: linear-gradient(90deg, var(--color-accent), var(--color-primary-alt));
   --grad-soft: linear-gradient(135deg, #ffffff, #F4F5F7);
   --grad-success: linear-gradient(90deg, var(--color-success), var(--color-success-2));
   --grad-warning: linear-gradient(90deg, var(--color-warning), var(--color-warning-2));
@@ -193,15 +199,21 @@
   --color-text-label: #8b949e;
 
   /* NEW BRAND COLORS (DARK) */
-  --color-primary: #4ade80;      /* green-400 */
-  --color-primary-alt: #22c55e;  /* green-500 */
-  --color-primary-rgb: 74, 222, 128;
+  --color-primary: #ED1C24;
+  --color-primary-alt: #1C75BC;
+  --color-primary-rgb: 237, 28, 36;
+  --color-primary-hover: #D0161D;
+  --color-primary-active: #B50F16;
+  --color-primary-alt-hover: #175E97;
+  --color-primary-alt-active: #124A78;
   --color-white-rgb: 255, 255, 255;
   --color-black-rgb: 0, 0, 0;
   --color-gold-focus-rgb: 200, 169, 106;
   
-  --color-accent: #fcd34d;       /* amber-300 */
-  --color-accent-rgb: 252, 211, 77;
+  --color-accent: #ACCCE6;
+  --color-accent-rgb: 172, 204, 230;
+  --color-accent-hover: #98BEE0;
+  --color-accent-active: #82AFD9;
   --color-danger-rgb: 248, 113, 113;
   
   --color-danger: #f87171;       /* red-400 */
@@ -230,8 +242,8 @@
 
   --grad-soft: linear-gradient(135deg, #161B22, #10151D 60%, #0D1117);
   --grad-primary: linear-gradient(180deg, var(--color-primary), var(--color-primary-alt));
-  --grad-hero: linear-gradient(90deg, #22c55e, #4ade80);
-  --grad-accent: linear-gradient(90deg, #fcd34d, #fde68a);
+  --grad-hero: linear-gradient(90deg, var(--color-primary-alt), var(--color-primary));
+  --grad-accent: linear-gradient(90deg, var(--color-accent), var(--color-primary-alt));
   --grad-success: linear-gradient(90deg, var(--color-success), var(--color-success-2));
   --grad-warning: linear-gradient(90deg, var(--color-warning), var(--color-warning-2));
   --grad-danger: linear-gradient(90deg, var(--color-danger), var(--color-danger-2));

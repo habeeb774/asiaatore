@@ -1,13 +1,31 @@
-# Styles directory guide
+# Styles Directory Guide
 
-The stylesheet layer is split into a few tiers so we can reason about overrides without duplicating entire files:
+> **Last Cleanup:** Nov 2025 - Removed duplicates, consolidated font files, moved legacy code
+
+## Directory Structure
 
 | Folder | Purpose |
 | --- | --- |
-| `core/` | Low-level variables, mixins, and resets that every bundle consumes. |
-| `components/`, `home/`, `modules/` | Feature-specific partials that map to React routes/sections. |
-| `legacy/` | Centralised declarations for legacy layouts (hero sliders, Swiper product cards, etc.) so duplicated selectors live in one place. |
-| standalone `.scss` | Route-focused bundles that are code-split (for example `HomePage.scss`). |
+| `base/` | Reset, typography, and animations |
+| `core/` | Low-level variables, mixins, and base styles |
+| `components/` | Reusable component styles (rede-core, rede-header, etc.) |
+| `home/` | Home page specific styles |
+| `layout/` | Header, footer, sidebar, and grid layouts |
+| `legacy/` | **Deprecated files** - kept for reference only |
+| `themes/` | Theme presets |
+| `utils/` | SCSS utilities: `_functions.scss`, `_mixins.scss`, `_variables.scss` |
+
+## Key Files
+
+| File | Purpose |
+| --- | --- |
+| `index.scss` | **Main entry point** - imports all partials |
+| `_design-system.scss` | Forwards tokens from `../theme/_tokens.scss` |
+| `_variables.scss` | SCSS variables mapped to CSS custom properties |
+| `_mixins.scss` | Reusable mixins (card-surface, soft-shadow, etc.) |
+| `sidebar-modern.scss` | Modern sidebar theme with design tokens |
+| `fonts.css` | **Single source** for font imports and variables |
+| `all.css` | Font Awesome icons (bundled locally) |
 
 ## Import order
 

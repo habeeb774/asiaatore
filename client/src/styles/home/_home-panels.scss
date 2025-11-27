@@ -239,7 +239,7 @@
 .btn-danger {
   @extend .btn-danger;
   @include shared.btn-base();
-  background: #dc2626;
+  background: var(--color-danger);
   color: #fff;
 }
 

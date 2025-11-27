@@ -10,7 +10,7 @@ import Swiper from 'swiper';
 import { Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import './CategoriesSection.css';
+import '../../styles/legacy/CategoriesSection.css';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 50, scale: 0.8, rotateX: 15 },

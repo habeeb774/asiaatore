@@ -65,7 +65,7 @@ export default function AuditAdmin() {
             <Button disabled={auditPage===auditTotalPages} variant={auditPage===auditTotalPages? 'ghost':'primary'} onClick={()=>setAuditPage(p=>Math.min(auditTotalPages,p+1))}>التالي</Button>
           </div>
         )}
-        {error && <div style={{fontSize:'.65rem',color:'#b91c1c',marginTop:8}}>خطأ: {error}</div>}
+        {error && <div style={{fontSize:'.65rem',color:'var(--color-danger-2)',marginTop:8}}>خطأ: {error}</div>}
       </div>
     </AdminLayout>
   );

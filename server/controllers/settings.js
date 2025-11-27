@@ -75,6 +75,39 @@ const requireAdmin = (req, res, next) => {
 // Ensure uploads dir
 const uploadsDir = path.join(process.cwd(), 'uploads', 'settings');
 if (!fs.existsSync(uploadsDir)) { try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch { /* ignore */ } }
+const devSettingsFile = path.join(uploadsDir, 'local-dev-settings.json');
+
+const readDevSettings = () => {
+  try {
+    if (fs.existsSync(devSettingsFile)) {
+      const raw = fs.readFileSync(devSettingsFile, 'utf-8');
+      if (raw?.trim()) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {
+    if (global.appLogger) global.appLogger.warn({ err: e }, '[SETTINGS] Failed to read dev overlay');
+    else console.warn('[SETTINGS] Failed to read dev overlay:', e?.message || e);
+  }
+  return null;
+};
+
+const writeDevSettings = (patch) => {
+  if (!patch || typeof patch !== 'object') return null;
+  try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch {}
+  const current = readDevSettings() || {};
+  const merged = { ...current, ...patch, id: 'singleton', updatedAt: new Date().toISOString() };
+  try {
+    fs.writeFileSync(devSettingsFile, JSON.stringify(merged, null, 2));
+  } catch (e) {
+    if (global.appLogger) global.appLogger.warn({ err: e }, '[SETTINGS] Failed to write dev overlay');
+    else console.warn('[SETTINGS] Failed to write dev overlay:', e?.message || e);
+  }
+  return merged;
+};
 
 // Multer storage
 const storage = multer.diskStorage({
@@ -111,16 +144,8 @@ router.get('/', async (_req, res) => {
     // In dev, if a local dev settings file exists, merge it over DB values (helps when DB lacks columns)
     const devOverlayEnabled = (process.env.NODE_ENV !== 'production' || process.env.ALLOW_INVALID_DB === 'true');
     if (devOverlayEnabled) {
-      try {
-        const devFile = path.join(uploadsDir, 'local-dev-settings.json');
-        if (fs.existsSync(devFile)) {
-          const raw = fs.readFileSync(devFile, 'utf-8');
-          const overlay = JSON.parse(raw || '{}');
-          if (overlay && typeof overlay === 'object') {
-            setting = { ...(setting || {}), ...overlay };
-          }
-        }
-      } catch {}
+      const overlay = readDevSettings();
+      if (overlay) setting = { ...(setting || {}), ...overlay };
     }
     return res.json({ ok: true, setting: setting || null });
   } catch (e) {
@@ -186,6 +211,10 @@ router.get('/', async (_req, res) => {
 // PATCH update settings (admin)
 router.patch('/', attachUser, requireAdmin, async (req, res) => {
   await ensureSettingsTable();
+  const fallbackEnabled = (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ALLOW_INVALID_DB === 'true'
+  );
   const { siteNameAr, siteNameEn, colorPrimary, colorSecondary, colorAccent,
     taxNumber, supportPhone, supportMobile, supportWhatsapp, supportEmail, supportHours,
     footerAboutAr, footerAboutEn,
@@ -250,7 +279,7 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
   if (topStripBackground !== undefined) data.topStripBackground = topStripBackground || null;
   // UI customization
   if (ui_button_radius !== undefined) data.ui_button_radius = ui_button_radius || null;
-  if (ui_button_shadow !== undefined) data.ui_button_shadow = ui_button_shadow || null;
+  if (ui_button_shadow !== undefined) data.ui_button_shadow = toBool(ui_button_shadow);
   if (ui_input_radius !== undefined) data.ui_input_radius = ui_input_radius || null;
   if (ui_font_family !== undefined) data.ui_font_family = ui_font_family || null;
   if (ui_base_font_size !== undefined) data.ui_base_font_size = ui_base_font_size || null;
@@ -316,39 +345,44 @@ router.patch('/', attachUser, requireAdmin, async (req, res) => {
     } catch {}
     const allFields = Object.keys(data);
     const fields = availableCols.length ? allFields.filter(k => availableCols.includes(k)) : allFields;
+    const missingFields = allFields.filter(k => !fields.includes(k));
+    let overlayResult = null;
+    if (fallbackEnabled && missingFields.length) {
+      const overlayPatch = {};
+      missingFields.forEach((k) => {
+        if (data[k] !== undefined) overlayPatch[k] = data[k];
+      });
+      if (Object.keys(overlayPatch).length) overlayResult = writeDevSettings(overlayPatch);
+    }
     if (!fields.length) {
       const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
-      const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+      let setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+      if (fallbackEnabled) {
+        const overlay = readDevSettings();
+        if (overlay) setting = { ...(setting || {}), ...overlay };
+      }
+      if (overlayResult) setting = { ...(setting || {}), ...overlayResult };
       return res.json({ ok: true, setting });
     }
-  const sets = fields.map(k => `${k} = ?`).join(', ');
+    const sets = fields.map(k => `${k} = ?`).join(', ');
   // For raw SQL path, convert booleans to 0/1 to match TINYINT(1) columns
-  const values = fields.map(k => typeof data[k] === 'boolean' ? (data[k] ? 1 : 0) : data[k]);
+    const values = fields.map(k => typeof data[k] === 'boolean' ? (data[k] ? 1 : 0) : data[k]);
     // Ensure row exists
     await prisma.$executeRawUnsafe('INSERT IGNORE INTO StoreSetting (id) VALUES ("singleton")');
     // Apply update
     await prisma.$executeRawUnsafe(`UPDATE StoreSetting SET ${sets}, updatedAt = CURRENT_TIMESTAMP(3) WHERE id = "singleton"`, ...values);
     const rows = await prisma.$queryRawUnsafe('SELECT * FROM StoreSetting WHERE id = "singleton" LIMIT 1');
-    const setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+    let setting = Array.isArray(rows) && rows.length ? rows[0] : null;
+    if (fallbackEnabled) {
+      const overlay = readDevSettings();
+      if (overlay) setting = { ...(setting || {}), ...overlay };
+    }
     return res.json({ ok: true, setting });
   } catch (e) {
     // Dev-friendly fallback when DB is unavailable or schema is incompatible
-    const fallbackEnabled = (
-      process.env.NODE_ENV !== 'production' ||
-      process.env.ALLOW_INVALID_DB === 'true'
-    );
     if (fallbackEnabled) {
       try {
-        const devFile = path.join(uploadsDir, 'local-dev-settings.json');
-        let current = {};
-        try {
-          if (fs.existsSync(devFile)) {
-            const raw = fs.readFileSync(devFile, 'utf-8');
-            current = JSON.parse(raw || '{}');
-          }
-        } catch {}
-        const merged = { ...(current || {}), ...data, id: 'singleton', updatedAt: new Date().toISOString() };
-        fs.writeFileSync(devFile, JSON.stringify(merged, null, 2));
+        const merged = writeDevSettings(data);
         return res.json({ ok: true, setting: merged, warning: 'DEV_FALLBACK', message: 'Saved to local-dev-settings.json' });
       } catch (e2) {
         return res.status(400).json({ ok: false, error: 'UPDATE_FAILED', message: e.message + ' | fallback:' + (e2?.message || String(e2)) });

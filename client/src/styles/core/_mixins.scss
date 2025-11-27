@@ -1,6 +1,16 @@
 @use 'sass:map';
 @use './variables' as *;
 
+// Grid breakpoints (to avoid circular dependency)
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1400px
+) !default;
+
 // Theme color mixin
 @mixin theme-color($property, $color-key, $theme: light) {
   #{$property}: map.get(map.get($theme-colors, $theme), $color-key);
@@ -26,4 +36,17 @@
 @mixin focus-ring($color) {
   outline: 2px solid $color;
   outline-offset: 2px;
+}
+
+// Media breakpoint mixin
+@mixin media-breakpoint-up($breakpoint) {
+  @if $breakpoint == xs {
+    @media (min-width: 0) {
+      @content;
+    }
+  } @else {
+    @media (min-width: map.get($grid-breakpoints, $breakpoint)) {
+      @content;
+    }
+  }
 }

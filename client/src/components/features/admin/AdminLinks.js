@@ -67,8 +67,8 @@ const links = [
   {
     to: '/admin/marketing',
     key: 'marketing',
-    labelAr: 'التسويق',
-    labelEn: 'Marketing',
+    labelAr: 'التسويق والإعلانات',
+    labelEn: 'Marketing & Ads',
     icon: Megaphone,
     quick: true,
   },
@@ -145,14 +145,6 @@ const links = [
     labelAr: 'السجلات',
     labelEn: 'Audit Log',
     icon: FileText,
-  },
-  {
-    to: '/admin/ads',
-    key: 'ads',
-    labelAr: 'الإعلانات',
-    labelEn: 'Ads',
-    icon: Megaphone,
-    quick: true,
   },
   {
     to: '/admin/developer-settings',

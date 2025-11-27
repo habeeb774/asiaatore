@@ -14,7 +14,14 @@ const resolveText = (value, fallback = '') => {
   if (!value) return fallback;
   if (typeof value === 'string') return value;
   if (typeof value === 'object') {
-    return value.ar || value.en || Object.values(value).find((entry) => typeof entry === 'string' && entry.trim().length > 0) || fallback;
+    if (value.name) {
+      return resolveText(value.name, fallback);
+    }
+    const ar = value.ar || value['ar-SA'];
+    const en = value.en || value['en-US'];
+    if (ar || en) return ar || en;
+    const first = Object.values(value).find((entry) => typeof entry === 'string' && entry.trim().length > 0);
+    if (first) return first;
   }
   return fallback;
 };
@@ -38,12 +45,16 @@ const ProductsTable = ({
     const term = filters.searchTerm.trim().toLowerCase();
     return (products || []).filter((product) => {
       const productName = resolveText(product.name);
-      const brandName = resolveText(product.brand);
+      const brandName = resolveText(product.brand?.name || product.brand);
       const matchesSearch = !term
         || productName.toLowerCase().includes(term)
         || product.sku?.toLowerCase().includes(term)
         || brandName.toLowerCase().includes(term);
-      const matchesCategory = !filters.selectedCategory || product.categoryId === filters.selectedCategory;
+      const matchesCategory =
+        !filters.selectedCategory ||
+        product.categoryId === filters.selectedCategory ||
+        product.category === filters.selectedCategory ||
+        product.categorySlug === filters.selectedCategory;
       const matchesStatus = !filters.selectedStatus || product.status === filters.selectedStatus;
       return matchesSearch && matchesCategory && matchesStatus;
     });
@@ -99,8 +110,8 @@ const ProductsTable = ({
           >
             <option value="">جميع الفئات</option>
             {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
+              <option key={category.id || category.slug} value={category.slug || category.id}>
+                {resolveText(category.name, category.slug || category.id || '-')}
               </option>
             ))}
           </Select>
@@ -150,9 +161,9 @@ const ProductsTable = ({
             ) : (
               filteredProducts.map((product) => {
                 const stockState = resolveStockState(product.stock, product.minStock);
-                const category = categories.find((item) => item.id === product.categoryId);
+                const category = categories.find((item) => item.id === product.categoryId || item.slug === product.category || item.slug === product.categorySlug);
                 const productName = resolveText(product.name);
-                const brandName = resolveText(product.brand);
+                const brandName = resolveText(product.brand?.name || product.brand);
                 const categoryName = resolveText(category?.name, '-');
 
                 return (

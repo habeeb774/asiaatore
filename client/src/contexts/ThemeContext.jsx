@@ -23,6 +23,15 @@ const applyThemeClass = (theme) => {
   html.classList.remove('theme-light', 'theme-dark');
   if (effective === 'light' && theme !== 'system') html.classList.add('theme-light');
   if (effective === 'dark' && theme !== 'system') html.classList.add('theme-dark');
+
+  // Global dark/light markers for legacy SCSS selectors
+  html.classList.toggle('dark-mode', effective === 'dark');
+  html.classList.toggle('light-mode', effective === 'light');
+  try {
+    document.body.classList.toggle('dark-mode', effective === 'dark');
+    document.body.classList.toggle('light-mode', effective === 'light');
+  } catch {}
+
   // Data attribute for SCSS selectors like [data-theme="dark"]
   try {
     html.setAttribute('data-theme', effective);

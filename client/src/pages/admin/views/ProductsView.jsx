@@ -96,12 +96,12 @@ const ProductsView = () => {
       {
         label: 'منتجات نشطة',
         value: numberFormatter(metrics.active),
-        help: metrics.draft ? `${numberFormatter.format(metrics.draft)} مسودة بانتظار النشر` : undefined
+        help: metrics.draft ? `${numberFormatter(metrics.draft)} مسودة بانتظار النشر` : undefined
       },
       {
         label: 'بحاجة لإعادة التوريد',
         value: numberFormatter(metrics.lowStock),
-        help: metrics.outOfStock ? `${numberFormatter.format(metrics.outOfStock)} نفدت بالكامل` : undefined
+        help: metrics.outOfStock ? `${numberFormatter(metrics.outOfStock)} نفدت بالكامل` : undefined
       },
       {
         label: 'قيمة المخزون التقديرية',

@@ -134,7 +134,7 @@ export default function AdminUsers() {
         </select>
   <Button type="button" variant="ghost" onClick={fetchUsers}>تحديث</Button>
         {loading && <span style={{fontSize:'.7rem',color:'#64748b'}}>...تحميل</span>}
-        {error && <span style={{fontSize:'.7rem',color:'#b91c1c'}}>خطأ: {error}</span>}
+        {error && <span style={{fontSize:'.7rem',color:'var(--color-danger-2)'}}>خطأ: {error}</span>}
       </div>
 
       <form onSubmit={submit} style={{background:'#fff',padding:'1rem',borderRadius:12,boxShadow:'0 4px 14px -6px rgba(0,0,0,.08)',display:'grid',gap:10,marginBottom:12}}>
@@ -147,7 +147,7 @@ export default function AdminUsers() {
                 <input type="checkbox" checked={!!form.sendInvite} onChange={e=>setForm(f=>({...f,sendInvite:e.target.checked}))} /> إرسال رابط تعيين كلمة المرور
               </label>
               {!form.sendInvite && (
-                <input placeholder="كلمة المرور" required={!form.sendInvite} type="password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} />
+                <input placeholder="كلمة المرور" required={!form.sendInvite} type="password" autoComplete="new-password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} />
               )}
             </>
           )}

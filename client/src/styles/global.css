@@ -1,0 +1,154 @@
+/* global.css - Optimized global styles */
+/* Font imports handled by index.html for better performance */
+
+/* Optimized CSS variables - only essential tokens */
+:root {
+  --font-primary: 'Cairo', sans-serif;
+  --color-text: #1f2937;
+  --color-bg: #ffffff;
+  --color-text-soft: #6b7280;
+  --color-text-faint: #9ca3af;
+  --grad-primary: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+/* Base Styles - Optimized */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-primary);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  line-height: 1.5;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* Optimized Typography - Only essential styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  color: var(--color-text);
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+p {
+  margin-bottom: 1rem;
+  color: var(--color-text-soft);
+}
+
+a {
+  color: #059669;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #047857;
+  text-decoration: underline;
+}
+
+/* Optimized Buttons - Essential styles only */
+button, .btn {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: var(--grad-primary);
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #059669;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Optimized Forms - Essential styles only */
+input, select, textarea {
+  font-family: var(--font-primary);
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #ffffff;
+  color: var(--color-text);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+}
+
+/* Optimized Cards - Essential styles only */
+.card {
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Essential Utility Classes Only */
+.text-primary { color: #059669; }
+.text-secondary { color: var(--color-text-soft); }
+.text-muted { color: var(--color-text-faint); }
+.bg-primary { background-color: #059669; }
+.bg-secondary { background-color: #f3f4f6; }
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  html { font-size: 14px; }
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.5rem; }
+  h4 { font-size: 1.25rem; }
+  h5 { font-size: 1.1rem; }
+}

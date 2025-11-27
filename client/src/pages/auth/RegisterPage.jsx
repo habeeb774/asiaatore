@@ -89,16 +89,17 @@ const RegisterPage = () => {
         </span>
       }
     >
-      <header className="text-right">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-[0.75rem] text-primary">
-          <span className="h-2 w-2 rounded-full bg-primary" />
-          إنشاء حساب إداري
-        </span>
-        <h2 className="mt-4 text-2xl font-bold text-text">ابدأ التسجيل</h2>
-        <p className="mt-2 text-sm text-text-soft">
-          أدخل بيانات التواصل الأساسية لتفعيل الحساب والوصول إلى لوحة التحكم الموحدة.
-        </p>
-      </header>
+      {/* Back to home button */}
+      <div className="flex justify-end mb-3">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12l7-7M3 12l7 7" />
+            <path d="M21 12H4" />
+          </svg>
+          العودة للصفحة الرئيسية
+        </Link>
+      </div>
+      {/* Removed header block per request */}
 
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -147,7 +148,7 @@ const RegisterPage = () => {
             id="password"
             type={showPassword ? 'text' : 'password'}
             dir="rtl"
-            className="w-full text-right pr-20"
+            className="w-full text-right pr-10"
             autoComplete="new-password"
             placeholder="••••••••"
             aria-invalid={Boolean(errors.password)}
@@ -157,11 +158,21 @@ const RegisterPage = () => {
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-text-soft hover:text-text"
+            className="absolute inset-y-0 right-3 my-auto p-0 text-text-soft hover:text-text bg-transparent"
             onClick={() => setShowPassword((value) => !value)}
             title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
           >
-            {showPassword ? 'إخفاء' : 'إظهار'}
+            {showPassword ? (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.31 1.39-2.5 2.39-3.54M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12" />
+                <path d="M1 1l22 22" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
           </Button>
         </AuthFormField>
 
@@ -170,7 +181,7 @@ const RegisterPage = () => {
             id="confirm"
             type={showConfirm ? 'text' : 'password'}
             dir="rtl"
-            className="w-full text-right pr-20"
+            className="w-full text-right pr-10"
             autoComplete="new-password"
             placeholder="••••••••"
             aria-invalid={Boolean(errors.confirm)}
@@ -180,11 +191,21 @@ const RegisterPage = () => {
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute inset-y-0 left-2 my-auto px-2 text-xs text-text-soft hover:text-text"
+            className="absolute inset-y-0 right-3 my-auto p-0 text-text-soft hover:text-text bg-transparent"
             onClick={() => setShowConfirm((value) => !value)}
             title={showConfirm ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
           >
-            {showConfirm ? 'إخفاء' : 'إظهار'}
+            {showConfirm ? (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.58-1.31 1.39-2.5 2.39-3.54M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-5.12" />
+                <path d="M1 1l22 22" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
           </Button>
         </AuthFormField>
 

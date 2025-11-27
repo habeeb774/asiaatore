@@ -1,3 +1,9 @@
+// Import font utilities
+import { initFonts } from './utils/fontUtils';
+
+// Initialize Cairo font
+initFonts();
+
 // Safe console.error wrapper to avoid "Cannot convert object to primitive value"
 // errors thrown by dev tooling when formatting complex objects. This captures
 // arguments (safely stringified) to `window.__capturedConsoleErrors` for
@@ -71,6 +77,23 @@ import AppRoutes from "./AppRoutes";
 // Merged tailwind + global base into styles/index.scss to avoid duplicate CSS bundles
 // import "./index.css"; // removed (was causing duplicate global CSS)
 import "./styles/ui.css";
+// Ensure unified font variables are loaded globally
+import "./styles/fonts.css";
+// Performance optimizations
+import { 
+  preloadCriticalResources, 
+  addResourceHints, 
+  monitorBundleSize
+} from "./utils/performanceUtils.js";
+import { initCriticalOptimizations } from "./utils/criticalCSS.js";
+
+// Initialize critical performance optimizations immediately
+initCriticalOptimizations();
+preloadCriticalResources();
+addResourceHints();
+if (process.env.NODE_ENV === 'development') {
+  monitorBundleSize();
+}
 
 // Local Cairo font (self-hosted via package) - load only essential weights initially
 import "@fontsource/cairo/400.css";
@@ -256,6 +279,7 @@ const Providers = ({ children }) => {
       <HtmlLanguageSync />
       <GlobalToastEvents />
       <PwaUpdatePrompt />
+      <PwaInstallPrompt />
       {/* Global haptics: vibrate briefly on add-to-cart if supported and not reduced-motion */}
       <HapticsEvents />
       <ScrollTopButton />
@@ -385,6 +409,173 @@ function HapticsEvents() {
     window.addEventListener("cart:add", onAdd);
     return () => window.removeEventListener("cart:add", onAdd);
   }, []);
+  return null;
+}
+
+function PwaInstallPrompt() {
+  const { locale = "ar" } = useLanguage();
+  const toast = useToast();
+  const deferredPromptRef = React.useRef(null);
+  const toastIdRef = React.useRef(null);
+  const installHandledRef = React.useRef(false);
+
+  const markDismissed = React.useCallback(() => {
+    try {
+      sessionStorage.setItem("pwa-install-dismissed", "1");
+    } catch {}
+  }, []);
+
+  const markInstalled = React.useCallback(() => {
+    markDismissed();
+    try {
+      localStorage.setItem("pwa-install-installed", "1");
+    } catch {}
+  }, [markDismissed]);
+
+  const dismissToast = React.useCallback(() => {
+    if (toastIdRef.current && typeof toast?.dismiss === "function") {
+      try {
+        toast.dismiss(toastIdRef.current);
+      } catch {}
+    }
+    toastIdRef.current = null;
+  }, [toast]);
+
+  const showPromptToast = React.useCallback(() => {
+    if (!toast?.show) return;
+    if (!deferredPromptRef.current) return;
+
+    const title =
+      locale === "ar" ? "ثبّت تطبيق المتجر" : "Install the store app";
+    const description =
+      locale === "ar"
+        ? "أضف التطبيق إلى شاشتك الرئيسية لتجربة أسرع دون الحاجة للمتصفح."
+        : "Add the store to your home screen for a faster, streamlined experience.";
+    const actionLabel = locale === "ar" ? "تثبيت الآن" : "Install now";
+
+    dismissToast();
+
+    toastIdRef.current = toast.show({
+      type: "info",
+      title,
+      description,
+      duration: 0,
+      action: {
+        label: actionLabel,
+        onClick: async () => {
+          const promptEvent = deferredPromptRef.current;
+          if (!promptEvent) return;
+          try {
+            promptEvent.prompt();
+            const choice = await promptEvent.userChoice;
+            if (choice?.outcome === "accepted") {
+              installHandledRef.current = true;
+              markInstalled();
+              toast?.success?.(
+                locale === "ar" ? "تم تثبيت التطبيق" : "App installed",
+                locale === "ar"
+                  ? "ستجده الآن على شاشتك الرئيسية."
+                  : "You can now open it from your home screen.",
+                4000
+              );
+            } else {
+              markDismissed();
+              toast?.info?.(
+                locale === "ar"
+                  ? "يمكنك تثبيته لاحقًا من قائمة المتصفح."
+                  : "You can install it later from your browser menu.",
+                undefined,
+                3200
+              );
+            }
+          } catch (error) {
+            toast?.error?.(
+              locale === "ar" ? "تعذر إتمام التثبيت" : "Install could not complete",
+              undefined,
+              3200
+            );
+          } finally {
+            deferredPromptRef.current = null;
+            dismissToast();
+          }
+        },
+      },
+      onClose: () => {
+        markDismissed();
+        deferredPromptRef.current = null;
+        toastIdRef.current = null;
+      },
+    });
+  }, [dismissToast, locale, markDismissed, markInstalled, toast]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return () => {};
+
+    const handleBeforeInstallPrompt = (event) => {
+      let dismissed = false;
+      let installed = false;
+      try {
+        dismissed = sessionStorage.getItem("pwa-install-dismissed") === "1";
+      } catch {}
+      try {
+        installed = localStorage.getItem("pwa-install-installed") === "1";
+      } catch {}
+
+      const isStandalone = (() => {
+        try {
+          if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+            return true;
+          }
+        } catch {}
+        try {
+          return typeof navigator !== "undefined" && navigator.standalone;
+        } catch {}
+        return false;
+      })();
+
+      if (isStandalone || dismissed || installed) return;
+
+      event.preventDefault();
+      deferredPromptRef.current = event;
+      showPromptToast();
+    };
+
+    const handleAppInstalled = () => {
+      markInstalled();
+      dismissToast();
+      deferredPromptRef.current = null;
+      if (!installHandledRef.current) {
+        toast?.success?.(
+          locale === "ar" ? "التطبيق جاهز" : "App ready",
+          locale === "ar"
+            ? "يمكنك فتح المتجر مباشرة كتطبيق مستقل."
+            : "You can now launch the store as a standalone app.",
+          4000
+        );
+      }
+      installHandledRef.current = true;
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      dismissToast();
+    };
+  }, [dismissToast, locale, markInstalled, showPromptToast, toast]);
+
+  React.useEffect(() => {
+    if (deferredPromptRef.current) {
+      showPromptToast();
+    }
+  }, [showPromptToast]);
+
+  React.useEffect(() => () => {
+    deferredPromptRef.current = null;
+  }, []);
+
   return null;
 }
 

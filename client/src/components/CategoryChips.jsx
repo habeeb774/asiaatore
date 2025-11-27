@@ -1,21 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import useCategories from '../hooks/useCategories';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Coffee, CupSoda, Cookie, Utensils, Store as StoreIcon, Tag, Candy, Apple, Beef, Milk, Sparkles, ShoppingBag, Package, Truck, Car, Home, Wrench, Droplets, Zap, Heart, Star, Gift, Percent } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { Chip } from './ui/Chip';
-
-const scrollShadows = 'after:content-[" "] after:absolute after:top-0 after:right-0 after:w-8 after:h-full after:pointer-events-none after:bg-gradient-to-l after:from-white after:to-transparent';
+import './CategoryChips.css';
 
 const CategoryChips = () => {
   const [cats, setCats] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
-  const trackRef = useRef(null);
   const { locale } = useLanguage();
   const baseProductsPath = locale === 'en' ? '/en/products' : (locale === 'fr' ? '/fr/products' : '/products');
-  const [showAll, setShowAll] = useState(false);
-  const MAX_DEFAULT = 10;
 
   // Use React Query hook for categories with caching
   const { data: categories = [], isLoading: loading, error } = useCategories({ withCounts: 1 });
@@ -55,26 +51,13 @@ const CategoryChips = () => {
   if (loading) return <div className="text-xs opacity-60 px-4 py-2">تحميل الفئات...</div>;
   if (error) return <div className="text-xs text-red-600 px-4 py-2">خطأ الفئات</div>;
   if (!uniqueCats.length) return null;
-  const displayed = showAll ? uniqueCats : uniqueCats.slice(0, MAX_DEFAULT);
 
-  const scrollBy = (dir) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const delta = Math.round(el.clientWidth * 0.8) * (dir === 'left' ? -1 : 1);
-    el.scrollBy({ left: delta, behavior: 'smooth' });
-  };
+  const duplicatedCats = [...uniqueCats, ...uniqueCats];
 
   return (
-    <div className="relative" role="navigation" aria-label="تصنيفات">
-      {/* Scroll arrows */}
-      <button type="button" aria-label="Scroll right" onClick={()=>scrollBy('right')} className="absolute left-1 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white/85 shadow hover:bg-white p-1 hidden sm:inline-flex">
-        <ChevronRight size={18} />
-      </button>
-      <button type="button" aria-label="Scroll left" onClick={()=>scrollBy('left')} className="absolute right-1 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white/85 shadow hover:bg-white p-1 hidden sm:inline-flex">
-        <ChevronLeft size={18} />
-      </button>
-      <div ref={trackRef} className={`flex gap-3 overflow-x-auto pb-2 px-2 snap-x snap-mandatory mobile-gutters hide-scrollbar ${scrollShadows}`} dir="rtl">
-        {displayed.map(c => {
+    <div className="autoscroller" role="navigation" aria-label="تصنيفات متحركة تلقائيا">
+      <div className="autoscroller-track gap-3 px-2">
+        {duplicatedCats.map((c, index) => {
           const qsCat = new URLSearchParams(location.search).get('category');
           const active = (qsCat === c.slug) || location.pathname.includes(`/category/${c.slug}`);
           const n = (c?.name?.ar || c?.name?.en || c?.slug || '').toLowerCase();
@@ -187,7 +170,7 @@ const CategoryChips = () => {
           const label = c.name?.ar || c.name?.en || c.slug;
           return (
             <Chip
-              key={c.id || c.slug}
+              key={`${c.id || c.slug}-${index}`}
               className="snap-start shrink-0"
               variant={active ? 'primary' : 'outline'}
               size="lg"
@@ -209,17 +192,6 @@ const CategoryChips = () => {
             </Chip>
           );
         })}
-        {uniqueCats.length > MAX_DEFAULT && (
-          <Chip
-            type="button"
-            onClick={() => setShowAll(s => !s)}
-            className="snap-start shrink-0"
-            variant={showAll ? 'soft' : 'outline'}
-            size="md"
-          >
-            {showAll ? (locale==='ar' ? 'إخفاء' : 'Hide') : (locale==='ar' ? 'عرض المزيد' : 'Show more')}
-          </Chip>
-        )}
       </div>
     </div>
   );

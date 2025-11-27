@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import { useLanguage } from '../../../context/LanguageContext';
 import Modal from '../../ui/Modal';
-import LazyImage from '../../common/LazyImage';
+import LazyImage from '../../shared/LazyImage/LazyImage';
 import { Skeleton } from '../../shared/SkeletonLoader/SkeletonLoader';
 
 const SocialCommerceContext = createContext();

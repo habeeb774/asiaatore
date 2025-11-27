@@ -167,10 +167,10 @@
 @media (prefers-reduced-motion: reduce) { .checkout-progress__bar span { transition: none; } }
 
 /* Field validation styles */
-.field-hint { margin-top: .25rem; font-size: .75rem; color: #dc2626; }
+.field-hint { margin-top: .25rem; font-size: .75rem; color: var(--color-danger); }
 input.is-invalid,
 select.is-invalid,
-textarea.is-invalid { border-color: #dc2626 !important; box-shadow: 0 0 0 2px rgba(220,38,38,.08); }
+textarea.is-invalid { border-color: var(--color-danger) !important; box-shadow: 0 0 0 2px rgba(var(--color-danger-rgb),.08); }
 
 /* Sticky summary on desktop; naturally full-width on mobile */
 @media (min-width: 768px) {

@@ -1,0 +1,109 @@
+/* OffersSpecialSection.css - Styles for the luxury offers special section */
+
+.special-offers-carousel .carousel-container {
+  padding: 2rem 0;
+}
+
+.special-offers-carousel .carousel-slide {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.special-offers-carousel .carousel-dots {
+  margin-top: 2rem;
+}
+
+.special-offers-carousel .carousel-dots .dot {
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.special-offers-carousel .carousel-dots .dot.active {
+  background: linear-gradient(135deg, #d97706, #c2410c);
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+}
+
+.special-offers-carousel .carousel-arrow {
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  border: none;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  transition: all 0.3s ease;
+}
+
+.special-offers-carousel .carousel-arrow:hover {
+  background: linear-gradient(135deg, #d97706, #c2410c);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+}
+
+.special-offers-carousel .carousel-arrow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Luxury glow effects */
+.offers-special-glow {
+  position: relative;
+}
+
+.offers-special-glow::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #f59e0b, #ea580c, #dc2626, #f59e0b);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.offers-special-glow:hover::before {
+  opacity: 0.3;
+  animation: rotate-glow 2s linear infinite;
+}
+
+@keyframes rotate-glow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Special offer badge animations */
+.special-offer-badge {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .special-offers-carousel .carousel-container {
+    padding: 1rem 0;
+  }
+
+  .special-offers-carousel .carousel-slide {
+    padding: 0 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .special-offers-carousel {
+    --carousel-visible-count: 1;
+  }
+
+  .special-offers-carousel .carousel-slide {
+    padding: 0 0.25rem;
+  }
+}

@@ -13,6 +13,7 @@ const FeaturedProductsSection = lazy(() => import('../../components/home/Feature
 const CategoriesSection = lazy(() => import('../../components/home/CategoriesSection'));
 const OffersSpecialSection = lazy(() => import('../../components/home/OffersSpecialSection'));
 const BrandsStrip = lazy(() => import('../../components/home/BrandsStrip'));
+const OffersSlider = lazy(() => import('../../components/OffersSlider/OffersSlider.jsx'));
 
 const Home = () => {
   const { products } = useProducts();
@@ -24,10 +25,10 @@ const Home = () => {
   return (
     <>
       <HomeSEO locale={locale} />
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-16 sm:space-y-24">
+      <div className="mx-auto max-w-7xl px-6 py-4 sm:px-6 sm:py-16 lg:px-8 space-y-12 sm:space-y-24">
         {/* قسم الهيرو الرئيسي مع الإعلانات والشعار */}
         <ErrorBoundary>
-          <Suspense fallback={<HeroSkeleton className="mb-6"/>}>
+          <Suspense fallback={<HeroSkeleton className="my-4"/>}>
             <HeroUnified />
           </Suspense>
         </ErrorBoundary>
@@ -52,6 +53,13 @@ const Home = () => {
               t={t}
               locale={locale}
             />
+          </Suspense>
+        </ErrorBoundary>
+
+        {/* قسم عروض الخصومات (سلايدر) تحت المنتجات المميزة */}
+        <ErrorBoundary>
+          <Suspense fallback={<SliderSkeleton className="my-6"/>}>
+            <OffersSlider className="mt-2" />
           </Suspense>
         </ErrorBoundary>
 

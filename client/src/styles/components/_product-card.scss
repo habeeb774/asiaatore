@@ -1,0 +1,210 @@
+// =====================
+// Product Card Footer
+// =====================
+.product-footer {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: var(--color-bg-light);
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border-color: var(--color-primary-light);
+  }
+  
+  .price {
+    margin-bottom: 1.25rem;
+    
+    .price-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      
+      .current-price {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-text);
+        line-height: 1.2;
+        position: relative;
+        font-family: 'Tajawal', sans-serif;
+        
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: -0.25rem;
+          right: 0;
+          width: 100%;
+          height: 2px;
+          background: var(--color-primary);
+          transform: scaleX(0);
+          transform-origin: right;
+          transition: transform 0.3s ease;
+        }
+      }
+      
+      .original-price {
+        font-size: 0.9375rem;
+        color: var(--color-text-secondary);
+        text-decoration: line-through;
+        opacity: 0.8;
+      }
+      
+      .discount-badge {
+        background: var(--color-success-light);
+        color: var(--color-success-dark);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        
+        &::before {
+          content: '✓';
+          font-weight: bold;
+        }
+      }
+    }
+  }
+  
+  .add-to-cart-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 0.625rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    font-family: 'Tajawal', sans-serif;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.5);
+      opacity: 0;
+      border-radius: 100%;
+      transform: scale(1, 1) translate(-50%, -50%);
+      transform-origin: 50% 50%;
+    }
+    
+    &:hover {
+      background: var(--color-primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(var(--color-primary-rgb), 0.3);
+      
+      &::after {
+        animation: ripple 1s ease-out;
+      }
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.2);
+    }
+    
+    svg {
+      width: 1.25rem;
+      height: 1.25rem;
+      transition: transform 0.3s ease;
+    }
+    
+    &:hover svg {
+      animation: cartBounce 0.6s ease;
+    }
+    
+    span {
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+    
+    &:active span {
+      transform: scale(0.98);
+    }
+  }
+  
+  // Loading state
+  &.loading {
+    .add-to-cart-btn {
+      pointer-events: none;
+      background: var(--color-primary-light);
+      
+      &::before {
+        content: '';
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+        margin-right: 0.5rem;
+      }
+      
+      span {
+        opacity: 0;
+      }
+    }
+  }
+  
+  // Success state
+  &.success {
+    .add-to-cart-btn {
+      background: var(--color-success);
+      
+      &::before {
+        content: '✓';
+        margin-right: 0.5rem;
+        animation: none;
+        border: none;
+        width: auto;
+        height: auto;
+        color: white;
+        font-weight: bold;
+      }
+      
+      span {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes cartBounce {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(20, 20);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

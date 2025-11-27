@@ -1,5 +1,6 @@
 /* Header specific styles extracted from reda-store-theme.css */
-header { background: #fff; position: fixed; top: 0; left: 0; right: 0; box-shadow: 5px 8px 8px #d1d1d13b; z-index: 1000; }
+/* Now uses centralized design tokens */
+header { background: var(--header-bg, #fff); position: fixed; top: 0; left: 0; right: 0; box-shadow: var(--header-shadow, 5px 8px 8px #d1d1d13b); z-index: var(--header-zindex, 1200); }
 header .top_header .container { display:flex; align-items:center; justify-content:space-between; padding: 15px 0; }
 header .top_header .logo { width: 180px; }
 header .top_header .search_box { width: 610px; display:flex; align-items:center; border-radius: 2px; background: var(--bg_color); }

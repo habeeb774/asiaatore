@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Seo from '../../components/Seo';
 import AdminLayout from '../../components/features/admin/AdminLayout';
 import { useSettings } from '../../contexts/SettingsContext';
-import { Button } from '../../components/ui';
-import Input from '../../components/ui/input';  
+import { Button, Input } from '../../components/ui';
 import EnvEditor from './integrations/EnvEditor';
 import SettingsUi from './settings/SettingsUi';
 import SettingsLogo from './settings/SettingsLogo';
@@ -14,12 +13,19 @@ import SettingsLinksApps from './settings/SettingsLinksApps';
 import SettingsCompanyFooter from './settings/SettingsCompanyFooter';
 import SettingsTopStrip from './settings/SettingsTopStrip';
 import SettingsHero from './settings/SettingsHero';
+import { LayoutGrid, Palette, Image as ImageIcon, Phone, Building, TicketPercent, MessageCircle, Database, CreditCard, Truck, Link as LinkIcon, Search, Star } from 'lucide-react';
+import SaveBar from '../../components/features/admin/forms/SaveBar';
+import FormField from '../../components/features/admin/forms/FormField';
+import Fieldset from '../../components/features/admin/forms/Fieldset';
+import { useForm, FormProvider, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { settingsSchema, validateSettings } from '../../validation/settingsSchema';
 
 const Settings = () => {
   const { setting, loading, error, update, uploadLogo } = useSettings();
   const [form, setForm] = useState({
     siteNameAr:'', siteNameEn:'',
-    colorPrimary:'#69be3c', colorSecondary:'#2eafff', colorAccent:'#2eafff',
+    colorPrimary:'#ED1C24', colorSecondary:'#1C75BC', colorAccent:'#ACCCE6',
     taxNumber:'',
     supportPhone:'', supportMobile:'', supportWhatsapp:'', supportEmail:'', supportHours:'',
     footerAboutAr:'', footerAboutEn:'',
@@ -62,10 +68,12 @@ const Settings = () => {
   const [msg, setMsg] = useState('');
   const [errors, setErrors] = useState({});
   const logoInputRef = useRef(null);
+  const formMethods = useForm({ resolver: zodResolver(settingsSchema), mode: 'onChange', defaultValues: form });
 
   useEffect(() => {
     if (setting) {
-      setForm(f => ({
+      setForm(f => {
+        const next = {
         ...f,
         siteNameAr: setting.siteNameAr || '',
         siteNameEn: setting.siteNameEn || '',
@@ -138,11 +146,29 @@ const Settings = () => {
       ui_base_font_size: setting.ui_base_font_size ? String(setting.ui_base_font_size) : '16',
       ui_spacing_scale: setting.ui_spacing_scale ? String(setting.ui_spacing_scale) : '1',
       ui_theme_default: setting.ui_theme_default || 'system'
-      }));
+      };
+        try { formMethods.reset(next); } catch {}
+        return next;
+      });
     }
   }, [setting]);
 
   const onChange = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Helper: normalize value for comparison (handle color case-insensitivity)
+  const normalizeForCompare = (k, v) => {
+    if (v === null || v === undefined) return '';
+    // Normalize hex colors to lowercase for consistent comparison
+    if (['colorPrimary', 'colorSecondary', 'colorAccent', 'topStripBackground'].includes(k)) {
+      return String(v).toLowerCase();
+    }
+    return v;
+  };
+
+  // Helper: check if values are effectively equal
+  const valuesEqual = (k, formVal, settingVal) => {
+    return normalizeForCompare(k, formVal) === normalizeForCompare(k, settingVal);
+  };
 
   // Helpers: basic validation
   const isHex = (s) => /^#([0-9a-fA-F]{6})$/.test(String(s || ''));
@@ -154,38 +180,36 @@ const Settings = () => {
   const isDigits = (s) => !s || /^[0-9+\s-]+$/.test(String(s));
 
   const validate = () => {
-    const e = {};
-    if (!form.siteNameAr && !form.siteNameEn) e.siteNameEn = 'يرجى إدخال اسم المتجر';
-    if (!isHex(form.colorPrimary)) e.colorPrimary = 'الرجاء إدخال لون بصيغة #RRGGBB';
-    if (!isHex(form.colorSecondary)) e.colorSecondary = 'الرجاء إدخال لون بصيغة #RRGGBB';
-    if (!isHex(form.colorAccent)) e.colorAccent = 'الرجاء إدخال لون بصيغة #RRGGBB';
-    if (form.topStripBackground && !isHex(form.topStripBackground)) e.topStripBackground = 'الرجاء إدخال لون بصيغة #RRGGBB';
-    if (!isEmail(form.supportEmail)) e.supportEmail = 'صيغة بريد غير صحيحة';
-    if (!isUrl(form.linkBlog)) e.linkBlog = 'رابط غير صحيح';
-    if (!isUrl(form.linkSocial)) e.linkSocial = 'رابط غير صحيح';
-    if (!isUrl(form.linkReturns)) e.linkReturns = 'رابط غير صحيح';
-    if (!isUrl(form.linkPrivacy)) e.linkPrivacy = 'رابط غير صحيح';
-    if (!isUrl(form.appStoreUrl)) e.appStoreUrl = 'رابط غير صحيح';
-    if (!isUrl(form.playStoreUrl)) e.playStoreUrl = 'رابط غير صحيح';
-    if (!isUrl(form.heroBackgroundImage)) e.heroBackgroundImage = 'رابط غير صحيح';
-    if (!isUrl(form.heroCenterImage)) e.heroCenterImage = 'رابط غير صحيح';
-    if (form.heroAutoplayInterval && isNaN(+form.heroAutoplayInterval)) e.heroAutoplayInterval = 'قيمة رقمية بالمللي ثانية';
-  // Shipping numeric checks
-  const numOrEmpty = (v)=> v==='' || !isNaN(+v);
-  if (!numOrEmpty(form.shippingBase)) e.shippingBase = 'رقم صحيح';
-  if (!numOrEmpty(form.shippingPerKm)) e.shippingPerKm = 'رقم صحيح';
-  if (!numOrEmpty(form.shippingMin)) e.shippingMin = 'رقم صحيح';
-  if (!numOrEmpty(form.shippingMax)) e.shippingMax = 'رقم صحيح';
-  if (!numOrEmpty(form.shippingFallback)) e.shippingFallback = 'رقم صحيح';
-  if (!numOrEmpty(form.originLat)) e.originLat = 'رقم صحيح';
-  if (!numOrEmpty(form.originLng)) e.originLng = 'رقم صحيح';
-  if (form.aramexApiUrl && !isUrl(form.aramexApiUrl)) e.aramexApiUrl = 'رابط غير صحيح';
-  if (form.smsaApiUrl && !isUrl(form.smsaApiUrl)) e.smsaApiUrl = 'رابط غير صحيح';
-    if (!isDigits(form.supportPhone)) e.supportPhone = 'أرقام فقط مسموحة';
-    if (!isDigits(form.supportMobile)) e.supportMobile = 'أرقام فقط مسموحة';
+    const { success, errors: e } = validateSettings(form);
     setErrors(e);
-    return Object.keys(e).length === 0;
+    return success;
   };
+
+  const computedChanges = useMemo(() => {
+    const changed = {};
+    if (setting) {
+      Object.keys(form).forEach(k => {
+        if (!valuesEqual(k, form[k], setting[k]) && (form[k] !== '' || (setting[k] !== undefined && setting[k] !== null && setting[k] !== ''))) {
+          changed[k] = form[k];
+        }
+      });
+    } else {
+      Object.assign(changed, form);
+    }
+    return changed;
+  }, [form, setting]);
+
+  const isDirty = useMemo(() => Object.keys(computedChanges).length > 0 || !!logoFile, [computedChanges, logoFile]);
+
+  useEffect(() => {
+    const beforeUnload = (e) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [isDirty]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -196,7 +220,7 @@ const Settings = () => {
       const changed = {};
       if (setting) {
         Object.keys(form).forEach(k => {
-          if (form[k] !== setting[k] && (form[k] !== '' || (setting[k] !== undefined && setting[k] !== null && setting[k] !== ''))) {
+          if (!valuesEqual(k, form[k], setting[k]) && (form[k] !== '' || (setting[k] !== undefined && setting[k] !== null && setting[k] !== ''))) {
             changed[k] = form[k];
           }
         });
@@ -279,6 +303,7 @@ const Settings = () => {
       const root = document.documentElement;
       root.style.setProperty('--color-primary', form.colorPrimary);
       root.style.setProperty('--color-secondary', form.colorSecondary);
+      root.style.setProperty('--color-primary-alt', form.colorSecondary);
       root.style.setProperty('--color-accent', form.colorAccent);
       // UI variables
       root.style.setProperty('--ui-border-radius', `${form.ui_button_radius || '8'}px`);
@@ -302,9 +327,10 @@ const Settings = () => {
   const resetPreviewFromSetting = () => {
     try {
       const root = document.documentElement;
-      root.style.setProperty('--color-primary', setting?.colorPrimary || '#69be3c');
-      root.style.setProperty('--color-secondary', setting?.colorSecondary || '#2eafff');
-      root.style.setProperty('--color-accent', setting?.colorAccent || '#2eafff');
+      root.style.setProperty('--color-primary', setting?.colorPrimary || '#ED1C24');
+      root.style.setProperty('--color-secondary', setting?.colorSecondary || '#1C75BC');
+      root.style.setProperty('--color-primary-alt', setting?.colorSecondary || '#1C75BC');
+      root.style.setProperty('--color-accent', setting?.colorAccent || '#ACCCE6');
       // Reset UI variables from saved settings or defaults
       root.style.setProperty('--ui-border-radius', `${setting?.ui_button_radius || '8'}px`);
       root.style.setProperty('--ui-button-radius', `${setting?.ui_button_radius || '8'}px`);
@@ -522,6 +548,7 @@ const Settings = () => {
     { id: 'links-apps', label: 'روابط مهمة وتطبيقات' }
   ];
   const goTo = (id) => {
+    if (isDirty && !confirm('لديك تغييرات غير محفوظة. هل تريد المتابعة دون حفظ؟')) return;
     setCurrentSection(id);
     setNavOpen(false);
     // Optional smooth scroll if needed
@@ -531,61 +558,193 @@ const Settings = () => {
     }, 50);
   };
 
+  const [sectionQuery, setSectionQuery] = useState('');
+  const sectionSearchRef = useRef(null);
+  const filteredSections = useMemo(() => {
+    const q = sectionQuery.trim().toLowerCase();
+    if (!q) return sections;
+    return sections.filter(s => (s.label || '').toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
+  }, [sections, sectionQuery]);
+  const [pinned, setPinned] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('admin.settings.pinned') || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('admin.settings.pinned', JSON.stringify(pinned)); } catch {}
+  }, [pinned]);
+  const togglePin = (id) => {
+    setPinned((arr) => arr.includes(id) ? arr.filter(x=>x!==id) : [...arr, id]);
+  };
+  useEffect(() => {
+    if (navOpen) {
+      try { sectionSearchRef.current?.focus(); } catch {}
+    }
+  }, [navOpen]);
+  useEffect(() => {
+    if (!navOpen) setSectionQuery('');
+  }, [navOpen]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKeyDown = (e) => { if (e.key === 'Escape') setNavOpen(false); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navOpen]);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('admin.settings.currentSection');
+      if (saved && sections.some(s=>s.id===saved)) setCurrentSection(saved);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem('admin.settings.currentSection', currentSection); } catch {}
+  }, [currentSection]);
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const k = String(e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 's') {
+        e.preventDefault();
+        try { document.querySelector('form.settings-form button[type="submit"]').click(); } catch {}
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const iconFor = (id) => {
+    switch (id) {
+      case 'store-info': return <Building size={16} />;
+      case 'brand-colors': return <Palette size={16} />;
+      case 'ui-components': return <LayoutGrid size={16} />;
+      case 'logo-preview': return <ImageIcon size={16} />;
+      case 'contact-info': return <Phone size={16} />;
+      case 'company-footer': return <Building size={16} />;
+      case 'top-strip': return <TicketPercent size={16} />;
+      case 'hero': return <ImageIcon size={16} />;
+      case 'whatsapp': return <MessageCircle size={16} />;
+      case 'env-db': return <Database size={16} />;
+      case 'shipping-payment': return <CreditCard size={16} />;
+      case 'shipping-providers': return <Truck size={16} />;
+      case 'links-apps': return <LinkIcon size={16} />;
+      default: return <LayoutGrid size={16} />;
+    }
+  };
+
   return (
     <AdminLayout title="الإعدادات / Settings">
       <Seo title="الإعدادات | Settings" description="Store settings" />
       <div style={{display:'flex', alignItems:'center', gap:8, justifyContent:'space-between'}}>
         <div style={{margin:0}} />
-        <Button type="button" variant="secondary" size="sm" onClick={()=> setNavOpen(true)}>
+        <Button type="button" variant="secondary" size="sm" aria-controls="settings-sections-drawer" aria-expanded={navOpen ? 'true' : 'false'} onClick={()=> setNavOpen(true)}>
           قائمة الأقسام
         </Button>
       </div>
       {/* Drawer */}
       {navOpen && (
         <>
-          <div onClick={()=> setNavOpen(false)} style={{position:'fixed', inset:0, background:'rgba(0,0,0,.35)', zIndex:50}} />
-          <aside role="dialog" aria-label="قائمة الأقسام" style={{position:'fixed', insetBlockStart:0, insetInlineEnd:0, blockSize:'100dvh', inlineSize:'min(80vw, 320px)', background:'#fff', borderInlineStart:'1px solid #e2e8f0', zIndex:60, display:'grid', gridTemplateRows:'auto 1fr', boxShadow:'-12px 0 24px -16px rgba(0,0,0,.25)'}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 12px', borderBlockEnd:'1px solid #e2e8f0'}}>
-              <strong>أقسام الإعدادات</strong>
+          <div onClick={()=> setNavOpen(false)} style={{position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:50, transition:'opacity .2s ease-out'}} />
+          <aside id="settings-sections-drawer" role="dialog" aria-modal="true" aria-label="قائمة الأقسام" style={{position:'fixed', insetBlockStart:0, insetInlineEnd:0, blockSize:'100dvh', inlineSize:'min(92vw, 360px)', background:'#fff', borderInlineStart:'1px solid #e2e8f0', zIndex:60, display:'grid', gridTemplateRows:'auto auto 1fr', boxShadow:'-12px 0 24px -16px rgba(0,0,0,.25)', transform:'translateX(0)', transition:'transform .25s ease-out'}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px', borderBlockEnd:'1px solid #e2e8f0'}}>
+              <strong style={{fontSize:'.95rem'}}>أقسام الإعدادات</strong>
               <Button type="button" variant="ghost" size="sm" onClick={()=> setNavOpen(false)}>إغلاق</Button>
             </div>
-            <nav style={{padding:8, overflow:'auto'}}>
-              <ul style={{listStyle:'none', margin:0, padding:0, display:'grid', gap:6}}>
-                {sections.map(s => (
-                  <li key={s.id}>
-                    <Button type="button" variant="ghost" size="sm" style={{width:'100%', justifyContent:'flex-start'}} onClick={()=> goTo(s.id)}>
-                      {s.label}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+            <div style={{padding:'8px 12px', borderBlockEnd:'1px solid #e2e8f0'}}>
+              <Input ref={sectionSearchRef} size="sm" placeholder="ابحث عن قسم..." value={sectionQuery} onChange={e=>setSectionQuery(e.target.value)} leading={<Search size={14} />} />
+            </div>
+            <nav style={{padding:'8px 8px 12px', overflow:'auto'}}>
+              {(() => {
+                const list = filteredSections;
+                const fav = list.filter(s => pinned.includes(s.id));
+                const rest = list.filter(s => !pinned.includes(s.id));
+                const renderGroup = (items, title) => (
+                  items.length ? (
+                    <>
+                      {title ? <div style={{padding:'6px 8px', fontSize:'.72rem', opacity:.7}}>{title}</div> : null}
+                      <ul style={{listStyle:'none', margin:0, padding:0, display:'grid', gap:6}}>
+                        {items.map(s => {
+                          const active = currentSection === s.id;
+                          const isPinned = pinned.includes(s.id);
+                          return (
+                            <li key={s.id}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                aria-current={active ? 'true' : undefined}
+                                onClick={()=> goTo(s.id)}
+                                style={{
+                                  width:'100%',
+                                  justifyContent:'flex-start',
+                                  gap:8,
+                                  background: active ? 'rgba(16,185,129,0.1)' : undefined,
+                                  border: active ? '1px solid rgba(16,185,129,0.25)' : '1px solid transparent'
+                                }}
+                              >
+                                <span style={{display:'inline-flex', alignItems:'center', justifyContent:'center', color: active ? 'rgb(5,150,105)' : '#64748b'}}>
+                                  {iconFor(s.id)}
+                                </span>
+                                <span style={{fontSize:'.9rem'}}>{s.label}</span>
+                                <span style={{marginInlineStart:'auto'}} />
+                                <span role="button" tabIndex={0} aria-label={isPinned ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'} onClick={(e)=>{e.stopPropagation(); togglePin(s.id);}} onKeyDown={(e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); e.stopPropagation(); togglePin(s.id); } }} style={{display:'inline-flex', alignItems:'center', justifyContent:'center', padding:4, color: isPinned ? 'rgb(234,179,8)' : '#94a3b8'}}>
+                                  <Star size={16} fill={isPinned ? 'rgb(234,179,8)' : 'none'} />
+                                </span>
+                              </Button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  ) : null
+                );
+                return (
+                  <div style={{display:'grid', gap:8}}>
+                    {renderGroup(fav, 'مفضلة')}
+                    {renderGroup(rest, fav.length ? 'كل الأقسام' : '')}
+                  </div>
+                );
+              })()}
             </nav>
           </aside>
         </>
       )}
-      <div aria-live="polite" style={{minHeight:24, marginBottom:8, color: msg?.startsWith('فشل') ? '#dc2626' : '#0f766e'}}>{msg}</div>
+      <div aria-live="polite" style={{minHeight:24, marginBottom:8, color: msg?.startsWith('فشل') ? 'var(--color-danger)' : 'var(--color-primary-alt)'}}>{msg}</div>
       {loading ? (
         <p>يتم التحميل...</p>
       ) : error ? (
         <p className="error">خطأ: {error}</p>
       ) : (
-        <form onSubmit={submit} className="settings-form" style={{display:'grid', gap:12, maxWidth:880}}>
-          <section id="store-info" style={{scrollMarginTop:80}} hidden={currentSection !== 'store-info'}>
-          <fieldset style={{display:'grid', gap:8, border:'1px solid #e2e8f0', borderRadius:8, padding:12}}>
-            <legend style={{padding:'0 6px', fontWeight:800, fontSize:'.85rem'}}>معلومات المتجر</legend>
-            <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
-              <label htmlFor="siteNameAr" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>اسم المتجر (AR)</span>
-                <input id="siteNameAr" value={form.siteNameAr} onChange={e=>onChange('siteNameAr', e.target.value)} placeholder="مثال: متجر النخبة" />
-          <Input id="siteNameAr" value={form.siteNameAr} onChange={e=>onChange('siteNameAr', e.target.value)} placeholder="مثال: متجر النخبة" />
-              </label>
-              <label htmlFor="siteNameEn" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>Store Name (EN)</span>
-                <input id="siteNameEn" value={form.siteNameEn} onChange={e=>onChange('siteNameEn', e.target.value)} placeholder="e.g., Elite Store" />
-          <Input id="siteNameEn" value={form.siteNameEn} onChange={e=>onChange('siteNameEn', e.target.value)} placeholder="e.g., Elite Store" />
-                {errors.siteNameEn && <small style={{color:'#dc2626'}}>{errors.siteNameEn}</small>}
-              </label>
-            </div>
+        <FormProvider {...formMethods}>
+          <form onSubmit={submit} className="settings-form" style={{display:'grid', gap:12, maxWidth:880}}>
+            <section id="store-info" style={{scrollMarginTop:80}} hidden={currentSection !== 'store-info'}>
+  <Fieldset title="معلومات المتجر">
+    <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
+      <FormField htmlFor="siteNameAr" label="اسم المتجر (AR)">
+        <Controller
+          name="siteNameAr"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              id="siteNameAr"
+              value={field.value ?? ''}
+              onChange={e => { const v = e.target.value; field.onChange(v); onChange('siteNameAr', v); }}
+              placeholder="مثال: متجر النخبة"
+            />
+          )}
+        />
+      </FormField>
+      <FormField htmlFor="siteNameEn" label="Store Name (EN)" error={errors.siteNameEn || formMethods.formState.errors.siteNameEn?.message}>
+        <Controller
+          name="siteNameEn"
+          control={formMethods.control}
+          render={({ field }) => (
+            <Input
+              id="siteNameEn"
+              value={field.value ?? ''}
+              onChange={e => { const v = e.target.value; field.onChange(v); onChange('siteNameEn', v); }}
+              placeholder="e.g., Elite Store"
+            />
+          )}
+        />
+      </FormField>
+    </div>
             {/* SEO Preview */}
             <div style={{marginTop:8, borderTop:'1px dashed #e2e8f0', paddingTop:8, display:'flex', gap:8, alignItems:'center', justifyContent:'space-between'}}>
               <div>
@@ -598,7 +757,7 @@ const Settings = () => {
                 <Button type="button" variant="secondary" size="sm" onClick={resetSeoPreviewFromSetting}>إعادة معاينة SEO</Button>
               </div>
             </div>
-          </fieldset>
+          </Fieldset>
           </section>
 
           <div hidden={currentSection !== 'ui-components'}>
@@ -619,39 +778,50 @@ const Settings = () => {
           </div>
 
           <section id="brand-colors" style={{scrollMarginTop:80}} hidden={currentSection !== 'brand-colors'}>
-          <fieldset style={{display:'grid', gap:8, border:'1px solid #e2e8f0', borderRadius:8, padding:12}}>
-            <legend style={{padding:'0 6px', fontWeight:800, fontSize:'.85rem'}}>ألوان الهوية</legend>
+          <Fieldset title="ألوان الهوية">
             <div style={{display:'grid', gridTemplateColumns:'var(--cols-3)', gap:8}}>
-              <label htmlFor="colorPrimary" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>اللون الأساسي</span>
-                <input id="colorPrimary" type="color" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
-          <Input id="colorPrimary" type="color" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
-                <input aria-label="Hex" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
-          <Input aria-label="Hex" value={form.colorPrimary} onChange={e=>onChange('colorPrimary', e.target.value)} />
-                {errors.colorPrimary && <small style={{color:'#dc2626'}}>{errors.colorPrimary}</small>}
-              </label>
-              <label htmlFor="colorSecondary" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>اللون الثانوي</span>
-                <input id="colorSecondary" type="color" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
-          <Input id="colorSecondary" type="color" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
-                <input aria-label="Hex" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
-          <Input aria-label="Hex" value={form.colorSecondary} onChange={e=>onChange('colorSecondary', e.target.value)} />
-                {errors.colorSecondary && <small style={{color:'#dc2626'}}>{errors.colorSecondary}</small>}
-              </label>
-              <label htmlFor="colorAccent" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>لون مميز</span>
-                <input id="colorAccent" type="color" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
-          <Input id="colorAccent" type="color" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
-                <input aria-label="Hex" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
-          <Input aria-label="Hex" value={form.colorAccent} onChange={e=>onChange('colorAccent', e.target.value)} />
-                {errors.colorAccent && <small style={{color:'#dc2626'}}>{errors.colorAccent}</small>}
-              </label>
+              <FormField htmlFor="colorPrimary" label="اللون الأساسي" error={errors.colorPrimary || formMethods.formState.errors.colorPrimary?.message}>
+                <Controller
+                  name="colorPrimary"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Input id="colorPrimary" type="color" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('colorPrimary', v); }} />
+                      <Input aria-label="Hex" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('colorPrimary', v); }} />
+                    </>
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="colorSecondary" label="اللون الثانوي" error={errors.colorSecondary || formMethods.formState.errors.colorSecondary?.message}>
+                <Controller
+                  name="colorSecondary"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Input id="colorSecondary" type="color" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('colorSecondary', v); }} />
+                      <Input aria-label="Hex" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('colorSecondary', v); }} />
+                    </>
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="colorAccent" label="لون مميز" error={errors.colorAccent || formMethods.formState.errors.colorAccent?.message}>
+                <Controller
+                  name="colorAccent"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <>
+                      <Input id="colorAccent" type="color" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('colorAccent', v); }} />
+                      <Input aria-label="Hex" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('colorAccent', v); }} />
+                    </>
+                  )}
+                />
+              </FormField>
             </div>
             <div style={{display:'flex', gap:8}}>
               <Button type="button" variant="success" onClick={applyPreviewToApp}>تطبيق المعاينة</Button>
               <Button type="button" variant="secondary" onClick={resetPreviewFromSetting}>إلغاء المعاينة</Button>
             </div>
-          </fieldset>
+          </Fieldset>
           </section>
 
           <div hidden={currentSection !== 'logo-preview'}>
@@ -672,42 +842,66 @@ const Settings = () => {
           <div style={{display:'grid', gap:8}}>
             <span style={{fontSize:'.8rem', fontWeight:800}}>معلومات التواصل</span>
             <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
-              <label htmlFor="supportPhone" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>رقم الهاتف (هاتف)</span>
-                <input id="supportPhone" value={form.supportPhone} onChange={e=>onChange('supportPhone', e.target.value)} placeholder="مثال: 920000000" />
-          <Input id="supportPhone" value={form.supportPhone} onChange={e=>onChange('supportPhone', e.target.value)} placeholder="مثال: 920000000" />
-                {errors.supportPhone && <small style={{color:'#dc2626'}}>{errors.supportPhone}</small>}
-              </label>
-              <label htmlFor="supportMobile" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>رقم الجوال (Mobile)</span>
-                <input id="supportMobile" value={form.supportMobile} onChange={e=>onChange('supportMobile', e.target.value)} placeholder="مثال: +9665XXXXXXXX" />
-          <Input id="supportMobile" value={form.supportMobile} onChange={e=>onChange('supportMobile', e.target.value)} placeholder="مثال: +9665XXXXXXXX" />
-                {errors.supportMobile && <small style={{color:'#dc2626'}}>{errors.supportMobile}</small>}
-              </label>
-              <label htmlFor="supportWhatsapp" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>واتساب (أرقام فقط)</span>
-                <input id="supportWhatsapp" value={form.supportWhatsapp}
-                  onChange={e=>onChange('supportWhatsapp', e.target.value)}
-                  onBlur={e=> onChange('supportWhatsapp', e.target.value.replace(/\D+/g,''))}
-                  placeholder="مثال: 9665XXXXXXXX" />
-                <small style={{opacity:.7}}>سيستخدم كرابط wa.me/الرقم</small>
-              </label>
-              <label htmlFor="supportEmail" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>البريد الإلكتروني</span>
-                <input id="supportEmail" type="email" value={form.supportEmail} onChange={e=>onChange('supportEmail', e.target.value)} placeholder="support@example.com" />
-          <Input id="supportEmail" type="email" value={form.supportEmail} onChange={e=>onChange('supportEmail', e.target.value)} placeholder="support@example.com" />
-                {errors.supportEmail && <small style={{color:'#dc2626'}}>{errors.supportEmail}</small>}
-              </label>
-              <label htmlFor="supportHours" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>ساعات العمل (اختياري)</span>
-                <input id="supportHours" value={form.supportHours} onChange={e=>onChange('supportHours', e.target.value)} placeholder="مثال: 9ص - 6م (السبت-الخميس)" />
-          <Input id="supportHours" value={form.supportHours} onChange={e=>onChange('supportHours', e.target.value)} placeholder="مثال: 9ص - 6م (السبت-الخميس)" />
-              </label>
-              <label htmlFor="taxNumber" style={{display:'grid', gap:4}}>
-                <span style={{fontSize:'.7rem', fontWeight:700}}>الرقم الضريبي (اختياري)</span>
-                <input id="taxNumber" value={form.taxNumber} onChange={e=>onChange('taxNumber', e.target.value)} placeholder="مثال: 311307460300003" />
-          <Input id="taxNumber" value={form.taxNumber} onChange={e=>onChange('taxNumber', e.target.value)} placeholder="مثال: 311307460300003" />
-              </label>
+              <FormField htmlFor="supportPhone" label="رقم الهاتف (هاتف)" error={errors.supportPhone || formMethods.formState.errors.supportPhone?.message}>
+                <Controller
+                  name="supportPhone"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <Input id="supportPhone" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('supportPhone', v); }} placeholder="مثال: 920000000" />
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="supportMobile" label="رقم الجوال (Mobile)" error={errors.supportMobile || formMethods.formState.errors.supportMobile?.message}>
+                <Controller
+                  name="supportMobile"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <Input id="supportMobile" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('supportMobile', v); }} placeholder="مثال: +9665XXXXXXXX" />
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="supportWhatsapp" label="واتساب (أرقام فقط)" hint={"سيستخدم كرابط wa.me/الرقم"}>
+                <Controller
+                  name="supportWhatsapp"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <Input
+                      id="supportWhatsapp"
+                      value={field.value ?? ''}
+                      onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('supportWhatsapp', v); }}
+                      onBlur={e=>{ const v=e.target.value.replace(/\D+/g,''); field.onBlur(); field.onChange(v); onChange('supportWhatsapp', v); }}
+                      placeholder="مثال: 9665XXXXXXXX"
+                    />
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="supportEmail" label="البريد الإلكتروني" error={errors.supportEmail || formMethods.formState.errors.supportEmail?.message}>
+                <Controller
+                  name="supportEmail"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <Input id="supportEmail" type="email" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('supportEmail', v); }} placeholder="support@example.com" />
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="supportHours" label="ساعات العمل (اختياري)">
+                <Controller
+                  name="supportHours"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <Input id="supportHours" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('supportHours', v); }} placeholder="مثال: 9ص - 6م (السبت-الخميس)" />
+                  )}
+                />
+              </FormField>
+              <FormField htmlFor="taxNumber" label="الرقم الضريبي (اختياري)">
+                <Controller
+                  name="taxNumber"
+                  control={formMethods.control}
+                  render={({ field }) => (
+                    <Input id="taxNumber" value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('taxNumber', v); }} placeholder="مثال: 311307460300003" />
+                  )}
+                />
+              </FormField>
             </div>
           </div>
           </section>
@@ -758,13 +952,9 @@ const Settings = () => {
           </div>
 
           {/* Sticky save bar */}
-          <div style={{position:'sticky', bottom:0, background:'rgba(255,255,255,0.7)', backdropFilter:'saturate(180%) blur(8px)', padding:'10px 0', borderTop:'1px solid #e2e8f0', display:'flex', gap:8, alignItems:'center'}}>
-            <Button type="submit" variant="primary" disabled={saving}>
-              {saving ? 'يحفظ...' : 'حفظ التغييرات'}
-            </Button>
-            <span style={{fontSize:'.75rem', opacity:.8}}>لن يتم تطبيق الألوان على الزوار حتى تحفظ التغييرات.</span>
-          </div>
+          <SaveBar saving={saving} canSave={isDirty} note={'لن يتم تطبيق الألوان على الزوار حتى تحفظ التغييرات.'} />
         </form>
+        </FormProvider>
       )}
     </AdminLayout>
   );

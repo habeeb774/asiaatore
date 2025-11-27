@@ -1,9 +1,47 @@
 import React, { useMemo } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { X, LogOut } from 'lucide-react';
 import { adminLinks } from './AdminLinks';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
+
+const LINK_GROUPS = [
+  {
+    id: 'dashboard',
+    titleAr: 'الرئيسية',
+    titleEn: 'Home',
+    keys: ['overview', 'analytics', 'reports'],
+  },
+  {
+    id: 'commerce',
+    titleAr: 'المتجر',
+    titleEn: 'Store',
+    keys: ['orders', 'products', 'categories', 'brands', 'reviews', 'bank_transfers'],
+  },
+  {
+    id: 'users',
+    titleAr: 'العملاء والمستخدمون',
+    titleEn: 'Customers & Users',
+    keys: ['customers', 'users', 'sellers', 'sellers_kyc'],
+  },
+  {
+    id: 'marketing',
+    titleAr: 'التسويق والحملات',
+    titleEn: 'Marketing & Campaigns',
+    keys: ['marketing', 'apps'],
+  },
+  {
+    id: 'system',
+    titleAr: 'إعدادات النظام',
+    titleEn: 'System Settings',
+    keys: ['settings', 'developer_settings', 'audit'],
+  },
+];
+
+const adminLinksByKey = adminLinks.reduce((acc, link) => {
+  acc[link.key] = link;
+  return acc;
+}, {});
 
 function useLocaleLabel(locale) {
   return useMemo(() => (
@@ -12,37 +50,86 @@ function useLocaleLabel(locale) {
 }
 
 function DrawerNav({ collapsed, onNavigate, locale }) {
-  const location = useLocation();
   const getLabel = useLocaleLabel(locale);
 
   return (
-    <ul className="mt-2 space-y-1" role="list">
-      {adminLinks.map((link) => {
-        const Icon = link.icon;
-        const label = getLabel(link);
-        const isExact = link.exact;
+    <nav
+      className="mt-2 space-y-4"
+      aria-label={locale === 'ar' ? 'قائمة الإدارة' : 'Admin navigation'}
+    >
+      {LINK_GROUPS.map((group) => {
+        const groupLinks = group.keys
+          .map((key) => adminLinksByKey[key])
+          .filter(Boolean);
+
+        if (!groupLinks.length) return null;
+
+        const groupTitle = locale === 'ar' ? group.titleAr : group.titleEn;
+
         return (
-          <li key={link.key}>
-            <NavLink
-              to={link.to}
-              end={isExact}
-              className={({ isActive }) => [
-                'group flex items-center rounded-lg px-3 py-2 text-sm transition-colors',
-                isActive
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-200 hover:bg-white/10 hover:text-white',
-                collapsed ? 'justify-center' : 'gap-3',
-              ].join(' ')}
-              aria-label={collapsed ? label : undefined}
-              onClick={() => onNavigate?.()}
-            >
-              {Icon ? <Icon size={19} aria-hidden /> : null}
-              {!collapsed && <span className="truncate">{label}</span>}
-            </NavLink>
-          </li>
+          <div key={group.id} className="space-y-1.5">
+            {!collapsed && (
+              <div className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide uppercase text-slate-400/80">
+                {groupTitle}
+              </div>
+            )}
+            <ul className="space-y-1" role="list">
+              {groupLinks.map((link) => (
+                <DrawerNavItem
+                  key={link.key}
+                  link={link}
+                  label={getLabel(link)}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </ul>
+          </div>
         );
       })}
-    </ul>
+    </nav>
+  );
+}
+
+function DrawerNavItem({ link, label, collapsed, onNavigate }) {
+  const Icon = link.icon;
+  const isExact = link.exact;
+
+  return (
+    <li>
+      <NavLink
+        to={link.to}
+        end={isExact}
+        className={({ isActive }) => [
+          'group relative flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-all',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+          isActive
+            ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-sm'
+            : 'text-slate-200 hover:bg-white/5 hover:text-white',
+          collapsed ? 'justify-center' : 'gap-3',
+        ].join(' ')}
+        aria-label={collapsed ? label : undefined}
+        onClick={() => onNavigate?.()}
+      >
+        {Icon ? (
+          <span
+            className={[
+              'flex h-8 w-8 items-center justify-center rounded-lg border',
+              'border-white/10 bg-white/5 text-emerald-100',
+              'group-hover:border-white/20 group-hover:bg-white/10',
+            ].join(' ')}
+            aria-hidden
+          >
+            <Icon size={18} />
+          </span>
+        ) : null}
+        {!collapsed && (
+          <span className="flex-1 truncate text-[13px]">
+            {label}
+          </span>
+        )}
+      </NavLink>
+    </li>
   );
 }
 
@@ -97,8 +184,9 @@ export default function AdminDrawer({
   const content = (
     <div
       className={[
-        'flex h-full flex-col bg-slate-900/98 text-white shadow-xl',
-        'backdrop-blur-sm border-l border-slate-800',
+        'flex h-full flex-col text-white shadow-xl',
+        'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950',
+        'backdrop-blur-xl border-l border-slate-800/80',
         'transition-all duration-300 ease-in-out',
         collapsed ? 'w-20' : 'w-72',
       ].join(' ')}
@@ -114,7 +202,7 @@ export default function AdminDrawer({
   if (mode === 'pinned') {
     return (
       <aside
-        className="hidden lg:flex absolute top-0 right-0 bottom-0 z-20"
+        className="hidden lg:flex absolute top-0 right-0 bottom-0 z-30"
         aria-label="Admin navigation"
       >
         {content}

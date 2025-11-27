@@ -1,4 +1,6 @@
 import React from 'react';
+import { ArrowUp } from 'lucide-react';
+import { Button } from '../ui';
 
 export default function ScrollTopButton() {
   const [visible, setVisible] = React.useState(false);
@@ -13,13 +15,14 @@ export default function ScrollTopButton() {
   }, []);
   if (!visible) return null;
   return (
-    <button
-      type="button"
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="fixed bottom-5 inset-inline-end-5 z-50 rounded-full bg-slate-900 text-white shadow-lg hover:bg-slate-800 transition p-3"
+    <Button
       aria-label="العودة للأعلى"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed bottom-5 inset-inline-end-5 z-50"
+      size="icon"
+      variant="primary"
     >
-      ↑
-    </button>
+      <ArrowUp size={18} />
+    </Button>
   );
 }

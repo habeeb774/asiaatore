@@ -13,7 +13,8 @@ const variantMap = {
   ghost: 'ui-btn--ghost',
   danger: 'ui-btn--danger',
   destructive: 'ui-btn--danger',
-  success: 'ui-btn--success'
+  success: 'ui-btn--success',
+  soft: 'ui-btn--soft'
 };
 
 const sizeMap = { sm: 'ui-btn--sm', md: 'ui-btn--md', lg: 'ui-btn--lg', icon: 'ui-btn--icon' };
@@ -23,24 +24,64 @@ export function buttonVariants({ variant = 'primary', size = 'md', className } =
 }
 
 const Button = React.forwardRef(function Button(
-  { as = 'button', variant = 'primary', size = 'md', className, children, disabled = false, 'aria-label': ariaLabel, ...rest },
+  {
+    as = 'button',
+    variant = 'primary',
+    size = 'md',
+    className,
+    children,
+    disabled = false,
+    loading = false,
+    leading,
+    trailing,
+    block = false,
+    'aria-label': ariaLabel,
+    ...rest
+  },
   ref
 ) {
   const compClass = clsx(buttonVariants({ variant, size, className }), {
-    'is-disabled': disabled
+    'is-disabled': disabled || loading,
+    'is-loading': loading,
+    'ui-btn--block': block
   });
+
+  const content = (
+    <span className="ui-btn__content">
+      {leading ? <span className="ui-btn__icon ui-btn__icon--leading">{leading}</span> : null}
+      <span className="ui-btn__label">{children}</span>
+      {trailing ? <span className="ui-btn__icon ui-btn__icon--trailing">{trailing}</span> : null}
+    </span>
+  );
 
   if (as === 'a') {
     return (
-      <a ref={ref} className={compClass} aria-label={ariaLabel} {...rest}>
-        {children}
+      <a
+        ref={ref}
+        className={compClass}
+        aria-label={ariaLabel}
+        aria-disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        {...rest}
+      >
+        {content}
+        {loading ? <span className="ui-spinner ui-btn__spinner" aria-hidden="true" /> : null}
       </a>
     );
   }
 
   return (
-    <button ref={ref} type={rest.type || 'button'} className={compClass} disabled={disabled} aria-label={ariaLabel} {...rest}>
-      {children}
+    <button
+      ref={ref}
+      type={rest.type || 'button'}
+      className={compClass}
+      disabled={disabled || loading}
+      aria-label={ariaLabel}
+      aria-busy={loading || undefined}
+      {...rest}
+    >
+      {content}
+      {loading ? <span className="ui-spinner ui-btn__spinner" aria-hidden="true" /> : null}
     </button>
   );
 });

@@ -6,7 +6,7 @@
   position: fixed;
   inset: 0 0 auto 0;
   top: 0;
-  z-index: 1250; // Above backdrop (1200) but below sidebar panel (1300)
+  z-index: var(--header-zindex, 1200); // Uses centralized z-index from tokens
   background: var(--color-surface);
   -webkit-backdrop-filter: saturate(140%) blur(8px);
   backdrop-filter: saturate(140%) blur(8px);
@@ -398,26 +398,6 @@
     flex-wrap: wrap;
   }
 
-/* Desktop / tablet integration for inline TopNav */
-@media (min-width: 768px) {
-  .header .topnav-inline {
-    display: flex; /* shown via Tailwind utility too; ensure fallback */
-    justify-content: center;
-    align-items: center;
-  }
-
-  /* If legacy lower nav exists, hide it on larger screens */
-  .header > .lower-nav,
-  .header .header-lower-nav {
-    display: none !important;
-  }
-
-  /* Reduce header-actions gap on desktop for compactness */
-  .header .header-actions {
-    gap: 8px;
-  }
-}
-
   .header .header-inner.reorganized .header-start {
     order: 1;
   }
@@ -479,6 +459,25 @@
   }
 }
 
+@media (min-width: 768px) {
+  .header .topnav-inline {
+    display: flex; /* shown via Tailwind utility too; ensure fallback */
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* If legacy lower nav exists, hide it on larger screens */
+  .header > .lower-nav,
+  .header .header-lower-nav {
+    display: none !important;
+  }
+
+  /* Reduce header-actions gap on desktop for compactness */
+  .header .header-actions {
+    gap: 8px;
+  }
+}
+
 @media (max-width: 640px) {
   .header .logo img {
     height: 25px;
@@ -487,4 +486,16 @@
   .header .header-inner {
     padding-inline: 0 !important;
   }
-}}
+}
+
+/* Dark mode for header */
+.dark-mode .header {
+  background: var(--color-surface, #161B22);
+  border-bottom-color: var(--color-border, rgba(74, 222, 128, 0.2));
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.dark-mode .header.scrolled {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+}

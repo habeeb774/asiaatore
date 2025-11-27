@@ -20,6 +20,9 @@
     </style>
 
     <title>شركة منفذ اسيا التجارية</title>
+    <!-- Preconnect to Google Fonts to improve reliability -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Fonts: prefer local copies in dev to avoid external DNS/font CDN failures -->
     <style>
@@ -53,27 +56,31 @@
             p2.rel = 'preconnect'; p2.href = 'https://fonts.gstatic.com'; p2.crossOrigin = '';
             head.appendChild(p2);
             var p3 = document.createElement('link');
-            p3.rel = 'preload'; p3.as = 'style'; p3.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap';
+            p3.rel = 'preload'; p3.as = 'style'; p3.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap'; p3.crossOrigin = 'anonymous';
             head.appendChild(p3);
             var p4 = document.createElement('link');
-            p4.rel = 'stylesheet'; p4.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap';
+            p4.rel = 'stylesheet'; p4.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&family=Amiri:wght@400;700&display=swap'; p4.crossOrigin = 'anonymous';
             head.appendChild(p4);
           }
         }catch(e){/* ignore */}
       })();
     </script>
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="https://cdn.assets.salla.network/themes/1034648396/1.126.0/app.css">
-    <link rel="stylesheet" href="https://cdn.salla.network/fonts/sallaicons.css?v=2.0.5">
+    <!-- Styles - Made non-render-blocking -->
+    <link rel="stylesheet" href="https://cdn.assets.salla.network/themes/1034648396/1.126.0/app.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdn.salla.network/fonts/sallaicons.css?v=2.0.5" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdn.assets.salla.network/themes/1034648396/1.126.0/app.css"></noscript>
+    <noscript><link rel="stylesheet" href="https://cdn.salla.network/fonts/sallaicons.css?v=2.0.5"></noscript>
 
     <!-- Favicons / PWA -->
-    <link rel="icon" type="image/png" href="/icons/pwa-192.png">
+    <link rel="icon" type="image/svg+xml" href="/images/site-logo.svg">
+    <link rel="alternate icon" type="image/png" href="/icons/pwa-192.png">
     <link rel="apple-touch-icon" href="/icons/pwa-192.png">
     <link rel="manifest" href="/manifest.webmanifest">
     <meta name="theme-color" content="#69be3c">
     <meta name="msapplication-TileColor" content="#69be3c">
     <meta name="msapplication-config" content="/browserconfig.xml">
+    <!-- PWA Icons - ensure all referenced files exist -->
     <link rel="apple-touch-icon" sizes="72x72" href="/icons/pwa-72.png">
     <link rel="apple-touch-icon" sizes="96x96" href="/icons/pwa-96.png">
     <link rel="apple-touch-icon" sizes="128x128" href="/icons/pwa-128.png">
@@ -231,39 +238,58 @@
     <!-- Prefetching Home route removed: indexing/build previously produced a malformed replacement in dist/index.html on Windows builds.
          If you want to prefetch the Home chunk, add a safe <link rel="modulepreload"> to the generated asset in a post-build step.
          For now we avoid dynamic import() in index.html to prevent build-time string-replacement bugs. -->
-    <!-- Avoid preloading non-essential vendor chunks like vendor.motion and vendor.leaflet
-         This script removes modulepreload links that reference those chunk names so the
-         browser doesn't fetch them eagerly during initial parse. We keep preloads for
-         critical runtime bundles but drop heavy optional libs until they are needed. -->
+    <!-- Dynamic preload script to optimize critical resource loading -->
     <script>
       (function(){
         try{
-          // Run as early as possible to catch <link rel=modulepreload> injected by build
-          const removeIfMatches = (link) => {
+          // Remove non-critical preloads to avoid unused resource warnings
+          const removeNonCriticalPreloads = () => {
             try{
-              const href = link.getAttribute('href') || '';
-              if (/vendor\.motion|vendor\.leaflet/.test(href)) {
-                link.parentNode && link.parentNode.removeChild(link);
-              }
+          const criticalPatterns = [
+                'vendor.react-D3GEvEWB.js',
+                'vendor.common-FbpOaMwW.js',
+                'index-B2089zuU.css',
+                'index-CLRXmrDi.js'
+              ];
+              
+              const links = document.querySelectorAll('link[rel="modulepreload"], link[rel="preload"]');
+              links.forEach(link => {
+                const href = link.getAttribute('href') || '';
+                const isCritical = criticalPatterns.some(pattern => href.includes(pattern));
+                
+                if (!isCritical && (link.rel === 'modulepreload' || link.rel === 'preload')) {
+                  // Convert non-critical preloads to prefetch for later loading
+                  if (href.endsWith('.js')) {
+                    link.setAttribute('rel', 'prefetch');
+                  } else if (href.endsWith('.css')) {
+                    link.setAttribute('rel', 'prefetch');
+                  }
+                }
+              });
             }catch(e){}
           };
-          // Remove existing
-          Array.from(document.getElementsByTagName('link')).forEach(l => {
-            if (l.rel === 'modulepreload') removeIfMatches(l);
-          });
-          // Observe for additions (Vite or other tooling may inject later)
-          const mo = new MutationObserver(mutations => {
-            for (const m of mutations) {
-              for (const node of m.addedNodes) {
-                if (node && node.tagName === 'LINK' && node.rel === 'modulepreload') removeIfMatches(node);
-              }
-            }
-          });
-          mo.observe(document.head || document.documentElement, { childList: true, subtree: true });
-        }catch(e){/* no-op */}
+          
+          // Run after page load to avoid blocking critical resources
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', removeNonCriticalPreloads);
+          } else {
+            setTimeout(removeNonCriticalPreloads, 100);
+          }
+        }catch(e){}
       })();
     </script>
-    <!-- Preload critical chunks for better LCP -->
+    <!-- Preload critical chunks in correct dependency order -->
+    <link rel="modulepreload" href="/assets/vendor.react-D3GEvEWB.js" crossorigin />
+    <link rel="modulepreload" href="/assets/vendor.common-FbpOaMwW.js" crossorigin />
+    <link rel="preload" href="/assets/index-B2089zuU.css" as="style" crossorigin />
+    
+    <!-- Preconnect to critical external domains -->
+    <link rel="preconnect" href="https://api.stripe.com" />
+    <link rel="preconnect" href="https://www.paypal.com" />
+    
+    <!-- DNS prefetch for non-critical domains -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
 
     <!-- DNS prefetch for external resources -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
@@ -355,7 +381,7 @@
         }catch(e){}
       })();
     </script>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.jsx" defer></script>
     <!-- Re-wrap console.error after Vite and app initialization to ensure
          we capture/format arguments safely and avoid devtools formatting
          code throwing. This runs slightly deferred to let Vite install its

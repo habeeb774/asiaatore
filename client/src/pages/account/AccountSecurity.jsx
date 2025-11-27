@@ -111,5 +111,5 @@ const p = {margin:0,fontSize:'.8rem',color:'#475569'};
 const btn = {padding:'.6rem .9rem',border:0,borderRadius:12,background:'linear-gradient(90deg,#69be3c,#f6ad55)',color:'#fff',fontSize:'.8rem',fontWeight:600,cursor:'pointer'};
 const btnGhost = {padding:'.55rem .85rem',border:'1px solid #e2e8f0',borderRadius:12,background:'#fff',color:'#334155',fontSize:'.8rem',fontWeight:600,cursor:'pointer'};
 const inp = {padding:'.6rem .8rem',border:'1px solid #e2e8f0',borderRadius:12,fontSize:'.8rem'};
-const errBox = {background:'#fee2e2',color:'#b91c1c',padding:'.5rem .7rem',borderRadius:12,fontSize:'.75rem',lineHeight:1.5};
+const errBox = {background:'#fee2e2',color:'var(--color-danger-2)',padding:'.5rem .7rem',borderRadius:12,fontSize:'.75rem',lineHeight:1.5};
 const okBox = {background:'#dcfce7',color:'#166534',padding:'.5rem .7rem',borderRadius:12,fontSize:'.75rem',lineHeight:1.5};

@@ -1,0 +1,202 @@
+// =============================================
+// Minimal Grid System
+// =============================================
+
+@use 'sass:color';
+@use 'sass:math';
+@use 'sass:map';
+
+// Spacing variables
+$spacers: (
+  0: 0,
+  1: 0.25rem,
+  2: 0.5rem,
+  3: 1rem,
+  4: 1.5rem,
+  5: 3rem
+) !default;
+
+// Grid breakpoints
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1400px
+) !default;
+
+// Container max widths
+$container-max-widths: (
+  sm: 540px,
+  md: 720px,
+  lg: 960px,
+  xl: 1140px,
+  xxl: 1320px
+) !default;
+
+// Grid columns
+$grid-columns: 12 !default;
+$grid-gutter-width: 1.5rem !default;
+
+// Container
+.container {
+  width: 100%;
+  padding-right: $grid-gutter-width * 0.5;
+  padding-left: $grid-gutter-width * 0.5;
+  margin-right: auto;
+  margin-left: auto;
+
+  @each $breakpoint, $width in $grid-breakpoints {
+    @if $width > 0 {
+      @media (min-width: $width) {
+        max-width: map.get($container-max-widths, $breakpoint);
+      }
+    }
+  }
+}
+
+// Row
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -$grid-gutter-width * 0.5;
+  margin-left: -$grid-gutter-width * 0.5;
+}
+
+// Columns
+[class*="col-"] {
+  width: 100%;
+  padding-right: $grid-gutter-width * 0.5;
+  padding-left: $grid-gutter-width * 0.5;
+}
+
+// Generate grid columns
+@each $breakpoint, $width in $grid-breakpoints {
+  @media (min-width: $width) {
+    $infix: if($width > 0, '-#{$breakpoint}', '');
+
+    @for $i from 1 through $grid-columns {
+      .col#{$infix}-#{$i} {
+        flex: 0 0 math.percentage(math.div($i, $grid-columns));
+        max-width: math.percentage(math.div($i, $grid-columns));
+      }
+    }
+
+    .col#{$infix}-auto {
+      flex: 0 0 auto;
+      width: auto;
+      max-width: 100%;
+    }
+  }
+}
+
+// Base spacing utilities
+@each $size, $length in $spacers {
+  .m-#{$size} {
+    margin: $length !important;
+  }
+
+  .mt-#{$size},
+  .my-#{$size} {
+    margin-top: $length !important;
+  }
+
+  .mr-#{$size},
+  .mx-#{$size} {
+    margin-right: $length !important;
+  }
+
+  .mb-#{$size},
+  .my-#{$size} {
+    margin-bottom: $length !important;
+  }
+
+  .ml-#{$size},
+  .mx-#{$size} {
+    margin-left: $length !important;
+  }
+
+  .p-#{$size} {
+    padding: $length !important;
+  }
+
+  .pt-#{$size},
+  .py-#{$size} {
+    padding-top: $length !important;
+  }
+
+  .pr-#{$size},
+  .px-#{$size} {
+    padding-right: $length !important;
+  }
+
+  .pb-#{$size},
+  .py-#{$size} {
+    padding-bottom: $length !important;
+  }
+
+  .pl-#{$size},
+  .px-#{$size} {
+    padding-left: $length !important;
+  }
+}
+
+// Responsive spacing utilities
+@each $breakpoint, $width in $grid-breakpoints {
+  @if $width > 0 {
+    @media (min-width: $width) {
+      $infix: '-#{$breakpoint}';
+
+      @each $size, $length in $spacers {
+        .m#{$infix}-#{$size} {
+          margin: $length !important;
+        }
+
+        .mt#{$infix}-#{$size},
+        .my#{$infix}-#{$size} {
+          margin-top: $length !important;
+        }
+
+        .mr#{$infix}-#{$size},
+        .mx#{$infix}-#{$size} {
+          margin-right: $length !important;
+        }
+
+        .mb#{$infix}-#{$size},
+        .my#{$infix}-#{$size} {
+          margin-bottom: $length !important;
+        }
+
+        .ml#{$infix}-#{$size},
+        .mx#{$infix}-#{$size} {
+          margin-left: $length !important;
+        }
+
+        .p#{$infix}-#{$size} {
+          padding: $length !important;
+        }
+
+        .pt#{$infix}-#{$size},
+        .py#{$infix}-#{$size} {
+          padding-top: $length !important;
+        }
+
+        .pr#{$infix}-#{$size},
+        .px#{$infix}-#{$size} {
+          padding-right: $length !important;
+        }
+
+        .pb#{$infix}-#{$size},
+        .py#{$infix}-#{$size} {
+          padding-bottom: $length !important;
+        }
+
+        .pl#{$infix}-#{$size},
+        .px#{$infix}-#{$size} {
+          padding-left: $length !important;
+        }
+      }
+    }
+  }
+}

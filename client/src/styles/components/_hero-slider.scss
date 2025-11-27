@@ -5,71 +5,120 @@
 
 // أنماط Swiper المخصصة
 .hero-slider-container {
-  @apply relative overflow-hidden;
+  position: relative;
+  overflow: hidden;
 
   // تخصيص نقاط التنقل
   .hero-pagination-bullet {
     width: 12px;
     height: 12px;
-    @apply rounded-full bg-white/60 transition-all duration-200;
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 9999px;
+    transition: all 0.2s;
   }
 
   .hero-pagination-bullet-active {
-    @apply bg-white scale-125 shadow-lg;
+    background-color: white;
+    transform: scale(1.25);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   // تخصيص أزرار التنقل
   .hero-nav-prev,
   .hero-nav-next {
-    @apply absolute top-1/2 -translate-y-1/2 z-10 bg-black/40 hover:bg-black/70 text-white rounded-full w-12 h-12 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: white;
+    border-radius: 9999px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .hero-nav-prev:hover,
+  .hero-nav-next:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+
+  .hero-nav-prev:focus,
+  .hero-nav-next:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
   }
 
   .hero-nav-prev {
-    @apply left-4;
+    left: 16px;
   }
 
   .hero-nav-next {
-    @apply right-4;
+    right: 16px;
   }
 
   // تخصيص Swiper
   .hero-swiper {
-    @apply w-full h-full;
+    width: 100%;
+    height: 100%;
 
     .swiper-pagination {
-      @apply bottom-4;
+      bottom: 16px;
     }
 
     .swiper-pagination-bullet {
-      @apply bg-white/60 hover:bg-white/80;
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+
+    .swiper-pagination-bullet:hover {
+      background-color: rgba(255, 255, 255, 0.8);
     }
 
     .swiper-pagination-bullet-active {
-      @apply bg-white scale-125 shadow-lg;
+      background-color: white;
+      transform: scale(1.25);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
     .swiper-button-prev,
     .swiper-button-next {
-      @apply text-white bg-black/40 hover:bg-black/70 rounded-full w-12 h-12 transition-all duration-200;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.4);
+      border-radius: 9999px;
+      width: 48px;
+      height: 48px;
+      transition: all 0.2s;
+    }
 
-      &::after {
-        @apply text-lg font-bold;
-      }
+    .swiper-button-prev:hover,
+    .swiper-button-next:hover {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .swiper-button-prev::after,
+    .swiper-button-next::after {
+      font-size: 18px;
+      font-weight: bold;
     }
 
     .swiper-button-prev {
-      @apply left-4;
+      left: 16px;
     }
 
     .swiper-button-next {
-      @apply right-4;
+      right: 16px;
     }
   }
 }
 
 // أنماط حالة التحميل
 .hero-slider-loading {
-  @apply relative overflow-hidden;
+  position: relative;
+  overflow: hidden;
 
   .animate-spin {
     animation: spin 1s linear infinite;
@@ -87,87 +136,173 @@
 
 // أنماط الشريحة الفردية
 .hero-slide {
-  @apply relative w-full h-full cursor-pointer overflow-hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  overflow: hidden;
 
   // تأثيرات التحويم
   &:hover {
     .hero-image-container img {
-      @apply scale-105;
+      transform: scale(1.05);
     }
   }
 
   // انتقال سلس للصور
   .hero-image-container {
-    @apply relative overflow-hidden;
+    position: relative;
+    overflow: hidden;
 
     img {
-      @apply transition-transform duration-700 ease-out;
+      transition: transform 0.7s ease-out;
     }
   }
 }
 
 // أنماط المحتوى النصي
 .hero-content {
-  @apply absolute inset-0 flex flex-col justify-center items-center text-center px-6;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
 
   // تأثيرات النص
   h1 {
-    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4;
+    font-size: clamp(2.25rem, 5vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
 
     span {
-      @apply block text-white drop-shadow-2xl;
+      display: block;
+      color: white;
+      filter: drop-shadow(0 25px 50px -12px rgba(0, 0, 0, 0.25));
     }
   }
 
   p {
-    @apply text-lg sm:text-2xl md:text-3xl text-white/95 font-medium max-w-3xl mx-auto leading-snug drop-shadow-lg mb-6;
+    font-size: clamp(1.125rem, 2vw, 1.875rem);
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 500;
+    max-width: 48rem;
+    margin: 0 auto 24px;
+    line-height: 1.4;
+    filter: drop-shadow(0 10px 8px -3px rgba(0, 0, 0, 0.1));
   }
 
   // زر الدعوة للعمل
   .hero-cta {
-    @apply bg-white text-gray-900 hover:bg-gray-100 px-8 py-4 rounded-full font-semibold shadow-xl transition-all duration-200;
+    background-color: white;
+    color: #111827;
+    padding: 16px 32px;
+    border-radius: 9999px;
+    font-weight: 600;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s;
+  }
+
+  .hero-cta:hover {
+    background-color: #f3f4f6;
   }
 }
 
 // أنماط البانر
 .hero-banner-content {
-  @apply absolute inset-0 flex flex-col items-center justify-center text-center px-4;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
 
   .banner-overlay {
-    @apply bg-black/50 rounded-xl px-4 py-3 inline-block max-w-2xl mx-auto shadow-lg;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: inline-block;
+    max-width: 42rem;
+    margin: 0 auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
     h2 {
-      @apply text-2xl md:text-4xl font-bold mb-2 drop-shadow-lg text-white;
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+      font-weight: bold;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 10px 8px -3px rgba(0, 0, 0, 0.1));
+      color: white;
     }
 
     p {
-      @apply text-sm md:text-lg max-w-xl text-white/90;
+      font-size: clamp(0.875rem, 1vw, 1.125rem);
+      max-width: 18rem;
+      color: rgba(255, 255, 255, 0.9);
     }
   }
 }
 
 // أنماط نقاط التنقل المخصصة
 .hero-custom-pagination {
-  @apply absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10;
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
 
   button {
     width: 12px;
     height: 12px;
-    @apply rounded-full transition-all duration-200;
+    border-radius: 9999px;
+    transition: all 0.2s;
 
     &.active {
-      @apply bg-white scale-125 shadow-lg;
+      background-color: white;
+      transform: scale(1.25);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
     &:not(.active) {
-      @apply bg-white/60 hover:bg-white/80;
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+
+    &:not(.active):hover {
+      background-color: rgba(255, 255, 255, 0.8);
     }
   }
 }
 
 // أنماط زر التشغيل/الإيقاف
 .hero-play-pause {
-  @apply absolute top-4 right-4 z-10 bg-black/40 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+  border-radius: 9999px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.hero-play-pause:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.hero-play-pause:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 // أنماط متجاوبة
@@ -175,59 +310,63 @@
   .hero-slider-container {
     .hero-nav-prev,
     .hero-nav-next {
-      @apply w-10 h-10;
+      width: 40px;
+      height: 40px;
     }
 
     .hero-nav-prev {
-      @apply left-2;
+      left: 8px;
     }
 
     .hero-nav-next {
-      @apply right-2;
+      right: 8px;
     }
 
     .hero-swiper {
       .swiper-button-prev,
       .swiper-button-next {
-        @apply w-10 h-10;
+        width: 40px;
+        height: 40px;
       }
 
       .swiper-button-prev {
-        @apply left-2;
+        left: 8px;
       }
 
       .swiper-button-next {
-        @apply right-2;
+        right: 8px;
       }
     }
   }
 
   .hero-content {
-    @apply px-4;
+    padding: 16px;
 
     h1 {
-      @apply text-3xl sm:text-4xl md:text-5xl;
+      font-size: clamp(1.875rem, 4vw, 3rem);
     }
 
     p {
-      @apply text-base sm:text-xl md:text-2xl;
+      font-size: clamp(1rem, 1.5vw, 1.5rem);
     }
 
     .hero-cta {
-      @apply px-6 py-3 text-sm;
+      padding: 12px 24px;
+      font-size: 0.875rem;
     }
   }
 
   .hero-banner-content {
     .banner-overlay {
-      @apply px-3 py-2 max-w-sm;
+      padding: 8px 12px;
+      max-width: 20rem;
 
       h2 {
-        @apply text-xl md:text-2xl;
+        font-size: clamp(1.25rem, 2vw, 1.5rem);
       }
 
       p {
-        @apply text-xs md:text-sm;
+        font-size: clamp(0.75rem, 0.875vw, 0.875rem);
       }
     }
   }
@@ -236,29 +375,29 @@
 // أنماط الوضع المظلم
 @media (prefers-color-scheme: dark) {
   .hero-slider-loading {
-    @apply bg-gradient-to-br from-gray-700 to-gray-800;
+    background: linear-gradient(to bottom right, #374151, #1f2937);
   }
 
   .hero-slide .hero-image-container {
-    @apply bg-gradient-to-br from-gray-700 to-gray-800;
+    background: linear-gradient(to bottom right, #374151, #1f2937);
   }
 }
 
 // أنماط الطباعة
 @media print {
   .hero-slider-container {
-    @apply hidden;
+    display: none;
   }
 }
 
 // أنماط الوصولية
 @media (prefers-reduced-motion: reduce) {
   .hero-slide .hero-image-container img {
-    @apply transition-none;
+    transition: none;
   }
 
   .hero-slider-container * {
-    @apply transition-none;
+    transition: none;
   }
 }
 
@@ -266,9 +405,11 @@
 .hero-nav-prev:focus-visible,
 .hero-nav-next:focus-visible,
 .hero-play-pause:focus-visible {
-  @apply ring-2 ring-white/50 ring-offset-2 ring-offset-transparent;
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
 }
 
 .hero-slide:focus-visible {
-  @apply outline-2 outline-white/50 outline-offset-2;
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
 }

@@ -37,6 +37,7 @@ export default function TopStrip() {
           ref={stripRef}
           className="w-full flex gap-4 overflow-x-auto no-scrollbar py-2 items-center smooth-scroll"
           style={{ scrollBehavior: 'smooth' }}
+          role="region"
           aria-label="Top promotions"
         >
           {items.map(b => (

@@ -6,7 +6,7 @@ import Button, { ButtonLink } from '../../components/ui/Button';
 import { motion, AnimatePresence } from '../../lib/framerLazy';
 import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
-import LazyImage from '../../components/common/LazyImage';
+import SafeImage from '../../components/common/SafeImage';
 import { CartSkeleton } from '../../components/shared/PageSkeletons';
 
 const Cart = () => {
@@ -60,6 +60,46 @@ const Cart = () => {
   const FREE_SHIPPING_THRESHOLD = 200; // SAR
   const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - totalValue);
   const progressToFreeShipping = Math.min(100, (totalValue / FREE_SHIPPING_THRESHOLD) * 100);
+
+  const summaryChips = useMemo(() => ([
+    {
+      key: 'items',
+      label: locale === 'ar' ? 'منتجات مختارة' : 'Curated items',
+      value: itemCount,
+      hint: locale === 'ar' ? 'يمكنك تعديل الكميات في أي وقت' : 'Adjust quantities anytime'
+    },
+    {
+      key: 'savings',
+      label: locale === 'ar' ? 'إجمالي التوفير' : 'Total savings',
+      value: items.reduce((sum, item) => {
+        const unit = Number(item.price ?? item.salePrice ?? 0);
+        const old = Number(item.oldPrice ?? item.originalPrice ?? NaN);
+        if (!Number.isFinite(old) || old <= unit) return sum;
+        return sum + (old - unit) * (item.quantity || 1);
+      }, 0),
+      format: true,
+      hint: locale === 'ar' ? 'استفد من عروض اليوم' : 'Tap into today’s offers'
+    },
+    {
+      key: 'shipping',
+      label: locale === 'ar' ? 'الشحن المجاني' : 'Complimentary shipping',
+      value: remainingForFreeShipping <= 0,
+      hint: remainingForFreeShipping <= 0
+        ? (locale === 'ar' ? 'تم تفعيل الشحن المجاني' : 'Complimentary shipping unlocked')
+        : (locale === 'ar'
+            ? `أضف ${formatCurrency(remainingForFreeShipping)} فقط`
+            : `Add ${formatCurrency(remainingForFreeShipping)} more`)
+    }
+  ]), [formatCurrency, itemCount, items, locale, remainingForFreeShipping]);
+
+  const premiumBackground = (
+    <div className="absolute inset-0 -z-10 overflow-hidden">
+      <div className="absolute inset-0 bg-slate-950" aria-hidden="true" />
+      <div className="absolute -top-40 -left-32 h-80 w-80 rounded-full bg-emerald-500/15 blur-3xl" aria-hidden="true" />
+      <div className="absolute top-40 right-0 h-[28rem] w-[28rem] translate-x-1/3 rounded-full bg-amber-400/10 blur-[140px]" aria-hidden="true" />
+      <div className="absolute bottom-0 left-1/2 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-white/5 blur-2xl" aria-hidden="true" />
+    </div>
+  );
 
   const effectiveError = (() => {
     if (error) return error;
@@ -321,14 +361,21 @@ const Cart = () => {
 
   if (items.length === 0) {
     return (
-      <div className="pt-20 min-h-screen bg-gray-50">
+      <div className="relative min-h-screen bg-slate-950 pt-24">
+        {premiumBackground}
         <div className="container-custom px-4 py-16">
-          <div className="text-center">
-            <ShoppingBag size={64} className="mx-auto text-gray-400 mb-4" />
-            <h2 className="text-2xl font-bold mb-4">سلة التسوق فارغة</h2>
-            <p className="text-gray-600 mb-8">لم تقم بإضافة أي منتجات إلى سلة التسوق بعد</p>
-            <ButtonLink to="/products" variant="primary" className="text-lg px-8 py-3">
-              تصفح المنتجات
+          <div className="mx-auto max-w-xl overflow-hidden rounded-4xl border border-white/10 bg-white/5 p-10 text-center text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.9)] backdrop-blur-xl">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10">
+              <ShoppingBag size={36} className="text-white/70" />
+            </div>
+            <h2 className="mb-3 text-3xl font-semibold tracking-tight">{locale === 'ar' ? 'سلة التسوق فارغة' : 'Your cart feels empty'}</h2>
+            <p className="mb-8 text-sm text-white/70">
+              {locale === 'ar'
+                ? 'اكتشف تشكيلتنا المنتقاة بعناية وأضف المنتجات المفضلة لديك'
+                : 'Explore our curated collection and add pieces that speak to you.'}
+            </p>
+            <ButtonLink to="/products" variant="primary" className="inline-flex items-center justify-center px-8 py-3 text-base font-semibold">
+              {locale === 'ar' ? 'تصفح المنتجات' : 'Browse the boutique'}
             </ButtonLink>
           </div>
         </div>
@@ -337,8 +384,9 @@ const Cart = () => {
   }
 
   return (
-    <div className="pt-20 min-h-screen bg-gray-50">
-      <div className="container-custom px-4 py-8">
+    <div className="relative min-h-screen bg-slate-950 pt-24 text-white">
+      {premiumBackground}
+      <div className="container-custom relative px-4 pb-12">
         {cartLoading && items.length > 0 && (
           <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-800">
             {locale === 'ar'
@@ -380,30 +428,68 @@ const Cart = () => {
             </p>
           </motion.div>
         )}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">سلة التسوق</h1>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setCartViewMode(cartViewMode === 'detailed' ? 'compact' : 'detailed')}
-              className="text-gray-600 hover:text-gray-800 flex items-center space-x-2 space-x-reverse text-sm"
-              title={locale === 'ar' ? 'تبديل وضع العرض' : 'Toggle view mode'}
-            >
-              <span>{cartViewMode === 'detailed' ? (locale === 'ar' ? 'عرض مختصر' : 'Compact') : (locale === 'ar' ? 'عرض مفصل' : 'Detailed')}</span>
-            </button>
-            <button
-              onClick={handleClearCart}
-              className="text-red-600 hover:text-red-700 flex items-center space-x-2 space-x-reverse disabled:opacity-40 disabled:cursor-not-allowed"
-              disabled={!clearCart || isLoading('clearCart')}
-            >
-              {isLoading('clearCart') ? (
-                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <Trash2 size={20} />
-              )}
-              <span>{isLoading('clearCart') ? (locale === 'ar' ? 'جاري الإفراغ...' : 'Clearing...') : (locale === 'ar' ? 'إفراغ السلة' : 'Clear Cart')}</span>
-            </button>
+        <section className="mb-10 rounded-4xl border border-white/10 bg-white/5 px-6 py-8 shadow-[0_40px_120px_-50px_rgba(15,23,42,0.8)] backdrop-blur-xl">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs uppercase tracking-[0.4em] text-white/60">
+                {locale === 'ar' ? 'تجربة تسوق مخصصة' : 'A bespoke shopping journey'}
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">
+                {locale === 'ar' ? 'سلة التسوق' : 'Your curated cart'}
+              </h1>
+              <p className="mt-3 text-sm text-white/70">
+                {locale === 'ar'
+                  ? 'راجع اختياراتك بعناية وأكمل الطلب بخطوة واحدة.'
+                  : 'Review your refined selections and glide through checkout with ease.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setCartViewMode(cartViewMode === 'detailed' ? 'compact' : 'detailed')}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                title={locale === 'ar' ? 'تبديل وضع العرض' : 'Toggle view mode'}
+              >
+                <span>{cartViewMode === 'detailed' ? (locale === 'ar' ? 'عرض مختصر' : 'Compact view') : (locale === 'ar' ? 'عرض مفصل' : 'Detailed view')}</span>
+              </button>
+              <button
+                onClick={handleClearCart}
+                className="inline-flex items-center gap-2 rounded-2xl border border-red-300/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={!clearCart || isLoading('clearCart')}
+              >
+                {isLoading('clearCart') ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-200 border-t-transparent" />
+                ) : (
+                  <Trash2 size={18} />
+                )}
+                <span>{isLoading('clearCart') ? (locale === 'ar' ? 'جاري الإفراغ...' : 'Clearing...') : (locale === 'ar' ? 'إفراغ السلة' : 'Clear cart')}</span>
+              </button>
+            </div>
           </div>
-        </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {summaryChips.map((chip) => (
+              <motion.div
+                key={chip.key}
+                className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-inner"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
+              >
+                <p className="text-[0.68rem] uppercase tracking-[0.35em] text-white/50">{chip.label}</p>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold">
+                    {chip.format ? formatCurrency(chip.value) : (typeof chip.value === 'boolean' ? (chip.value ? '✓' : '...') : chip.value)}
+                  </span>
+                  {chip.key === 'shipping' && typeof chip.value === 'boolean' && (
+                    <span className={`text-xs font-semibold ${chip.value ? 'text-emerald-300' : 'text-amber-200'}`}>
+                      {chip.value ? (locale === 'ar' ? 'جاهز للشحن' : 'Ready to ship') : (locale === 'ar' ? 'أضف المزيد' : 'Keep adding')}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-white/60">{chip.hint}</p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* تحذير البيانات القديمة */}
@@ -446,7 +532,7 @@ const Cart = () => {
 
           {/* عناصر السلة */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_30px_100px_-60px_rgba(15,23,42,0.9)] backdrop-blur-xl">
               {/* Inline undo banner (appears when an item was removed) */}
               {undo?.item && (
                 <motion.div
@@ -481,19 +567,15 @@ const Cart = () => {
                 return (
                   <motion.div
                     key={item.id || `${index}-${quantity}`}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 24 }}
                     animate={{
-                      opacity: hasUpdateAnimation(`remove-${item.id}`) ? 0.5 : 1,
+                      opacity: hasUpdateAnimation(`remove-${item.id}`) ? 0.45 : 1,
                       y: 0,
-                      backgroundColor: hasUpdateAnimation(`remove-${item.id}`) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0)',
-                      scale: hasUpdateAnimation(`remove-${item.id}`) ? 0.98 : 1
+                      scale: hasUpdateAnimation(`remove-${item.id}`) ? 0.96 : 1
                     }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{
-                      duration: hasUpdateAnimation(`remove-${item.id}`) ? 0.2 : 0.5,
-                      delay: index * 0.05
-                    }}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors duration-200"
+                    exit={{ opacity: 0, y: -18 }}
+                    transition={{ duration: 0.35, delay: index * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col gap-6 border-b border-white/5 p-6 transition-colors duration-200 last:border-b-0 hover:bg-white/5 sm:flex-row sm:items-center sm:justify-between"
                     onTouchStart={isMobile ? handleTouchStart : undefined}
                     onTouchMove={isMobile ? handleTouchMove : undefined}
                     onTouchEnd={isMobile ? () => handleTouchEnd(item.id) : undefined}
@@ -503,7 +585,7 @@ const Cart = () => {
                         <LazyImage
                           src={item.images?.[0] || '/images/hero-image.svg'}
                           alt={safe(item.name || item.title)}
-                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                          className="h-20 w-20 flex-shrink-0 rounded-2xl object-cover shadow-[0_20px_40px_-30px_rgba(15,23,42,0.8)]"
                           sizes="64px"
                           width={64}
                           height={64}
@@ -516,52 +598,46 @@ const Cart = () => {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-lg mb-2 truncate">{safe(item.name || item.title)}</h3>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-2">
+                        <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-white">{safe(item.name || item.title)}</h3>
+                        <div className="mb-2 flex flex-wrap items-center gap-4 text-sm text-white/70">
                           <span>
                             السعر:{' '}
-                            <span className="font-semibold text-gray-900">{formatCurrency(unitPrice)}</span>
+                            <span className="font-semibold text-white">{formatCurrency(unitPrice)}</span>
                             {Number.isFinite(oldPrice) && oldPrice > unitPrice && (
                               <span className="ms-2 line-through opacity-60">{formatCurrency(oldPrice)}</span>
                             )}
                           </span>
                           <span>
                             الإجمالي:{' '}
-                            <span className="font-semibold text-gray-900">{formatCurrency(lineTotal)}</span>
+                            <span className="font-semibold text-white">{formatCurrency(lineTotal)}</span>
                           </span>
                           {saved > 0 && (
-                            <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold">
+                            <span className="inline-flex items-center rounded-md bg-emerald-500/15 px-2 py-0.5 text-emerald-200 font-semibold">
                               {locale==='ar' ? `وفرت ${formatCurrency(saved)}` : `Saved ${formatCurrency(saved)}`}
                             </span>
                           )}
                           {lowStock && (
-                            <span className="inline-flex items-center text-red-700 bg-red-50 px-2 py-0.5 rounded-md font-semibold">
+                            <span className="inline-flex items-center rounded-md bg-red-500/20 px-2 py-0.5 text-red-200 font-semibold">
                               {locale==='ar' ? `المتاح الآن: ${item.stock}` : `Available: ${item.stock}`}
                             </span>
                           )}
                         </div>
                         {/* Additional product details */}
                         {cartViewMode === 'detailed' && (
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
                             {item.sku && (
-                              <span className="bg-gray-100 px-2 py-1 rounded">
-                                SKU: {item.sku}
-                              </span>
+                              <span className="rounded px-2 py-1 bg-white/10">SKU: {item.sku}</span>
                             )}
                             {item.weight && (
-                              <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                              <span className="rounded bg-emerald-500/10 px-2 py-1 text-emerald-200">
                                 {locale === 'ar' ? 'الوزن' : 'Weight'}: {item.weight}kg
                               </span>
                             )}
                             {item.brand && (
-                              <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded">
-                                {item.brand}
-                              </span>
+                              <span className="rounded bg-indigo-500/10 px-2 py-1 text-indigo-200">{item.brand}</span>
                             )}
                             {item.category && (
-                              <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">
-                                {item.category}
-                              </span>
+                              <span className="rounded bg-white/10 px-2 py-1">{item.category}</span>
                             )}
                           </div>
                         )}
@@ -569,7 +645,7 @@ const Cart = () => {
                     </div>
 
                     <div className="flex items-center justify-end gap-4 flex-wrap sm:flex-nowrap">
-                        <div className="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden shadow-sm hover:border-primary-red/30 transition-colors">
+                        <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/10 shadow-inner transition-colors hover:border-emerald-300/40">
                         <button
                           type="button"
                           onClick={() => canDecrease && handleUpdateQuantity(item.id, Math.max(1, quantity - 1))}
@@ -577,7 +653,7 @@ const Cart = () => {
                           onPointerUp={onHoldEnd}
                           onPointerCancel={onHoldEnd}
                           onPointerLeave={onHoldEnd}
-                          className="px-4 py-2 text-gray-600 hover:text-primary-red hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="px-4 py-2 text-white/70 transition-colors hover:bg-red-500/20 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-30"
                           aria-label={decreaseLabel}
                           disabled={!canDecrease || !updateQuantity || isLoading(`quantity-${item.id}`)}
                         >
@@ -594,7 +670,7 @@ const Cart = () => {
                             handleUpdateQuantity(item.id, v);
                           }}
                           onKeyDown={(e) => onQtyKeyDown(e, item)}
-                          className="px-4 py-2 border-l border-r border-gray-200 min-w-16 text-center text-sm font-semibold appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-primary-red/20 focus:border-primary-red transition-all"
+                          className="min-w-16 border-x border-white/10 bg-transparent px-4 py-2 text-center text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-emerald-300/50"
                           disabled={isLoading(`quantity-${item.id}`)}
                         />
                         <button
@@ -610,7 +686,7 @@ const Cart = () => {
                           onPointerUp={onHoldEnd}
                           onPointerCancel={onHoldEnd}
                           onPointerLeave={onHoldEnd}
-                          className="px-4 py-2 text-gray-600 hover:text-primary-red hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="px-4 py-2 text-white/70 transition-colors hover:bg-emerald-500/20 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-30"
                           aria-label={increaseLabel}
                           disabled={!canIncrease || !updateQuantity || isLoading(`quantity-${item.id}`)}
                         >
@@ -624,7 +700,7 @@ const Cart = () => {
                           e.preventDefault();
                           onRemove(item, false); // Remove with confirmation on right-click
                         }}
-                        className="p-3 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed border border-red-200 hover:border-red-500"
+                        className="rounded-xl border border-red-300/30 p-3 text-red-200 transition-all duration-200 hover:bg-red-500/20 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={removeLabel}
                         disabled={!removeFromCart || isLoading(`remove-${item.id}`)}
                         title={locale === 'ar' ? 'انقر للإزالة السريعة، انقر بزر الفأرة الأيمن للتأكيد' : 'Click to quick remove, right-click for confirmation'}
@@ -645,32 +721,30 @@ const Cart = () => {
 
           {/* ملخص الطلب */}
           <div className="lg:col-span-1">
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 p-6 sticky top-24">
-              <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary-red rounded-lg flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">✓</span>
-                </div>
-                ملخص الطلب
+            <div className="sticky top-28 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.9)] backdrop-blur-xl">
+              <h2 className="mb-6 flex items-center gap-2 text-xl font-semibold text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-400/20 text-emerald-200">✓</div>
+                {locale === 'ar' ? 'ملخص الطلب' : 'Order overview'}
               </h2>
               
               <div className="space-y-4 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">عدد المنتجات:</span>
-                  <span>{itemCount}</span>
+                <div className="flex justify-between text-white/70">
+                  <span>{locale === 'ar' ? 'عدد المنتجات' : 'Items in cart'}:</span>
+                  <span className="text-white">{itemCount}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">المجموع:</span>
-                  <span>{formatCurrency(totalValue)}</span>
+                <div className="flex justify-between text-white/70">
+                  <span>{locale === 'ar' ? 'المجموع' : 'Subtotal'}:</span>
+                  <span className="text-white">{formatCurrency(totalValue)}</span>
                 </div>
                 {hasWeights && totalWeight > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">الوزن الإجمالي:</span>
-                    <span>{totalWeight.toFixed(2)} kg</span>
+                  <div className="flex justify-between text-white/70">
+                    <span>{locale === 'ar' ? 'الوزن الإجمالي' : 'Total weight'}:</span>
+                    <span className="text-white">{totalWeight.toFixed(2)} kg</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-gray-600">الشحن:</span>
-                  <span className="text-green-600">مجاني</span>
+                <div className="flex justify-between text-white/70">
+                  <span>{locale === 'ar' ? 'الشحن' : 'Shipping'}:</span>
+                  <span className="text-emerald-200">{remainingForFreeShipping > 0 ? (locale === 'ar' ? 'قابل للتفعيل' : 'Unlock with more') : (locale === 'ar' ? 'مجاني' : 'Complimentary')}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-4">
                   <motion.div
@@ -678,10 +752,10 @@ const Cart = () => {
                     initial={{ scale: 1 }}
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 0.3 }}
-                    className="flex justify-between text-lg font-bold"
+                    className="flex justify-between text-lg font-bold text-white"
                   >
                     <span>الإجمالي:</span>
-                    <span className="text-primary-red">{formatCurrency(totalValue)}</span>
+                    <span className="text-emerald-200">{formatCurrency(totalValue)}</span>
                   </motion.div>
                 </div>
               </div>
@@ -704,7 +778,7 @@ const Cart = () => {
                       transition={{ duration: 0.5, delay: 0.1 }}
                     >
                       <motion.div
-                        className="h-full bg-green-500 transition-all duration-300"
+                        className="h-full bg-emerald-400 transition-all duration-300"
                         initial={{ width: 0 }}
                         animate={{ width: `${progressToFreeShipping}%` }}
                         transition={{ duration: 0.8, delay: 0.2 }}
@@ -722,12 +796,12 @@ const Cart = () => {
                   </motion.div>
                 )}
               </div>
-              <div className="flex gap-2 mb-4">
+              <div className="mb-4 flex gap-2">
                 <input
                   value={couponCode}
                   onChange={e => setCouponCode(e.target.value)}
-                  className="border rounded px-3 py-2 text-sm flex-1 disabled:opacity-50"
-                  placeholder="كود خصم (اختياري)"
+                  className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 disabled:opacity-50"
+                  placeholder={locale === 'ar' ? 'كود خصم (اختياري)' : 'Promo code (optional)'}
                   disabled={isLoading('coupon')}
                 />
                 <Button
@@ -746,15 +820,15 @@ const Cart = () => {
                   )}
                 </Button>
               </div>
-              <ButtonLink to="/checkout" variant="primary" className="w-full py-3 text-lg mb-4 text-center block">
-                إتمام الشراء
+              <ButtonLink to="/checkout" variant="primary" className="mb-4 block w-full py-3 text-center text-lg">
+                {locale === 'ar' ? 'إتمام الشراء' : 'Finalize the order'}
               </ButtonLink>
               <Link
                 to="/products"
-                className="flex items-center justify-center space-x-2 space-x-reverse text-gray-600 hover:text-primary-red transition-colors"
+                className="flex items-center justify-center space-x-2 space-x-reverse text-white/70 transition-colors hover:text-emerald-200"
               >
                 <ArrowLeft size={20} />
-                <span>مواصلة التسوق</span>
+                <span>{locale === 'ar' ? 'مواصلة التسوق' : 'Continue browsing'}</span>
               </Link>
             </div>
           </div>

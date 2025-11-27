@@ -28,6 +28,7 @@
   /* allow admin to set a global font family for UI primitives */
   font-family: var(--ui-font-family, inherit);
   line-height: 1;
+  position: relative;
   cursor: pointer !important;
   transition: transform var(--transition-fast, .18s ease), box-shadow var(--transition-fast, .18s ease), opacity var(--transition-fast, .18s ease);
   box-shadow: var(--btn-shadow);
@@ -67,15 +68,57 @@ table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
 .ui-btn--secondary { --btn-bg: var(--color-primary-alt); --btn-fg: var(--color-text-contrast); --btn-border: transparent; }
 .ui-btn--accent { --btn-bg: var(--color-accent); --btn-fg: var(--color-text-contrast); --btn-border: transparent; }
 .ui-btn--danger { --btn-bg: var(--color-danger); --btn-fg: var(--color-text-contrast); --btn-border: transparent; }
+.ui-btn--primary:hover { --btn-bg: var(--color-primary-hover); }
+.ui-btn--primary:active { --btn-bg: var(--color-primary-active); }
+.ui-btn--secondary:hover { --btn-bg: var(--color-primary-alt-hover); }
+.ui-btn--secondary:active { --btn-bg: var(--color-primary-alt-active); }
+.ui-btn--accent:hover { --btn-bg: var(--color-accent-hover); }
+.ui-btn--accent:active { --btn-bg: var(--color-accent-active); }
+.ui-btn--success { --btn-bg: var(--color-success, var(--color-primary)); --btn-fg: var(--color-text-contrast); --btn-border: transparent; }
 .ui-btn--outline { --btn-bg: transparent; --btn-fg: var(--color-text); --btn-border: var(--color-border); box-shadow: none; }
 .ui-btn--ghost { --btn-bg: transparent; --btn-fg: var(--color-text); --btn-border: transparent; box-shadow: none; }
 .ui-btn--soft { --btn-bg: color-mix(in srgb, var(--color-primary) 12%, transparent); --btn-fg: var(--color-primary); --btn-border: transparent; }
+.ui-btn--outline:hover { --btn-border: var(--color-primary-alt); --btn-fg: var(--color-primary-alt); }
+.ui-btn--outline:active { opacity: .9; }
+.ui-btn--ghost:hover { --btn-bg: color-mix(in srgb, var(--color-primary) 8%, transparent); --btn-fg: var(--color-primary); }
+.ui-btn--ghost:active { --btn-bg: color-mix(in srgb, var(--color-primary) 12%, transparent); }
+
+/* Dark mode for buttons */
+.dark-mode .ui-btn--outline {
+  --btn-fg: var(--color-text, #EAEAEA);
+  --btn-border: var(--color-border, rgba(74, 222, 128, 0.2));
+}
+.dark-mode .ui-btn--outline:hover {
+  --btn-border: var(--color-primary);
+  --btn-fg: var(--color-primary);
+}
+.dark-mode .ui-btn--ghost {
+  --btn-fg: var(--color-text, #EAEAEA);
+}
+.dark-mode .ui-btn--ghost:hover {
+  --btn-bg: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  --btn-fg: var(--color-primary);
+}
 
 /* Button sizes */
 .ui-btn--sm { --btn-h: 32px; --btn-px: var(--space-3, .75rem); font-size: var(--text-sm, .75rem); }
 .ui-btn--md { --btn-h: 40px; --btn-px: var(--space-4, 1rem); font-size: var(--text-sm, .85rem); }
 .ui-btn--lg { --btn-h: 46px; --btn-px: var(--space-5, 1.25rem); font-size: var(--text-md, .95rem); }
 .ui-btn--icon { --btn-h: 40px; padding: 0; width: var(--btn-h); }
+.ui-btn--block { inline-size: 100%; width: 100%; }
+.ui-btn__content { display: inline-flex; align-items: center; gap: var(--btn-gap); }
+.ui-btn__icon { display: inline-flex; align-items: center; justify-content: center; font-size: 1.1em; }
+.ui-btn__label { display: inline-block; }
+.ui-btn.is-loading .ui-btn__label { opacity: .85; }
+.ui-btn__spinner { position: absolute; inset-inline-start: .6rem; }
+.ui-btn-group { display: inline-flex; gap: .5rem; align-items: stretch; }
+.ui-btn-group--block { display: flex; width: 100%; }
+.ui-btn-group--block > .ui-btn { flex: 1 1 auto; }
+.ui-btn-group--segmented { gap: 0; }
+.ui-btn-group--segmented > .ui-btn { border-radius: 0; box-shadow: none; }
+.ui-btn-group--segmented > .ui-btn:first-child { border-start-start-radius: var(--btn-radius); border-end-start-radius: var(--btn-radius); }
+.ui-btn-group--segmented > .ui-btn:last-child { border-start-end-radius: var(--btn-radius); border-end-end-radius: var(--btn-radius); }
+.ui-btn-group--segmented > .ui-btn + .ui-btn { margin-inline-start: -1px; }
 
 /* Backwards-compat: map legacy `.btn` names to the modern UI primitives */
 .btn { @extend .ui-btn; }
@@ -111,6 +154,17 @@ table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
 .ui-badge--warning { background: rgba(var(--color-accent-rgb),.12); color: var(--color-orange-900); border-color: rgba(var(--color-accent-rgb),.24); }
 .ui-badge--danger { background: rgba(var(--color-danger-rgb),.12); color: var(--color-red-900); border-color: rgba(var(--color-danger-rgb),.24); }
 
+/* Dark mode for badges */
+.dark-mode .ui-badge {
+  background: var(--color-surface-muted, #10151D);
+  color: var(--color-text, #EAEAEA);
+  border-color: var(--color-border, rgba(74, 222, 128, 0.2));
+}
+.dark-mode .ui-badge--neutral {
+  background: var(--color-surface-elevated, #1F242C);
+  border-color: var(--color-border, rgba(74, 222, 128, 0.2));
+}
+
 /* Card */
 .ui-card { background: var(--color-surface, #fff); color: var(--color-text, #1f2933); border: 1px solid var(--color-border, #e4e7eb); border-radius: var(--radius-lg, 16px); box-shadow: 0 10px 24px -14px rgba(0,0,0,.18); }
 .ui-card--outline { box-shadow: none; }
@@ -119,6 +173,20 @@ table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
 .ui-card__header { padding: var(--space-4, 1rem); border-block-end: 1px solid var(--color-border, #e4e7eb); }
 .ui-card__title { font-weight: 700; font-size: var(--text-lg, 1.15rem); margin: 0; font-family: var(--font-serif, inherit); }
 .ui-card__content { padding: var(--space-4, 1rem); }
+
+/* Dark mode for cards */
+.dark-mode .ui-card {
+  background: var(--color-surface, #161B22);
+  color: var(--color-text, #EAEAEA);
+  border-color: var(--color-border, rgba(74, 222, 128, 0.2));
+  box-shadow: 0 10px 24px -14px rgba(0,0,0,.4);
+}
+.dark-mode .ui-card--flat {
+  border-color: var(--color-border-soft, rgba(74, 222, 128, 0.1));
+}
+.dark-mode .ui-card__header {
+  border-color: var(--color-border, rgba(74, 222, 128, 0.2));
+}
 
 /* Chip */
 .ui-chip {
@@ -136,6 +204,14 @@ table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
 .ui-chip__close { inline-size: 1.1em; block-size: 1.1em; border-radius: 50%; display: grid; place-items: center; background: transparent; border: 0; color: inherit; }
 .ui-chip__close:hover { background: rgba(0,0,0,.06); }
 
+/* Dark mode for chips */
+.dark-mode .ui-chip {
+  --chip-bg: #161B22; --chip-fg: var(--color-text, #EAEAEA); --chip-br: var(--color-border, rgba(74, 222, 128, 0.2));
+}
+.dark-mode .ui-chip:hover { 
+  background: var(--color-surface-elevated, #1F242C);
+}
+
 /* Skeleton */
 .ui-skeleton { position: relative; overflow: hidden; background: var(--color-border-soft, #edf0f3); border-radius: var(--radius-sm, 6px); }
 .ui-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); animation: ui-shimmer 1.3s infinite; }
@@ -146,6 +222,14 @@ table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
 .ui-skeleton--circle { border-radius: var(--radius-full, 9999px); aspect-ratio: 1 / 1; }
 .ui-skeleton--static::after { animation: none; opacity: 0; }
 @keyframes ui-shimmer { 100% { transform: translateX(100%); } }
+
+/* Dark mode for skeleton */
+.dark-mode .ui-skeleton {
+  background: rgba(74, 222, 128, 0.1);
+}
+.dark-mode .ui-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.3), transparent);
+}
 
 /* Form inputs */
 .ui-input {
@@ -168,6 +252,17 @@ table tbody tr td[style*="tdActions"] button:not([disabled]):not(.is-disabled) {
 }
 .ui-input--sm { padding: .25rem .5rem; font-size: var(--text-sm, .75rem); }
 .ui-input--lg { padding: .65rem 1rem; font-size: var(--text-md, .95rem); }
+
+/* Dark mode for form inputs */
+.dark-mode .ui-input {
+  background: var(--color-surface, #161B22);
+  border-color: var(--color-border, rgba(74, 222, 128, 0.2));
+  color: var(--color-text, #EAEAEA);
+}
+.dark-mode .ui-input:focus-within {
+  box-shadow: 0 6px 18px -6px rgba(74, 222, 128, 0.2);
+  border-color: rgba(74, 222, 128, 0.4);
+}
 
 /* Utility mapping classes for JS primitives (keeps old names working) */
 /* .ui-btn--primary is defined above; this comment is a placeholder. */

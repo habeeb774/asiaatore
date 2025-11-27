@@ -15,9 +15,14 @@ export const useCategories = () => {
     setError(null);
     try {
       const list = await api.listCategories();
-      if (Array.isArray(list)) {
-        setCategories(list);
-      }
+      const next = Array.isArray(list?.categories)
+        ? list.categories
+        : Array.isArray(list)
+          ? list
+          : Array.isArray(list?.data)
+            ? list.data
+            : [];
+      setCategories(next);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -30,8 +35,11 @@ export const useCategories = () => {
     setError(null);
     try {
       const created = await api.createCategory(categoryData);
-      setCategories(prev => [created, ...prev]);
-      return created;
+      const payload = created?.category || created?.data || null;
+      if (payload) {
+        setCategories(prev => [payload, ...prev]);
+      }
+      return payload || created;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -45,8 +53,11 @@ export const useCategories = () => {
     setError(null);
     try {
       const updated = await api.updateCategory(categoryId, categoryData);
-      setCategories(prev => prev.map(c => c.id === updated.id ? updated : c));
-      return updated;
+      const payload = updated?.category || updated?.data || null;
+      if (payload) {
+        setCategories(prev => prev.map(c => (c.id === payload.id ? payload : c)));
+      }
+      return payload || updated;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -60,7 +71,7 @@ export const useCategories = () => {
     setError(null);
     try {
       await api.deleteCategory(categoryId);
-      setCategories(prev => prev.filter(c => c.id !== categoryId));
+      setCategories(prev => prev.filter(c => c.id !== categoryId && c.slug !== categoryId));
     } catch (err) {
       setError(err.message);
       throw err;

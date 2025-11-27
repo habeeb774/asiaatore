@@ -1,10 +1,11 @@
 @use "sass:color";
-/* variables.scss */
-$primary-color: #3498db;
-$header-bg: #2c3e50;
-$white: #000000;
-$cart-bg: #69be3c;
-$pure-white: #ffffff;
+/* Header.scss - Uses centralized design tokens from theme/_tokens.scss */
+/* Legacy SCSS variables mapped to CSS custom properties */
+$primary-color: #ED1C24;
+$header-bg: var(--header-bg, #fff);
+$white: var(--color-text, #1F2937);
+$cart-bg: var(--color-success, #22c55e);
+$pure-white: var(--color-surface, #ffffff);
 $header-accent: $primary-color;
 $header-shadow-color: rgba(0, 0, 0, 0.1);
 
@@ -13,7 +14,7 @@ $header-shadow-color: rgba(0, 0, 0, 0.1);
   background-color: $header-bg;
   color: $white;
   padding: 1px 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--header-shadow, 0 2px 10px rgba(0, 0, 0, 0.1));
 
   .container {
     display: flex;

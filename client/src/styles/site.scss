@@ -3,6 +3,7 @@
 /* ====================================================== */
 
 /* Core imports */
+@use 'sass:map';
 @use './core/variables' as *;
 @use './core/mixins' as *;
 @use './core/base';
@@ -11,51 +12,37 @@
 @use './product-card';
 
 /* Theme overrides */
-$primary-red: map-get(map-get($theme-colors, light), primary);
+$primary-red: map.get(map.get($theme-colors, light), primary);
 $primary-gold: #2eafff;
-$text-dark: map-get(map-get($theme-colors, light), text);
+$text-dark: map.get(map.get($theme-colors, light), text);
 $muted: #64748b;
-$bg: map-get(map-get($theme-colors, light), bg);
-$card-bg: map-get(map-get($theme-colors, light), card);
+$bg: map.get(map.get($theme-colors, light), bg);
+$card-bg: map.get(map.get($theme-colors, light), card);
 $shadow: $shadow !default;
 
 /* ------------------------ */
 /* Base & Typography        */
 /* ------------------------ */
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; margin:0; overflow-x:hidden; font-family: var(--font-main,'Cairo',system-ui); -webkit-font-smoothing: antialiased; }
+/* Reset handled by base/_reset.scss, box-sizing by that file */
+html, body, #root { height: 100%; margin:0; overflow-x:hidden; font-family: var(--font-sans,'Cairo',system-ui); -webkit-font-smoothing: antialiased; }
 img { max-width: 100%; height: auto; }
 
+/* Site-specific aliases - core tokens from theme/_tokens.scss */
 :root {
-  --header-height: 88px;
-  --font-main: 'Cairo';
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-
-  /* Hero */
+  --font-main: var(--font-sans);
+  
+  /* Hero typography */
   --h1-size: clamp(2.125rem, 4.8vw, 3.125rem);
   --h2-size: clamp(1.75rem, 3.8vw, 2.25rem);
   --h3-size: clamp(1.375rem, 2.8vw, 1.5rem);
 
-  /* Colors */
-  --color-primary: $primary-red;
-  --color-secondary: $primary-gold;
-  --main-text-color: $text-dark;
-  --card-bg: $card-bg;
-  --bg-color: #f8fafc;
-  --shadow: 0 8px 30px rgba(0,0,0,0.12);
+  /* Legacy aliases */
+  --main-text-color: var(--color-text);
+  --card-bg: var(--color-surface);
+  --bg-color: var(--color-bg);
 }
 
-/* Dark mode */
-[data-theme='dark'], .theme-dark {
-  --bg-color: #0b1220;
-  --main-text-color: #cbd5e1;
-  --card-bg: #0b1220;
-  --shadow: 0 8px 30px rgba(0,0,0,0.5);
-  --color-primary: #f6c85f;
-}
+/* Dark mode handled by theme/_tokens.scss .dark-mode class */
 
 /* Headings */
 h1 { font-size: var(--h1-size); line-height:1.2; margin:0 0 .75rem; font-weight:800; }
@@ -152,14 +139,14 @@ h2 { font-size: var(--h2-size); line-height:1.2; margin:0 0 .75rem; font-weight:
   grid-template-columns:repeat(auto-fit,minmax(clamp(180px,45vw,240px),1fr));
 }
 .home-products .product-card {
-  background:#fff;
-  border-radius:var(--radius-md);
-  box-shadow:0 4px 18px -4px rgba(0,0,0,.08),0 2px 6px -2px rgba(0,0,0,.06);
+  background: var(--grad-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 22px -16px rgba(15,23,42,0.18), 0 2px 6px rgba(15,23,42,0.06);
   transition: transform .55s cubic-bezier(.16,.8,.36,1), box-shadow .55s cubic-bezier(.16,.8,.36,1);
 }
 .home-products .product-card:hover {
   transform:translateY(-8px);
-  box-shadow:0 14px 38px -6px rgba(0,0,0,.18),0 4px 10px -2px rgba(0,0,0,.12);  --tw-slashed-zero: initial;
+  box-shadow: 0 16px 36px -12px rgba(15,23,42,0.22), 0 10px 28px -12px rgba(var(--color-primary-rgb),0.28);  --tw-slashed-zero: initial;
   --tw-numeric-figure: initial;
   --tw-numeric-spacing: initial;
   --tw-numeric-fraction: initial;
@@ -295,16 +282,16 @@ h2 { font-size: var(--h2-size); line-height:1.2; margin:0 0 .75rem; font-weight:
 /* Dark mode using data-theme attribute set on <html> by ThemeProvider */
 [data-theme='dark'] {
   /* Derive from theme map */
-  --bg-color: #{map-get(map-get($theme-colors, dark), bg)};
+  --bg-color: #{map.get(map.get($theme-colors, dark), bg)};
   --header-bg: rgba(9,12,19,0.96);
   --menu-bg: #071127;
   --footer-bg: #071127;
-  --main-text-color: #{map-get(map-get($theme-colors, dark), text)};
+  --main-text-color: #{map.get(map.get($theme-colors, dark), text)};
   --text-btn: #f8fafc;
-  --card-bg: #{map-get(map-get($theme-colors, dark), card)};
+  --card-bg: #{map.get(map.get($theme-colors, dark), card)};
   --dark-text-main: #e6eef8;
   --dark-text-sec: #9aa6b2;
-  --color-primary: #{map-get(map-get($theme-colors, dark), primary)};
+  --color-primary: #{map.get(map.get($theme-colors, dark), primary)};
   --shadow: 0 8px 30px rgba(0,0,0,0.6);
   background-color: var(--bg-color);
   color: var(--main-text-color);

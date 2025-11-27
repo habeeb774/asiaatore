@@ -4,16 +4,16 @@ import { Label } from '../../ui';
 const AuthFormField = ({ id, label, error, hint, children }) => (
   <div className="space-y-2 text-right">
     {label ? (
-      <Label htmlFor={id} className="text-sm font-medium text-slate-200">
+      <Label htmlFor={id} className="modern-label">
         {label}
       </Label>
     ) : null}
-    <div className="relative mt-1.5">
+    <div className="relative">
       {children}
     </div>
-    {hint ? <p className="text-[0.7rem] text-slate-400">{hint}</p> : null}
+    {hint ? <p className="text-[0.7rem] text-gray-500">{hint}</p> : null}
     {error ? (
-      <p className="text-xs text-red-400" role="alert">
+      <p className="text-xs text-red-600 font-medium" role="alert">
         {error}
       </p>
     ) : null}

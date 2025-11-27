@@ -42,18 +42,18 @@ const AdminDashboard = () => {
     try { document.title = pageTitle; } catch {}
   }, [pageTitle]);
 
-  if (!isAdmin) {
-    return <AdminAccessControl user={user} />;
-  }
-
-  const shouldShowNav = !location.pathname.startsWith('/admin/overview') && !location.pathname.startsWith('/admin/products');
-
   // Dynamically load admin stylesheet (code-split) on first mount.
   React.useEffect(() => {
     let cancelled = false;
     import('../../../styles/AdminPage.scss').catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  if (!isAdmin) {
+    return <AdminAccessControl user={user} />;
+  }
+
+  const shouldShowNav = !location.pathname.startsWith('/admin/overview') && !location.pathname.startsWith('/admin/products');
 
   return (
     <AdminLayout title={pageTitle}>

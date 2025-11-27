@@ -5,7 +5,7 @@ const ToastContext = createContext(null);
 
 export const ToastProvider = ({ children }) => {
   const show = useCallback((opts) => {
-    const { type = 'info', title, description, duration = 3500, action } = opts || {};
+    const { type = 'info', title, description, duration = 3500, action, onClose } = opts || {};
 
     const toastOptions = {
       autoClose: duration > 0 ? duration : false,
@@ -17,6 +17,10 @@ export const ToastProvider = ({ children }) => {
       progress: undefined,
       theme: "colored",
     };
+
+    if (typeof onClose === 'function') {
+      toastOptions.onClose = onClose;
+    }
 
     let toastContent = title;
     if (description) {
@@ -69,13 +73,21 @@ export const ToastProvider = ({ children }) => {
     }
   }, []);
 
+  const dismiss = useCallback((id) => {
+    if (id === undefined || id === null) return;
+    try {
+      toast.dismiss(id);
+    } catch {}
+  }, []);
+
   const api = useMemo(() => ({
     show,
+    dismiss,
     success: (title, description, duration, extras = {}) => show({ type:'success', title, description, duration, ...extras }),
     error: (title, description, duration, extras = {}) => show({ type:'error', title, description, duration, ...extras }),
     info: (title, description, duration, extras = {}) => show({ type:'info', title, description, duration, ...extras }),
     warn: (title, description, duration, extras = {}) => show({ type:'warn', title, description, duration, ...extras })
-  }), [show]);
+  }), [show, dismiss]);
 
   return (
     <ToastContext.Provider value={api}>

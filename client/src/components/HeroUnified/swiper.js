@@ -13,26 +13,57 @@ async function ensureSwiper() {
   return SwiperClass;
 }
 
-export const useHeroSwiper = () => {
+export const useHeroSwiper = ({
+  selector = '.slide-swp',
+  paginationSelector = '.swiper-pagination',
+  nextSelector = '.swiper-button-next',
+  prevSelector = '.swiper-button-prev',
+  autoplayDelay = 3500,
+  enabled = true,
+  showPagination = true,
+  showNavigation = false
+} = {}) => {
   useEffect(() => {
-    const el = document.querySelector('.slide-swp');
-    if (!el) return;
+    if (!enabled) return;
+    const el = selector ? document.querySelector(selector) : null;
+    if (!el) return () => {};
     let observer;
     let destroyed = false;
     const init = async () => {
       try {
         const Swiper = await ensureSwiper();
         if (destroyed) return;
-        const instance = new Swiper(el, {
-          modules: [Navigation, Pagination, Autoplay],
+        const modules = [Autoplay];
+        const config = {
+          modules,
           loop: true,
-          autoplay: { delay: 3500, disableOnInteraction: false },
-          pagination: { el: document.querySelector('.swiper-pagination'), clickable: true },
-          navigation: {
-            nextEl: document.querySelector('.swiper-button-next'),
-            prevEl: document.querySelector('.swiper-button-prev')
-          }
-        });
+          autoplay: autoplayDelay ? { delay: autoplayDelay, disableOnInteraction: false } : false
+        };
+
+              if (showPagination && paginationSelector) {
+                const paginationEl = document.querySelector(paginationSelector);
+                if (paginationEl) {
+                  config.pagination = {
+                    el: paginationEl,
+                    clickable: true
+                  };
+                  modules.push(Pagination);
+                }
+        }
+
+              if (showNavigation && nextSelector && prevSelector) {
+                const nextEl = document.querySelector(nextSelector);
+                const prevEl = document.querySelector(prevSelector);
+                if (nextEl && prevEl) {
+                  config.navigation = {
+                    nextEl,
+                    prevEl
+                  };
+                  modules.push(Navigation);
+                }
+        }
+
+        const instance = new Swiper(el, config);
         el.__swiperInstance = instance;
       } catch {}
     };
@@ -51,5 +82,5 @@ export const useHeroSwiper = () => {
       try { observer && observer.disconnect(); } catch {}
       try { el.__swiperInstance && el.__swiperInstance.destroy(true, true); } catch {}
     };
-  }, []);
+  }, [selector, paginationSelector, nextSelector, prevSelector, autoplayDelay, enabled, showPagination, showNavigation]);
 };

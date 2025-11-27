@@ -3,6 +3,7 @@
   "nav": {
     "home": "Home",
     "about": "About",
+    "taglineFallback": "Your one-stop shop for daily essentials",
     "actions": {
       "add": "Add",
       "add_to_cart": "Add to cart",

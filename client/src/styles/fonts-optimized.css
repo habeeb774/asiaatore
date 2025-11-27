@@ -1,0 +1,159 @@
+/* Optimized Self-Hosted Arabic Fonts */
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: local('Cairo ExtraLight'), local('Cairo-ExtraLight'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS8p4_RA.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: local('Cairo Light'), local('Cairo-Light'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS8p5_RBF.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Cairo'), local('Cairo-Regular'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS8p6_Bw.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Cairo Medium'), local('Cairo-Medium'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS8p5_BRF.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Cairo SemiBold'), local('Cairo-SemiBold'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS8p5_RRF.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Cairo Bold'), local('Cairo-Bold'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRcyS8p7_BRF.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: local('Cairo ExtraBold'), local('Cairo-ExtraBold'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRcyS8p5_RRF.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: local('Cairo Black'), local('Cairo-Black'), url('./fonts/cairo-v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRcyS8p7_RRF.woff2') format('woff2');
+}
+
+/* Amiri Font - Only critical weights */
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Amiri'), local('Amiri-Regular'), url('./fonts/amiri-v30/J7aRnpd8CGxBHpUrtLMS7JNKIjk.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Amiri Bold'), local('Amiri-Bold'), url('./fonts/amiri-v30/J7aRnpd8CGxBHpUutLMS7JNK.woff2') format('woff2');
+}
+
+/* Font Face Declarations */
+:root {
+  --font-cairo: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-tajawal: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+  --font-amiri: 'Amiri', Georgia, 'Times New Roman', Times, serif;
+  --font-noto-naskh: Georgia, 'Times New Roman', Times, serif;
+
+  /* Unified sitewide font variables */
+  --font-main: var(--font-cairo);
+  --font-sans: var(--font-cairo);
+  --font-serif: var(--font-amiri);
+  --font-heading: var(--font-cairo);
+}
+
+/* Base Typography */
+body {
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+/* Arabic Text Enhancements */
+.arabic-text {
+  font-family: var(--font-cairo);
+  line-height: 1.8;
+  text-align: right;
+}
+
+.arabic-heading {
+  font-family: var(--font-amiri);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: right;
+}
+
+/* Luxury Typography Classes */
+.luxury-font-primary {
+  font-family: var(--font-cairo);
+}
+
+.luxury-font-heading {
+  font-family: var(--font-amiri);
+}
+
+.luxury-font-serif {
+  font-family: var(--font-amiri);
+}
+
+/* Font Weight Utilities */
+.font-light-arabic { font-weight: 200; }
+.font-thin-arabic { font-weight: 300; }
+.font-normal-arabic { font-weight: 400; }
+.font-medium-arabic { font-weight: 500; }
+.font-semibold-arabic { font-weight: 600; }
+.font-bold-arabic { font-weight: 700; }
+.font-extrabold-arabic { font-weight: 800; }
+.font-black-arabic { font-weight: 900; }
+
+/* Letter Spacing for Arabic */
+.tracking-tight-arabic { letter-spacing: -0.05em; }
+.tracking-normal-arabic { letter-spacing: 0; }
+.tracking-wide-arabic { letter-spacing: 0.05em; }
+
+/* Line Height for Arabic */
+.leading-tight-arabic { line-height: 1.25; }
+.leading-normal-arabic { line-height: 1.5; }
+.leading-relaxed-arabic { line-height: 1.75; }
+.leading-loose-arabic { line-height: 2; }

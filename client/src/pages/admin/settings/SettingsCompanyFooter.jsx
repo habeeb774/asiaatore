@@ -1,20 +1,33 @@
 import React from 'react';
+import { Input, Textarea } from '../../../components/ui';
+import { useFormContext, Controller } from 'react-hook-form';
+import FormField from '../../../components/features/admin/forms/FormField';
 
 const SettingsCompanyFooter = ({ form, onChange }) => {
+  const { control } = useFormContext();
   return (
     <section id="company-footer" style={{display:'grid', gap:12, scrollMarginTop:80}}>
       <div style={{display:'grid', gap:8}}>
         <span style={{fontSize:'.8rem', fontWeight:800}}>وصف الفوتر</span>
         <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
-          <label htmlFor="footerAboutAr" style={{display:'grid', gap:4}}>
-            <span style={{fontSize:'.7rem', fontWeight:700}}>نبذة (AR)</span>
-            <textarea id="footerAboutAr" rows={4} value={form.footerAboutAr} onChange={e=>onChange('footerAboutAr', e.target.value)} placeholder={"متخصصون في بيع المواد الغذائية بالجملة وبالحبة\nوجميع احتياجات المنزل من منظفات و كماليات\nأيضًا يوجد لدينا قسم السوبر ماركت وجميع\nاحتياجات الأسرة السعودية وأسعارنا جملة وجودتنا\nأصلية"} />
-            <small style={{opacity:.7}}>يمكنك كتابة عدة أسطر؛ ستظهر كفقرات منفصلة.</small>
-          </label>
-          <label htmlFor="footerAboutEn" style={{display:'grid', gap:4}}>
-            <span style={{fontSize:'.7rem', fontWeight:700}}>About (EN)</span>
-            <textarea id="footerAboutEn" rows={4} value={form.footerAboutEn} onChange={e=>onChange('footerAboutEn', e.target.value)} placeholder="We specialize in wholesale and retail food products and home essentials." />
-          </label>
+          <FormField htmlFor="footerAboutAr" label="نبذة (AR)" hint={"يمكنك كتابة عدة أسطر؛ ستظهر كفقرات منفصلة."}>
+            <Controller
+              name="footerAboutAr"
+              control={control}
+              render={({ field }) => (
+                <Textarea id="footerAboutAr" rows={4} value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('footerAboutAr', v); }} placeholder={"متخصصون في بيع المواد الغذائية بالجملة وبالحبة\nوجميع احتياجات المنزل من منظفات و كماليات\nأيضًا يوجد لدينا قسم السوبر ماركت وجميع\nاحتياجات الأسرة السعودية وأسعارنا جملة وجودتنا\nأصلية"} />
+              )}
+            />
+          </FormField>
+          <FormField htmlFor="footerAboutEn" label="About (EN)">
+            <Controller
+              name="footerAboutEn"
+              control={control}
+              render={({ field }) => (
+                <Textarea id="footerAboutEn" rows={4} value={field.value ?? ''} onChange={e=>{ const v=e.target.value; field.onChange(v); onChange('footerAboutEn', v); }} placeholder="We specialize in wholesale and retail food products and home essentials." />
+              )}
+            />
+          </FormField>
         </div>
       </div>
 
@@ -23,19 +36,19 @@ const SettingsCompanyFooter = ({ form, onChange }) => {
         <div style={{display:'grid', gridTemplateColumns:'var(--cols-2)', gap:8}}>
           <label htmlFor="companyNameAr" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>اسم الشركة (AR)</span>
-            <input id="companyNameAr" value={form.companyNameAr} onChange={e=>onChange('companyNameAr', e.target.value)} placeholder="مثال: شركة منفذ آسيا التجارية" />
+            <Input id="companyNameAr" value={form.companyNameAr} onChange={e=>onChange('companyNameAr', e.target.value)} placeholder="مثال: شركة منفذ آسيا التجارية" />
           </label>
           <label htmlFor="companyNameEn" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>Company Name (EN)</span>
-            <input id="companyNameEn" value={form.companyNameEn} onChange={e=>onChange('companyNameEn', e.target.value)} placeholder="e.g., Asia Outlet Co." />
+            <Input id="companyNameEn" value={form.companyNameEn} onChange={e=>onChange('companyNameEn', e.target.value)} placeholder="e.g., Asia Outlet Co." />
           </label>
           <label htmlFor="commercialRegNo" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>السجل التجاري</span>
-            <input id="commercialRegNo" value={form.commercialRegNo} onChange={e=>onChange('commercialRegNo', e.target.value)} placeholder="مثال: 1010xxxxxx" />
+            <Input id="commercialRegNo" value={form.commercialRegNo} onChange={e=>onChange('commercialRegNo', e.target.value)} placeholder="مثال: 1010xxxxxx" />
           </label>
           <label htmlFor="taxNumber2" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>الرقم الضريبي</span>
-            <input id="taxNumber2" value={form.taxNumber} onChange={e=>onChange('taxNumber', e.target.value)} placeholder="مثال: 311307460300003" />
+            <Input id="taxNumber2" value={form.taxNumber} onChange={e=>onChange('taxNumber', e.target.value)} placeholder="مثال: 311307460300003" />
           </label>
           <label htmlFor="addressAr" style={{display:'grid', gap:4}}>
             <span style={{fontSize:'.7rem', fontWeight:700}}>العنوان (AR)</span>
